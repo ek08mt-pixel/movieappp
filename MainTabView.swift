@@ -11,17 +11,13 @@ struct MainTabView: View {
             TabView(selection: $selectedTab) {
                 HomeView()
                     .tag(0)
-                
                 Color.clear.tag(1)
-                
                 LibraryView()
                     .tag(2)
             }
-            .tabViewStyle(.automatic)
             
             VStack {
                 Spacer()
-                
                 HStack(spacing: 0) {
                     TabButton(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
                         withAnimation(.spring(response: 0.3)) { selectedTab = 0 }
@@ -38,25 +34,30 @@ struct MainTabView: View {
                 .background(
                     Capsule()
                         .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.3), radius: 8, y: 2)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        )
                 )
                 .padding(.horizontal, 50)
                 .padding(.bottom, 12)
                 
-                // Search button nổi
                 .overlay {
                     Button {
                         showSearch = true
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(LinearGradient(colors: [.orange, .pink.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .fill(.ultraThinMaterial)
                                 .frame(width: 64, height: 64)
-                                .shadow(color: .orange.opacity(0.6), radius: 16, y: -4)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
                             
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 26, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(.white.opacity(0.9))
                         }
                     }
                     .offset(y: -34)
@@ -80,10 +81,10 @@ struct TabButton: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 20, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .orange : .gray.opacity(0.6))
+                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
                 Text(title)
                     .font(.system(size: 10))
-                    .foregroundColor(isSelected ? .orange : .gray.opacity(0.6))
+                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
             }
         }
         .frame(width: 50)
