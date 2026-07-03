@@ -1,15 +1,13 @@
 import SwiftUI
 
 struct HomeView: View {
-    // Đổi thành @StateObject để khởi tạo chuẩn xác
-    @StateObject private var vm = HomeViewModel()
+    @StateObject var vm = HomeViewModel()
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                    // Truy cập trực tiếp qua vm thay vì thông qua binding
-                    ForEach(vm.nowPlayingMovies, id: \.id) { movie in
+                    ForEach(vm.nowPlayingMovies) { movie in
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack {
                                 AsyncImage(url: movie.posterURL) { image in
