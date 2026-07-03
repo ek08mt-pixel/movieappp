@@ -37,7 +37,6 @@ jobs:
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # Gộp tất cả file .swift từ mọi thư mục
           SWIFT_FILES=$(find . -name "*.swift" -not -name "MovieApp.swift" | tr '\n' ' ')
           echo "Files: $SWIFT_FILES"
           
@@ -77,7 +76,7 @@ jobs:
           </dict></plist>
           EOF
           
-          cd Payload && zip -r ../PhimHay.ipa . && cd ..
+          zip -r PhimHay.ipa Payload/
           ls -la PhimHay.ipa
       
       - uses: actions/upload-artifact@v4
