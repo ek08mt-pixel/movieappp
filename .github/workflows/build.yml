@@ -1,0 +1,97 @@
+name: Build IPA
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Xcode Project
+        run: |
+          mkdir -p PhimHay
+          
+          # Copy all Swift files into flat structure
+          cp *.swift PhimHay/ 2>/dev/null || true
+          cp Views/*.swift PhimHay/ 2>/dev/null || true
+          cp ViewModels/*.swift PhimHay/ 2>/dev/null || true
+          cp Utils/*.swift PhimHay/ 2>/dev/null || true
+          
+          # Create dummy AppIcon
+          mkdir -p PhimHay/Assets.xcassets/AppIcon.appiconset
+          cat > PhimHay/Assets.xcassets/AppIcon.appiconset/Contents.json << 'EOF'
+          {
+            "images" : [{"idiom" : "universal","size" : "1024x1024"}],
+            "info" : {"author" : "xcode","version" : 1}
+          }
+          EOF
+          
+          # Create Info.plist
+          cat > PhimHay/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key><string>Phim Hay</string>
+              <key>CFBundleDisplayName</key><string>Phim Hay</string>
+              <key>CFBundleIdentifier</key><string>com.phimhay.app</string>
+              <key>CFBundleVersion</key><string>1</string>
+              <key>CFBundleShortVersionString</key><string>1.0</string>
+              <key>CFBundlePackageType</key><string>APPL</string>
+              <key>CFBundleExecutable</key><string>PhimHay</string>
+              <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+              <key>UILaunchScreen</key><dict/>
+              <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
+              <key>LSRequiresIPhoneOS</key><true/>
+              <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+              <key>MinimumOSVersion</key><string>16.0</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Create Xcode project using swift package
+          cat > Package.swift << 'EOF'
+          // swift-tools-version:5.7
+          import PackageDescription
+          let package = Package(
+              name: "PhimHay",
+              platforms: [.iOS(.v16)],
+              products: [.executable(name: "PhimHay", targets: ["PhimHay"])],
+              targets: [.executableTarget(name: "PhimHay", path: "PhimHay")]
+          )
+          EOF
+      
+      - name: Build with swift package
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          swift build \
+            --sdk "$SDK" \
+            --triple arm64-apple-ios16.0 \
+            --configuration release \
+            --product PhimHay \
+            -Xswiftc "-target" \
+            -Xswiftc "arm64-apple-ios16.0"
+          
+          # Find built binary
+          find . -name "PhimHay" -type f
+      
+      - name: Package IPA
+        run: |
+          BINARY=$(find . -name "PhimHay" -type f | head -1)
+          echo "Binary: $BINARY"
+          
+          mkdir -p Payload/PhimHay.app
+          cp "$BINARY" Payload/PhimHay.app/
+          cp PhimHay/Info.plist Payload/PhimHay.app/
+          
+          cd Payload
+          zip -r ../PhimHay.ipa .
+          cd ..
+          ls -la PhimHay.ipa
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhimHay-IPA
+          path: PhimHay.ipa
