@@ -7,8 +7,10 @@ class HomeViewModel: ObservableObject {
     @Published var nowPlaying: [Movie] = []
     @Published var topRated: [Movie] = []
     @Published var genres: [Genre] = []
+    @Published var isLoading = true
     
     func loadAll() async {
+        isLoading = true
         async let t = APIService.shared.trending()
         async let u = APIService.shared.upcoming()
         async let n = APIService.shared.nowPlaying()
@@ -24,5 +26,6 @@ class HomeViewModel: ObservableObject {
         } catch {
             print("Error: \(error)")
         }
+        isLoading = false
     }
 }
