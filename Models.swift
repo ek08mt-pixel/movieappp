@@ -119,3 +119,15 @@ struct Video: Codable {
     let type: String
     let name: String?
 }
+struct Cinema: Identifiable {
+    let id = UUID()
+    let name: String
+    let bookingURL: String
+}
+
+struct Movie: Identifiable {
+    let id = UUID()
+    let title: String
+    // ... các thuộc tính khác của phim
+    let cinemas: [Cinema] // Thêm dòng này vào model Movie của bạn
+}
