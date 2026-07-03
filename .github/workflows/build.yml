@@ -1,0 +1,101 @@
+name: Build IPA
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup
+        run: |
+          mkdir -p Payload/PhimHay.app
+          
+          cat > Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>Phim Hay</string>
+              <key>CFBundleDisplayName</key>
+              <string>🍿 Phim Hay</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.phimhay.app</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleExecutable</key>
+              <string>PhimHay</string>
+              <key>UIRequiredDeviceCapabilities</key>
+              <array><string>arm64</string></array>
+              <key>UILaunchScreen</key>
+              <dict>
+                  <key>UIColorName</key>
+                  <string>LaunchScreen</string>
+              </dict>
+              <key>UISupportedInterfaceOrientations</key>
+              <array><string>UIInterfaceOrientationPortrait</string></array>
+              <key>UIStatusBarStyle</key>
+              <string>UIStatusBarStyleDarkContent</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>NSAppTransportSecurity</key>
+              <dict>
+                  <key>NSAllowsArbitraryLoads</key>
+                  <true/>
+              </dict>
+              <key>MinimumOSVersion</key>
+              <string>15.0</string>
+          </dict>
+          </plist>
+          EOF
+          
+          cp Info.plist Payload/PhimHay.app/
+      
+      - name: Compile Swift
+        run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          # Tạo bridging header rỗng
+          touch BridgingHeader.h
+          
+          # Compile tất cả file Swift thành object files
+          for f in *.swift Views/*.swift ViewModels/*.swift Utils/*.swift; do
+            if [ -f "$f" ]; then
+              echo "Compiling $f..."
+              swiftc -c "$f" \
+                -sdk "$SDK_PATH" \
+                -target arm64-apple-ios15.0 \
+                -parse-as-library \
+                -module-name PhimHay \
+                -o "${f%.swift}.o"
+            fi
+          done
+          
+          # Link tất cả object files thành executable
+          swiftc -o Payload/PhimHay.app/PhimHay \
+            -sdk "$SDK_PATH" \
+            -target arm64-apple-ios15.0 \
+            -emit-executable \
+            *.o \
+            -Xlinker -dead_strip
+          
+          # Kiểm tra
+          file Payload/PhimHay.app/PhimHay
+      
+      - name: Package IPA
+        run: |
+          cd Payload
+          zip -r ../PhimHay.ipa .
+          cd ..
+          ls -la PhimHay.ipa
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhimHay-IPA
+          path: PhimHay.ipa
