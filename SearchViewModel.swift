@@ -6,15 +6,29 @@ class SearchViewModel: ObservableObject {
     @Published var results: [Movie] = []
     @Published var isSearching = false
     
+    private var searchTask: Task<Void, Never>?
+    
     func search() async {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        isSearching = true
-        defer { isSearching = false }
-        
-        do {
-            results = try await APIService.shared.search(query: query)
-        } catch {
-            results = []
+        searchTask?.cancel()
+        searchTask = Task {
+            guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+                results = []
+                return
+            }
+            isSearching = true
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                if !Task.isCancelled {
+                    results = try await APIService.shared.search(query: query)
+                }
+            } catch {
+                if !Task.isCancelled {
+                    results = []
+                }
+            }
+            if !Task.isCancelled {
+                isSearching = false
+            }
         }
     }
 }
