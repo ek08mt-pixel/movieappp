@@ -53,7 +53,6 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Buttons
                         HStack(spacing: 10) {
                             if let key = vm.trailerKey {
                                 Button {
@@ -121,7 +120,7 @@ struct MovieDetailView: View {
                                 LazyHGrid(rows: [GridItem(.fixed(165)), GridItem(.fixed(165))], spacing: 10) {
                                     ForEach(vm.similar.prefix(12)) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
-                                            VStack(spacing: 4) {
+                                            ZStack(alignment: .bottom) {
                                                 AsyncImage(url: m.posterURL) { phase in
                                                     if let image = phase.image {
                                                         image.resizable().aspectRatio(contentMode: .fill)
@@ -131,8 +130,16 @@ struct MovieDetailView: View {
                                                 }
                                                 .frame(width: 110, height: 165)
                                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                Text(m.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 110)
+                                                
+                                                VStack(spacing: 2) {
+                                                    Text(m.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
+                                                }
+                                                .padding(.horizontal, 6).padding(.vertical, 6)
+                                                .frame(width: 110)
+                                                .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                             }
+                                            .frame(width: 110, height: 165)
                                         }
                                     }
                                 }
@@ -175,14 +182,12 @@ struct MovieDetailView: View {
 
 struct WebView: UIViewRepresentable {
     let urlString: String
-    
-    func makeUIView(context: Context) -> WKWebView {
+    func makeUIViewController(context: Context) -> WKWebView {
         let wv = WKWebView()
         wv.backgroundColor = .black
         wv.isOpaque = false
         if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }
         return wv
     }
-    
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIViewController(_ uiView: WKWebView, context: Context) {}
 }
