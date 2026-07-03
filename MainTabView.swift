@@ -1,69 +1,68 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: String = "home"
     
     init() {
+        // Ẩn thanh Tab Bar mặc định của hệ thống
         UITabBar.appearance().isHidden = true
     }
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Lớp dưới: TabView ẩn để giữ trạng thái các View không bị load lại
             TabView(selection: $selectedTab) {
-                HomeView().tag(0)
-                SearchView().tag(1)
-                LibraryView().tag(2)
+                HomeView()
+                    .tag("home")
+                
+                SearchView()
+                    .tag("search")
+                
+                LibraryView()
+                    .tag("library")
             }
-            .toolbar(.hidden, for: .tabBar)
             
-            // Floating Tab Bar
-            HStack {
+            // Lớp trên: Floating Tab Bar tùy chỉnh
+            HStack(spacing: 0) {
+                TabButton(icon: "house.fill", title: "Home", tab: "home", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
-                    selectedTab = 0
-                }
+                TabButton(icon: "magnifyingglass", title: "Search", tab: "search", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) {
-                    selectedTab = 1
-                }
-                Spacer()
-                TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
-                    selectedTab = 2
-                }
-                Spacer()
+                TabButton(icon: "square.grid.2x2.fill", title: "Library", tab: "library", selectedTab: $selectedTab)
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 30)
             .background(
-                RoundedRectangle(cornerRadius: 40)
+                RoundedRectangle(cornerRadius: 35)
                     .fill(Color.black.opacity(0.8))
-                    .background(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 35)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5) // Viền cực mỏng
+                    )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 40))
-            .shadow(color: .black.opacity(0.3), radius: 10, y: 3)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
+            .padding(.horizontal, 25)
+            .padding(.bottom, 25)
         }
-        .ignoresSafeArea(.keyboard)
     }
 }
 
+// Nút Tab tùy chỉnh
 struct TabButton: View {
     let icon: String
     let title: String
-    let isSelected: Bool
-    let action: () -> Void
+    let tab: String
+    @Binding var selectedTab: String
     
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-                Text(title)
-                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = tab
             }
+        }) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(selectedTab == tab ? .white : .gray)
+                .padding(10)
         }
-        .animation(.spring(response: 0.3), value: isSelected)
     }
 }
