@@ -7,7 +7,7 @@ struct MovieDetailView: View {
     @StateObject private var vm = MovieDetailViewModel()
     @EnvironmentObject var appState: AppState
     @State private var showTrailer = false
-    @State private var showBookingSheet = false
+    @State private var showBookingSheet = false // Biến này giờ sẽ kích hoạt BookingView
     
     var body: some View {
         ZStack {
@@ -91,6 +91,7 @@ struct MovieDetailView: View {
                             }
                         }
                         
+                        // ... Phần hiển thị diễn viên và phim tương tự giữ nguyên ...
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.headline).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -166,32 +167,10 @@ struct MovieDetailView: View {
                 }
             }
         }
+        // ĐÂY LÀ PHẦN SỬA ĐỔI: Gọi BookingView của bạn thay vì WebView Google
         .sheet(isPresented: $showBookingSheet) {
-            NavigationStack {
-                WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))")
-                    .ignoresSafeArea()
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Đóng") { showBookingSheet = false }
-                        }
-                    }
-            }
+            BookingView(cinemas: movie.cinemas)
+                .presentationDetents([.medium, .large])
         }
     }
-}
-
-struct WebView: UIViewRepresentable {
-    let urlString: String
-    
-    func makeUIView(context: Context) -> WKWebView {
-        let wv = WKWebView()
-        wv.backgroundColor = .black
-        wv.isOpaque = false
-        if let url = URL(string: urlString) {
-            wv.load(URLRequest(url: url))
-        }
-        return wv
-    }
-    
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
