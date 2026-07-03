@@ -14,43 +14,31 @@ struct MainTabView: View {
                 LibraryView().tag(2)
             }
             
-            // Thanh tab kiểu Telegram/iOS 27 - mỏng, tràn đáy, không khung
-            HStack(spacing: 0) {
-                Spacer()
+            // 3 nút đơn, không nền, không khung
+            HStack(spacing: 40) {
                 TabButton(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
                     selectedTab = 0
                 }
-                Spacer()
-                Spacer()
-                Spacer()
+                
+                // Search
+                Button {
+                    showSearch = true
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                        Text("Search")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                
                 TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
                     selectedTab = 2
                 }
-                Spacer()
             }
-            .padding(.bottom, 25)
-            .padding(.top, 10)
-            .background(
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .ignoresSafeArea(edges: .bottom)
-            )
-            
-            // Nút Search nổi
-            Button {
-                showSearch = true
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
-                    )
-            }
-            .offset(y: -28)
+            .padding(.bottom, 30)
         }
         .sheet(isPresented: $showSearch) {
             SearchView()
@@ -75,6 +63,5 @@ struct TabButton: View {
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
             }
         }
-        .animation(.spring(response: 0.3), value: isSelected)
     }
 }
