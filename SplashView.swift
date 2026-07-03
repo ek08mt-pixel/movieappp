@@ -6,20 +6,31 @@ struct SplashView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Background blur với poster mờ
+            ZStack {
+                Color.black
+                
+                HStack(spacing: 8) {
+                    ForEach(0..<3) { _ in
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 90, height: 135)
+                    }
+                }
+                .blur(radius: 20)
+                .opacity(0.4)
+            }
+            .ignoresSafeArea()
             
             VStack(spacing: 16) {
+                // Icon đầu mèo
                 ZStack {
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 90, height: 90)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                        .frame(width: 80, height: 80)
                     
-                    Image(systemName: "play.rectangle.fill")
-                        .font(.system(size: 42))
+                    Image(systemName: "cat.fill")
+                        .font(.system(size: 40))
                         .foregroundColor(.white.opacity(0.8))
                 }
                 .scaleEffect(scale)
@@ -29,7 +40,7 @@ struct SplashView: View {
                     .foregroundColor(.white)
                     .tracking(4)
                 
-                Text("Tìm Phim Cùng Em Mew Nha")
+                Text("Tìm Phim Hay Cùng Em Mew Nha")
                     .font(.system(size: 14))
                     .foregroundColor(.gray.opacity(0.6))
             }
