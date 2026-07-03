@@ -31,7 +31,7 @@ struct SplashView: View {
                     .foregroundColor(.white)
                     .tracking(4)
                 
-                Text(Tìm Phim Hay Cùng Em Mew Nha")
+                Text("Tìm Phim Hay Cùng Em Mew Nha")
                     .font(.system(size: 14))
                     .foregroundColor(.gray.opacity(0.7))
             }
