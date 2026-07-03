@@ -54,22 +54,33 @@ jobs:
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # Gom tất cả file .swift
-          SOURCES=$(find . -name "*.swift" -type f)
-          echo "Sources found:"
-          echo "$SOURCES"
-          
-          # Build 1 lần tất cả files
           swiftc \
             -sdk "$SDK" \
-            -target arm64-apple-ios16.0
+            -target arm64-apple-ios16.0 \
             -parse-as-library \
             -module-name PhimHay \
             -o Payload/PhimHay.app/PhimHay \
-            $SOURCES \
+            MovieApp.swift \
+            ContentView.swift \
+            Models.swift \
+            APIService.swift \
+            Views/HomeView.swift \
+            Views/HeroBanner.swift \
+            Views/MovieCard.swift \
+            Views/MovieSection.swift \
+            Views/SearchView.swift \
+            Views/HistoryView.swift \
+            Views/ProfileView.swift \
+            Views/LoginView.swift \
+            Views/MovieDetailView.swift \
+            Views/ActorDetailView.swift \
+            Views/MovieListView.swift \
+            ViewModels/HomeViewModel.swift \
+            ViewModels/SearchViewModel.swift \
+            ViewModels/MovieDetailViewModel.swift \
             -Xlinker -dead_strip
           
-          echo "Binary created:"
+          echo "Binary:"
           file Payload/PhimHay.app/PhimHay
       
       - name: Package IPA
