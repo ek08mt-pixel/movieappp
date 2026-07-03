@@ -1,13 +1,16 @@
 import Foundation
 
 class HomeViewModel: ObservableObject {
-    @Published var nowPlayingMovies: [Movie] = []
     @Published var trendingMovies: [Movie] = []
-
+    @Published var nowPlayingMovies: [Movie] = []
+    
     @MainActor
     func loadMovies() async {
-        // Dữ liệu mẫu để đảm bảo app không bị trống
-        self.nowPlayingMovies = []
-        self.trendingMovies = []
+        do {
+            self.trendingMovies = try await APIService.shared.fetchTrending()
+            self.nowPlayingMovies = try await APIService.shared.fetchNowPlaying()
+        } catch {
+            print("Không thể tải dữ liệu: \(error)")
+        }
     }
 }
