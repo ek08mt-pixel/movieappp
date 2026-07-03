@@ -2,23 +2,31 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
-    @State private var scrollOffset: CGFloat = 0
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    HeroHeader(movies: vm.trending)
-                    
-                    VStack(spacing: 28) {
-                        GenreRow(genres: vm.genres)
-                        
-                        PosterSection(title: "🔥 Xu hướng", movies: vm.trending)
-                        BackdropSection(title: "🎬 Đang chiếu", movies: vm.nowPlaying)
-                        PosterSection(title: "📅 Sắp chiếu", movies: vm.upcoming)
-                        PosterSection(title: "⭐ Đánh giá cao", movies: vm.topRated)
+            Group {
+                if vm.isLoading {
+                    VStack {
+                        ProgressView()
+                            .tint(.white.opacity(0.6))
+                            .scaleEffect(1.5)
                     }
-                    .padding(.top, 16)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            HeroHeader(movies: vm.trending)
+                            
+                            VStack(spacing: 28) {
+                                GenreRow(genres: vm.genres)
+                                PosterSection(title: "🔥 Xu hướng", movies: vm.trending)
+                                BackdropSection(title: "🎬 Đang chiếu", movies: vm.nowPlaying)
+                                PosterSection(title: "📅 Sắp chiếu", movies: vm.upcoming)
+                                PosterSection(title: "⭐ Đánh giá cao", movies: vm.topRated)
+                            }
+                            .padding(.top, 16)
+                        }
+                    }
                 }
             }
             .background(Color.black)
@@ -41,7 +49,7 @@ struct HeroHeader: View {
                         if let image = phase.image {
                             image.resizable().aspectRatio(contentMode: .fill)
                         } else {
-                            Rectangle().fill(Color.gray.opacity(0.15))
+                            Rectangle().fill(Color.gray.opacity(0.1))
                         }
                     }
                     .frame(height: 520)
@@ -56,22 +64,17 @@ struct HeroHeader: View {
                         Spacer()
                         
                         HStack(spacing: 6) {
-                            Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
+                            Image(systemName: "star.fill").foregroundColor(.white.opacity(0.6)).font(.caption)
                             Text(movie.ratingText).foregroundColor(.white).font(.caption).bold()
                             Text("•").foregroundColor(.gray)
                             Text(movie.yearText).foregroundColor(.gray).font(.caption)
-                            Text("•").foregroundColor(.gray)
-                            Text("Phim lẻ").foregroundColor(.gray).font(.caption)
                         }
                         
                         Text(movie.title)
-                            .font(.system(size: 32, weight: .heavy))
-                            .foregroundColor(.white)
+                            .font(.system(size: 32, weight: .heavy)).foregroundColor(.white)
                         
                         Text(movie.overview)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                            .lineLimit(2)
+                            .font(.subheadline).foregroundColor(.gray).lineLimit(2)
                         
                         HStack(spacing: 12) {
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
@@ -80,9 +83,9 @@ struct HeroHeader: View {
                                     Text("Xem Trailer")
                                 }
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                                 .padding(.horizontal, 22).padding(.vertical, 11)
-                                .background(Color.orange)
+                                .background(.ultraThinMaterial)
                                 .clipShape(Capsule())
                             }
                             
@@ -110,7 +113,7 @@ struct HeroHeader: View {
             HStack(spacing: 6) {
                 ForEach(0..<min(movies.count, 5), id: \.self) { i in
                     Capsule()
-                        .fill(i == currentIndex ? Color.orange : Color.white.opacity(0.3))
+                        .fill(i == currentIndex ? Color.white : Color.white.opacity(0.3))
                         .frame(width: i == currentIndex ? 20 : 6, height: 6)
                         .animation(.spring(), value: currentIndex)
                 }
@@ -134,9 +137,9 @@ struct GenreRow: View {
                 ForEach(genres.prefix(8)) { g in
                     Text(g.name)
                         .font(.caption).fontWeight(.medium)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(.white.opacity(0.7))
                         .padding(.horizontal, 14).padding(.vertical, 7)
-                        .background(Capsule().fill(Color.white.opacity(0.08)).overlay(Capsule().stroke(Color.white.opacity(0.1))))
+                        .background(Capsule().fill(.ultraThinMaterial))
                 }
             }
             .padding(.horizontal, 20)
@@ -169,12 +172,11 @@ struct PosterSection: View {
                                     }
                                     .frame(width: 145, height: 218)
                                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                                    .shadow(color: .black.opacity(0.4), radius: 5, y: 2)
                                     
                                     Text(movie.title).font(.caption).fontWeight(.semibold).foregroundColor(.white).lineLimit(1).frame(width: 145)
                                     
                                     HStack(spacing: 3) {
-                                        Image(systemName: "star.fill").font(.system(size: 8)).foregroundColor(.yellow)
+                                        Image(systemName: "star.fill").font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
                                         Text(movie.ratingText).font(.system(size: 10)).foregroundColor(.gray)
                                     }
                                 }
@@ -213,7 +215,6 @@ struct BackdropSection: View {
                                     }
                                     .frame(width: 260, height: 146)
                                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                                    .shadow(color: .black.opacity(0.4), radius: 5, y: 2)
                                     
                                     Text(movie.title).font(.caption).fontWeight(.semibold).foregroundColor(.white).lineLimit(1).frame(width: 260)
                                 }
