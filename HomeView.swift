@@ -32,10 +32,10 @@ struct HomeView: View {
                                             
                                             VStack(alignment: .leading, spacing: 6) {
                                                 Text(movie.title)
-    .font(.system(size: 28, weight: .heavy))
-    .foregroundColor(.white)
-    .lineLimit(2)
-    .padding(.trailing, 40)
+                                                    .font(.system(size: 26, weight: .heavy))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(2)
+                                                    .padding(.trailing, 30)
                                                 HStack {
                                                     Image(systemName: "star.fill").foregroundColor(.white.opacity(0.6)).font(.caption)
                                                     Text(movie.ratingText).foregroundColor(.white).font(.caption)
@@ -51,32 +51,26 @@ struct HomeView: View {
                             .frame(height: 450)
                             
                             // Genre Row
-                            ScrollView(.horizontal, showsIndicators: false) {
-    HStack(spacing: 10) {
-        ForEach(vm.genres.prefix(10)) { g in
-            NavigationLink(destination: MovieListView(title: g.name, movies: [])) {
-                Text(g.name)
-                    .font(.caption).fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .background(Capsule().fill(.ultraThinMaterial))
-            }
-        }
-    }
-    .padding(.horizontal, 20)
-}
+                            if !vm.genres.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(vm.genres.prefix(10)) { g in
+                                            Text(g.name)
+                                                .font(.caption).fontWeight(.medium)
+                                                .foregroundColor(.white.opacity(0.7))
+                                                .padding(.horizontal, 14).padding(.vertical, 7)
+                                                .background(Capsule().fill(.ultraThinMaterial))
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                }
+                                .padding(.vertical, 12)
                             }
                             
-                            // Section: Trending
+                            // Sections
                             MovieSection(title: "🔥 Xu hướng", movies: vm.trending)
-                            
-                            // Section: Now Playing
                             MovieSection(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying)
-                            
-                            // Section: Upcoming
                             MovieSection(title: "📅 Sắp chiếu", movies: vm.upcoming)
-                            
-                            // Section: Top Rated
                             MovieSection(title: "⭐ Đánh giá cao", movies: vm.topRated)
                             
                             Spacer().frame(height: 120)
@@ -90,23 +84,22 @@ struct HomeView: View {
     }
 }
 
-// Section component
 struct MovieSection: View {
     let title: String
     let movies: [Movie]
     
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(title)
-                    .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                    .font(.headline).fontWeight(.bold).foregroundColor(.white)
                     .padding(.horizontal, 20)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 14) {
+                    HStack(spacing: 12) {
                         ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                VStack(spacing: 6) {
+                                VStack(spacing: 5) {
                                     AsyncImage(url: movie.posterURL) { phase in
                                         if let image = phase.image {
                                             image.resizable().aspectRatio(contentMode: .fill)
@@ -114,16 +107,16 @@ struct MovieSection: View {
                                             Rectangle().fill(Color.gray.opacity(0.08))
                                         }
                                     }
-                                    .frame(width: 145, height: 218)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .frame(width: 120, height: 180)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                     
                                     Text(movie.title)
-                                        .font(.caption).fontWeight(.semibold).foregroundColor(.white)
-                                        .lineLimit(1).frame(width: 145)
+                                        .font(.system(size: 11)).fontWeight(.medium).foregroundColor(.white)
+                                        .lineLimit(1).frame(width: 120)
                                     
                                     HStack(spacing: 3) {
-                                        Image(systemName: "star.fill").font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
-                                        Text(movie.ratingText).font(.system(size: 10)).foregroundColor(.gray)
+                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.white.opacity(0.5))
+                                        Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
                                     }
                                 }
                             }
@@ -132,7 +125,7 @@ struct MovieSection: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .padding(.top, 24)
+            .padding(.top, 20)
         }
     }
 }
