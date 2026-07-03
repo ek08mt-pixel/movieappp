@@ -12,10 +12,8 @@ jobs:
         run: |
           mkdir -p App
           
-          # Copy tất cả file Swift TRỪ MovieApp.swift (vì đã có AppEntry.swift thay thế)
           find . -name "*.swift" -not -name "MovieApp.swift" -exec cp {} App/ \;
           
-          # Info.plist
           cat > App/Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -34,9 +32,17 @@ jobs:
           </dict></plist>
           EOF
           
-          # File AppEntry thay thế MovieApp.swift
           cat > App/AppEntry.swift << 'EOF'
           import SwiftUI
+          
+          class AppState: ObservableObject {
+              @Published var favorites: [Movie] = []
+              @Published var watchHistory: [Movie] = []
+              @Published var searchHistory: [String] = []
+              @Published var isLoggedIn = false
+              @Published var userName = ""
+          }
+          
           @main struct AppEntry: App {
               @StateObject var appState = AppState()
               var body: some Scene {
