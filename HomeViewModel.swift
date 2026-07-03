@@ -3,14 +3,15 @@ import Foundation
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var trending: [Movie] = []
-    @Published var upcoming: [Movie] = []
-    @Published var nowPlaying: [Movie] = []
-    @Published var topRated: [Movie] = []
-    @Published var genres: [Genre] = []
-    @Published var isLoading = false
+    @Published var isLoading = true
     
     func loadAll() async {
-        // Tạm tắt API để test
+        isLoading = true
+        do {
+            trending = try await APIService.shared.trending()
+        } catch {
+            trending = []
+        }
         isLoading = false
     }
 }
