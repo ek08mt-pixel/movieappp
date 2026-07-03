@@ -4,52 +4,44 @@ struct MainTabView: View {
     @State private var selectedTab: String = "home"
     
     init() {
-        // Ẩn thanh Tab Bar mặc định của hệ thống
+        // Ẩn thanh Tab Bar hệ thống để thay thế bằng custom bar
         UITabBar.appearance().isHidden = true
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Lớp dưới: TabView ẩn để giữ trạng thái các View không bị load lại
-            TabView(selection: $selectedTab) {
-                HomeView()
-                    .tag("home")
-                
-                SearchView()
-                    .tag("search")
-                
-                LibraryView()
-                    .tag("library")
+            // Lớp nội dung: Sử dụng ZStack để chứa các view, 
+            // dùng opacity để ẩn/hiện giúp giữ trạng thái (không bị load lại)
+            ZStack {
+                HomeView().opacity(selectedTab == "home" ? 1 : 0)
+                SearchView().opacity(selectedTab == "search" ? 1 : 0)
+                LibraryView().opacity(selectedTab == "library" ? 1 : 0)
             }
-            
-            // Lớp trên: Floating Tab Bar tùy chỉnh
-            HStack(spacing: 0) {
-                TabButton(icon: "house.fill", title: "Home", tab: "home", selectedTab: $selectedTab)
+            .padding(.bottom, 80) // Đẩy nội dung lên để không bị Tab Bar che
+
+            // Floating Tab Bar
+            HStack {
+                TabButton(icon: "house.fill", tab: "home", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "magnifyingglass", title: "Search", tab: "search", selectedTab: $selectedTab)
+                TabButton(icon: "magnifyingglass", tab: "search", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "square.grid.2x2.fill", title: "Library", tab: "library", selectedTab: $selectedTab)
+                TabButton(icon: "square.grid.2x2.fill", tab: "library", selectedTab: $selectedTab)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 30)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 40)
             .background(
-                RoundedRectangle(cornerRadius: 35)
-                    .fill(Color.black.opacity(0.8))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 35)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5) // Viền cực mỏng
-                    )
+                Capsule() // Dùng hình con nhộng cho Telegram style
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
             )
-            .padding(.horizontal, 25)
-            .padding(.bottom, 25)
+            .padding(.horizontal, 30)
+            .padding(.bottom, 20) // Khoảng cách trôi nổi so với đáy
         }
     }
 }
 
-// Nút Tab tùy chỉnh
 struct TabButton: View {
     let icon: String
-    let title: String
     let tab: String
     @Binding var selectedTab: String
     
@@ -60,9 +52,8 @@ struct TabButton: View {
             }
         }) {
             Image(systemName: icon)
-                .font(.system(size: 20))
+                .font(.system(size: 22))
                 .foregroundColor(selectedTab == tab ? .white : .gray)
-                .padding(10)
         }
     }
 }
