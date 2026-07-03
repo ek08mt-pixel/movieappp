@@ -5,7 +5,7 @@ struct MainTabView: View {
     @State private var showSearch = false
     
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.black.ignoresSafeArea()
             
             TabView(selection: $selectedTab) {
@@ -14,54 +14,50 @@ struct MainTabView: View {
                 LibraryView().tag(2)
             }
             
-            // 3 nút đơn, không nền, không khung
-            HStack(spacing: 40) {
-                TabButton(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
-                    selectedTab = 0
-                }
-                
-                // Search
-                Button {
-                    showSearch = true
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white.opacity(0.8))
-                        Text("Search")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.5))
+            VStack {
+                Spacer()
+                HStack(spacing: 50) {
+                    Button {
+                        selectedTab = 0
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 22, weight: selectedTab == 0 ? .bold : .regular))
+                            Text("Home")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(selectedTab == 0 ? .white : .gray.opacity(0.5))
+                    }
+                    
+                    Button {
+                        showSearch = true
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 22, weight: .bold))
+                            Text("Search")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Button {
+                        selectedTab = 2
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "square.grid.2x2.fill")
+                                .font(.system(size: 22, weight: selectedTab == 2 ? .bold : .regular))
+                            Text("Library")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(selectedTab == 2 ? .white : .gray.opacity(0.5))
                     }
                 }
-                
-                TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
-                    selectedTab = 2
-                }
+                .padding(.bottom, 35)
             }
-            .padding(.bottom, 30)
         }
         .sheet(isPresented: $showSearch) {
             SearchView()
-        }
-    }
-}
-
-struct TabButton: View {
-    let icon: String
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-                Text(title)
-                    .font(.system(size: 10))
-                    .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-            }
         }
     }
 }
