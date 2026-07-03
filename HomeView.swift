@@ -31,7 +31,11 @@ struct HomeView: View {
                                             LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom)
                                             
                                             VStack(alignment: .leading, spacing: 6) {
-                                                Text(movie.title).font(.title).fontWeight(.heavy).foregroundColor(.white)
+                                                Text(movie.title)
+    .font(.system(size: 28, weight: .heavy))
+    .foregroundColor(.white)
+    .lineLimit(2)
+    .padding(.trailing, 40)
                                                 HStack {
                                                     Image(systemName: "star.fill").foregroundColor(.white.opacity(0.6)).font(.caption)
                                                     Text(movie.ratingText).foregroundColor(.white).font(.caption)
