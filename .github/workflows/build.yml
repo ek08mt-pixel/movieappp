@@ -8,31 +8,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Project
+      - name: Create AppEntry
         run: |
-          mkdir -p App
-          
-          find . -name "*.swift" -not -name "MovieApp.swift" -exec cp {} App/ \;
-          
-          cat > App/Info.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-          <key>CFBundleExecutable</key><string>App</string>
-          <key>CFBundleIdentifier</key><string>com.phimhay.app</string>
-          <key>CFBundleName</key><string>Phim Hay</string>
-          <key>CFBundleVersion</key><string>1</string>
-          <key>CFBundleShortVersionString</key><string>1.0</string>
-          <key>CFBundlePackageType</key><string>APPL</string>
-          <key>LSRequiresIPhoneOS</key><true/>
-          <key>UILaunchScreen</key><dict/>
-          <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
-          <key>MinimumOSVersion</key><string>16.0</string>
-          <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
-          </dict></plist>
-          EOF
-          
-          cat > App/AppEntry.swift << 'EOF'
+          cat > AppEntry.swift << 'EOF'
           import SwiftUI
           
           class AppState: ObservableObject {
@@ -55,9 +33,13 @@ jobs:
           }
           EOF
       
-      - name: Build IPA
+      - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          # Gộp tất cả file .swift từ mọi thư mục
+          SWIFT_FILES=$(find . -name "*.swift" -not -name "MovieApp.swift" | tr '\n' ' ')
+          echo "Files: $SWIFT_FILES"
           
           xcrun -sdk iphoneos swiftc \
             -target arm64-apple-ios16.0 \
@@ -65,15 +47,35 @@ jobs:
             -framework SwiftUI \
             -framework UIKit \
             -framework Foundation \
-            -o App/App \
-            App/*.swift
+            -o App \
+            $SWIFT_FILES
           
+          echo "Binary size:"
+          ls -la App
+          file App
+      
+      - name: Package IPA
+        run: |
           mkdir -p Payload/PhimHay.app
-          cp App/App Payload/PhimHay.app/
-          cp App/Info.plist Payload/PhimHay.app/
+          cp App Payload/PhimHay.app/
           
-          file Payload/PhimHay.app/App
-          ls -la Payload/PhimHay.app/
+          cat > Payload/PhimHay.app/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>CFBundleExecutable</key><string>App</string>
+          <key>CFBundleIdentifier</key><string>com.phimhay.app</string>
+          <key>CFBundleName</key><string>Phim Hay</string>
+          <key>CFBundleVersion</key><string>1</string>
+          <key>CFBundleShortVersionString</key><string>1.0</string>
+          <key>CFBundlePackageType</key><string>APPL</string>
+          <key>LSRequiresIPhoneOS</key><true/>
+          <key>UILaunchScreen</key><dict/>
+          <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
+          <key>MinimumOSVersion</key><string>16.0</string>
+          <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+          </dict></plist>
+          EOF
           
           cd Payload && zip -r ../PhimHay.ipa . && cd ..
           ls -la PhimHay.ipa
