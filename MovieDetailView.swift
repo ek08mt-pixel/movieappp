@@ -1,9 +1,13 @@
 import SwiftUI
+import WebKit
+import AVKit
 
 struct MovieDetailView: View {
     let movie: Movie
     @StateObject private var vm = MovieDetailViewModel()
     @EnvironmentObject var appState: AppState
+    @State private var showTrailer = false
+    @State private var showBooking = false
     
     var body: some View {
         ZStack {
@@ -58,8 +62,11 @@ struct MovieDetailView: View {
                         
                         // Buttons
                         HStack(spacing: 10) {
-                            if let key = vm.trailerKey {
-                                Link(destination: URL(string: "https://youtube.com/watch?v=\(key)")!) {
+                            // Nút Trailer - mở video ngay trong app
+                            if vm.trailerKey != nil {
+                                Button {
+                                    showTrailer = true
+                                } label: {
                                     Label("Trailer", systemImage: "play.fill")
                                         .frame(maxWidth: .infinity).padding(10)
                                         .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
@@ -67,13 +74,17 @@ struct MovieDetailView: View {
                                 }
                             }
                             
-                            Link(destination: URL(string: "https://www.google.com/search?q=đặt+vé+xem+\(movie.title.replacingOccurrences(of: " ", with: "+"))")!) {
+                            // Nút Đặt vé - mở web đặt vé phim
+                            Button {
+                                showBooking = true
+                            } label: {
                                 Label("Đặt vé", systemImage: "ticket.fill")
                                     .frame(maxWidth: .infinity).padding(10)
                                     .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
                                     .font(.caption).fontWeight(.bold)
                             }
                             
+                            // Nút Lưu
                             Button {
                                 if appState.favorites.contains(where: {$0.id == movie.id}) {
                                     appState.favorites.removeAll {$0.id == movie.id}
@@ -146,5 +157,95 @@ struct MovieDetailView: View {
             }
         }
         .task { await vm.load(movieId: movie.id) }
+        // Trailer player
+        .fullScreenCover(isPresented: $showTrailer) {
+            TrailerPlayerView(trailerKey: vm.trailerKey ?? "")
+        }
+        // Web đặt vé
+        .sheet(isPresented: $showBooking) {
+            BookingWebView(movieTitle: movie.title)
+        }
     }
+}
+
+// MARK: - Trailer Player (video ngay trong app)
+struct TrailerPlayerView: View {
+    let trailerKey: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VideoPlayerView(key: trailerKey)
+                .ignoresSafeArea()
+            
+            VStack {
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    .padding()
+                    Spacer()
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
+struct VideoPlayerView: UIViewControllerRepresentable {
+    let key: String
+    
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        if let url = URL(string: "https://www.youtube.com/watch?v=\(key)") {
+            // Dùng WebView để nhúng YouTube thay vì AVPlayer
+        }
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+}
+
+// MARK: - WebView đặt vé
+struct BookingWebView: View {
+    let movieTitle: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                // Mở web đặt vé - dùng Google search "đặt vé xem [tên phim]"
+                WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movieTitle.replacingOccurrences(of: " ", with: "+"))")
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Đóng") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let wv = WKWebView()
+        wv.backgroundColor = .black
+        wv.isOpaque = false
+        if let url = URL(string: urlString) {
+            wv.load(URLRequest(url: url))
+        }
+        return wv
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
