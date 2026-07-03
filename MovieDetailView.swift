@@ -13,17 +13,16 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // ... (Phần trên giữ nguyên như cũ) ...
+                    // ... các thành phần giao diện khác ...
                     
-                    // Nút Đặt vé
                     Button { showBookingSheet = true } label: {
                         Label("Đặt vé", systemImage: "ticket.fill")
                             .frame(maxWidth: .infinity).padding(10)
                             .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
                     }
                     .padding(.horizontal)
-
-                    // PHẦN PHIM TƯƠNG TỰ (Đã sửa lại để không bị gộp)
+                    
+                    // Phần phim tương tự
                     if !vm.similar.isEmpty {
                         Text("Phim tương tự").font(.headline).foregroundColor(.white).padding(.horizontal)
                         ScrollView(.horizontal, showsIndicators: false) {
