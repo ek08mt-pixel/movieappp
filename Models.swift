@@ -28,6 +28,9 @@ struct Movie: Codable, Identifiable, Hashable {
     let adult: Bool?
     let originalLanguage: String?
     
+    // Đã thêm biến này vào để chứa danh sách rạp
+    var cinemas: [Cinema] = []
+    
     enum CodingKeys: String, CodingKey {
         case id, title, overview, adult, popularity
         case posterPath = "poster_path"
@@ -65,6 +68,13 @@ struct Movie: Codable, Identifiable, Hashable {
     
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
     static func == (lhs: Movie, rhs: Movie) -> Bool { lhs.id == rhs.id }
+}
+
+// MARK: - Cinema (Đặt vé)
+struct Cinema: Identifiable, Hashable {
+    let id = UUID()
+    let name: String
+    let bookingURL: String
 }
 
 // MARK: - Actor
@@ -118,9 +128,4 @@ struct Video: Codable {
     let site: String
     let type: String
     let name: String?
-}
-struct Cinema: Identifiable {
-    let id = UUID()
-    let name: String
-    let bookingURL: String
 }
