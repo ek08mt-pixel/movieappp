@@ -54,7 +54,7 @@ struct MovieDetailView: View {
                         }
                         
                         HStack(spacing: 10) {
-                            if let key = vm.trailerKey {
+                            if vm.trailerKey != nil {
                                 Button {
                                     showTrailer = true
                                 } label: {
@@ -182,12 +182,16 @@ struct MovieDetailView: View {
 
 struct WebView: UIViewRepresentable {
     let urlString: String
-    func makeUIViewController(context: Context) -> WKWebView {
+    
+    func makeUIView(context: Context) -> WKWebView {
         let wv = WKWebView()
         wv.backgroundColor = .black
         wv.isOpaque = false
-        if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }
+        if let url = URL(string: urlString) {
+            wv.load(URLRequest(url: url))
+        }
         return wv
     }
-    func updateUIViewController(_ uiView: WKWebView, context: Context) {}
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
