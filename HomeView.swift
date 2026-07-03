@@ -1,21 +1,18 @@
-import Foundation
+import SwiftUI
 
-class HomeViewModel: ObservableObject {
-    @Published var trendingMovies: [Movie] = []
-    @Published var nowPlayingMovies: [Movie] = []
+struct HomeView: View {
+    @StateObject var vm = HomeViewModel()
     
-    @MainActor
-    func loadMovies() async {
-        do {
-            // Đảm bảo bạn bỏ dấu // ở 2 dòng dưới đây
-            let trending = try await APIService.shared.fetchTrending()
-            let nowPlaying = try await APIService.shared.fetchNowPlaying()
-            
-            // Gán dữ liệu vào biến @Published
-            self.trendingMovies = trending
-            self.nowPlayingMovies = nowPlaying
-        } catch {
-            print("Lỗi khi tải dữ liệu: \(error)")
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            ScrollView {
+                VStack {
+                    Text("Xu hướng").foregroundColor(.white).padding()
+                    // Các nội dung khác
+                }
+            }
         }
+        .task { await vm.loadMovies() }
     }
 }
