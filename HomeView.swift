@@ -51,20 +51,20 @@ struct HomeView: View {
                             .frame(height: 450)
                             
                             // Genre Row
-                            if !vm.genres.isEmpty {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        ForEach(vm.genres.prefix(10)) { g in
-                                            Text(g.name)
-                                                .font(.caption).fontWeight(.medium)
-                                                .foregroundColor(.white.opacity(0.7))
-                                                .padding(.horizontal, 14).padding(.vertical, 7)
-                                                .background(Capsule().fill(.ultraThinMaterial))
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                }
-                                .padding(.vertical, 12)
+                            ScrollView(.horizontal, showsIndicators: false) {
+    HStack(spacing: 10) {
+        ForEach(vm.genres.prefix(10)) { g in
+            NavigationLink(destination: MovieListView(title: g.name, movies: [])) {
+                Text(g.name)
+                    .font(.caption).fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.horizontal, 14).padding(.vertical, 7)
+                    .background(Capsule().fill(.ultraThinMaterial))
+            }
+        }
+    }
+    .padding(.horizontal, 20)
+}
                             }
                             
                             // Section: Trending
