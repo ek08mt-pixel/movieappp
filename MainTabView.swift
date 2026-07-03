@@ -9,66 +9,59 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // 1. Lớp nội dung chính (Dùng ZStack + opacity để không bị load lại)
+            // Lớp nội dung (không bị load lại)
             ZStack {
-                HomeView()
-                    .opacity(selectedTab == "home" ? 1 : 0)
-                
-                SearchView()
-                    .opacity(selectedTab == "search" ? 1 : 0)
-                
-                LibraryView()
-                    .opacity(selectedTab == "library" ? 1 : 0)
+                HomeView().opacity(selectedTab == "home" ? 1 : 0)
+                SearchView().opacity(selectedTab == "search" ? 1 : 0)
+                LibraryView().opacity(selectedTab == "library" ? 1 : 0)
             }
-            .padding(.bottom, 90) // Đẩy nội dung lên cao để không bị che bởi tab bar
+            .padding(.bottom, 80) // Khoảng cách để nội dung không bị che
 
-            // 2. Floating Tab Bar (Custom)
+            // Floating Tab Bar style Telegram
             HStack(spacing: 0) {
                 Spacer()
-                TabButton(icon: "house.fill", title: "Home", tab: "home", selectedTab: $selectedTab)
+                TabButton(icon: "house.fill", tab: "home", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "magnifyingglass", title: "Search", tab: "search", selectedTab: $selectedTab)
+                TabButton(icon: "magnifyingglass", tab: "search", selectedTab: $selectedTab)
                 Spacer()
-                TabButton(icon: "square.grid.2x2.fill", title: "Library", tab: "library", selectedTab: $selectedTab)
+                TabButton(icon: "square.grid.2x2.fill", tab: "library", selectedTab: $selectedTab)
                 Spacer()
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 8) // Độ dày của thanh - giữ thấp để trông mỏng
             .background(
                 ZStack {
-                    // Hiệu ứng mờ Telegram
-                    Color.black.opacity(0.3)
-                        .background(.ultraThinMaterial)
-                    
-                    // Viền mảnh tinh tế
-                    RoundedRectangle(cornerRadius: 30)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    // Hiệu ứng mờ kiểu Telegram (trong suốt, không đục)
+                    Color.clear.background(.ultraThinMaterial)
                 }
             )
-            .cornerRadius(30)
-            .padding(.horizontal, 50) // Khoảng cách hai bên giúp tab bar mảnh hơn
-            .padding(.bottom, 25) // Khoảng cách trôi nổi so với đáy
-            .shadow(color: .black.opacity(0.4), radius: 15, x: 0, y: 10)
+            .clipShape(Capsule()) // Bo tròn hai đầu theo kiểu viên thuốc
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.3) // Viền cực mỏng
+            )
+            .padding(.horizontal, 70) // Độ rộng ngang - thu hẹp để trông thanh thoát
+            .padding(.bottom, 20) // Khoảng cách trôi nổi so với đáy
+            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
         }
     }
 }
 
-// Nút bấm cho tab
 struct TabButton: View {
     let icon: String
-    let title: String
     let tab: String
     @Binding var selectedTab: String
     
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 selectedTab = tab
             }
         }) {
             Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(selectedTab == tab ? .white : .gray.opacity(0.7))
-                .padding(10)
+                .font(.system(size: 20, weight: .medium)) // Icon nhỏ vừa phải
+                .foregroundColor(selectedTab == tab ? .white : .gray)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 15)
         }
     }
 }
