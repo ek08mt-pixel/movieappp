@@ -4,6 +4,7 @@ struct SearchView: View {
     @StateObject private var vm = SearchViewModel()
     @FocusState private var focused: Bool
     @Environment(\.dismiss) var dismiss
+    @State private var selectedMovie: Movie?
     
     var body: some View {
         NavigationStack {
@@ -15,14 +16,12 @@ struct SearchView: View {
                         TextField("Tìm phim...", text: $vm.query)
                             .focused($focused).foregroundColor(.white)
                             .onChange(of: vm.query) { newValue in
-                                if newValue.count >= 2 {
-                                    Task { await vm.search() }
-                                } else {
-                                    vm.results = []
-                                }
+                                Task { await vm.search() }
                             }
                         if !vm.query.isEmpty {
-                            Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) }
+                            Button { vm.query = "" } label: {
+                                Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
+                            }
                         }
                     }
                     .padding(12)
@@ -44,7 +43,9 @@ struct SearchView: View {
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(vm.results) { movie in
-                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                    Button {
+                                        selectedMovie = movie
+                                    } label: {
                                         HStack(spacing: 12) {
                                             AsyncImage(url: movie.posterURL) { phase in
                                                 if let image = phase.image {
@@ -58,14 +59,15 @@ struct SearchView: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(movie.title).foregroundColor(.white).font(.subheadline).fontWeight(.semibold).lineLimit(2)
                                                 HStack {
-                                                    Image(systemName: "star.fill").foregroundColor(.white.opacity(0.5)).font(.caption2)
+                                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption2)
                                                     Text(movie.ratingText).foregroundColor(.gray).font(.caption2)
-                                                    Text("•").foregroundColor(.gray).font(.caption2)
+                                                    Text("•").foregroundColor(.gray)
                                                     Text(movie.yearText).foregroundColor(.gray).font(.caption2)
                                                 }
                                             }
                                             Spacer()
-                                        }.padding(.horizontal).padding(.vertical, 6)
+                                        }
+                                        .padding(.horizontal).padding(.vertical, 6)
                                     }
                                     Divider().background(Color.gray.opacity(0.2)).padding(.horizontal)
                                 }
@@ -80,6 +82,9 @@ struct SearchView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Đóng") { dismiss() }
                 }
+            }
+            .fullScreenCover(item: $selectedMovie) { movie in
+                MovieDetailView(movie: movie)
             }
         }
         .onAppear { focused = true }
