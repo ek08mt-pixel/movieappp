@@ -62,7 +62,7 @@ jobs:
           # Build 1 lần tất cả files
           swiftc \
             -sdk "$SDK" \
-            -target arm64-apple-ios15.0 \
+            -target arm64-apple-ios16.0
             -parse-as-library \
             -module-name PhimHay \
             -o Payload/PhimHay.app/PhimHay \
