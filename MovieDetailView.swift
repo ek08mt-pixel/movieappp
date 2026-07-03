@@ -87,15 +87,60 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // ... Phần diễn viên và phim tương tự của bạn ...
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.headline).foregroundColor(.white)
-                            // (Code cũ của bạn ở đây)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 14) {
+                                    ForEach(vm.actors.prefix(15)) { actor in
+                                        NavigationLink(destination: ActorDetailView(actor: actor)) {
+                                            VStack(spacing: 4) {
+                                                AsyncImage(url: actor.profileURL) { phase in
+                                                    if let image = phase.image {
+                                                        image.resizable().aspectRatio(contentMode: .fill)
+                                                    } else {
+                                                        Circle().fill(Color.gray.opacity(0.1))
+                                                    }
+                                                }
+                                                .frame(width: 60, height: 60).clipShape(Circle())
+                                                Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         
                         if !vm.similar.isEmpty {
                             Text("Phim tương tự").font(.headline).foregroundColor(.white)
-                            // (Code cũ của bạn ở đây)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHGrid(rows: [GridItem(.fixed(165)), GridItem(.fixed(165))], spacing: 10) {
+                                    ForEach(vm.similar.prefix(12)) { m in
+                                        NavigationLink(destination: MovieDetailView(movie: m)) {
+                                            ZStack(alignment: .bottom) {
+                                                AsyncImage(url: m.posterURL) { phase in
+                                                    if let image = phase.image {
+                                                        image.resizable().aspectRatio(contentMode: .fill)
+                                                    } else {
+                                                        Rectangle().fill(Color.gray.opacity(0.08))
+                                                    }
+                                                }
+                                                .frame(width: 110, height: 165)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                
+                                                VStack(spacing: 2) {
+                                                    Text(m.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
+                                                }
+                                                .padding(.horizontal, 6).padding(.vertical, 6)
+                                                .frame(width: 110)
+                                                .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            }
+                                            .frame(width: 110, height: 165)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                            }
                         }
                     }
                     .padding(.horizontal, 20).padding(.top, 20)
@@ -123,7 +168,7 @@ struct MovieDetailView: View {
         }
     }
 }
-MovieDetailView.swift
+
 struct WebView: UIViewRepresentable {
     let urlString: String
     
