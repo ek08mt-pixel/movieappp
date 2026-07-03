@@ -9,13 +9,13 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Lớp nội dung (không bị load lại)
+            // Lớp nội dung: Sử dụng opacity để giữ trạng thái view (không load lại)
             ZStack {
                 HomeView().opacity(selectedTab == "home" ? 1 : 0)
                 SearchView().opacity(selectedTab == "search" ? 1 : 0)
                 LibraryView().opacity(selectedTab == "library" ? 1 : 0)
             }
-            .padding(.bottom, 80) // Khoảng cách để nội dung không bị che
+            .ignoresSafeArea(.all) // Cho phép nội dung tràn hết màn hình
 
             // Floating Tab Bar style Telegram
             HStack(spacing: 0) {
@@ -27,21 +27,21 @@ struct MainTabView: View {
                 TabButton(icon: "square.grid.2x2.fill", tab: "library", selectedTab: $selectedTab)
                 Spacer()
             }
-            .padding(.vertical, 8) // Độ dày của thanh - giữ thấp để trông mỏng
+            .padding(.vertical, 8)
             .background(
                 ZStack {
-                    // Hiệu ứng mờ kiểu Telegram (trong suốt, không đục)
-                    Color.clear.background(.ultraThinMaterial)
+                    // Hiệu ứng kính mờ
+                    Color.black.opacity(0.2)
+                        .background(.ultraThinMaterial)
                 }
             )
-            .clipShape(Capsule()) // Bo tròn hai đầu theo kiểu viên thuốc
+            .clipShape(Capsule())
             .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.3) // Viền cực mỏng
+                Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .padding(.horizontal, 70) // Độ rộng ngang - thu hẹp để trông thanh thoát
-            .padding(.bottom, 20) // Khoảng cách trôi nổi so với đáy
-            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+            .padding(.horizontal, 70) // Thu hẹp ngang để thanh bar mảnh hơn
+            .padding(.bottom, 25) // Khoảng cách trôi nổi so với đáy
+            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
         }
     }
 }
@@ -53,15 +53,14 @@ struct TabButton: View {
     
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 selectedTab = tab
             }
         }) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium)) // Icon nhỏ vừa phải
-                .foregroundColor(selectedTab == tab ? .white : .gray)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 15)
+                .font(.system(size: 20))
+                .foregroundColor(selectedTab == tab ? .white : .gray.opacity(0.8))
+                .padding(12)
         }
     }
 }
