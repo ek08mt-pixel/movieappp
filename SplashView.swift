@@ -6,23 +6,21 @@ struct SplashView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.05, green: 0.05, blue: 0.15), Color.black],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            Color.black.ignoresSafeArea()
             
             VStack(spacing: 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 28)
-                        .fill(LinearGradient(colors: [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(.ultraThinMaterial)
                         .frame(width: 90, height: 90)
-                        .shadow(color: .orange.opacity(0.5), radius: 20)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
                     
                     Image(systemName: "play.rectangle.fill")
                         .font(.system(size: 42))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.8))
                 }
                 .scaleEffect(scale)
                 
@@ -31,9 +29,9 @@ struct SplashView: View {
                     .foregroundColor(.white)
                     .tracking(4)
                 
-                Text("Tìm Phim Hay Cùng Em Mew Nha")
+                Text("Tìm Phim Cùng Em Mew Nha")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray.opacity(0.7))
+                    .foregroundColor(.gray.opacity(0.6))
             }
             .opacity(opacity)
         }
