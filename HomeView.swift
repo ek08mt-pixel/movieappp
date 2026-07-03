@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject private var vm = HomeViewModel()
-    @EnvironmentObject var appState: AppState
+    @StateObject var vm = HomeViewModel()
     
     var body: some View {
         NavigationStack {
