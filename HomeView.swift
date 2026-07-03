@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - HomeView
 struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
     @State private var currentIndex = 0
@@ -15,7 +14,7 @@ struct HomeView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
-                            // Hero Banner + Avatar
+                            // Hero Banner
                             ZStack(alignment: .topTrailing) {
                                 TabView(selection: $currentIndex) {
                                     ForEach(Array(vm.trending.prefix(5).enumerated()), id: \.element.id) { i, movie in
@@ -32,15 +31,16 @@ struct HomeView: View {
                                                 
                                                 LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom)
                                                 
-                                                VStack(alignment: .leading, spacing: 6) {
+                                                VStack(alignment: .leading, spacing: 4) {
                                                     Text(movie.title)
-                                                        .font(.system(size: 28, weight: .heavy))
+                                                        .font(.system(size: 24, weight: .heavy))
                                                         .foregroundColor(.white)
                                                         .lineLimit(2)
-                                                        .frame(maxWidth: 280, alignment: .leading)
-                                                    HStack {
-                                                        Image(systemName: "star.fill").foregroundColor(.white.opacity(0.6)).font(.caption)
-                                                        Text(movie.ratingText).foregroundColor(.white).font(.caption)
+                                                        .frame(maxWidth: 250, alignment: .leading)
+                                                        .shadow(color: .black.opacity(0.8), radius: 4)
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
+                                                        Text(movie.ratingText).foregroundColor(.white).font(.caption).bold()
                                                     }
                                                 }
                                                 .padding()
@@ -67,16 +67,18 @@ struct HomeView: View {
                                 .padding(.top, 50).padding(.trailing, 20)
                             }
                             
-                            // Genres
+                            // Genres - bấm được
                             if !vm.genres.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
                                         ForEach(vm.genres.prefix(10)) { g in
-                                            Text(g.name.replacingOccurrences(of: "Phim ", with: ""))
-                                                .font(.caption).fontWeight(.medium)
-                                                .foregroundColor(.white.opacity(0.7))
-                                                .padding(.horizontal, 14).padding(.vertical, 7)
-                                                .background(Capsule().fill(.ultraThinMaterial))
+                                            NavigationLink(destination: GenreMovieView(genre: g)) {
+                                                Text(g.name.replacingOccurrences(of: "Phim ", with: ""))
+                                                    .font(.caption).fontWeight(.medium)
+                                                    .foregroundColor(.white.opacity(0.7))
+                                                    .padding(.horizontal, 14).padding(.vertical, 7)
+                                                    .background(Capsule().fill(.ultraThinMaterial))
+                                            }
                                         }
                                     }
                                     .padding(.horizontal, 20)
@@ -89,8 +91,9 @@ struct HomeView: View {
                             SectionRow(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying)
                             SectionRow(title: "📅 Sắp chiếu", movies: vm.upcoming)
                             SectionRow(title: "⭐ Đánh giá cao", movies: vm.topRated)
+                            SectionRow(title: "🎯 Phổ biến", movies: vm.popular)
                             
-                            Spacer().frame(height: 120)
+                            Spacer().frame(height: 100)
                         }
                     }
                 }
@@ -101,7 +104,6 @@ struct HomeView: View {
     }
 }
 
-// MARK: - SectionRow
 struct SectionRow: View {
     let title: String
     let movies: [Movie]
@@ -109,13 +111,19 @@ struct SectionRow: View {
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 10) {
-                Text(title)
-                    .font(.headline).fontWeight(.bold).foregroundColor(.white)
-                    .padding(.horizontal, 20)
+                HStack {
+                    Text(title)
+                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
+                    Spacer()
+                    NavigationLink(destination: MovieListView(title: title, movies: movies)) {
+                        Text("Xem tất cả").font(.caption).foregroundColor(.gray)
+                    }
+                }
+                .padding(.horizontal, 20)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHGrid(rows: [GridItem(.fixed(165)), GridItem(.fixed(165))], spacing: 12) {
-                        ForEach(movies) { movie in
+                    LazyHStack(spacing: 12) {
+                        ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 VStack(spacing: 5) {
                                     AsyncImage(url: movie.posterURL) { phase in
@@ -125,12 +133,19 @@ struct SectionRow: View {
                                             Rectangle().fill(Color.gray.opacity(0.08))
                                         }
                                     }
-                                    .frame(width: 110, height: 165)
+                                    .frame(width: 120, height: 180)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .shadow(color: .black.opacity(0.3), radius: 4)
                                     
                                     Text(movie.title)
                                         .font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white)
-                                        .lineLimit(1).frame(width: 110)
+                                        .lineLimit(2).frame(width: 120, alignment: .leading)
+                                    
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                        Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
+                                    }
+                                    .frame(width: 120, alignment: .leading)
                                 }
                             }
                         }
@@ -138,7 +153,7 @@ struct SectionRow: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .padding(.top, 20)
+            .padding(.top, 24)
         }
     }
 }
