@@ -40,7 +40,8 @@ struct MainTabView: View {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 24, weight: .medium))
                                 .foregroundColor(.white.opacity(0.9))
-                                .symbolEffect(.bounce.up.byLayer, value: showSearch)
+                                .scaleEffect(showSearch ? 1.2 : 1.0)
+                                .animation(.spring(response: 0.3), value: showSearch)
                         }
                     }
                     .offset(y: -32)
@@ -65,7 +66,8 @@ struct TabIcon: View {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-                    .symbolEffect(.bounce.down.byLayer, value: isSelected)
+                    .scaleEffect(isSelected ? 1.2 : 1.0)
+                    .animation(.spring(response: 0.3), value: isSelected)
                 Text(title)
                     .font(.system(size: 9))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
