@@ -8,36 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Create AppEntry
-        run: |
-          cat > AppEntry.swift << 'EOF'
-          import SwiftUI
-          
-          class AppState: ObservableObject {
-              @Published var favorites: [Movie] = []
-              @Published var watchHistory: [Movie] = []
-              @Published var searchHistory: [String] = []
-              @Published var isLoggedIn = false
-              @Published var userName = ""
-          }
-          
-          @main struct AppEntry: App {
-              @StateObject var appState = AppState()
-              var body: some Scene {
-                  WindowGroup {
-                      ContentView()
-                          .environmentObject(appState)
-                          .preferredColorScheme(.dark)
-                  }
-              }
-          }
-          EOF
-      
       - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          SWIFT_FILES=$(find . -name "*.swift" -not -name "MovieApp.swift" | tr '\n' ' ')
+          SWIFT_FILES=$(find . -name "*.swift" | tr '\n' ' ')
           echo "Files: $SWIFT_FILES"
           
           xcrun -sdk iphoneos swiftc \
@@ -63,8 +38,9 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
           <key>CFBundleExecutable</key><string>App</string>
-          <key>CFBundleIdentifier</key><string>com.phimhay.app</string>
-          <key>CFBundleName</key><string>Phim Hay</string>
+          <key>CFBundleIdentifier</key><string>com.emmew.app</string>
+          <key>CFBundleName</key><string>EMCC</string>
+          <key>CFBundleDisplayName</key><string>EMCC</string>
           <key>CFBundleVersion</key><string>1</string>
           <key>CFBundleShortVersionString</key><string>1.0</string>
           <key>CFBundlePackageType</key><string>APPL</string>
@@ -76,10 +52,10 @@ jobs:
           </dict></plist>
           EOF
           
-          zip -r PhimHay.ipa Payload/
-          ls -la PhimHay.ipa
+          zip -r EMCC.ipa Payload/
+          ls -la EMCC.ipa
       
       - uses: actions/upload-artifact@v4
         with:
-          name: PhimHay-IPA
-          path: PhimHay.ipa
+          name: EMCC-IPA
+          path: EMCC.ipa
