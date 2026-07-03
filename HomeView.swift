@@ -39,7 +39,6 @@ struct HomeView: View {
                                 .frame(height: 450)
                                 .animation(.easeInOut(duration: 0.4), value: currentIndex)
                                 
-                                // Tên phim + rating dưới cùng
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(vm.trending.indices.contains(currentIndex) ? vm.trending[currentIndex].title : "")
                                         .font(.system(size: 28, weight: .heavy))
@@ -112,6 +111,7 @@ struct HomeView: View {
     }
 }
 
+// MARK: - SectionGrid với ZStack poster
 struct SectionGrid: View {
     let title: String
     let movies: [Movie]
@@ -137,7 +137,8 @@ struct SectionGrid: View {
                     ], spacing: 10) {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
-                                VStack(spacing: 4) {
+                                // ZStack: poster dưới, text trên có nền mờ
+                                ZStack(alignment: .bottom) {
                                     AsyncImage(url: movie.posterURL) { phase in
                                         if let image = phase.image {
                                             image.resizable().aspectRatio(contentMode: .fill)
@@ -147,18 +148,27 @@ struct SectionGrid: View {
                                     }
                                     .frame(width: 110, height: 165)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .shadow(color: .black.opacity(0.3), radius: 3)
                                     
-                                    Text(movie.title)
-                                        .font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white)
-                                        .lineLimit(2).frame(width: 110, alignment: .leading)
-                                    
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
-                                        Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
+                                    // Text overlay dưới cùng
+                                    VStack(spacing: 2) {
+                                        Text(movie.title)
+                                            .font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white)
+                                            .lineLimit(2)
+                                        
+                                        HStack(spacing: 3) {
+                                            Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                            Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.white.opacity(0.9))
+                                        }
                                     }
-                                    .frame(width: 110, alignment: .leading)
+                                    .padding(.horizontal, 6).padding(.vertical, 6)
+                                    .frame(width: 110)
+                                    .background(
+                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
+                                .frame(width: 110, height: 165)
+                                .shadow(color: .black.opacity(0.3), radius: 3)
                             }
                         }
                     }
