@@ -3,16 +3,22 @@ import Foundation
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var trending: [Movie] = []
+    @Published var nowPlaying: [Movie] = []
+    @Published var upcoming: [Movie] = []
+    @Published var topRated: [Movie] = []
+    @Published var genres: [Genre] = []
     @Published var isLoading = true
     
     func loadAll() async {
         isLoading = true
         do {
-            let movies = try await APIService.shared.trending()
-            trending = movies
+            trending = try await APIService.shared.trending()
+            nowPlaying = try await APIService.shared.nowPlaying()
+            upcoming = try await APIService.shared.upcoming()
+            topRated = try await APIService.shared.topRated()
+            genres = try await APIService.shared.genres()
         } catch {
-            print("API Error: \(error)")
-            trending = []
+            print("Error: \(error)")
         }
         isLoading = false
     }
