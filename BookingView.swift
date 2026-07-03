@@ -8,11 +8,12 @@ struct BookingView: View {
         NavigationStack {
             Group {
                 if cinemas.isEmpty {
-                    VStack(spacing: 15) {
-                        Image(systemName: "ticket")
-                            .font(.system(size: 50))
+                    VStack(spacing: 20) {
+                        Image(systemName: "film")
+                            .font(.system(size: 60))
                             .foregroundColor(.gray)
                         Text("Chưa có thông tin rạp")
+                            .font(.headline)
                             .foregroundColor(.white)
                     }
                 } else {
@@ -24,7 +25,7 @@ struct BookingView: View {
                         }) {
                             HStack {
                                 Text(cinema.name)
-                                    .font(.headline)
+                                    .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.white)
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -45,9 +46,6 @@ struct BookingView: View {
                 }
             }
             .background(Color.black)
-        }
-        .onAppear {
-            print("BookingView đã nhận được \(cinemas.count) rạp.")
         }
     }
 }
