@@ -19,7 +19,7 @@ struct EmmewApp: App {
                 SplashView()
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            withAnimation(.easeOut(duration: 0.6)) {
+                            withAnimation(.easeOut(duration: 0.5)) {
                                 showSplash = false
                             }
                         }
