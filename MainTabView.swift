@@ -5,7 +5,7 @@ struct MainTabView: View {
     @State private var showSearch = false
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
             
             TabView(selection: $selectedTab) {
@@ -14,39 +14,43 @@ struct MainTabView: View {
                 LibraryView().tag(2)
             }
             
-            VStack {
+            // Thanh tab kiểu Telegram/iOS 27 - mỏng, tràn đáy, không khung
+            HStack(spacing: 0) {
                 Spacer()
-                HStack(spacing: 50) {
-                    TabIcon(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 0 }
-                    }
-                    
-                    TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 2 }
-                    }
+                TabButton(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
+                    selectedTab = 0
                 }
-                .padding(.bottom, 20)
-                
-                .overlay {
-                    Button {
-                        showSearch = true
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .frame(width: 60, height: 60)
-                                .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                            
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(.white.opacity(0.9))
-                                .scaleEffect(showSearch ? 1.2 : 1.0)
-                                .animation(.spring(response: 0.3), value: showSearch)
-                        }
-                    }
-                    .offset(y: -32)
+                Spacer()
+                Spacer()
+                Spacer()
+                TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
+                    selectedTab = 2
                 }
+                Spacer()
             }
+            .padding(.bottom, 25)
+            .padding(.top, 10)
+            .background(
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            
+            // Nút Search nổi
+            Button {
+                showSearch = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    )
+            }
+            .offset(y: -28)
         }
         .sheet(isPresented: $showSearch) {
             SearchView()
@@ -54,7 +58,7 @@ struct MainTabView: View {
     }
 }
 
-struct TabIcon: View {
+struct TabButton: View {
     let icon: String
     let title: String
     let isSelected: Bool
@@ -62,16 +66,15 @@ struct TabIcon: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-                    .scaleEffect(isSelected ? 1.2 : 1.0)
-                    .animation(.spring(response: 0.3), value: isSelected)
                 Text(title)
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
             }
         }
+        .animation(.spring(response: 0.3), value: isSelected)
     }
 }
