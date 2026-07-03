@@ -1,68 +1,30 @@
-import SwiftUI
+// File: HomeViewModel.swift
+import Foundation
 
-struct HomeView: View {
-    @StateObject private var vm = HomeViewModel()
+class HomeViewModel: ObservableObject {
+    @Published var trendingMovies: [Movie] = []
+    @Published var nowPlayingMovies: [Movie] = []
     
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                if vm.nowPlayingMovies.isEmpty && vm.trendingMovies.isEmpty {
-                    ProgressView("Đang tải dữ liệu...")
-                        .foregroundColor(.white)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Xu hướng")
-                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                                .padding(.horizontal)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
-                                    ForEach(vm.trendingMovies) { movie in
-                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                            AsyncImage(url: movie.posterURL) { image in
-                                                image.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: { Color.gray.opacity(0.1) }
-                                            .frame(width: 140, height: 210)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                            
-                            Text("Đang chiếu rạp")
-                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                                .padding(.horizontal)
-                            
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                                ForEach(vm.nowPlayingMovies) { movie in
-                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                        VStack {
-                                            AsyncImage(url: movie.posterURL) { image in
-                                                image.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: { Color.gray.opacity(0.1) }
-                                            .frame(height: 200)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            
-                                            Text(movie.title)
-                                                .foregroundColor(.white)
-                                                .lineLimit(1)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.top)
-                    }
-                }
-            }
-        }
-        .task {
-            await vm.loadMovies()
+    @MainActor
+    func loadMovies() async {
+        do {
+            // Giả sử APIService của bạn trả về dữ liệu
+            // Hãy thêm lệnh print để debug trong Console của Xcode
+            print("Đang bắt đầu tải phim...")
+            
+            let trending = try await APIService.shared.fetchTrending()
+            let nowPlaying = try await APIService.shared.fetchNowPlaying()
+            
+            // Cập nhật lên UI
+            self.trendingMovies = trending
+            self.nowPlayingMovies = nowPlaying
+            
+            print("Đã tải xong: \(trending.count) phim xu hướng")
+        } catch {
+            print("Lỗi tải phim: \(error.localizedDescription)")
+            // Dù lỗi, cũng nên gán mảng rỗng để thoát vòng xoay loading
+            self.trendingMovies = []
+            self.nowPlayingMovies = []
         }
     }
 }
