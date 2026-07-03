@@ -53,7 +53,7 @@ struct ActorDetailView: View {
             }
         }
         .task {
-            detail = await APIService.shared.actorDetail(actorId: actor.id)
+            detail = try? await APIService.shared.actorDetail(actorId: actor.id)
             movies = (try? await APIService.shared.actorMovies(actorId: actor.id)) ?? []
         }
     }
