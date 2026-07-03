@@ -11,7 +11,6 @@ struct MovieDetailView: View {
             
             ScrollView {
                 VStack(spacing: 0) {
-                    // Backdrop
                     ZStack(alignment: .bottom) {
                         AsyncImage(url: movie.backdropURL) { phase in
                             if let image = phase.image {
@@ -24,8 +23,7 @@ struct MovieDetailView: View {
                         LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom).frame(height: 250)
                     }
                     
-                    VStack(alignment: .leading, spacing: 16) {
-                        // Title + Info
+                    VStack(alignment: .leading, spacing: 14) {
                         HStack(alignment: .top, spacing: 14) {
                             AsyncImage(url: movie.posterURL) { phase in
                                 if let image = phase.image {
@@ -59,14 +57,21 @@ struct MovieDetailView: View {
                         }
                         
                         // Buttons
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             if let key = vm.trailerKey {
                                 Link(destination: URL(string: "https://youtube.com/watch?v=\(key)")!) {
                                     Label("Trailer", systemImage: "play.fill")
-                                        .frame(maxWidth: .infinity).padding(12)
+                                        .frame(maxWidth: .infinity).padding(10)
                                         .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
-                                        .font(.subheadline).fontWeight(.bold)
+                                        .font(.caption).fontWeight(.bold)
                                 }
+                            }
+                            
+                            Link(destination: URL(string: "https://www.google.com/search?q=đặt+vé+xem+\(movie.title.replacingOccurrences(of: " ", with: "+"))")!) {
+                                Label("Đặt vé", systemImage: "ticket.fill")
+                                    .frame(maxWidth: .infinity).padding(10)
+                                    .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
+                                    .font(.caption).fontWeight(.bold)
                             }
                             
                             Button {
@@ -78,9 +83,9 @@ struct MovieDetailView: View {
                             } label: {
                                 Label(appState.favorites.contains(where: {$0.id == movie.id}) ? "Đã lưu" : "Lưu",
                                       systemImage: appState.favorites.contains(where: {$0.id == movie.id}) ? "checkmark" : "plus")
-                                    .frame(maxWidth: .infinity).padding(12)
+                                    .frame(maxWidth: .infinity).padding(10)
                                     .background(.ultraThinMaterial).foregroundColor(.white).clipShape(Capsule())
-                                    .font(.subheadline).fontWeight(.semibold)
+                                    .font(.caption).fontWeight(.semibold)
                             }
                         }
                         
@@ -112,10 +117,10 @@ struct MovieDetailView: View {
                         if !vm.similar.isEmpty {
                             Text("Phim tương tự").font(.headline).fontWeight(.bold).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 14) {
+                                HStack(spacing: 12) {
                                     ForEach(vm.similar) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
-                                            VStack(spacing: 6) {
+                                            VStack(spacing: 5) {
                                                 AsyncImage(url: m.posterURL) { phase in
                                                     if let image = phase.image {
                                                         image.resizable().aspectRatio(contentMode: .fill)
@@ -123,9 +128,9 @@ struct MovieDetailView: View {
                                                         Rectangle().fill(Color.gray.opacity(0.08))
                                                     }
                                                 }
-                                                .frame(width: 130, height: 195)
+                                                .frame(width: 120, height: 180)
                                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                Text(m.title).font(.caption).foregroundColor(.white).lineLimit(1).frame(width: 130)
+                                                Text(m.title).font(.system(size: 11)).foregroundColor(.white).lineLimit(1).frame(width: 120)
                                             }
                                         }
                                     }
