@@ -7,54 +7,52 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
             
-            // Nội dung chính
             Group {
                 switch selectedTab {
-                case 0:
-                    HomeView()
-                case 1:
-                    SearchView()
-                case 2:
-                    LibraryView()
-                default:
-                    HomeView()
+                case 0: HomeView()
+                case 1: SearchView()
+                case 2: LibraryView()
+                default: HomeView()
                 }
             }
             
-            // Custom Floating Tab Bar
+            // Thanh Tab mỏng, trôi nổi, giống Telegram
             HStack(spacing: 0) {
-                TabItem(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                TabIcon(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         selectedTab = 0
                     }
                 }
                 
-                TabItem(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                TabIcon(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         selectedTab = 1
                     }
                 }
                 
-                TabItem(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         selectedTab = 2
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             .background(
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 4)
+                RoundedRectangle(cornerRadius: 40)
+                    .fill(Color.black.opacity(0.7))
+                    .background(.ultraThinMaterial)
+                    .blur(radius: 0.5)
             )
-            .padding(.horizontal, 40)
-            .padding(.bottom, 20)
+            .clipShape(RoundedRectangle(cornerRadius: 40))
+            .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
+            .padding(.horizontal, 60)
+            .padding(.bottom, 28)
         }
     }
 }
 
-struct TabItem: View {
+struct TabIcon: View {
     let icon: String
     let title: String
     let isSelected: Bool
@@ -62,18 +60,15 @@ struct TabItem: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 18, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
-                    .scaleEffect(isSelected ? 1.1 : 1.0)
-                
                 Text(title)
-                    .font(.system(size: 10, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(isSelected ? .white : .gray.opacity(0.5))
             }
             .frame(maxWidth: .infinity)
         }
-        .animation(.spring(response: 0.3), value: isSelected)
     }
 }
