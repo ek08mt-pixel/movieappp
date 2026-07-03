@@ -62,7 +62,7 @@ struct MovieDetailView: View {
                             Link(destination: URL(string: "https://youtube.com/watch?v=\(trailer)")!) {
                                 Label("Xem Trailer", systemImage: "play.fill")
                                     .frame(maxWidth: .infinity).padding().background(Color.orange).cornerRadius(12)
-                                    .foregroundColor(.black).bold()
+                                    .font(.headline).foregroundColor(.black)
                             }
                         }
                         
@@ -70,7 +70,7 @@ struct MovieDetailView: View {
                         Link(destination: URL(string: "https://www.google.com/search?q=đặt+vé+\(movie.title.replacingOccurrences(of: " ", with: "+"))")!) {
                             Label("Đặt vé", systemImage: "ticket.fill")
                                 .frame(maxWidth: .infinity).padding().background(Color.white.opacity(0.15)).cornerRadius(12)
-                                .foregroundColor(.white).bold()
+                                .font(.headline).foregroundColor(.white)
                         }
                     }
                     .padding(.horizontal)
