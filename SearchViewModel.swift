@@ -4,30 +4,24 @@ import Foundation
 class SearchViewModel: ObservableObject {
     @Published var query = ""
     @Published var results: [Movie] = []
-    @Published var isSearching = false
     
-    private var searchTask: Task<Void, Never>?
+    private var task: Task<Void, Never>?
     
     func search() async {
-        searchTask?.cancel()
-        searchTask = Task {
-            guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
-                results = []
-                return
-            }
-            isSearching = true
-            do {
-                try await Task.sleep(nanoseconds: 300_000_000)
-                if !Task.isCancelled {
-                    results = try await APIService.shared.search(query: query)
-                }
-            } catch {
-                if !Task.isCancelled {
+        task?.cancel()
+        let q = query.trimmingCharacters(in: .whitespaces)
+        if q.isEmpty {
+            results = []
+            return
+        }
+        task = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if !Task.isCancelled {
+                do {
+                    results = try await APIService.shared.search(query: q)
+                } catch {
                     results = []
                 }
-            }
-            if !Task.isCancelled {
-                isSearching = false
             }
         }
     }
