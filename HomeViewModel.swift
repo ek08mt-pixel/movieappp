@@ -11,21 +11,28 @@ class HomeViewModel: ObservableObject {
     
     func loadAll() async {
         isLoading = true
-        async let t = APIService.shared.trending()
-        async let u = APIService.shared.upcoming()
-        async let n = APIService.shared.nowPlaying()
-        async let tr = APIService.shared.topRated()
-        async let g = APIService.shared.genres()
         
         do {
-            trending = try await t
-            upcoming = try await u
-            nowPlaying = try await n
-            topRated = try await tr
-            genres = try await g
+            let t = try await APIService.shared.trending()
+            let u = try await APIService.shared.upcoming()
+            let n = try await APIService.shared.nowPlaying()
+            let tr = try await APIService.shared.topRated()
+            let g = try await APIService.shared.genres()
+            
+            trending = t
+            upcoming = u
+            nowPlaying = n
+            topRated = tr
+            genres = g
         } catch {
             print("Error: \(error)")
+            trending = []
+            upcoming = []
+            nowPlaying = []
+            topRated = []
+            genres = []
         }
+        
         isLoading = false
     }
 }
