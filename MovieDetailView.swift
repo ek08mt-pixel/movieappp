@@ -102,8 +102,28 @@ struct MovieDetailView: View {
                     }
                     
                     if !vm.similar.isEmpty {
-                        PosterSection(title: "Phim tương tự", movies: vm.similar)
+    Text("Phim tương tự")
+        .font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
+    ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 14) {
+            ForEach(vm.similar) { movie in
+                NavigationLink(destination: MovieDetailView(movie: movie)) {
+                    AsyncImage(url: movie.posterURL) { phase in
+                        if let image = phase.image {
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle().fill(Color.gray.opacity(0.1))
+                        }
                     }
+                    .frame(width: 145, height: 218)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
                     
                     Spacer().frame(height: 120)
                 }
