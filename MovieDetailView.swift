@@ -9,6 +9,9 @@ struct MovieDetailView: View {
     @EnvironmentObject var appState: AppState
     @State private var showTrailer = false
     @State private var showBookingSheet = false
+    @State private var showFullOverview = false
+    @State private var commentText = ""
+    @State private var comments: [String] = []
     
     var body: some View {
         ZStack {
@@ -36,7 +39,11 @@ struct MovieDetailView: View {
                                     Text("•").foregroundColor(.gray)
                                     Text(movie.yearText).foregroundColor(.gray)
                                 }
-                                Text(movie.overview).font(.caption).foregroundColor(.gray).lineLimit(4)
+                                Button {
+                                    showFullOverview = true
+                                } label: {
+                                    Text(movie.overview).font(.caption).foregroundColor(.gray).lineLimit(4).multilineTextAlignment(.leading)
+                                }
                             }
                         }
                         
@@ -74,8 +81,7 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        QuoteView(movieId: movie.id)
-                            .padding(.vertical, 8)
+                        QuoteView(movieId: movie.id).padding(.vertical, 8)
                         
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.headline).foregroundColor(.white)
@@ -103,7 +109,6 @@ struct MovieDetailView: View {
                                             ZStack(alignment: .bottom) {
                                                 CachedAsyncImage(url: m.posterURL)
                                                     .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
-                                                
                                                 VStack(spacing: 2) {
                                                     Text(m.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
                                                 }
@@ -117,6 +122,39 @@ struct MovieDetailView: View {
                                 }.padding(.horizontal, 20)
                             }
                         }
+                        
+                        // Comment section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Bình luận").font(.headline).foregroundColor(.white)
+                            
+                            HStack(spacing: 8) {
+                                TextField("Viết bình luận...", text: $commentText)
+                                    .textFieldStyle(.plain).foregroundColor(.white).padding(10)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                                
+                                Button {
+                                    if !commentText.isEmpty {
+                                        comments.append(commentText)
+                                        commentText = ""
+                                    }
+                                } label: {
+                                    Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.orange)
+                                }
+                            }
+                            
+                            ForEach(comments, id: \.self) { comment in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30)
+                                        .overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14)))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white)
+                                        Text(comment).font(.caption).foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .padding(.top, 16)
                     }
                     .padding(.horizontal, 20).padding(.top, 20)
                     Spacer().frame(height: 100)
@@ -126,6 +164,19 @@ struct MovieDetailView: View {
         .task {
             await vm.load(movieId: movie.id)
             colorManager.extractColors(from: movie.backdropURL)
+        }
+        .sheet(isPresented: $showFullOverview) {
+            NavigationStack {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    ScrollView {
+                        Text(movie.overview)
+                            .foregroundColor(.white).padding()
+                    }
+                }
+                .navigationTitle(movie.title)
+                .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showFullOverview = false } } }
+            }
         }
         .fullScreenCover(isPresented: $showTrailer) {
             ZStack {
