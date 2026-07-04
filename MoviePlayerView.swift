@@ -77,13 +77,12 @@ class ExternalPlayerManager {
     }
 }
 
-// MARK: - Network Manager với Redirect + Cookie + Referer
+// MARK: - Network Manager
 class NetworkManager {
     static let shared = NetworkManager()
     
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
-        config.httpShouldHandleCookies = true
         config.httpCookieAcceptPolicy = .always
         config.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
@@ -100,31 +99,20 @@ class NetworkManager {
         req.setValue("application/json, text/html, */*", forHTTPHeaderField: "Accept")
         if let ref = referer { req.setValue(ref, forHTTPHeaderField: "Referer") }
         req.timeoutInterval = 20
-        
         print("🌐 [\(source)] URL: \(urlString)")
         let (data, response) = try await session.data(for: req)
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [\(source)] HTTP: \(httpResponse.statusCode)")
-            if let finalURL = httpResponse.url?.absoluteString, finalURL != urlString {
-                print("🔀 [\(source)] REDIRECTED TO: \(finalURL)")
-            }
-        }
+        if let httpResponse = response as? HTTPURLResponse { print("📊 [\(source)] HTTP: \(httpResponse.statusCode)") }
         if let raw = String(data: data, encoding: .utf8) { print("📄 [\(source)] RAW: \(raw.prefix(1500))") }
         return data
     }
     
-    // Resolve link rút gọn thành final URL
     func resolveFinalURL(_ urlString: String) async -> URL? {
         guard let url = URL(string: urlString) else { return nil }
         var req = URLRequest(url: url)
         req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         req.httpMethod = "HEAD"
-        do {
-            let (_, response) = try await session.data(for: req)
-            return response.url ?? url
-        } catch {
-            return url
-        }
+        do { let (_, response) = try await session.data(for: req); return response.url ?? url }
+        catch { return url }
     }
 }
 
@@ -160,7 +148,6 @@ class NguoncProvider {
         if let episodes = res.episodes {
             for ep in episodes {
                 if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) {
-                    // Resolve redirect nếu có
                     if let finalURL = await NetworkManager.shared.resolveFinalURL(m3u8) { return finalURL }
                     return url
                 }
@@ -249,17 +236,14 @@ class PlayerDebugger: NSObject {
     }
     
     static func debugPlayer(url: URL) -> AVPlayer {
-        let item = createPlayerItem(url: url)
-        return AVPlayer(playerItem: item)
+        return AVPlayer(playerItem: createPlayerItem(url: url))
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == #keyPath(AVPlayerItem.status), let item = object as? AVPlayerItem {
             switch item.status {
-            case .readyToPlay: print("✅ AVPlayer READY TO PLAY")
-            case .failed:
-                print("❌ AVPlayer FAILED: \(item.error?.localizedDescription ?? "unknown")")
-                if let error = item.error as NSError? { print("❌ Domain: \(error.domain), Code: \(error.code)") }
+            case .readyToPlay: print("✅ AVPlayer READY")
+            case .failed: print("❌ AVPlayer FAILED: \(item.error?.localizedDescription ?? "")")
             case .unknown: print("⚠️ AVPlayer UNKNOWN")
             @unknown default: break
             }
@@ -289,47 +273,32 @@ struct MoviePlayerView: View {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
                     HStack(spacing: 12) {
-                        Button { Task { await loadStream() } } label: {
-                            Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
-                        }
-                        if let url = streamURL {
-                            Button { showExternalPlayerMenu = true } label: {
-                                Label("Mở bằng app khác", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption)
-                            }
-                        }
+                        Button { Task { await loadStream() } } label: { Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption) }
+                        if streamURL != nil { Button { showExternalPlayerMenu = true } label: { Label("Mở bằng app khác", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) } }
                     }
                 }
             } else if let player = player, !isTorrent {
                 CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
                     .overlay(alignment: .topTrailing) {
-                        if let url = streamURL {
+                        if streamURL != nil {
                             Menu {
-                                ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in
-                                    Button(p.name) { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) }
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding()
-                            }
+                                ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in Button(p.name) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } }
+                            } label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
                         }
                     }
-            } else if isTorrent, let url = streamURL {
+            } else if isTorrent {
                 VStack(spacing: 20) {
                     Image(systemName: "film.stack.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text("Link Torrent").foregroundColor(.white).font(.headline)
-                    Text("Cần trình phát ngoài").foregroundColor(.gray)
-                    Button { showExternalPlayerMenu = true } label: {
-                        Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial))
-                    }
+                    Button { showExternalPlayerMenu = true } label: { Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial)) }
                 }
             }
         }
         .onAppear {
             UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-            UIViewController.attemptRotationToDeviceOrientation()
         }
         .onDisappear {
             UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-            UIViewController.attemptRotationToDeviceOrientation()
         }
         .task { await loadStream() }
         .actionSheet(isPresented: $showExternalPlayerMenu) {
