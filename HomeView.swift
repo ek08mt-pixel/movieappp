@@ -33,13 +33,11 @@ struct HomeView: View {
                                 }
                                 .tabViewStyle(.page(indexDisplayMode: .never))
                                 .frame(height: 450)
-                                .animation(.easeInOut(duration: 0.4), value: currentIndex)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(vm.trending24h.indices.contains(currentIndex) ? vm.trending24h[currentIndex].title : "")
                                         .font(.system(size: 28, weight: .heavy)).foregroundColor(.white)
-                                        .lineLimit(2).frame(maxWidth: 280, alignment: .leading)
-                                        .shadow(color: .black, radius: 6)
+                                        .lineLimit(2).frame(maxWidth: 280, alignment: .leading).shadow(color: .black, radius: 6)
                                     HStack {
                                         Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
                                         Text(vm.trending24h.indices.contains(currentIndex) ? vm.trending24h[currentIndex].ratingText : "")
@@ -50,10 +48,11 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 HStack(spacing: 12) {
-                                    // Nút Random 🎲
                                     Button {
-                                        randomMovie = vm.trending24h.randomElement()
-                                        showRandom = true
+                                        if let movie = vm.trending24h.randomElement() {
+                                            randomMovie = movie
+                                            showRandom = true
+                                        }
                                     } label: {
                                         ZStack {
                                             Circle().fill(.thinMaterial).frame(width: 36, height: 36)
@@ -93,17 +92,11 @@ struct HomeView: View {
                             // Movie of the Day
                             if let mod = vm.movieOfDay {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("🌟 Movie of the Day")
-                                        .font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
-                                    
+                                    Text("🌟 Movie of the Day").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
                                     NavigationLink(destination: MovieDetailView(movie: mod)) {
                                         ZStack(alignment: .bottomLeading) {
-                                            CachedAsyncImage(url: mod.backdropURL)
-                                                .frame(height: 200).clipShape(RoundedRectangle(cornerRadius: 16))
-                                            
-                                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
-                                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                            
+                                            CachedAsyncImage(url: mod.backdropURL).frame(height: 200).clipShape(RoundedRectangle(cornerRadius: 16))
+                                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 16))
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(mod.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
                                                 Text(mod.overview).font(.caption).foregroundColor(.gray).lineLimit(2)
@@ -114,12 +107,10 @@ struct HomeView: View {
                                 .padding(.top, 24)
                             }
                             
-                            // Continue Exploring
                             if !appState.watchHistory.isEmpty {
                                 SectionGrid(title: "👀 Tiếp tục khám phá", movies: appState.watchHistory)
                             }
                             
-                            // Because you liked
                             if let lastWatched = appState.watchHistory.last {
                                 SectionGrid(title: "✨ Vì bạn đã xem \(lastWatched.title)", movies: vm.trending24h.shuffled())
                             }
@@ -133,6 +124,7 @@ struct HomeView: View {
                             SectionGrid(title: "🇰🇷 Phim Hàn Quốc", movies: vm.korean)
                             SectionGrid(title: "🇯🇵 Phim Nhật Bản", movies: vm.japanese)
                             SectionGrid(title: "🇻🇳 Phim Việt Nam", movies: vm.vietnamese)
+                            SectionGrid(title: "🎌 Anime", movies: vm.anime)
                             
                             Spacer().frame(height: 100)
                         }
@@ -144,14 +136,12 @@ struct HomeView: View {
         .task { await vm.loadAll() }
         .fullScreenCover(isPresented: $showRandom) {
             if let movie = randomMovie {
-                NavigationStack {
-                    MovieDetailView(movie: movie)
-                        .overlay(alignment: .topTrailing) {
-                            Button { showRandom = false } label: {
-                                Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
-                            }
+                MovieDetailView(movie: movie)
+                    .overlay(alignment: .topTrailing) {
+                        Button { showRandom = false } label: {
+                            Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
                         }
-                }
+                    }
             }
         }
     }
@@ -181,7 +171,6 @@ struct SectionGrid: View {
                                 ZStack(alignment: .bottom) {
                                     CachedAsyncImage(url: movie.posterURL)
                                         .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
-                                    
                                     VStack(spacing: 2) {
                                         Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
                                         HStack(spacing: 3) {
@@ -193,8 +182,7 @@ struct SectionGrid: View {
                                     .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .frame(width: 110, height: 165)
-                                .shadow(color: .black.opacity(0.3), radius: 3)
+                                .frame(width: 110, height: 165).shadow(color: .black.opacity(0.3), radius: 3)
                             }
                         }
                     }
