@@ -11,25 +11,24 @@ struct MainTabView: View {
                 HomeView().opacity(selectedTab == 0 ? 1 : 0)
                 SearchView().opacity(selectedTab == 1 ? 1 : 0)
                 ExploreView().opacity(selectedTab == 2 ? 1 : 0)
-                AIRecommendView().opacity(selectedTab == 3 ? 1 : 0)
-                LibraryView().opacity(selectedTab == 4 ? 1 : 0)
+                LibraryView().opacity(selectedTab == 3 ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
             
-            HStack(spacing: 0) {
+            HStack(spacing: 10) {
                 TabIcon(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) { selectedTab = 0 }
                 TabIcon(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) { selectedTab = 1 }
                 TabIcon(icon: "safari.fill", title: "Khám phá", isSelected: selectedTab == 2) { selectedTab = 2 }
-                TabIcon(icon: "brain.head.profile", title: "AI", isSelected: selectedTab == 3) { selectedTab = 3 }
-                TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 4) { selectedTab = 4 }
+                TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 3) { selectedTab = 3 }
             }
             .padding(.vertical, 12)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
+            .background(Color.black.opacity(0.75))
             .background(.ultraThinMaterial)
             .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.3), radius: 10, y: 3)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 25)
+            .shadow(color: .black.opacity(0.3), radius: 8, y: 2)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
         }
         .ignoresSafeArea(.keyboard)
     }
