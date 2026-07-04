@@ -46,7 +46,7 @@ struct MovieDetailView: View {
             }.ignoresSafeArea(edges: .top)
         }.navigationBarHidden(true).task { await vm.load(movieId: movie.id) }
         .sheet(isPresented: $showFullOverview) { NavigationStack { ZStack { Color.black.ignoresSafeArea(); ScrollView { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).foregroundColor(.white).padding() } }.navigationTitle(movie.title).toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showFullOverview = false } } } } }
-        .sheet(isPresented: $showPlayer) { MoviePlayerView(movieTitle: movie.title, movieId: movie.id) }
+        .sheet(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title) }
         .fullScreenCover(isPresented: $showTrailer) { ZStack { Color.black.ignoresSafeArea(); WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea() }.overlay(alignment: .topLeading) { Button { showTrailer = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding() } } }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
