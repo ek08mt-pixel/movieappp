@@ -149,11 +149,11 @@ struct SectionGrid: View {
                 }.padding(.horizontal, 20)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHGrid(rows: [GridItem(.fixed(165)), GridItem(.fixed(165))], spacing: 10) {
+                    LazyHGrid(rows: [GridItem(.fixed(160)), GridItem(.fixed(160))], spacing: 10) {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 ZStack(alignment: .bottom) {
-                                    CachedAsyncImage(url: movie.posterURL).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
+                                    CachedAsyncImage(url: movie.posterURL).frame(width: 110, height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
                                     VStack(spacing: 2) {
                                         Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
                                         HStack(spacing: 3) {
@@ -165,7 +165,7 @@ struct SectionGrid: View {
                                     .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .frame(width: 110, height: 165).shadow(color: .black.opacity(0.3), radius: 3)
+                                .frame(width: 110, height: 160).shadow(color: .black.opacity(0.3), radius: 3)
                             }
                         }
                     }.padding(.horizontal, 20)
