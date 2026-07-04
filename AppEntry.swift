@@ -28,6 +28,7 @@ class AppState: ObservableObject {
 @main
 struct EmmewApp: App {
     @StateObject private var appState = AppState()
+    @StateObject private var langManager = LanguageManager.shared
     @State private var showSplash = true
     
     init() {
@@ -52,6 +53,7 @@ struct EmmewApp: App {
             } else {
                 MainTabView()
                     .environmentObject(appState)
+                    .environmentObject(langManager)
                     .preferredColorScheme(.dark)
             }
         }
