@@ -26,9 +26,6 @@ enum MovieSource: String, CaseIterable {
         default: return nil
         }
     }
-    
-    var isAPISource: Bool { manifestURL == nil }
-    var isTorrentSource: Bool { manifestURL != nil }
 }
 
 // MARK: - StreamError
@@ -80,26 +77,54 @@ class ExternalPlayerManager {
     }
 }
 
-// MARK: - Network Manager
+// MARK: - Network Manager với Redirect + Cookie + Referer
 class NetworkManager {
     static let shared = NetworkManager()
+    
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
-        config.httpAdditionalHeaders = ["User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"]
+        config.httpShouldHandleCookies = true
+        config.httpCookieAcceptPolicy = .always
+        config.httpAdditionalHeaders = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
+            "Accept": "application/json, text/html, */*",
+            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
+        ]
         return URLSession(configuration: config)
     }()
     
-    func fetchJSON(from urlString: String, source: String) async throws -> Data {
+    func fetchJSON(from urlString: String, source: String, referer: String? = nil) async throws -> Data {
         guard let url = URL(string: urlString) else { throw StreamError.invalidURL }
         var req = URLRequest(url: url)
-        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.timeoutInterval = 15
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        req.setValue("application/json, text/html, */*", forHTTPHeaderField: "Accept")
+        if let ref = referer { req.setValue(ref, forHTTPHeaderField: "Referer") }
+        req.timeoutInterval = 20
+        
         print("🌐 [\(source)] URL: \(urlString)")
         let (data, response) = try await session.data(for: req)
-        if let httpResponse = response as? HTTPURLResponse { print("📊 [\(source)] HTTP: \(httpResponse.statusCode)") }
-        if let raw = String(data: data, encoding: .utf8) { print("📄 [\(source)] RAW: \(raw.prefix(2000))") }
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📊 [\(source)] HTTP: \(httpResponse.statusCode)")
+            if let finalURL = httpResponse.url?.absoluteString, finalURL != urlString {
+                print("🔀 [\(source)] REDIRECTED TO: \(finalURL)")
+            }
+        }
+        if let raw = String(data: data, encoding: .utf8) { print("📄 [\(source)] RAW: \(raw.prefix(1500))") }
         return data
+    }
+    
+    // Resolve link rút gọn thành final URL
+    func resolveFinalURL(_ urlString: String) async -> URL? {
+        guard let url = URL(string: urlString) else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        req.httpMethod = "HEAD"
+        do {
+            let (_, response) = try await session.data(for: req)
+            return response.url ?? url
+        } catch {
+            return url
+        }
     }
 }
 
@@ -125,16 +150,20 @@ class NguoncProvider {
     static let shared = NguoncProvider()
     private let baseURL = "https://phim.nguonc.com/api"
     func searchFilm(keyword: String) async throws -> String? {
-        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/films/phim-moi-cap-nhat", source: "Nguonc")
+        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/films/phim-moi-cap-nhat", source: "Nguonc", referer: "https://phim.nguonc.com/")
         let res = try JSONDecoder().decode(NguoncFilmListResponse.self, from: data)
         return res.items?.first(where: { $0.name?.lowercased().contains(keyword.lowercased()) ?? false })?.slug
     }
     func fetchStreamURL(slug: String) async throws -> URL? {
-        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/film/\(slug)", source: "Nguonc")
+        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/film/\(slug)", source: "Nguonc", referer: "https://phim.nguonc.com/")
         let res = try JSONDecoder().decode(NguoncFilmDetailResponse.self, from: data)
         if let episodes = res.episodes {
             for ep in episodes {
-                if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) { return url }
+                if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) {
+                    // Resolve redirect nếu có
+                    if let finalURL = await NetworkManager.shared.resolveFinalURL(m3u8) { return finalURL }
+                    return url
+                }
                 if let embed = ep.link_embed, let url = URL(string: embed) { return url }
             }
         }
@@ -181,12 +210,12 @@ class MovieStreamService {
         throw StreamError.noStreamAvailable
     }
     private func fetchKKPhim(imdbId: String) async throws -> URL {
-        let data = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/search?keyword=\(imdbId)", source: "KKPhim")
+        let data = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/search?keyword=\(imdbId)", source: "KKPhim", referer: "https://kkphim.trankhanh.io.vn/")
         var slug: String?
         if let r = try? JSONDecoder().decode([KKPhimMovie].self, from: data) { slug = r.first?.slug }
         else if let r = try? JSONDecoder().decode(KKPhimMovie.self, from: data) { slug = r.slug }
         guard let slug = slug else { throw StreamError.noStreamAvailable }
-        let data2 = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/movie/\(slug)", source: "KKPhim-Ep")
+        let data2 = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/movie/\(slug)", source: "KKPhim-Ep", referer: "https://kkphim.trankhanh.io.vn/")
         let res = try JSONDecoder().decode(KKPhimResponse.self, from: data2)
         if let url = res.episodes?.first?.sources?.first?.url, let streamURL = URL(string: url) { return streamURL }
         throw StreamError.noStreamAvailable
@@ -209,7 +238,10 @@ class PlayerDebugger: NSObject {
     static let shared = PlayerDebugger()
     
     static func createPlayerItem(url: URL) -> AVPlayerItem {
-        let headers: [String: String] = ["User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15"]
+        let headers: [String: String] = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
+            "Referer": "https://phim.nguonc.com/"
+        ]
         let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
         let item = AVPlayerItem(asset: asset)
         item.addObserver(shared, forKeyPath: #keyPath(AVPlayerItem.status), options: [.new, .initial], context: nil)
@@ -256,17 +288,35 @@ struct MoviePlayerView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                    Button { Task { await loadStream() } } label: {
-                        Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
+                    HStack(spacing: 12) {
+                        Button { Task { await loadStream() } } label: {
+                            Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
+                        }
+                        if let url = streamURL {
+                            Button { showExternalPlayerMenu = true } label: {
+                                Label("Mở bằng app khác", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption)
+                            }
+                        }
                     }
                 }
             } else if let player = player, !isTorrent {
                 CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
+                    .overlay(alignment: .topTrailing) {
+                        if let url = streamURL {
+                            Menu {
+                                ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in
+                                    Button(p.name) { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) }
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding()
+                            }
+                        }
+                    }
             } else if isTorrent, let url = streamURL {
                 VStack(spacing: 20) {
                     Image(systemName: "film.stack.fill").font(.system(size: 50)).foregroundColor(.gray)
-                    Text("Đây là link Torrent").foregroundColor(.white).font(.headline)
-                    Text("Cần trình phát ngoài để xem").foregroundColor(.gray)
+                    Text("Link Torrent").foregroundColor(.white).font(.headline)
+                    Text("Cần trình phát ngoài").foregroundColor(.gray)
                     Button { showExternalPlayerMenu = true } label: {
                         Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial))
                     }
