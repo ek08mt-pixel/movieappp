@@ -1,16 +1,16 @@
 import Foundation
 
 enum AppLanguage: String, CaseIterable {
-    case vietnamese = "vi"
-    case english = "en"
-    case korean = "ko"
-    case japanese = "ja"
-    case chinese = "zh"
-    case french = "fr"
-    case spanish = "es"
-    case german = "de"
-    case russian = "ru"
-    case thai = "th"
+    case vietnamese = "vi-VN"
+    case english = "en-US"
+    case korean = "ko-KR"
+    case japanese = "ja-JP"
+    case chinese = "zh-CN"
+    case french = "fr-FR"
+    case spanish = "es-ES"
+    case german = "de-DE"
+    case russian = "ru-RU"
+    case thai = "th-TH"
     
     var displayName: String {
         switch self {
@@ -25,6 +25,10 @@ enum AppLanguage: String, CaseIterable {
         case .russian: return "Русский"
         case .thai: return "ไทย"
         }
+    }
+    
+    var tmdbLanguage: String {
+        return rawValue
     }
 }
 
