@@ -44,7 +44,6 @@ struct ProfileView: View {
                         if appState.isLoggedIn {
                             Text(appState.userName)
                                 .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                            
                             Button("Đăng xuất") {
                                 appState.isLoggedIn = false
                                 appState.userName = ""
@@ -53,9 +52,7 @@ struct ProfileView: View {
                             .foregroundColor(.red).font(.caption)
                         } else {
                             Button {
-                                loginName = ""
-                                loginPassword = ""
-                                confirmPassword = ""
+                                loginName = ""; loginPassword = ""; confirmPassword = ""
                                 showLogin = true
                             } label: {
                                 HStack {
@@ -68,9 +65,28 @@ struct ProfileView: View {
                             }
                         }
                         
+                        // Stats
+                        NavigationLink(destination: StatsView()) {
+                            HStack {
+                                Image(systemName: "chart.bar.fill").foregroundColor(.orange)
+                                Text("Xem thống kê của bạn").foregroundColor(.white)
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
+                            }
+                            .padding()
+                            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                        }
+                        .padding(.horizontal)
+                        
                         HStack(spacing: 0) {
-                            StatBox(value: "\(appState.favorites.count)", label: "Yêu thích")
-                            StatBox(value: "\(appState.watchHistory.count)", label: "Đã xem")
+                            VStack(spacing: 4) {
+                                Text("\(appState.favorites.count)").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                                Text("Yêu thích").font(.caption).foregroundColor(.gray)
+                            }.frame(maxWidth: .infinity)
+                            VStack(spacing: 4) {
+                                Text("\(appState.watchHistory.count)").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                                Text("Đã xem").font(.caption).foregroundColor(.gray)
+                            }.frame(maxWidth: .infinity)
                         }
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
@@ -86,6 +102,18 @@ struct ProfileView: View {
                                     Text("Ngôn ngữ").foregroundColor(.white)
                                     Spacer()
                                     Text(langManager.currentLanguage.displayName).foregroundColor(.gray).font(.caption)
+                                    Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
+                                }.padding()
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            // Director search
+                            NavigationLink(destination: DirectorSearchView()) {
+                                HStack {
+                                    Image(systemName: "megaphone.fill").foregroundColor(.white.opacity(0.6)).frame(width: 24)
+                                    Text("Tìm đạo diễn").foregroundColor(.white)
+                                    Spacer()
                                     Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
                                 }.padding()
                             }
@@ -116,19 +144,14 @@ struct ProfileView: View {
                         TextField("Nhập tên mới", text: $loginName)
                             .textFieldStyle(.plain).foregroundColor(.white).padding()
                             .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                        
                         Button("Lưu") {
-                            if !loginName.isEmpty {
-                                appState.userName = loginName
-                                appState.saveToDisk()
-                            }
+                            if !loginName.isEmpty { appState.userName = loginName; appState.saveToDisk() }
                             showEditName = false
                         }
                         .fontWeight(.bold).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding()
                         .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.2)))
-                    }
-                    .padding()
+                    }.padding()
                 }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showEditName = false } } }
             }
@@ -139,56 +162,30 @@ struct ProfileView: View {
                     Color.black.ignoresSafeArea()
                     ScrollView {
                         VStack(spacing: 20) {
-                            Text("Đăng nhập / Đăng ký")
-                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                            
-                            TextField("Tên người dùng", text: $loginName)
-                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                            Text("Đăng nhập / Đăng ký").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                            TextField("Tên người dùng", text: $loginName).textFieldStyle(.plain).foregroundColor(.white).padding()
                                 .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            
-                            SecureField("Mật khẩu", text: $loginPassword)
-                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                            SecureField("Mật khẩu", text: $loginPassword).textFieldStyle(.plain).foregroundColor(.white).padding()
                                 .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            
-                            SecureField("Xác nhận mật khẩu", text: $confirmPassword)
-                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                            SecureField("Xác nhận mật khẩu", text: $confirmPassword).textFieldStyle(.plain).foregroundColor(.white).padding()
                                 .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            
                             Button {
                                 if !loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty {
-                                    appState.userName = loginName
-                                    appState.isLoggedIn = true
-                                    appState.saveToDisk()
-                                    showLogin = false
+                                    appState.userName = loginName; appState.isLoggedIn = true; appState.saveToDisk(); showLogin = false
                                 }
                             } label: {
-                                Text(loginPassword.isEmpty ? "Đăng ký" : "Xác nhận")
-                                    .fontWeight(.bold).foregroundColor(.white)
+                                Text(loginPassword.isEmpty ? "Đăng ký" : "Xác nhận").fontWeight(.bold).foregroundColor(.white)
                                     .frame(maxWidth: .infinity).padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(!loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty
-                                                  ? Color.blue.opacity(0.6) : Color.gray.opacity(0.3))
-                                    )
+                                    .background(RoundedRectangle(cornerRadius: 12)
+                                        .fill(!loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty ? Color.blue.opacity(0.6) : Color.gray.opacity(0.3)))
                             }
                             .disabled(loginName.isEmpty || loginPassword != confirmPassword || loginPassword.isEmpty)
-                        }
-                        .padding()
+                        }.padding()
                     }
                 }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showLogin = false } } }
             }
         }
-    }
-}
-
-struct StatBox: View {
-    let value: String; let label: String
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value).font(.title2).fontWeight(.bold).foregroundColor(.white)
-            Text(label).font(.caption).foregroundColor(.gray)
-        }.frame(maxWidth: .infinity)
     }
 }
 
@@ -198,8 +195,7 @@ struct ProfileRow: View {
         Button(action: action) {
             HStack {
                 Image(systemName: icon).foregroundColor(.white.opacity(0.6)).frame(width: 24)
-                Text(title).foregroundColor(.white)
-                Spacer()
+                Text(title).foregroundColor(.white); Spacer()
                 Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
             }.padding()
         }
