@@ -204,7 +204,7 @@ class MovieStreamService {
     }
 }
 
-// MARK: - Player Debug (NSObject để KVO hoạt động)
+// MARK: - Player Debug
 class PlayerDebugger: NSObject {
     static let shared = PlayerDebugger()
     
@@ -232,13 +232,6 @@ class PlayerDebugger: NSObject {
             @unknown default: break
             }
         }
-    }
-    
-    static func testAppleLink() {
-        guard let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8") else { return }
-        print("🧪 TEST APPLE LINK...")
-        let player = debugPlayer(url: url)
-        player.play()
     }
 }
 
@@ -279,6 +272,14 @@ struct MoviePlayerView: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+        .onDisappear {
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            UIViewController.attemptRotationToDeviceOrientation()
         }
         .task { await loadStream() }
         .actionSheet(isPresented: $showExternalPlayerMenu) {
