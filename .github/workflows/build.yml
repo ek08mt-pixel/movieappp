@@ -50,7 +50,12 @@ jobs:
           <key>CFBundlePackageType</key><string>APPL</string>
           <key>LSRequiresIPhoneOS</key><true/>
           <key>UILaunchScreen</key><dict/>
-          <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
+          <key>UISupportedInterfaceOrientations</key>
+          <array>
+              <string>UIInterfaceOrientationPortrait</string>
+              <string>UIInterfaceOrientationLandscapeLeft</string>
+              <string>UIInterfaceOrientationLandscapeRight</string>
+          </array>
           <key>MinimumOSVersion</key><string>16.0</string>
           <key>NSAppTransportSecurity</key>
           <dict>
