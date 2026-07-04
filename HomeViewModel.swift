@@ -12,6 +12,7 @@ class HomeViewModel: ObservableObject {
     @Published var vietnamese: [Movie] = []
     @Published var usuk: [Movie] = []
     @Published var genres: [Genre] = []
+    @Published var movieOfDay: Movie?
     @Published var isLoading = true
     
     func loadAll() async {
@@ -40,6 +41,12 @@ class HomeViewModel: ObservableObject {
             vietnamese = results.7
             usuk = results.8
             genres = results.9
+            
+            // Movie of the Day
+            let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+            if !trending24h.isEmpty {
+                movieOfDay = trending24h[dayOfYear % trending24h.count]
+            }
         } catch {
             print("Error: \(error)")
         }
