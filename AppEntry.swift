@@ -6,6 +6,23 @@ class AppState: ObservableObject {
     @Published var searchHistory: [String] = []
     @Published var isLoggedIn = false
     @Published var userName = ""
+    @Published var selectedAvatar = "person.fill"
+    
+    init() {
+        loadFromDisk()
+    }
+    
+    func saveToDisk() {
+        UserDefaults.standard.set(isLoggedIn, forKey: "isLoggedIn")
+        UserDefaults.standard.set(userName, forKey: "userName")
+        UserDefaults.standard.set(selectedAvatar, forKey: "selectedAvatar")
+    }
+    
+    func loadFromDisk() {
+        isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")
+        userName = UserDefaults.standard.string(forKey: "userName") ?? ""
+        selectedAvatar = UserDefaults.standard.string(forKey: "selectedAvatar") ?? "person.fill"
+    }
 }
 
 @main
