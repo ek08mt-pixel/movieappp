@@ -33,12 +33,10 @@ enum StreamError: Error, LocalizedError {
 // MARK: - Response Models
 struct AnimeKitsuStream: Codable { let title: String?; let url: String? }
 struct AnimeKitsuResponse: Codable { let streams: [AnimeKitsuStream]? }
-
 struct KKPhimSource: Codable { let url: String? }
 struct KKPhimEpisode: Codable { let sources: [KKPhimSource]? }
 struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
 struct KKPhimMovie: Codable { let slug: String? }
-
 struct NTLStreamItem: Codable { let name: String?; let title: String?; let url: String? }
 struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
 
@@ -75,18 +73,15 @@ class MovieStreamService {
         var req = URLRequest(url: URL(string: searchURL)!)
         req.setValue("https://kkphim.trankhanh.io.vn", forHTTPHeaderField: "Referer")
         let (data, _) = try await URLSession.shared.data(for: req)
-        
         var slug: String?
         if let results = try? JSONDecoder().decode([KKPhimMovie].self, from: data) { slug = results.first?.slug }
         else if let movie = try? JSONDecoder().decode(KKPhimMovie.self, from: data) { slug = movie.slug }
         guard let slug = slug else { throw StreamError.noStreamAvailable }
-        
         let epURL = "https://kkphim.trankhanh.io.vn/api/movie/\(slug)"
         var req2 = URLRequest(url: URL(string: epURL)!)
         req2.setValue("https://kkphim.trankhanh.io.vn", forHTTPHeaderField: "Referer")
         let (data2, _) = try await URLSession.shared.data(for: req2)
         let res = try JSONDecoder().decode(KKPhimResponse.self, from: data2)
-        
         if let url = res.episodes?.first?.sources?.first?.url, let streamURL = URL(string: url) { return streamURL }
         throw StreamError.noStreamAvailable
     }
@@ -108,8 +103,9 @@ struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     @Environment(\.dismiss) var dismiss
     @State private var selectedSource: MovieSource = .kkphim
-    @State private var streamURL: URL?; @State private var isLoading = true
-    @State private var errorMessage: String?; @State private var player: AVPlayer?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var player: AVPlayer?
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
@@ -117,15 +113,11 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             
             if isLoading {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     ProgressView().tint(.white).scaleEffect(1.5)
-                    VStack(spacing: 12) {
-                        Image(systemName: "movieclapper.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(.white.opacity(0.2))
-                        Text("Đang chuẩn bị phim cho bạn...")
-                            .foregroundColor(.gray).font(.caption)
-                    }
+                    Text("Đợi Mew tí...")
+                        .foregroundColor(.white.opacity(0.7))
+                        .font(.headline)
                 }
             } else if let errorMessage = errorMessage {
                 VStack(spacing: 16) {
@@ -143,7 +135,7 @@ struct MoviePlayerView: View {
                     }
                 }
             } else if let player = player {
-                NetflixStylePlayer(player: player, movieTitle: movieTitle, dismiss: { dismiss() })
+                CustomVideoPlayer(player: player)
                     .ignoresSafeArea()
                     .onAppear { player.play() }
                     .onDisappear { player.pause() }
@@ -172,117 +164,20 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Netflix Style Player
-struct NetflixStylePlayer: View {
+// MARK: - Custom Video Player (AVPlayerViewController gốc, có PiP + xoay ngang)
+struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
-    let movieTitle: String
-    let dismiss: () -> Void
-    @State private var showControls = true
-    @State private var isPlaying = true
-    @State private var currentTime: Double = 0
-    @State private var duration: Double = 1
-    @State private var playbackSpeed: Float = 1.0
-    @State private var selectedSubtitle = "Tắt"
     
-    let speeds: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
-    let subtitles = ["Tắt", "Tiếng Việt", "English", "Auto"]
-    
-    var body: some View {
-        ZStack {
-            AVPlayerControllerRepresentable(player: player)
-                .ignoresSafeArea()
-                .onTapGesture { withAnimation(.easeInOut(duration: 0.3)) { showControls.toggle() } }
-            
-            if showControls {
-                VStack {
-                    HStack {
-                        Button(action: dismiss) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .bold)).foregroundColor(.white)
-                                .padding(10).background(Circle().fill(.ultraThinMaterial))
-                        }
-                        Spacer()
-                        Text(movieTitle).font(.headline).foregroundColor(.white).lineLimit(1)
-                        Spacer()
-                        
-                        Menu {
-                            ForEach(speeds, id: \.self) { speed in
-                                Button("\(speed, specifier: "%.2f")x") { playbackSpeed = speed; player.rate = speed }
-                            }
-                        } label: {
-                            Image(systemName: "speedometer").font(.system(size: 16)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial))
-                        }
-                        
-                        Menu {
-                            ForEach(subtitles, id: \.self) { sub in
-                                Button(sub) { selectedSubtitle = sub }
-                            }
-                        } label: {
-                            Image(systemName: "captions.bubble").font(.system(size: 16)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial))
-                        }
-                    }
-                    .padding(.horizontal, 16).padding(.top, 50)
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 8) {
-                        Slider(value: $currentTime, in: 0...max(duration, 1)) { editing in
-                            if !editing { player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)) }
-                        }
-                        .tint(.red).padding(.horizontal)
-                        
-                        HStack {
-                            Text(formatTime(currentTime)).font(.caption).foregroundColor(.gray)
-                            Spacer()
-                            Text(formatTime(duration - currentTime)).font(.caption).foregroundColor(.gray)
-                        }.padding(.horizontal)
-                        
-                        HStack(spacing: 40) {
-                            Button { player.seek(to: CMTime(seconds: max(currentTime - 10, 0), preferredTimescale: 600)) } label: {
-                                Image(systemName: "gobackward.10").font(.system(size: 22)).foregroundColor(.white)
-                            }
-                            Button {
-                                if isPlaying { player.pause() } else { player.play() }; isPlaying.toggle()
-                            } label: {
-                                Image(systemName: isPlaying ? "pause.fill" : "play.fill").font(.system(size: 40)).foregroundColor(.white)
-                            }
-                            Button { player.seek(to: CMTime(seconds: min(currentTime + 10, duration), preferredTimescale: 600)) } label: {
-                                Image(systemName: "goforward.10").font(.system(size: 22)).foregroundColor(.white)
-                            }
-                            Button {
-                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                    windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape))
-                                }
-                            } label: {
-                                Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left").font(.system(size: 16)).foregroundColor(.white)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16).padding(.bottom, 30)
-                    .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
-                }
-                .transition(.opacity)
-            }
-        }
-        .onAppear {
-            player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { time in
-                currentTime = time.seconds
-                if let dur = player.currentItem?.duration.seconds, dur.isFinite { duration = dur }
-            }
-        }
-    }
-    
-    func formatTime(_ seconds: Double) -> String {
-        let m = Int(seconds) / 60; let s = Int(seconds) % 60
-        return String(format: "%d:%02d", m, s)
-    }
-}
-
-struct AVPlayerControllerRepresentable: UIViewControllerRepresentable {
-    let player: AVPlayer
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let c = AVPlayerViewController(); c.player = player; c.showsPlaybackControls = false
-        c.videoGravity = .resizeAspect; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true; return c
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.showsPlaybackControls = true
+        controller.videoGravity = .resizeAspect
+        controller.allowsPictureInPicturePlayback = true
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        controller.updatesNowPlayingInfoCenter = true
+        return controller
     }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
+    
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
 }
