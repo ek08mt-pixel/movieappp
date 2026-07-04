@@ -12,6 +12,9 @@ struct LanguageSelectionView: View {
                     Button {
                         langManager.setLanguage(lang)
                         dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            exit(0)
+                        }
                     } label: {
                         HStack {
                             Text(lang.displayName).foregroundColor(.white)
@@ -27,7 +30,7 @@ struct LanguageSelectionView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Chọn ngôn ngữ")
+        .navigationTitle("Ngôn ngữ / Language")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
