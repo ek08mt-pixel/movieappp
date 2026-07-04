@@ -68,6 +68,18 @@ jobs:
           <array>
               <string>audio</string>
           </array>
+          <key>LSApplicationQueriesSchemes</key>
+          <array>
+              <string>infuse</string>
+              <string>vlc-x-callback</string>
+              <string>vimu</string>
+              <string>outplayer</string>
+              <string>nplayer</string>
+              <string>pxtreme</string>
+              <string>fbplayer</string>
+              <string>mxplayer</string>
+              <string>iina</string>
+          </array>
           </dict></plist>
           EOF
           
