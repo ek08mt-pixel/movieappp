@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
+    @EnvironmentObject var appState: AppState
     @State private var currentIndex = 0
     
     var body: some View {
@@ -20,14 +21,8 @@ struct HomeView: View {
                                     ForEach(Array(vm.trending.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                                             ZStack {
-                                                AsyncImage(url: movie.backdropURL) { phase in
-                                                    if let image = phase.image {
-                                                        image.resizable().aspectRatio(contentMode: .fill)
-                                                    } else {
-                                                        Rectangle().fill(Color.gray.opacity(0.08))
-                                                    }
-                                                }
-                                                .frame(height: 450).clipped()
+                                                CachedAsyncImage(url: movie.backdropURL)
+                                                    .frame(height: 450).clipped()
                                                 LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
                                             }
                                         }
@@ -53,9 +48,16 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 NavigationLink(destination: ProfileView()) {
-                                    Circle()
-                                        .fill(.regularMaterial.opacity(0.3)).frame(width: 38, height: 38)
-                                        .overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 16)))
+                                    ZStack {
+                                        Circle()
+                                            .fill(.thinMaterial)
+                                            .frame(width: 36, height: 36)
+                                        
+                                        Image(systemName: appState.selectedAvatar)
+                                            .foregroundColor(.white.opacity(0.7))
+                                            .font(.system(size: 16))
+                                    }
+                                    .shadow(color: .black.opacity(0.2), radius: 4)
                                 }
                                 .padding(.top, 50).padding(.trailing, 16)
                             }
@@ -125,14 +127,8 @@ struct SectionGrid: View {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 ZStack(alignment: .bottom) {
-                                    AsyncImage(url: movie.posterURL) { phase in
-                                        if let image = phase.image {
-                                            image.resizable().aspectRatio(contentMode: .fill)
-                                        } else {
-                                            Rectangle().fill(Color.gray.opacity(0.08))
-                                        }
-                                    }
-                                    .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
+                                    CachedAsyncImage(url: movie.posterURL)
+                                        .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
                                     
                                     VStack(spacing: 2) {
                                         Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
