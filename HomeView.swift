@@ -17,7 +17,7 @@ struct HomeView: View {
                         VStack(spacing: 0) {
                             ZStack(alignment: .bottomLeading) {
                                 TabView(selection: $currentIndex) {
-                                    ForEach(Array(vm.trending.prefix(5).enumerated()), id: \.element.id) { i, movie in
+                                    ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                                             ZStack {
                                                 CachedAsyncImage(url: movie.backdropURL)
@@ -33,13 +33,13 @@ struct HomeView: View {
                                 .animation(.easeInOut(duration: 0.4), value: currentIndex)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(vm.trending.indices.contains(currentIndex) ? vm.trending[currentIndex].title : "")
+                                    Text(vm.trending24h.indices.contains(currentIndex) ? vm.trending24h[currentIndex].title : "")
                                         .font(.system(size: 28, weight: .heavy)).foregroundColor(.white)
                                         .lineLimit(2).frame(maxWidth: 280, alignment: .leading)
                                         .shadow(color: .black, radius: 6)
                                     HStack {
                                         Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
-                                        Text(vm.trending.indices.contains(currentIndex) ? vm.trending[currentIndex].ratingText : "")
+                                        Text(vm.trending24h.indices.contains(currentIndex) ? vm.trending24h[currentIndex].ratingText : "")
                                             .foregroundColor(.white).font(.caption).bold()
                                     }
                                 }
@@ -52,7 +52,6 @@ struct HomeView: View {
                                         Image(systemName: appState.selectedAvatar)
                                             .foregroundColor(.white.opacity(0.7)).font(.system(size: 16))
                                     }
-                                    .shadow(color: .black.opacity(0.2), radius: 4)
                                 }
                                 .padding(.top, 50).padding(.trailing, 16)
                             }
@@ -74,13 +73,15 @@ struct HomeView: View {
                                 .padding(.vertical, 12)
                             }
                             
-                            SectionGrid(title: "🔥 Xu hướng", movies: vm.trending)
+                            SectionGrid(title: "🔥 24h qua", movies: vm.trending24h)
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
                             SectionGrid(title: "⭐ Đánh giá cao", movies: vm.topRated)
                             SectionGrid(title: "🎯 Phổ biến", movies: vm.popular)
-                            SectionGrid(title: "🌍 Phim Âu Mỹ", movies: vm.usuk)
-                            SectionGrid(title: "🎌 Phim Châu Á", movies: vm.asian)
+                            SectionGrid(title: "🇺🇸 Phim Âu Mỹ", movies: vm.usuk)
+                            SectionGrid(title: "🇰🇷 Phim Hàn Quốc", movies: vm.korean)
+                            SectionGrid(title: "🇯🇵 Phim Nhật Bản", movies: vm.japanese)
+                            SectionGrid(title: "🇻🇳 Phim Việt Nam", movies: vm.vietnamese)
                             
                             Spacer().frame(height: 100)
                         }
