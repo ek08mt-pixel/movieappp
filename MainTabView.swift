@@ -7,20 +7,18 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeView().tag(0)
-                SearchView().tag(1)
-                ExploreView().tag(2)
-                LibraryView().tag(3)
+            ZStack {
+                HomeView().opacity(selectedTab == 0 ? 1 : 0)
+                SearchView().opacity(selectedTab == 1 ? 1 : 0)
+                ExploreView().opacity(selectedTab == 2 ? 1 : 0)
+                LibraryView().opacity(selectedTab == 3 ? 1 : 0)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.3), value: selectedTab)
             
             HStack(spacing: 0) {
-                TabIcon(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) { withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 0 } }
-                TabIcon(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) { withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 1 } }
-                TabIcon(icon: "safari.fill", title: "Khám phá", isSelected: selectedTab == 2) { withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 2 } }
-                TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 3) { withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { selectedTab = 3 } }
+                TabIcon(icon: "house.fill", title: "Home", isSelected: selectedTab == 0) { selectedTab = 0 }
+                TabIcon(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) { selectedTab = 1 }
+                TabIcon(icon: "safari.fill", title: "Khám phá", isSelected: selectedTab == 2) { selectedTab = 2 }
+                TabIcon(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 3) { selectedTab = 3 }
             }
             .padding(.vertical, 12)
             .background(RoundedRectangle(cornerRadius: 40).fill(Color.black.opacity(0.8)).background(.ultraThinMaterial))
@@ -41,6 +39,5 @@ struct TabIcon: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .animation(.spring(response: 0.3), value: isSelected)
     }
 }
