@@ -24,7 +24,7 @@ struct AskAIView: View {
                             HStack(spacing: 8) {
                                 ForEach(sampleQuestions, id: \.self) { q in
                                     Button { question = q; askAI(q) } label: {
-                                        Text(q).font(.caption).foregroundColor(.white).padding(10).background(Capsule().fill(.ultraThinMaterial))
+                                        Text(q).font(.caption).foregroundColor(.white.opacity(0.8)).padding(10).background(Capsule().fill(.ultraThinMaterial))
                                     }
                                 }
                             }
@@ -32,19 +32,20 @@ struct AskAIView: View {
                         
                         ForEach(chatHistory, id: \.0) { q, a in
                             VStack(alignment: .leading, spacing: 6) {
-                                HStack { Image(systemName: "person.circle.fill").foregroundColor(.orange); Text("Bạn").font(.caption).fontWeight(.bold).foregroundColor(.orange); Spacer() }
+                                HStack { Image(systemName: "person.circle.fill").foregroundColor(.white.opacity(0.6)); Text("Bạn").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.6)); Spacer() }
                                 Text(q).foregroundColor(.white).font(.subheadline).padding().background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                                HStack { Image(systemName: "sparkles").foregroundColor(.purple); Text("AI").font(.caption).fontWeight(.bold).foregroundColor(.purple); Spacer() }
-                                Text(a).foregroundColor(.white).font(.subheadline).padding().background(RoundedRectangle(cornerRadius: 12).fill(.purple.opacity(0.15)))
+                                HStack { Image(systemName: "sparkles").foregroundColor(.white.opacity(0.6)); Text("AI").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.6)); Spacer() }
+                                Text(a).foregroundColor(.white).font(.subheadline).padding().background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.08)))
                             }
                         }
                         if isLoading { HStack { Spacer(); ProgressView().tint(.white); Spacer() } }
+                        Spacer().frame(height: 80)
                     }.padding()
                 }
                 HStack(spacing: 8) {
                     TextField("Hỏi về phim này...", text: $question).textFieldStyle(.plain).foregroundColor(.white).padding(12).background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                    Button { askAI(question) } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 32)).foregroundColor(.orange) }.disabled(question.isEmpty || isLoading)
-                }.padding()
+                    Button { askAI(question) } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 32)).foregroundColor(.white.opacity(0.7)) }.disabled(question.isEmpty || isLoading)
+                }.padding().padding(.bottom, 20)
             }
         }
     }
@@ -52,28 +53,15 @@ struct AskAIView: View {
     func askAI(_ q: String) {
         guard !q.isEmpty else { return }
         isLoading = true; let userQ = q; question = ""
-        
-        // Dùng kiến thức có sẵn về phim để trả lời thông minh hơn
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            var answer = ""
-            let lowerQ = userQ.lowercased()
-            
-            if lowerQ.contains("plot twist") || lowerQ.contains("bất ngờ") {
-                answer = "\(movie.title) có rating \(movie.ratingText)/10. Dựa trên điểm số này, phim có thể có những tình tiết hấp dẫn. Tuy nhiên mình không muốn spoil trước, hãy xem và tự khám phá nhé! 🍿"
-            } else if lowerQ.contains("diễn viên") || lowerQ.contains("actor") {
-                answer = "\(movie.title) có sự tham gia của dàn diễn viên tài năng. Bạn có thể xem danh sách đầy đủ ở phần 'Diễn viên' bên dưới trang chi tiết phim."
-            } else if lowerQ.contains("phần 2") || lowerQ.contains("sequel") {
-                answer = "Hiện tại mình chưa có thông tin về phần tiếp theo của \(movie.title). Phim ra mắt năm \(movie.yearText), bạn có thể kiểm tra thêm trên Google."
-            } else if lowerQ.contains("giống") || lowerQ.contains("tương tự") {
-                answer = "Nếu bạn thích \(movie.title), hãy xem phần 'Phim tương tự' bên dưới. Mình cũng recommend bạn xem thêm các phim cùng thể loại!"
-            } else if lowerQ.contains("đáng xem") || lowerQ.contains("hay không") {
-                answer = movie.voteAverage >= 7.0 ? "Có! \(movie.title) được đánh giá \(movie.ratingText)/10 - rất đáng xem! 👍" : "\(movie.title) có rating \(movie.ratingText)/10. Tùy gu mỗi người, nhưng bạn có thể thử xem trailer trước khi quyết định."
-            } else {
-                answer = "\(movie.title) (\(movie.yearText)) - Rating: \(movie.ratingText)/10. \(movie.overview.prefix(150))... Bạn có thể xem trailer hoặc xem phim để biết thêm chi tiết!"
-            }
-            
-            chatHistory.append((userQ, answer))
-            isLoading = false
+            var answer = ""; let lowerQ = userQ.lowercased()
+            if lowerQ.contains("plot twist") || lowerQ.contains("bất ngờ") { answer = "\(movie.title) có rating \(movie.ratingText)/10. Mình không muốn spoil, hãy xem và tự khám phá nhé! 🍿" }
+            else if lowerQ.contains("diễn viên") || lowerQ.contains("actor") { answer = "Xem danh sách diễn viên đầy đủ ở phần 'Diễn viên' bên dưới trang chi tiết phim." }
+            else if lowerQ.contains("phần 2") || lowerQ.contains("sequel") { answer = "Phim ra mắt năm \(movie.yearText). Hiện mình chưa có thông tin về phần tiếp theo." }
+            else if lowerQ.contains("giống") || lowerQ.contains("tương tự") { answer = "Hãy xem phần 'Phim tương tự' bên dưới để tìm phim giống \(movie.title) nhé!" }
+            else if lowerQ.contains("đáng xem") || lowerQ.contains("hay không") { answer = movie.voteAverage >= 7.0 ? "Có! \(movie.title) được đánh giá \(movie.ratingText)/10 - rất đáng xem!" : "\(movie.title) có rating \(movie.ratingText)/10. Bạn có thể xem trailer trước khi quyết định." }
+            else { answer = "\(movie.title) (\(movie.yearText)) - Rating: \(movie.ratingText)/10. \(movie.overview.prefix(150))..." }
+            chatHistory.append((userQ, answer)); isLoading = false
         }
     }
 }
