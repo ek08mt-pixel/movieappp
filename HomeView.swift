@@ -21,12 +21,10 @@ struct HomeView: View {
                                 TabView(selection: $currentIndex) {
                                     ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                         NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                            ZStack {
-                                                CachedAsyncImage(url: movie.backdropURL)
-                                                    .aspectRatio(16/9, contentMode: .fill)
-                                                    .frame(height: 450).clipped()
-                                                LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
-                                            }
+                                            CachedAsyncImage(url: movie.backdropURL)
+                                                .aspectRatio(16/9, contentMode: .fill)
+                                                .frame(height: 450).clipped()
+                                                .overlay(LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom))
                                         }.tag(i)
                                     }
                                 }
@@ -45,9 +43,7 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 HStack(spacing: 12) {
-                                    Button {
-                                        if let movie = vm.trending24h.randomElement() { randomMovie = movie; showRandom = true }
-                                    } label: {
+                                    Button { if let movie = vm.trending24h.randomElement() { randomMovie = movie; showRandom = true } } label: {
                                         ZStack { Circle().fill(.thinMaterial).frame(width: 36, height: 36); Text("🎲").font(.system(size: 18)) }
                                     }
                                     NavigationLink(destination: ProfileView()) {
@@ -97,7 +93,7 @@ struct HomeView: View {
                             SectionGrid(title: "🇻🇳 Phim Việt Nam", movies: vm.vietnamese)
                             SectionGrid(title: "🎌 Anime", movies: vm.anime)
                             
-                            Spacer().frame(height: 100)
+                            Spacer().frame(height: 120)
                         }
                     }
                 }
@@ -106,9 +102,7 @@ struct HomeView: View {
         }
         .task { await vm.loadAll() }
         .sheet(isPresented: $showRandom) {
-            if let movie = randomMovie {
-                NavigationStack { MovieDetailView(movie: movie).overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } } }
-            }
+            if let movie = randomMovie { NavigationStack { MovieDetailView(movie: movie).overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } } } }
         }
     }
 }
@@ -117,13 +111,13 @@ struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white); Spacer()
                     NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) }
                 }.padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHGrid(rows: [GridItem(.fixed(165)), GridItem(.fixed(165))], spacing: 12) {
+                    LazyHGrid(rows: [GridItem(.fixed(175), spacing: 14), GridItem(.fixed(175), spacing: 14)], spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 VStack(spacing: 6) {
