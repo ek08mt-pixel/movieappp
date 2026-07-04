@@ -20,16 +20,19 @@ struct MovieDetailView: View {
             
             ScrollView {
                 VStack(spacing: 0) {
-                    ZStack(alignment: .bottom) {
-                        CachedAsyncImage(url: movie.backdropURL)
-                            .frame(height: 250).clipped()
-                        LinearGradient(colors: [.clear, colorManager.secondaryColor], startPoint: .center, endPoint: .bottom).frame(height: 250)
-                    }
+                    // Backdrop full screen - không blur, tràn status bar
+                    CachedAsyncImage(url: movie.backdropURL)
+                        .frame(height: 350)
+                        .clipped()
+                        .overlay(
+                            LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom)
+                        )
                     
                     VStack(alignment: .leading, spacing: 14) {
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL)
                                 .frame(width: 95, height: 142).clipShape(RoundedRectangle(cornerRadius: 10))
+                                .offset(y: -40)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(movie.title).font(.title3).fontWeight(.heavy).foregroundColor(.white)
@@ -39,9 +42,7 @@ struct MovieDetailView: View {
                                     Text("•").foregroundColor(.gray)
                                     Text(movie.yearText).foregroundColor(.gray)
                                 }
-                                Button {
-                                    showFullOverview = true
-                                } label: {
+                                Button { showFullOverview = true } label: {
                                     Text(movie.overview).font(.caption).foregroundColor(.gray).lineLimit(4).multilineTextAlignment(.leading)
                                 }
                             }
@@ -69,9 +70,7 @@ struct MovieDetailView: View {
                             Button {
                                 if appState.favorites.contains(where: {$0.id == movie.id}) {
                                     appState.favorites.removeAll {$0.id == movie.id}
-                                } else {
-                                    appState.favorites.append(movie)
-                                }
+                                } else { appState.favorites.append(movie) }
                             } label: {
                                 Label(appState.favorites.contains(where: {$0.id == movie.id}) ? "Đã lưu" : "Lưu",
                                       systemImage: appState.favorites.contains(where: {$0.id == movie.id}) ? "checkmark" : "plus")
@@ -90,8 +89,7 @@ struct MovieDetailView: View {
                                     ForEach(vm.actors.prefix(15)) { actor in
                                         NavigationLink(destination: ActorDetailView(actor: actor)) {
                                             VStack(spacing: 4) {
-                                                CachedAsyncImage(url: actor.profileURL)
-                                                    .frame(width: 60, height: 60).clipShape(Circle())
+                                                CachedAsyncImage(url: actor.profileURL).frame(width: 60, height: 60).clipShape(Circle())
                                                 Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60)
                                             }
                                         }
@@ -107,45 +105,29 @@ struct MovieDetailView: View {
                                     ForEach(vm.similar.prefix(12)) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
                                             ZStack(alignment: .bottom) {
-                                                CachedAsyncImage(url: m.posterURL)
-                                                    .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
+                                                CachedAsyncImage(url: m.posterURL).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
                                                 VStack(spacing: 2) {
                                                     Text(m.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
                                                 }
                                                 .padding(.horizontal, 6).padding(.vertical, 6).frame(width: 110)
                                                 .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            }
-                                            .frame(width: 110, height: 165)
+                                            }.frame(width: 110, height: 165)
                                         }
                                     }
                                 }.padding(.horizontal, 20)
                             }
                         }
                         
-                        // Comment section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Bình luận").font(.headline).foregroundColor(.white)
-                            
                             HStack(spacing: 8) {
-                                TextField("Viết bình luận...", text: $commentText)
-                                    .textFieldStyle(.plain).foregroundColor(.white).padding(10)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                                
-                                Button {
-                                    if !commentText.isEmpty {
-                                        comments.append(commentText)
-                                        commentText = ""
-                                    }
-                                } label: {
-                                    Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.orange)
-                                }
+                                TextField("Viết bình luận...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                                Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.orange) }
                             }
-                            
                             ForEach(comments, id: \.self) { comment in
                                 HStack(alignment: .top, spacing: 8) {
-                                    Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30)
-                                        .overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14)))
+                                    Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14)))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white)
                                         Text(comment).font(.caption).foregroundColor(.gray)
@@ -153,27 +135,22 @@ struct MovieDetailView: View {
                                     Spacer()
                                 }
                             }
-                        }
-                        .padding(.top, 16)
+                        }.padding(.top, 16)
                     }
-                    .padding(.horizontal, 20).padding(.top, 20)
+                    .padding(.horizontal, 20).padding(.top, 0)
                     Spacer().frame(height: 100)
                 }
             }
+            .ignoresSafeArea(edges: .top)
         }
+        .ignoresSafeArea(edges: .top)
         .task {
             await vm.load(movieId: movie.id)
             colorManager.extractColors(from: movie.backdropURL)
         }
         .sheet(isPresented: $showFullOverview) {
             NavigationStack {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    ScrollView {
-                        Text(movie.overview)
-                            .foregroundColor(.white).padding()
-                    }
-                }
+                ZStack { Color.black.ignoresSafeArea(); ScrollView { Text(movie.overview).foregroundColor(.white).padding() } }
                 .navigationTitle(movie.title)
                 .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showFullOverview = false } } }
             }
@@ -183,11 +160,7 @@ struct MovieDetailView: View {
                 Color.black.ignoresSafeArea()
                 WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea()
             }
-            .overlay(alignment: .topLeading) {
-                Button { showTrailer = false } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding()
-                }
-            }
+            .overlay(alignment: .topLeading) { Button { showTrailer = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding() } }
         }
         .sheet(isPresented: $showBookingSheet) {
             NavigationStack {
@@ -202,11 +175,8 @@ struct MovieDetailView: View {
 struct WebView: UIViewRepresentable {
     let urlString: String
     func makeUIView(context: Context) -> WKWebView {
-        let wv = WKWebView()
-        wv.backgroundColor = .black
-        wv.isOpaque = false
-        if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }
-        return wv
+        let wv = WKWebView(); wv.backgroundColor = .black; wv.isOpaque = false
+        if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }; return wv
     }
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
