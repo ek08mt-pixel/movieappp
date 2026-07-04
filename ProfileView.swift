@@ -3,10 +3,12 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @State private var showEditName = false
-    @State private var newName = ""
-    @State private var selectedAvatar = "person.fill"
+    @State private var showLogin = false
+    @State private var loginName = ""
+    @State private var loginPassword = ""
+    @State private var confirmPassword = ""
     
-    let avatars = ["person.fill", "cat.fill", "dog.fill", "rabbit.fill", "fish.fill", "pawprint.fill", "heart.fill"]
+    let avatars = ["person.fill", "cat.fill", "dog.fill", "rabbit.fill", "fish.fill", "pawprint.fill", "heart.fill", "star.fill", "crown.fill", "sparkles"]
     
     var body: some View {
         NavigationStack {
@@ -17,27 +19,52 @@ struct ProfileView: View {
                     VStack(spacing: 24) {
                         Menu {
                             ForEach(avatars, id: \.self) { icon in
-                                Button { selectedAvatar = icon } label: {
+                                Button {
+                                    appState.selectedAvatar = icon
+                                    appState.saveToDisk()
+                                } label: {
                                     Label(icon, systemImage: icon)
                                 }
                             }
                         } label: {
-                            Circle()
-                                .fill(.regularMaterial.opacity(0.2))
-                                .frame(width: 80, height: 80)
-                                .overlay(
-                                    Image(systemName: selectedAvatar)
-                                        .foregroundColor(.white.opacity(0.5)).font(.system(size: 35))
-                                )
+                            ZStack {
+                                Circle()
+                                    .fill(.thinMaterial)
+                                    .frame(width: 80, height: 80)
+                                    .shadow(color: .black.opacity(0.2), radius: 8)
+                                
+                                Image(systemName: appState.selectedAvatar)
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .font(.system(size: 35))
+                            }
                         }
                         .padding(.top, 20)
                         
                         if appState.isLoggedIn {
                             Text(appState.userName)
                                 .font(.title2).fontWeight(.bold).foregroundColor(.white)
+                            
+                            Button("Đăng xuất") {
+                                appState.isLoggedIn = false
+                                appState.userName = ""
+                                appState.saveToDisk()
+                            }
+                            .foregroundColor(.red).font(.caption)
                         } else {
-                            Button("Đăng nhập") { newName = ""; showEditName = true }
-                                .foregroundColor(.white.opacity(0.7))
+                            Button {
+                                loginName = ""
+                                loginPassword = ""
+                                confirmPassword = ""
+                                showLogin = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "person.badge.key.fill")
+                                    Text("Đăng nhập / Tạo tài khoản")
+                                }
+                                .foregroundColor(.white.opacity(0.8))
+                                .padding(.horizontal, 20).padding(.vertical, 10)
+                                .background(Capsule().fill(.ultraThinMaterial))
+                            }
                         }
                         
                         HStack(spacing: 0) {
@@ -49,7 +76,7 @@ struct ProfileView: View {
                         .padding(.horizontal)
                         
                         VStack(spacing: 1) {
-                            ProfileRow(icon: "pencil", title: "Đổi tên") { showEditName = true }
+                            ProfileRow(icon: "pencil", title: "Đổi tên hiển thị") { showEditName = true }
                             Divider().background(Color.white.opacity(0.1))
                             ProfileRow(icon: "doc.text", title: "Chính sách & Điều khoản") {}
                             Divider().background(Color.white.opacity(0.1))
@@ -73,12 +100,15 @@ struct ProfileView: View {
                 ZStack {
                     Color.black.ignoresSafeArea()
                     VStack(spacing: 20) {
-                        TextField("Nhập tên", text: $newName)
+                        TextField("Nhập tên mới", text: $loginName)
                             .textFieldStyle(.plain).foregroundColor(.white).padding()
                             .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
+                        
                         Button("Lưu") {
-                            appState.userName = newName
-                            appState.isLoggedIn = true
+                            if !loginName.isEmpty {
+                                appState.userName = loginName
+                                appState.saveToDisk()
+                            }
                             showEditName = false
                         }
                         .fontWeight(.bold).foregroundColor(.white)
@@ -88,6 +118,52 @@ struct ProfileView: View {
                     .padding()
                 }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showEditName = false } } }
+            }
+        }
+        .sheet(isPresented: $showLogin) {
+            NavigationStack {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            Text("Đăng nhập / Đăng ký")
+                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
+                            
+                            TextField("Tên người dùng", text: $loginName)
+                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
+                            
+                            SecureField("Mật khẩu", text: $loginPassword)
+                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
+                            
+                            SecureField("Xác nhận mật khẩu", text: $confirmPassword)
+                                .textFieldStyle(.plain).foregroundColor(.white).padding()
+                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
+                            
+                            Button {
+                                if !loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty {
+                                    appState.userName = loginName
+                                    appState.isLoggedIn = true
+                                    appState.saveToDisk()
+                                    showLogin = false
+                                }
+                            } label: {
+                                Text(loginPassword.isEmpty ? "Đăng ký" : "Xác nhận")
+                                    .fontWeight(.bold).foregroundColor(.white)
+                                    .frame(maxWidth: .infinity).padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(!loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty
+                                                  ? Color.blue.opacity(0.6) : Color.gray.opacity(0.3))
+                                    )
+                            }
+                            .disabled(loginName.isEmpty || loginPassword != confirmPassword || loginPassword.isEmpty)
+                        }
+                        .padding()
+                    }
+                }
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showLogin = false } } }
             }
         }
     }
