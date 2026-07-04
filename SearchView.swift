@@ -43,16 +43,20 @@ struct SearchView: View {
                                 Text("Tìm kiếm phổ biến")
                                     .font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
-                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10)
+                                ], spacing: 10) {
                                     ForEach(popularTopics, id: \.0) { topic, query, poster, _ in
                                         Button {
                                             vm.query = query; Task { await vm.search() }
                                         } label: {
                                             ZStack(alignment: .bottom) {
                                                 CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                    .frame(height: 90)
+                                                    .frame(height: 85)
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    .overlay(Color.black.opacity(0.4))
+                                                    .overlay(Color.black.opacity(0.35))
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                                 
                                                 Text(topic)
@@ -92,7 +96,12 @@ struct SearchView: View {
                         Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer()
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8)
+                            ], spacing: 8) {
                                 ForEach(vm.results) { movie in
                                     Button { selectedMovie = movie } label: {
                                         CachedAsyncImage(url: movie.posterURL)
