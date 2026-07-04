@@ -31,21 +31,20 @@ class HomeViewModel: ObservableObject {
         
         do {
             let results = try await (d, n, u, tr, p, ko, ja, vi, us, g)
-            trending24h = results.0
-            nowPlaying = results.1
-            upcoming = results.2
-            topRated = results.3
-            popular = results.4
-            korean = results.5.filter { ($0.adult ?? false) == false && $0.voteAverage > 5.0 }
-            japanese = results.6.filter { ($0.adult ?? false) == false && $0.voteAverage > 6.0 && $0.popularity ?? 0 > 10 }
-            vietnamese = results.7
-            usuk = results.8
+            trending24h = results.0.filter { ($0.adult ?? false) == false }
+            nowPlaying = results.1.filter { ($0.adult ?? false) == false }
+            upcoming = results.2.filter { ($0.adult ?? false) == false }
+            topRated = results.3.filter { ($0.adult ?? false) == false }
+            popular = results.4.filter { ($0.adult ?? false) == false }
+            korean = results.5.filter { ($0.adult ?? false) == false && $0.voteAverage > 5.0 && !($0.overview.lowercased().contains("sex")) }
+            japanese = results.6.filter { ($0.adult ?? false) == false && $0.voteAverage > 6.0 && $0.popularity ?? 0 > 10 && !($0.overview.lowercased().contains("sex")) && !($0.title.lowercased().contains("av")) }
+            vietnamese = results.7.filter { ($0.adult ?? false) == false }
+            usuk = results.8.filter { ($0.adult ?? false) == false }
             genres = results.9
             
-            // Movie of the Day
-            let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
             if !trending24h.isEmpty {
-                movieOfDay = trending24h[dayOfYear % trending24h.count]
+                let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+                movieOfDay = trending24h[day % trending24h.count]
             }
         } catch {
             print("Error: \(error)")
