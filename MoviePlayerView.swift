@@ -2,7 +2,7 @@ import SwiftUI
 import AVKit
 import MediaPlayer
 
-// MARK: - MovieSource
+// MARK: - MovieSource (chỉ giữ nguồn stream)
 enum MovieSource: String, CaseIterable {
     case kkphim = "KKPhim"
     case ntlStream = "NTL Stream"
@@ -98,6 +98,16 @@ class MovieStreamService {
     }
 }
 
+// MARK: - Rotatable AVPlayerViewController (Ép xoay ngang)
+class RotatablePlayerViewController: AVPlayerViewController {
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .allButUpsideDown
+    }
+    override var shouldAutorotate: Bool {
+        return true
+    }
+}
+
 // MARK: - MoviePlayerView
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
@@ -137,8 +147,16 @@ struct MoviePlayerView: View {
             } else if let player = player {
                 CustomVideoPlayer(player: player)
                     .ignoresSafeArea()
-                    .onAppear { player.play() }
-                    .onDisappear { player.pause() }
+                    .onAppear {
+                        player.play()
+                        // Ép xoay ngang ngay khi player xuất hiện
+                        UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+                    }
+                    .onDisappear {
+                        player.pause()
+                        // Trả về dọc khi thoát
+                        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+                    }
             }
         }
         .task { await loadStream() }
@@ -164,12 +182,12 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Custom Video Player (AVPlayerViewController gốc, có PiP + xoay ngang)
+// MARK: - Custom Video Player (dùng RotatablePlayerViewController)
 struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
+    func makeUIViewController(context: Context) -> RotatablePlayerViewController {
+        let controller = RotatablePlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
         controller.videoGravity = .resizeAspect
@@ -179,5 +197,5 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
         return controller
     }
     
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: RotatablePlayerViewController, context: Context) {}
 }
