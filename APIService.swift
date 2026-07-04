@@ -176,4 +176,10 @@ class APIService {
         let response = try decoder.decode(ActorMoviesResponse.self, from: data)
         return response.cast
     }
+}func animeMovies() async throws -> [Movie] {
+    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&with_original_language=ja&sort_by=popularity.desc&language=\(language)"
+    guard let url = URL(string: urlString) else { return [] }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    let response = try decoder.decode(MovieResponse.self, from: data)
+    return response.results
 }
