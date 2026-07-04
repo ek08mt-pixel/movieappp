@@ -16,6 +16,16 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
+// MARK: - MovieSource
+enum MovieSource: String, CaseIterable {
+    case ophim = "OPhim"
+    case twoembed = "2Embed"
+    case vidsrc = "VidSrc"
+    case nguonc = "NguonC"
+    case kkphim = "KKPhim"
+    case ntl = "NTL Stream"
+}
+
 // MARK: - Network Manager
 class NetworkManager {
     static let shared = NetworkManager()
@@ -75,23 +85,30 @@ struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
 struct NTLStreamItem: Codable { let url: String? }
 struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
 
-// MARK: - Source Manager (5 nguồn)
+// MARK: - Source Manager
 class SourceManager {
     static let shared = SourceManager()
     
-    func resolveMovie(imdbId: String) async throws -> URL {
-        // 1. OPhim (Vietsub)
-        if let url = try? await fetchOPhim(imdbId) { print("✅ OPhim OK"); return url }
-        // 2. 2Embed (USUK)
-        if let url = try? await fetch2Embed(imdbId) { print("✅ 2Embed OK"); return url }
-        // 3. VidSrc (USUK)
-        if let url = try? await fetchVidSrc(imdbId) { print("✅ VidSrc OK"); return url }
-        // 4. NguonC (Vietsub)
-        if let url = try? await fetchNguonc(imdbId) { print("✅ NguonC OK"); return url }
-        // 5. KKPhim
-        if let url = try? await fetchKKPhim(imdbId) { print("✅ KKPhim OK"); return url }
-        // 6. NTL Stream
-        if let url = try? await fetchNTLStream(imdbId) { print("✅ NTL OK"); return url }
+    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> URL {
+        switch source {
+        case .ophim: return try await fetchOPhim(imdbId)
+        case .twoembed: return try await fetch2Embed(imdbId)
+        case .vidsrc: return try await fetchVidSrc(imdbId)
+        case .nguonc: return try await fetchNguonc(imdbId)
+        case .kkphim: return try await fetchKKPhim(imdbId)
+        case .ntl: return try await fetchNTLStream(imdbId)
+        }
+    }
+    
+    func tryAllSources(imdbId: String) async throws -> URL {
+        for source in MovieSource.allCases {
+            print("🎯 THỬ: \(source.rawValue)...")
+            if let url = try? await getStreamURL(for: source, imdbId: imdbId) {
+                print("✅ THÀNH CÔNG: \(source.rawValue)")
+                return url
+            }
+            print("❌ THẤT BẠI: \(source.rawValue)")
+        }
         throw StreamError.noStreamAvailable
     }
     
@@ -112,13 +129,11 @@ class SourceManager {
     
     private func fetch2Embed(_ imdbId: String) async throws -> URL {
         let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
-        let urlString = "https://www.2embed.cc/embed/\(cleanId)"
-        return try await NetworkManager.shared.resolveURL(urlString)
+        return try await NetworkManager.shared.resolveURL("https://www.2embed.cc/embed/\(cleanId)")
     }
     
     private func fetchVidSrc(_ imdbId: String) async throws -> URL {
-        let urlString = "https://vidsrc.to/embed/movie/\(imdbId)"
-        return try await NetworkManager.shared.resolveURL(urlString)
+        return try await NetworkManager.shared.resolveURL("https://vidsrc.to/embed/movie/\(imdbId)")
     }
     
     private func fetchNguonc(_ imdbId: String) async throws -> URL {
@@ -204,7 +219,9 @@ struct MoviePlayerView: View {
     @Environment(\.dismiss) var dismiss
     @State private var isLoading = true; @State private var errorMessage: String?
     @State private var player: AVPlayer?; @State private var streamURL: String?
+    @State private var currentSource: MovieSource?
     @State private var showExternalPlayerMenu = false
+    @State private var showSourcePicker = false
     private let tmdbKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
@@ -218,14 +235,26 @@ struct MoviePlayerView: View {
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
                     HStack(spacing: 12) {
                         Button { Task { await loadStream() } } label: { Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption) }
-                        if streamURL != nil { Button { showExternalPlayerMenu = true } label: { Label("Mở bằng app khác", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) } }
+                        Button { showSourcePicker = true } label: { Label("Chọn nguồn", systemImage: "list.bullet").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) }
+                        if streamURL != nil { Button { showExternalPlayerMenu = true } label: { Label("App khác", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) } }
                     }
                 }
             } else if let player = player {
                 CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
+                    .overlay(alignment: .topLeading) {
+                        if let source = currentSource {
+                            Text(source.rawValue).font(.caption2).foregroundColor(.white.opacity(0.6)).padding(6).background(Capsule().fill(.ultraThinMaterial)).padding(.top, 50).padding(.leading, 20)
+                        }
+                    }
                     .overlay(alignment: .topTrailing) {
-                        Menu { ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in Button(p.name) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } }
-                        label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
+                        HStack(spacing: 8) {
+                            Menu {
+                                ForEach(MovieSource.allCases, id: \.self) { s in Button(s.rawValue) { Task { await loadFromSource(s) } } }
+                            } label: { Image(systemName: "list.bullet").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial)) }
+                            
+                            Menu { ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in Button(p.name) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } }
+                            label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
+                        }
                     }
             }
         }
@@ -233,13 +262,24 @@ struct MoviePlayerView: View {
         .actionSheet(isPresented: $showExternalPlayerMenu) {
             ActionSheet(title: Text("Chọn trình phát"), buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
         }
+        .actionSheet(isPresented: $showSourcePicker) {
+            ActionSheet(title: Text("Chọn nguồn phim"), buttons: MovieSource.allCases.map { s in .default(Text(s.rawValue)) { Task { await loadFromSource(s) } } } + [.cancel()])
+        }
     }
     
-    private func loadStream() async {
+    private func loadStream() async { await loadFromSource(nil) }
+    
+    private func loadFromSource(_ source: MovieSource?) async {
         isLoading = true; errorMessage = nil; player = nil
         do {
             let imdbId = try await fetchIMDbId()
-            let url = try await SourceManager.shared.resolveMovie(imdbId: imdbId)
+            let url: URL
+            if let source = source {
+                url = try await SourceManager.shared.getStreamURL(for: source, imdbId: imdbId)
+                currentSource = source
+            } else {
+                url = try await SourceManager.shared.tryAllSources(imdbId: imdbId)
+            }
             await MainActor.run { self.streamURL = url.absoluteString; self.player = PlayerDebugger.debugPlayer(url: url); self.isLoading = false }
         } catch { await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false } }
     }
