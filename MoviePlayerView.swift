@@ -1,16 +1,16 @@
 import SwiftUI
-import AVKit
+import WebKit
 
 // MARK: - MoviePlayerView
 struct MoviePlayerView: View {
     let movieId: Int
     let movieTitle: String
     @Environment(\.dismiss) var dismiss
-    @State private var streamURL: URL?
-    @State private var subtitles: [Subtitle] = []
+    @State private var imdbId: String?
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @State private var player: AVPlayer?
+    
+    private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
         ZStack {
@@ -34,139 +34,136 @@ struct MoviePlayerView: View {
                     }.frame(maxHeight: .infinity)
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 50)).foregroundColor(.gray)
                         Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                        Button("Thử lại") { Task { await fetchMovie() } }
+                        Button("Thử lại") { Task { await fetchIMDbId() } }
                             .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
                             .background(Capsule().fill(.ultraThinMaterial))
                     }.frame(maxHeight: .infinity)
-                } else if let player = player {
-                    CustomVideoPlayer(player: player, subtitles: subtitles)
-                        .onAppear { player.play() }
-                        .onDisappear { player.pause() }
+                } else if let imdbId = imdbId {
+                    VidSrcWebView(imdbId: imdbId)
                 }
             }
         }
-        .task { await fetchMovie() }
+        .task { await fetchIMDbId() }
     }
     
-    // MARK: - Fetch Movie từ Consumet API
-    private func fetchMovie() async {
+    private func fetchIMDbId() async {
         isLoading = true; errorMessage = nil
-        
+        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else {
+            errorMessage = "URL không hợp lệ"; isLoading = false; return
+        }
         do {
-            // Bước 1: Lấy thông tin phim từ Consumet
-            let infoURL = "https://api.consumet.org/movies/tmdb/info?id=\(movieId)"
-            let infoData = try await fetchJSON(from: infoURL)
-            
-            // Parse JSON để lấy episode ID
-            struct ConsumetInfo: Codable {
-                let id: String
-                let episodes: [ConsumetEpisode]?
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                errorMessage = "Không thể kết nối đến TMDB"; isLoading = false; return
             }
-            struct ConsumetEpisode: Codable {
-                let id: String
-                let title: String
-                let number: Int
-            }
-            
-            let info = try JSONDecoder().decode(ConsumetInfo.self, from: infoData)
-            
-            // Bước 2: Lấy link stream từ episode đầu tiên
-            let episodeId = info.episodes?.first?.id ?? info.id
-            let watchURL = "https://api.consumet.org/movies/tmdb/watch?episodeId=\(episodeId)&mediaId=\(info.id)"
-            let watchData = try await fetchJSON(from: watchURL)
-            
-            // Parse JSON lấy link stream + phụ đề
-            struct ConsumetWatch: Codable {
-                let sources: [ConsumetSource]?
-                let subtitles: [ConsumetSubtitle]?
-            }
-            struct ConsumetSource: Codable {
-                let url: String
-                let quality: String?
-                let isM3U8: Bool?
-            }
-            struct ConsumetSubtitle: Codable {
-                let url: String
-                let lang: String
-            }
-            
-            let watch = try JSONDecoder().decode(ConsumetWatch.self, from: watchData)
-            
+            struct ExternalIDs: Codable { let imdb_id: String? }
+            let result = try JSONDecoder().decode(ExternalIDs.self, from: data)
             await MainActor.run {
-                if let sourceURL = watch.sources?.first?.url,
-                   let url = URL(string: sourceURL) {
-                    
-                    // Tạo AVPlayer với link stream
-                    let asset = AVURLAsset(url: url)
-                    let playerItem = AVPlayerItem(asset: asset)
-                    
-                    // Thêm phụ đề
-                    if let subs = watch.subtitles {
-                        var loadedSubtitles: [Subtitle] = []
-                        for sub in subs {
-                            if let subURL = URL(string: sub.url) {
-                                loadedSubtitles.append(Subtitle(url: subURL, language: sub.lang))
-                            }
-                        }
-                        self.subtitles = loadedSubtitles
-                    }
-                    
-                    self.player = AVPlayer(playerItem: playerItem)
-                } else {
-                    self.errorMessage = "Không tìm thấy link stream"
-                }
-                self.isLoading = false
+                if let imdbId = result.imdb_id { self.imdbId = imdbId }
+                else { errorMessage = "Không tìm thấy IMDb ID" }
+                isLoading = false
             }
         } catch {
-            await MainActor.run {
-                self.errorMessage = "Lỗi API: \(error.localizedDescription)"
-                self.isLoading = false
-            }
+            await MainActor.run { errorMessage = "Lỗi: \(error.localizedDescription)"; isLoading = false }
         }
     }
+}
+
+// MARK: - VidSrc WebView (nhúng trực tiếp)
+struct VidSrcWebView: UIViewRepresentable {
+    let imdbId: String
+    @State private var selectedSource = 0
     
-    // Hàm fetch JSON tổng quát
-    private func fetchJSON(from urlString: String) async throws -> Data {
-        guard let url = URL(string: urlString) else {
-            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
-        }
+    // 4 nguồn VidSrc khác nhau
+    let sources: [(String, String)] = [
+        ("VidSrc 1", "https://vidsrc.to/embed/movie/\(imdbId)"),
+        ("VidSrc 2", "https://vidsrc.me/embed/movie?imdb=\(imdbId)"),
+        ("VidSrc 3", "https://vidsrc.xyz/embed/movie/\(imdbId)"),
+        ("VidSrc 4", "https://vidlink.pro/movie/\(imdbId)"),
+    ]
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        
+        let prefs = WKPreferences()
+        prefs.javaScriptEnabled = true
+        prefs.javaScriptCanOpenWindowsAutomatically = true
+        config.preferences = prefs
+        
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.backgroundColor = .black
+        webView.isOpaque = false
+        webView.scrollView.backgroundColor = .black
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.navigationDelegate = context.coordinator
+        
+        // User-Agent iPhone thật
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        
+        // Load nguồn mặc định
+        loadSource(0, in: webView)
+        
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    
+    func loadSource(_ index: Int, in webView: WKWebView) {
+        let urlString = sources[index].1
+        guard let url = URL(string: urlString) else { return }
         
         var request = URLRequest(url: url)
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 15
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://vidsrc.to", forHTTPHeaderField: "Referer")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.timeoutInterval = 30
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Server lỗi"])
+        print("🌐 LOADING: \(urlString)")
+        webView.load(request)
+    }
+    
+    // MARK: - Coordinator
+    class Coordinator: NSObject, WKNavigationDelegate {
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ LOAD THÀNH CÔNG: \(webView.url?.absoluteString ?? "")")
+            
+            // Inject script tự động bấm Play
+            let script = """
+            setTimeout(function() {
+                // Tìm và click nút play
+                var buttons = document.querySelectorAll('button, .play-button, .plyr__control--overlaid, [data-plyr="play"]');
+                for (var i = 0; i < buttons.length; i++) { buttons[i].click(); }
+                
+                // Tìm video và play
+                var videos = document.querySelectorAll('video');
+                for (var i = 0; i < videos.length; i++) {
+                    videos[i].play().catch(function(e) { console.log('Play error: ' + e); });
+                }
+            }, 2000);
+            """
+            webView.evaluateJavaScript(script, completionHandler: nil)
         }
         
-        return data
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            print("❌ LỖI: \(error.localizedDescription)")
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            print("❌ NAVIGATION LỖI: \(error.localizedDescription)")
+        }
+        
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            decisionHandler(.allow)
+        }
     }
-}
-
-// MARK: - Subtitle Model
-struct Subtitle {
-    let url: URL
-    let language: String
-}
-
-// MARK: - Custom Video Player với phụ đề
-struct CustomVideoPlayer: UIViewControllerRepresentable {
-    let player: AVPlayer
-    let subtitles: [Subtitle]
-    
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.player = player
-        controller.showsPlaybackControls = true
-        controller.videoGravity = .resizeAspect
-        return controller
-    }
-    
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
 }
