@@ -5,15 +5,15 @@ struct MoodPickerView: View {
     @State private var movies: [Movie] = []
     @State private var isLoading = false
     
-    let moods: [(String, String, String, Int)] = [
-        ("😢", "Buồn", "Drama", 18),
-        ("❤️", "Lãng mạn", "Romance", 10749),
-        ("🔪", "Kinh dị", "Horror", 27),
-        ("🤯", "Kịch tính", "Thriller", 53),
-        ("😂", "Hài hước", "Comedy", 35),
-        ("🧘", "Thư giãn", "Chill", 99),
-        ("💥", "Hành động", "Action", 28),
-        ("🚀", "Viễn tưởng", "Sci-Fi", 878),
+    let moods: [(String, String, Int)] = [
+        ("😢", "Buồn", 18),
+        ("❤️", "Lãng mạn", 10749),
+        ("🔪", "Kinh dị", 27),
+        ("🤯", "Kịch tính", 53),
+        ("😂", "Hài hước", 35),
+        ("🧘", "Thư giãn", 99),
+        ("💥", "Hành động", 28),
+        ("🚀", "Viễn tưởng", 878),
     ]
     
     var body: some View {
@@ -22,34 +22,30 @@ struct MoodPickerView: View {
                 Color.black.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Hôm nay bạn muốn xem gì?")
-                            .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                            .padding(.horizontal)
+                            .font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
                         
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            ForEach(moods, id: \.0) { emoji, name, _, genreId in
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                            ForEach(moods, id: \.0) { emoji, name, genreId in
                                 Button {
                                     selectedMood = name
                                     Task {
                                         isLoading = true
                                         do {
                                             movies = try await APIService.shared.discoverMovies(genreId: genreId)
-                                        } catch {
-                                            movies = []
-                                        }
+                                        } catch { movies = [] }
                                         isLoading = false
                                     }
                                 } label: {
-                                    VStack(spacing: 8) {
-                                        Text(emoji).font(.system(size: 40))
-                                        Text(name).font(.caption).fontWeight(.medium).foregroundColor(.white)
+                                    VStack(spacing: 4) {
+                                        Text(emoji).font(.system(size: 24))
+                                        Text(name).font(.system(size: 9)).foregroundColor(.white)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
+                                    .frame(maxWidth: .infinity).padding(.vertical, 8)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .fill(selectedMood == name ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(selectedMood == name ? Color.blue.opacity(0.3) : .ultraThinMaterial)
                                     )
                                 }
                             }
@@ -61,32 +57,24 @@ struct MoodPickerView: View {
                         }
                         
                         if !movies.isEmpty {
-                            Text(selectedMood ?? "")
-                                .font(.headline).foregroundColor(.white).padding(.horizontal)
+                            Text(selectedMood ?? "").font(.headline).foregroundColor(.white).padding(.horizontal)
                             
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(movies.prefix(10)) { movie in
-                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                            VStack(spacing: 5) {
-                                                CachedAsyncImage(url: movie.posterURL)
-                                                    .frame(width: 120, height: 180)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                Text(movie.title)
-                                                    .font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 120)
-                                            }
-                                        }
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                                ForEach(movies.prefix(12)) { movie in
+                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .frame(height: 150)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
                                     }
-                                }.padding(.horizontal)
-                            }
+                                }
+                            }.padding(.horizontal)
                         }
                         
                         Spacer().frame(height: 100)
                     }
                 }
             }
-            .navigationTitle("Chọn Mood")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Chọn Mood").navigationBarTitleDisplayMode(.inline)
         }
     }
 }
