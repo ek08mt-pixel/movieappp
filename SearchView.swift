@@ -7,8 +7,8 @@ struct SearchView: View {
     @State private var selectedMovie: Movie?
     
     let popularTopics: [(String, String, String, Int)] = [
-        ("Marvel", "marvel", "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg", 0),
-        ("DC", "dc comics", "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg", 0),
+        ("Marvel", "marvel", "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", 0),
+        ("DC", "dc", "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg", 0),
         ("Hành động", "action", "/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg", 28),
         ("Viễn tưởng", "sci fi", "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg", 878),
         ("Kinh dị", "horror", "/n6bUvigpBOqisP4apFP3FbhqEfA.jpg", 27),
@@ -32,13 +32,10 @@ struct SearchView: View {
                             }
                         }
                         if focused {
-                            Button("Đóng") { focused = false }
-                                .foregroundColor(.orange).font(.caption)
+                            Button("Đóng") { focused = false }.foregroundColor(.orange).font(.caption)
                         }
                     }
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
-                    .padding()
+                    .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding()
                     
                     if vm.query.isEmpty {
                         ScrollView {
@@ -46,22 +43,20 @@ struct SearchView: View {
                                 Text("Tìm kiếm phổ biến")
                                     .font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
-                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                    ForEach(popularTopics, id: \.0) { topic, query, poster, genreId in
+                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                                    ForEach(popularTopics, id: \.0) { topic, query, poster, _ in
                                         Button {
-                                            vm.query = query
-                                            Task { await vm.search() }
+                                            vm.query = query; Task { await vm.search() }
                                         } label: {
                                             ZStack(alignment: .bottom) {
                                                 CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                    .frame(height: 100)
+                                                    .frame(height: 90)
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    .blur(radius: 3)
-                                                    .overlay(Color.black.opacity(0.3))
+                                                    .overlay(Color.black.opacity(0.4))
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                                 
                                                 Text(topic)
-                                                    .font(.caption).fontWeight(.bold).foregroundColor(.white)
+                                                    .font(.system(size: 10)).fontWeight(.bold).foregroundColor(.white)
                                                     .padding(4).background(Color.black.opacity(0.5))
                                                     .clipShape(Capsule()).padding(4)
                                             }
@@ -76,8 +71,7 @@ struct SearchView: View {
                                 ForEach(Array(vm.trending.prefix(10).enumerated()), id: \.element.id) { index, movie in
                                     Button { selectedMovie = movie } label: {
                                         HStack(spacing: 12) {
-                                            Text("\(index + 1)")
-                                                .font(.title3).fontWeight(.bold).foregroundColor(.gray).frame(width: 30)
+                                            Text("\(index + 1)").font(.title3).fontWeight(.bold).foregroundColor(.gray).frame(width: 30)
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
                                             VStack(alignment: .leading, spacing: 4) {
@@ -98,23 +92,15 @@ struct SearchView: View {
                         Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer()
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                                 ForEach(vm.results) { movie in
                                     Button { selectedMovie = movie } label: {
-                                        VStack(spacing: 4) {
-                                            CachedAsyncImage(url: movie.posterURL)
-                                                .frame(height: 140).clipShape(RoundedRectangle(cornerRadius: 10))
-                                            Text(movie.title)
-                                                .font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
-                                            HStack(spacing: 2) {
-                                                Image(systemName: "star.fill").foregroundColor(.yellow).font(.system(size: 7))
-                                                Text(movie.ratingText).foregroundColor(.gray).font(.system(size: 8))
-                                            }
-                                        }
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .frame(height: 150)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
                                     }
                                 }
-                            }
-                            .padding(.horizontal)
+                            }.padding(.horizontal)
                         }
                     }
                 }
