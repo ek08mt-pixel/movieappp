@@ -5,38 +5,28 @@ struct MovieDetailView: View {
     let movie: Movie
     var showBooking: Bool = false
     @StateObject private var vm = MovieDetailViewModel()
+    @StateObject private var colorManager = DynamicColorManager()
     @EnvironmentObject var appState: AppState
     @State private var showTrailer = false
     @State private var showBookingSheet = false
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            LinearGradient(colors: [colorManager.dominantColor, colorManager.secondaryColor, .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 0) {
                     ZStack(alignment: .bottom) {
-                        AsyncImage(url: movie.backdropURL) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } else {
-                                Rectangle().fill(Color.gray.opacity(0.1))
-                            }
-                        }
-                        .frame(height: 250).clipped()
-                        LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom).frame(height: 250)
+                        CachedAsyncImage(url: movie.backdropURL)
+                            .frame(height: 250).clipped()
+                        LinearGradient(colors: [.clear, colorManager.secondaryColor], startPoint: .center, endPoint: .bottom).frame(height: 250)
                     }
                     
                     VStack(alignment: .leading, spacing: 14) {
                         HStack(alignment: .top, spacing: 14) {
-                            AsyncImage(url: movie.posterURL) { phase in
-                                if let image = phase.image {
-                                    image.resizable().aspectRatio(contentMode: .fill)
-                                } else {
-                                    Rectangle().fill(Color.gray.opacity(0.1))
-                                }
-                            }
-                            .frame(width: 95, height: 142).clipShape(RoundedRectangle(cornerRadius: 10))
+                            CachedAsyncImage(url: movie.posterURL)
+                                .frame(width: 95, height: 142).clipShape(RoundedRectangle(cornerRadius: 10))
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(movie.title).font(.title3).fontWeight(.heavy).foregroundColor(.white)
@@ -84,6 +74,9 @@ struct MovieDetailView: View {
                             }
                         }
                         
+                        QuoteView(movieId: movie.id)
+                            .padding(.vertical, 8)
+                        
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.headline).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -91,14 +84,8 @@ struct MovieDetailView: View {
                                     ForEach(vm.actors.prefix(15)) { actor in
                                         NavigationLink(destination: ActorDetailView(actor: actor)) {
                                             VStack(spacing: 4) {
-                                                AsyncImage(url: actor.profileURL) { phase in
-                                                    if let image = phase.image {
-                                                        image.resizable().aspectRatio(contentMode: .fill)
-                                                    } else {
-                                                        Circle().fill(Color.gray.opacity(0.1))
-                                                    }
-                                                }
-                                                .frame(width: 60, height: 60).clipShape(Circle())
+                                                CachedAsyncImage(url: actor.profileURL)
+                                                    .frame(width: 60, height: 60).clipShape(Circle())
                                                 Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60)
                                             }
                                         }
@@ -114,14 +101,8 @@ struct MovieDetailView: View {
                                     ForEach(vm.similar.prefix(12)) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
                                             ZStack(alignment: .bottom) {
-                                                AsyncImage(url: m.posterURL) { phase in
-                                                    if let image = phase.image {
-                                                        image.resizable().aspectRatio(contentMode: .fill)
-                                                    } else {
-                                                        Rectangle().fill(Color.gray.opacity(0.08))
-                                                    }
-                                                }
-                                                .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
+                                                CachedAsyncImage(url: m.posterURL)
+                                                    .frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 12))
                                                 
                                                 VStack(spacing: 2) {
                                                     Text(m.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2)
@@ -133,8 +114,7 @@ struct MovieDetailView: View {
                                             .frame(width: 110, height: 165)
                                         }
                                     }
-                                }
-                                .padding(.horizontal, 20)
+                                }.padding(.horizontal, 20)
                             }
                         }
                     }
@@ -143,7 +123,10 @@ struct MovieDetailView: View {
                 }
             }
         }
-        .task { await vm.load(movieId: movie.id) }
+        .task {
+            await vm.load(movieId: movie.id)
+            colorManager.extractColors(from: movie.backdropURL)
+        }
         .fullScreenCover(isPresented: $showTrailer) {
             ZStack {
                 Color.black.ignoresSafeArea()
