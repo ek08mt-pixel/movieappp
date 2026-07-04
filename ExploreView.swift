@@ -3,6 +3,9 @@ import SwiftUI
 struct ExploreView: View {
     @State private var randomMovie: Movie?
     @State private var showRandom = false
+    @State private var staffMovies: [Movie] = []
+    @State private var editorMovies: [Movie] = []
+    @State private var hiddenMovies: [Movie] = []
     
     let collections: [(String, String, String)] = [
         ("Oscar", "oscar", "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg"),
@@ -17,24 +20,6 @@ struct ExploreView: View {
         ("A24", "a24 films", "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"),
         ("Hàn Quốc", "korean movies", "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"),
         ("Nhật Bản", "japanese anime", "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg"),
-    ]
-    
-    let staffPicks: [(String, String, Int)] = [
-        ("The Godfather", "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", 238),
-        ("Pulp Fiction", "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg", 680),
-        ("Fight Club", "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg", 550),
-    ]
-    
-    let editorChoice: [(String, String, Int)] = [
-        ("Interstellar", "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", 157336),
-        ("Inception", "/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg", 27205),
-        ("Parasite", "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", 496243),
-    ]
-    
-    let hiddenGems: [(String, String, Int)] = [
-        ("Whiplash", "/7fn624j5lj3xTme2SgiLCeuedmO.jpg", 244786),
-        ("Oldboy", "/pWDtjs568ZfOTMbURQBYuT4Qxka.jpg", 670),
-        ("A Silent Voice", "/tD4kGqKj5Ld3GQqL0fJwKjK7Gv.jpg", 378064),
     ]
     
     var body: some View {
@@ -53,8 +38,10 @@ struct ExploreView: View {
                                 Task {
                                     do {
                                         let movies = try await APIService.shared.popular()
-                                        randomMovie = movies.randomElement()
-                                        showRandom = true
+                                        if let movie = movies.randomElement() {
+                                            randomMovie = movie
+                                            showRandom = true
+                                        }
                                     } catch {}
                                 }
                             } label: {
@@ -102,10 +89,8 @@ struct ExploreView: View {
                                         CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
                                             .frame(height: 100)
                                             .clipShape(RoundedRectangle(cornerRadius: 14))
-                                            .blur(radius: 2)
-                                            .overlay(Color.black.opacity(0.4))
+                                            .overlay(Color.black.opacity(0.35))
                                             .clipShape(RoundedRectangle(cornerRadius: 14))
-                                        
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
                                 }
@@ -113,58 +98,29 @@ struct ExploreView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Staff Picks - bấm được
-                        Text("Staff Picks").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(staffPicks, id: \.2) { title, poster, id in
-                                    NavigationLink(destination: MovieDetailView(movie: Movie(id: id, title: title, overview: "", posterPath: poster, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: nil, originalLanguage: nil))) {
-                                        VStack(spacing: 5) {
-                                            CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                .frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                                            Text(title).font(.system(size: 10)).foregroundColor(.white).frame(width: 120)
-                                        }
-                                    }
-                                }
-                            }.padding(.horizontal)
-                        }
+                        // Staff Picks
+                        SectionWithSeeAll(title: "Staff Picks", movies: staffMovies)
                         
-                        // Editor's Choice - bấm được
-                        Text("Editor's Choice").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(editorChoice, id: \.2) { title, poster, id in
-                                    NavigationLink(destination: MovieDetailView(movie: Movie(id: id, title: title, overview: "", posterPath: poster, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: nil, originalLanguage: nil))) {
-                                        VStack(spacing: 5) {
-                                            CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                .frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                                            Text(title).font(.system(size: 10)).foregroundColor(.white).frame(width: 120)
-                                        }
-                                    }
-                                }
-                            }.padding(.horizontal)
-                        }
+                        // Editor's Choice
+                        SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies)
                         
-                        // Hidden Gems - bấm được
-                        Text("Hidden Gems").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(hiddenGems, id: \.2) { title, poster, id in
-                                    NavigationLink(destination: MovieDetailView(movie: Movie(id: id, title: title, overview: "", posterPath: poster, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: nil, originalLanguage: nil))) {
-                                        VStack(spacing: 5) {
-                                            CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                .frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                                            Text(title).font(.system(size: 10)).foregroundColor(.white).frame(width: 120)
-                                        }
-                                    }
-                                }
-                            }.padding(.horizontal)
-                        }
+                        // Hidden Gems
+                        SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies)
                         
                         Spacer().frame(height: 120)
                     }
                 }
             }
+        }
+        .task {
+            async let s = APIService.shared.topRated()
+            async let e = APIService.shared.popular()
+            async let h = APIService.shared.discoverMovies(minRating: 7.5, minVotes: 100)
+            do {
+                staffMovies = try await s
+                editorMovies = try await e
+                hiddenMovies = try await h
+            } catch {}
         }
         .fullScreenCover(isPresented: $showRandom) {
             if let movie = randomMovie {
@@ -175,6 +131,37 @@ struct ExploreView: View {
                                 Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
                             }
                         }
+                }
+            }
+        }
+    }
+}
+
+struct SectionWithSeeAll: View {
+    let title: String
+    let movies: [Movie]
+    
+    var body: some View {
+        if movies.isEmpty { EmptyView() } else {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white)
+                    Spacer()
+                    NavigationLink(destination: MovieListView(title: title, movies: movies)) {
+                        Text("See All").font(.caption).foregroundColor(.gray)
+                    }
+                }.padding(.horizontal)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 10) {
+                        ForEach(movies.prefix(15)) { movie in
+                            NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                CachedAsyncImage(url: movie.posterURL)
+                                    .frame(width: 105, height: 158)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                        }
+                    }.padding(.horizontal)
                 }
             }
         }
