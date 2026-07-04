@@ -98,33 +98,10 @@ class MovieStreamService {
     }
 }
 
-// MARK: - Force Rotate Modifier
-struct ForceRotateModifier: ViewModifier {
-    let orientation: UIInterfaceOrientation
-    
-    func body(content: Content) -> some View {
-        content
-            .onAppear {
-                UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
-                UIViewController.attemptRotationToDeviceOrientation()
-            }
-            .onDisappear {
-                UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-                UIViewController.attemptRotationToDeviceOrientation()
-            }
-    }
-}
-
-extension View {
-    func forceRotate(to orientation: UIInterfaceOrientation) -> some View {
-        self.modifier(ForceRotateModifier(orientation: orientation))
-    }
-}
-
-// MARK: - Rotatable PlayerViewController
-class RotatablePlayerViewController: AVPlayerViewController {
+// MARK: - Landscape Player ViewController (chỉ xoay ngang)
+class LandscapePlayerViewController: AVPlayerViewController {
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .allButUpsideDown
+        return .landscape
     }
     override var shouldAutorotate: Bool {
         return true
@@ -152,9 +129,7 @@ struct MoviePlayerView: View {
             if isLoading {
                 VStack(spacing: 20) {
                     ProgressView().tint(.white).scaleEffect(1.5)
-                    Text("Đợi Mew tí...")
-                        .foregroundColor(.white.opacity(0.7))
-                        .font(.headline)
+                    Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline)
                 }
             } else if let errorMessage = errorMessage {
                 VStack(spacing: 16) {
@@ -174,9 +149,16 @@ struct MoviePlayerView: View {
             } else if let player = player {
                 CustomVideoPlayer(player: player)
                     .ignoresSafeArea()
-                    .forceRotate(to: .landscapeRight)
-                    .onAppear { player.play() }
-                    .onDisappear { player.pause() }
+                    .onAppear {
+                        player.play()
+                        UIDevice.current.setValue(UIInterfaceOrientation.landscapeLeft.rawValue, forKey: "orientation")
+                        UIViewController.attemptRotationToDeviceOrientation()
+                    }
+                    .onDisappear {
+                        player.pause()
+                        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+                        UIViewController.attemptRotationToDeviceOrientation()
+                    }
             }
         }
         .task { await loadStream() }
@@ -206,16 +188,15 @@ struct MoviePlayerView: View {
 struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     
-    func makeUIViewController(context: Context) -> RotatablePlayerViewController {
-        let controller = RotatablePlayerViewController()
+    func makeUIViewController(context: Context) -> LandscapePlayerViewController {
+        let controller = LandscapePlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
         controller.videoGravity = .resizeAspect
         controller.allowsPictureInPicturePlayback = true
         controller.canStartPictureInPictureAutomaticallyFromInline = true
-        controller.updatesNowPlayingInfoCenter = true
         return controller
     }
     
-    func updateUIViewController(_ uiViewController: RotatablePlayerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: LandscapePlayerViewController, context: Context) {}
 }
