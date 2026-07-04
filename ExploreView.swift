@@ -38,7 +38,7 @@ struct ExploreView: View {
                                 Task {
                                     do {
                                         let movies = try await APIService.shared.popular()
-                                        if let movie = movies.randomElement() {
+                                        if let movie = movies.filter({ !($0.adult ?? false) }).randomElement() {
                                             randomMovie = movie
                                             showRandom = true
                                         }
@@ -46,37 +46,37 @@ struct ExploreView: View {
                                 }
                             } label: {
                                 VStack(spacing: 6) {
-                                    Text("🎲").font(.system(size: 28))
+                                    Text("🎲").font(.system(size: 26))
                                     Text("Random").font(.system(size: 10)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 12)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                             
                             NavigationLink(destination: MoodPickerView()) {
                                 VStack(spacing: 6) {
-                                    Text("🎭").font(.system(size: 28))
+                                    Text("🎭").font(.system(size: 26))
                                     Text("Mood").font(.system(size: 10)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 12)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                             
                             NavigationLink(destination: TimelineView()) {
                                 VStack(spacing: 6) {
-                                    Text("📅").font(.system(size: 28))
+                                    Text("📅").font(.system(size: 26))
                                     Text("Timeline").font(.system(size: 10)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 12)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                             
                             NavigationLink(destination: GuessMovieView()) {
                                 VStack(spacing: 6) {
-                                    Text("❓").font(.system(size: 28))
+                                    Text("❓").font(.system(size: 26))
                                     Text("Guess").font(.system(size: 10)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 12)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                         }
@@ -98,13 +98,8 @@ struct ExploreView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Staff Picks
                         SectionWithSeeAll(title: "Staff Picks", movies: staffMovies)
-                        
-                        // Editor's Choice
                         SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies)
-                        
-                        // Hidden Gems
                         SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies)
                         
                         Spacer().frame(height: 120)
@@ -117,21 +112,19 @@ struct ExploreView: View {
             async let e = APIService.shared.popular()
             async let h = APIService.shared.discoverMovies(minRating: 7.5, minVotes: 100)
             do {
-                staffMovies = try await s
-                editorMovies = try await e
-                hiddenMovies = try await h
+                staffMovies = try await s.filter { !($0.adult ?? false) }
+                editorMovies = try await e.filter { !($0.adult ?? false) }
+                hiddenMovies = try await h.filter { !($0.adult ?? false) }
             } catch {}
         }
         .fullScreenCover(isPresented: $showRandom) {
             if let movie = randomMovie {
-                NavigationStack {
-                    MovieDetailView(movie: movie)
-                        .overlay(alignment: .topTrailing) {
-                            Button { showRandom = false } label: {
-                                Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
-                            }
+                MovieDetailView(movie: movie)
+                    .overlay(alignment: .topTrailing) {
+                        Button { showRandom = false } label: {
+                            Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
                         }
-                }
+                    }
             }
         }
     }
