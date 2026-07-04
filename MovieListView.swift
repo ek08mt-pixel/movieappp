@@ -14,33 +14,19 @@ struct MovieListView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(allMovies) { movie in
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack(spacing: 4) {
-                                CachedAsyncImage(url: movie.posterURL)
-                                    .frame(height: 165).clipShape(RoundedRectangle(cornerRadius: 10))
-                                Text(movie.title)
-                                    .font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white)
-                                    .lineLimit(2).frame(maxWidth: 110)
-                                HStack(spacing: 2) {
-                                    Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
-                                    Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
-                                }
+                                CachedAsyncImage(url: movie.posterURL).frame(height: 165).clipShape(RoundedRectangle(cornerRadius: 10))
+                                Text(movie.title).font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white).lineLimit(2).frame(maxWidth: 110)
+                                HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray) }
                             }
                         }
-                        .onAppear {
-                            if movie == allMovies.last && hasMore && !isLoading {
-                                Task { await loadMore() }
-                            }
-                        }
+                        .onAppear { if movie == allMovies.last && hasMore && !isLoading { Task { await loadMore() } } }
                     }
-                    
-                    if isLoading {
-                        ProgressView().tint(.white).frame(maxWidth: .infinity).padding()
-                    }
+                    if isLoading { ProgressView().tint(.white).frame(maxWidth: .infinity).padding() }
                 }.padding()
             }
         }
@@ -52,19 +38,11 @@ struct MovieListView: View {
     }
     
     func loadMore() async {
-        isLoading = true
-        page += 1
-        do {
-            let query = fixedQuery.isEmpty ? title : fixedQuery
-            let newMovies = try await APIService.shared.search(query: query, page: page)
-            if newMovies.isEmpty {
-                hasMore = false
-            } else {
-                allMovies.append(contentsOf: newMovies)
-            }
-        } catch {
-            hasMore = false
-        }
+        isLoading = true; page += 1
+        let q = fixedQuery.isEmpty ? title : fixedQuery
+        if let new = try? await APIService.shared.search(query: q, page: page), !new.isEmpty {
+            allMovies.append(contentsOf: new)
+        } else { hasMore = false }
         isLoading = false
     }
 }
