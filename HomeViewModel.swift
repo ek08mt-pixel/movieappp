@@ -20,8 +20,8 @@ class HomeViewModel: ObservableObject {
         async let u = APIService.shared.upcoming()
         async let tr = APIService.shared.topRated()
         async let p = APIService.shared.popular()
-        async let a = APIService.shared.moviesByGenre(genreId: 28)
-        async let us = APIService.shared.moviesByGenre(genreId: 12)
+        async let a = APIService.shared.asianMovies()
+        async let us = APIService.shared.usukMovies()
         async let g = APIService.shared.genres()
         
         do {
