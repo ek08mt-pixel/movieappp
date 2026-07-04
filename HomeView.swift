@@ -15,6 +15,7 @@ struct HomeView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
+                            // Hero Banner
                             ZStack(alignment: .bottomLeading) {
                                 TabView(selection: $currentIndex) {
                                     ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
@@ -56,6 +57,7 @@ struct HomeView: View {
                                 .padding(.top, 50).padding(.trailing, 16)
                             }
                             
+                            // Genres
                             if !vm.genres.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
@@ -73,6 +75,45 @@ struct HomeView: View {
                                 .padding(.vertical, 12)
                             }
                             
+                            // Movie of the Day
+                            if let mod = vm.movieOfDay {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("🌟 Movie of the Day")
+                                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                    
+                                    NavigationLink(destination: MovieDetailView(movie: mod)) {
+                                        ZStack(alignment: .bottomLeading) {
+                                            CachedAsyncImage(url: mod.backdropURL)
+                                                .frame(height: 200)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                            
+                                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                            
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(mod.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                                Text(mod.overview).font(.caption).foregroundColor(.gray).lineLimit(2)
+                                            }
+                                            .padding()
+                                        }
+                                        .padding(.horizontal, 20)
+                                    }
+                                }
+                                .padding(.top, 24)
+                            }
+                            
+                            // Continue Exploring
+                            if !appState.watchHistory.isEmpty {
+                                SectionGrid(title: "👀 Tiếp tục khám phá", movies: appState.watchHistory)
+                            }
+                            
+                            // Because you liked
+                            if !appState.watchHistory.isEmpty {
+                                SectionGrid(title: "✨ Vì bạn đã xem \(appState.watchHistory.first?.title ?? "")", movies: vm.trending24h.shuffled())
+                            }
+                            
+                            // Regular sections
                             SectionGrid(title: "🔥 24h qua", movies: vm.trending24h)
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
