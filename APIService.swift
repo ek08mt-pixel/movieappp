@@ -54,6 +54,22 @@ class APIService {
         return response.results
     }
     
+    func asianMovies() async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko|ja|zh&sort_by=popularity.desc&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results
+    }
+    
+    func usukMovies() async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=en&sort_by=popularity.desc&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results
+    }
+    
     func genres() async throws -> [Genre] {
         let urlString = "\(baseURL)/genre/movie/list?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
@@ -72,7 +88,7 @@ class APIService {
     }
     
     func moviesByGenre(genreId: Int) async throws -> [Movie] {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreId)&language=\(language)&sort_by=popularity.desc"
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreId)&sort_by=popularity.desc&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
