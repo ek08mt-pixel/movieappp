@@ -19,7 +19,6 @@ class HomeViewModel: ObservableObject {
         isLoading = true
         
         async let d = APIService.shared.trending24h()
-        async let w = APIService.shared.trendingWeek()
         async let n = APIService.shared.nowPlaying()
         async let u = APIService.shared.upcoming()
         async let tr = APIService.shared.topRated()
@@ -31,18 +30,17 @@ class HomeViewModel: ObservableObject {
         async let g = APIService.shared.genres()
         
         do {
-            let results = try await (d, w, n, u, tr, p, ko, ja, vi, us, g)
+            let results = try await (d, n, u, tr, p, ko, ja, vi, us, g)
             trending24h = results.0
-            trendingWeek = results.1
-            nowPlaying = results.2
-            upcoming = results.3
-            topRated = results.4
-            popular = results.5
-            korean = results.6
-            japanese = results.7
-            vietnamese = results.8
-            usuk = results.9
-            genres = results.10
+            nowPlaying = results.1
+            upcoming = results.2
+            topRated = results.3
+            popular = results.4
+            korean = results.5.filter { ($0.adult ?? false) == false && ($0.genreIds?.contains(10749) ?? false) == false }
+            japanese = results.6.filter { ($0.adult ?? false) == false && ($0.genreIds?.contains(10749) ?? false) == false }
+            vietnamese = results.7
+            usuk = results.8
+            genres = results.9
         } catch {
             print("Error: \(error)")
         }
