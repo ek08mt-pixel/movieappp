@@ -111,24 +111,30 @@ struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white); Spacer()
                     NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) }
                 }.padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHGrid(rows: [GridItem(.fixed(175), spacing: 14), GridItem(.fixed(175), spacing: 14)], spacing: 14) {
+                    HStack(spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
-                                VStack(spacing: 6) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     CachedAsyncImage(url: movie.posterURL)
                                         .aspectRatio(2/3, contentMode: .fill)
                                         .frame(width: 115, height: 172)
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
                                         .shadow(color: .black.opacity(0.3), radius: 3)
-                                    Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115)
-                                    HStack(spacing: 3) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray) }
+                                    Text(movie.title)
+                                        .font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white)
+                                        .lineLimit(2).frame(width: 115, alignment: .leading)
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                        Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
+                                    }
                                 }
+                                .frame(width: 115)
                             }
                         }
                     }.padding(.horizontal, 20)
