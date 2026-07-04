@@ -49,7 +49,7 @@ struct MoodPickerView: View {
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .fill(selectedMood == name ? Color.blue.opacity(0.3) : .ultraThinMaterial)
+                                            .fill(selectedMood == name ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial))
                                     )
                                 }
                             }
