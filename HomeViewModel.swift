@@ -3,7 +3,6 @@ import Foundation
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var trending24h: [Movie] = []
-    @Published var trendingWeek: [Movie] = []
     @Published var nowPlaying: [Movie] = []
     @Published var upcoming: [Movie] = []
     @Published var topRated: [Movie] = []
@@ -36,8 +35,8 @@ class HomeViewModel: ObservableObject {
             upcoming = results.2
             topRated = results.3
             popular = results.4
-            korean = results.5.filter { ($0.adult ?? false) == false && ($0.genreIds?.contains(10749) ?? false) == false }
-            japanese = results.6.filter { ($0.adult ?? false) == false && ($0.genreIds?.contains(10749) ?? false) == false }
+            korean = results.5.filter { ($0.adult ?? false) == false && $0.voteAverage > 5.0 }
+            japanese = results.6.filter { ($0.adult ?? false) == false && $0.voteAverage > 6.0 && $0.popularity ?? 0 > 10 }
             vietnamese = results.7
             usuk = results.8
             genres = results.9
