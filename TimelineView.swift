@@ -4,7 +4,7 @@ struct TimelineView: View {
     @State private var selectedYear: Double = 2024
     @State private var movies: [Movie] = []
     @State private var isLoading = false
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 14), count: 4)
     
     var body: some View {
         NavigationStack {
@@ -19,17 +19,17 @@ struct TimelineView: View {
                     if isLoading { ProgressView().tint(.white) }
                     
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
+                        LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(movies) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     VStack(alignment: .leading, spacing: 6) {
                                         CachedAsyncImage(url: movie.posterURL)
                                             .aspectRatio(2/3, contentMode: .fill)
-                                            .frame(height: 155)
+                                            .frame(height: 150)
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                         Text(movie.title)
                                             .font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
-                                            .frame(height: 24)
+                                            .frame(height: 26)
                                         HStack(spacing: 2) {
                                             Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
                                             Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
