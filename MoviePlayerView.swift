@@ -69,7 +69,7 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Player WebView với đầy đủ cấu hình
+// MARK: - Player WebView
 struct PlayerWebView: UIViewRepresentable {
     let imdbId: String
     
@@ -78,18 +78,16 @@ struct PlayerWebView: UIViewRepresentable {
     }
     
     func makeUIView(context: Context) -> WKWebView {
-        // Cấu hình WKWebViewConfiguration
+        // Cấu hình
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
-        // Bật JavaScript
         let prefs = WKPreferences()
         prefs.javaScriptEnabled = true
         prefs.javaScriptCanOpenWindowsAutomatically = true
         config.preferences = prefs
         
-        // Tạo WebView
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.backgroundColor = .black
         webView.isOpaque = false
@@ -97,14 +95,14 @@ struct PlayerWebView: UIViewRepresentable {
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.navigationDelegate = context.coordinator
         
-        // User-Agent giả lập Chrome trên MacOS để tránh bị chặn
-        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        // User-Agent giả lập iPhone thật
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
         
         // Load URL
         let urlString = "https://vidsrc.to/embed/movie/\(imdbId)"
         if let url = URL(string: urlString) {
             var request = URLRequest(url: url)
-            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
             request.setValue("https://vidsrc.to", forHTTPHeaderField: "Referer")
             request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
             request.timeoutInterval = 30
@@ -116,28 +114,76 @@ struct PlayerWebView: UIViewRepresentable {
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
     
-    // MARK: - Coordinator để debug lỗi
+    // MARK: - Coordinator
     class Coordinator: NSObject, WKNavigationDelegate {
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ LOAD THÀNH CÔNG: \(webView.url?.absoluteString ?? "")")
+            
+            // Inject script để tự động bấm Play và debug
+            let debugScript = """
+            // Debug: In toàn bộ HTML ra console
+            console.log('=== DEBUG HTML START ===');
+            console.log(document.body.innerHTML.substring(0, 2000));
+            console.log('=== DEBUG HTML END ===');
+            
+            // Tìm và click nút Play
+            setTimeout(function() {
+                var playButtons = document.querySelectorAll('button, .play-button, .plyr__control--overlaid, [data-plyr="play"], video');
+                console.log('Tìm thấy ' + playButtons.length + ' phần tử video/play');
+                
+                for (var i = 0; i < playButtons.length; i++) {
+                    var el = playButtons[i];
+                    console.log('Phần tử ' + i + ': ' + el.tagName + ' - Class: ' + el.className);
+                    
+                    if (el.tagName === 'VIDEO') {
+                        el.play().then(function() { console.log('Video đã play'); }).catch(function(e) { console.log('Lỗi play: ' + e); });
+                        el.muted = false;
+                    } else {
+                        el.click();
+                        console.log('Đã click: ' + el.className);
+                    }
+                }
+            }, 2000);
+            
+            // Thử lại sau 5 giây
+            setTimeout(function() {
+                var videos = document.querySelectorAll('video');
+                for (var i = 0; i < videos.length; i++) {
+                    videos[i].play().catch(function(e) { console.log('Retry play error: ' + e); });
+                }
+            }, 5000);
+            """
+            
+            webView.evaluateJavaScript(debugScript) { result, error in
+                if let error = error {
+                    print("❌ LỖI JS: \(error.localizedDescription)")
+                }
+            }
+        }
+        
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("❌ LỖI LOAD WEBVIEW: \(error.localizedDescription)")
-            print("❌ Chi tiết: \(error)")
+            print("❌ LỖI PROVISIONAL: \(error.localizedDescription)")
+            let nsError = error as NSError
+            print("❌ Domain: \(nsError.domain) - Code: \(nsError.code)")
+            print("❌ URL thất bại: \(nsError.userInfo[NSURLErrorFailingURLStringErrorKey] ?? "unknown")")
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             print("❌ LỖI NAVIGATION: \(error.localizedDescription)")
         }
         
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ LOAD THÀNH CÔNG")
-        }
-        
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🔄 ĐANG BẮT ĐẦU LOAD...")
+            print("🔄 ĐANG LOAD: \(webView.url?.absoluteString ?? "")")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            print("🔗 URL: \(navigationAction.request.url?.absoluteString ?? "unknown")")
+            print("🔗 REQUEST: \(navigationAction.request.url?.absoluteString ?? "unknown")")
             decisionHandler(.allow)
+        }
+        
+        func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+            completionHandler(.performDefaultHandling, nil)
         }
     }
 }
