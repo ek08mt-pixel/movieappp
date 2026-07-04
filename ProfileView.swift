@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var langManager: LanguageManager
     @State private var showEditName = false
     @State private var showLogin = false
     @State private var loginName = ""
@@ -77,6 +78,18 @@ struct ProfileView: View {
                         
                         VStack(spacing: 1) {
                             ProfileRow(icon: "pencil", title: "Đổi tên hiển thị") { showEditName = true }
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            NavigationLink(destination: LanguageSelectionView()) {
+                                HStack {
+                                    Image(systemName: "globe").foregroundColor(.white.opacity(0.6)).frame(width: 24)
+                                    Text("Ngôn ngữ").foregroundColor(.white)
+                                    Spacer()
+                                    Text(langManager.currentLanguage.displayName).foregroundColor(.gray).font(.caption)
+                                    Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
+                                }.padding()
+                            }
+                            
                             Divider().background(Color.white.opacity(0.1))
                             ProfileRow(icon: "doc.text", title: "Chính sách & Điều khoản") {}
                             Divider().background(Color.white.opacity(0.1))
