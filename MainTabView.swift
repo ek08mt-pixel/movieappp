@@ -9,17 +9,11 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-    HomeView()
-        .tag(0)
-        .id(0)
-    SearchView()
-        .tag(1)
-        .id(1)
-    LibraryView()
-        .tag(2)
-        .id(2)
-}
+            ZStack {
+                HomeView().opacity(selectedTab == 0 ? 1 : 0)
+                SearchView().opacity(selectedTab == 1 ? 1 : 0)
+                LibraryView().opacity(selectedTab == 2 ? 1 : 0)
+            }
             
             HStack {
                 Spacer()
