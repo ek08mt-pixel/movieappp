@@ -3,6 +3,7 @@ import SwiftUI
 struct GuessMovieView: View {
     @State private var movie: Movie?; @State private var options: [Movie] = []
     @State private var showResult = false; @State private var isCorrect = false; @State private var score = 0
+    @State private var usedMovieIds: Set<Int> = []
     
     var body: some View {
         ZStack {
@@ -13,24 +14,37 @@ struct GuessMovieView: View {
                     Text("Score: \(score)").font(.headline).foregroundColor(.orange)
                     
                     if let movie = movie {
-                        CachedAsyncImage(url: movie.posterURL).frame(width: 180, height: 270).clipShape(RoundedRectangle(cornerRadius: 16)).blur(radius: 25)
+                        CachedAsyncImage(url: movie.posterURL)
+                            .aspectRatio(2/3, contentMode: .fill)
+                            .frame(width: 180, height: 270)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .blur(radius: showResult ? 0 : 25)
+                            .animation(.easeInOut(duration: 0.5), value: showResult)
                         
                         if showResult {
                             Text(isCorrect ? "✅ Chính xác!" : "❌ Sai rồi!").font(.title2).fontWeight(.bold).foregroundColor(isCorrect ? .green : .red)
                             Text(movie.title).font(.title3).fontWeight(.heavy).foregroundColor(.white)
+                            Text(movie.overview).font(.caption).foregroundColor(.gray).lineLimit(3).padding(.horizontal)
                         }
                         
-                        ForEach(options) { option in
-                            Button {
-                                isCorrect = option.id == movie.id; showResult = true; if isCorrect { score += 1 }
-                            } label: {
-                                Text(option.title).font(.caption).fontWeight(.medium).foregroundColor(.white).frame(maxWidth: .infinity).padding(10)
+                        VStack(spacing: 8) {
+                            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                                Button {
+                                    isCorrect = option.id == movie.id; showResult = true; if isCorrect { score += 1 }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text("\(["A", "B", "C", "D"][index])").font(.caption).fontWeight(.bold).foregroundColor(.orange).frame(width: 20)
+                                        Text(option.title).font(.caption).fontWeight(.medium).foregroundColor(.white)
+                                        Spacer()
+                                    }
+                                    .padding(10)
                                     .background(RoundedRectangle(cornerRadius: 10).fill(showResult && option.id == movie.id ? AnyShapeStyle(Color.green.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial)))
-                            }.disabled(showResult)
+                                }.disabled(showResult)
+                            }
                         }.padding(.horizontal)
                         
                         Button { loadNewMovie() } label: {
-                            Text("Phim khác").font(.caption).foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
+                            Text("Phim khác →").font(.caption).foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
                         }
                     }
                     Spacer().frame(height: 120)
@@ -43,11 +57,10 @@ struct GuessMovieView: View {
     func loadNewMovie() {
         showResult = false
         Task {
-            if let movies = try? await APIService.shared.popular().filter({ !($0.adult ?? false) }), let correct = movies.randomElement() {
-                movie = correct
-                var opts = Array(movies.shuffled().prefix(4))
-                if !opts.contains(where: { $0.id == correct.id }) { opts[Int.random(in: 0..<4)] = correct }
-                options = opts
+            if let movies = try? await APIService.shared.popular().filter({ !($0.adult ?? false) && !usedMovieIds.contains($0.id) }), let correct = movies.randomElement() {
+                movie = correct; usedMovieIds.insert(correct.id)
+                var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
+                opts.append(correct); options = opts.shuffled()
             }
         }
     }
