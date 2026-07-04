@@ -5,15 +5,14 @@ struct MoviePlayerView: View {
     let movieTitle: String
     let movieId: Int
     @Environment(\.dismiss) var dismiss
-    @State private var selectedSource = 0
     @State private var isLoading = true
+    @State private var selectedSource = 0
     
     var sources: [(String, String)] {
         [
-            ("Vidsrc", "https://vidsrc.to/embed/movie/\(movieId)"),
-            ("Vidsrc 2", "https://vidsrc.xyz/embed/movie/\(movieId)"),
-            ("2Embed", "https://www.2embed.cc/embed/\(movieId)"),
-            ("Vidcloud", "https://vidcloud.icu/embed/movie/\(movieId)"),
+            ("Source 1", "https://multiembed.mov/directstream.php?video_id=\(movieId)&tmdb=1"),
+            ("Source 2", "https://www.2embed.cc/embed/\(movieId)"),
+            ("Source 3", "https://autoembed.to/movie/tmdb/\(movieId)"),
         ]
     }
     
@@ -39,7 +38,7 @@ struct MoviePlayerView: View {
                 }.padding()
                 
                 if isLoading {
-                    ProgressView().tint(.white)
+                    ProgressView().tint(.white).padding(.top, 100)
                 }
                 
                 WebView(urlString: sources[selectedSource].1)
