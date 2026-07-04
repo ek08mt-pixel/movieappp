@@ -7,100 +7,70 @@ struct ExploreView: View {
     @State private var editorMovies: [Movie] = []
     @State private var hiddenMovies: [Movie] = []
     
-    let collections: [(String, String, String)] = [
-        ("Oscar", "oscar", "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg"),
-        ("Cannes", "cannes", "/TU9NIjwzjoKPwQHoHshkFcQUCG.jpg"),
-        ("IMDb Top", "top rated", "/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg"),
-        ("Netflix", "netflix original", "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg"),
-        ("Ghibli", "studio ghibli", "/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg"),
-        ("Marvel", "marvel studios", "/or06FN3Dka5tukK1e9sl16pB3iy.jpg"),
-        ("DC", "dc films", "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg"),
-        ("Pixar", "pixar", "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"),
-        ("Disney", "disney", "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg"),
-        ("A24", "a24 films", "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"),
-        ("Hàn Quốc", "korean movies", "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"),
-        ("Nhật Bản", "japanese anime", "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg"),
+    let collections: [(String, String, Int)] = [
+        ("Oscar", "oscar winner", 0),
+        ("Cannes", "cannes film festival", 0),
+        ("IMDb Top", "imdb top", 0),
+        ("Netflix", "netflix", 0),
+        ("Ghibli", "studio ghibli", 0),
+        ("Marvel", "marvel", 0),
+        ("DC", "dc comics", 0),
+        ("Pixar", "pixar", 0),
+        ("Disney", "disney", 0),
+        ("A24", "a24", 0),
+        ("Hàn Quốc", "korean", 0),
+        ("Nhật Bản", "japanese", 0),
     ]
     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("Khám phá")
-                            .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
-                            .padding(.horizontal)
+                        Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
                         
                         HStack(spacing: 12) {
                             Button {
                                 Task {
-                                    do {
-                                        let movies = try await APIService.shared.popular()
-                                        if let movie = movies.filter({ !($0.adult ?? false) }).randomElement() {
-                                            randomMovie = movie
-                                            showRandom = true
-                                        }
-                                    } catch {}
+                                    let m = try? await APIService.shared.popular()
+                                    if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() {
+                                        randomMovie = movie; showRandom = true
+                                    }
                                 }
                             } label: {
-                                VStack(spacing: 6) {
-                                    Text("🎲").font(.system(size: 26))
-                                    Text("Random").font(.system(size: 10)).foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                                VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                            
                             NavigationLink(destination: MoodPickerView()) {
-                                VStack(spacing: 6) {
-                                    Text("🎭").font(.system(size: 26))
-                                    Text("Mood").font(.system(size: 10)).foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                                VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                            
                             NavigationLink(destination: TimelineView()) {
-                                VStack(spacing: 6) {
-                                    Text("📅").font(.system(size: 26))
-                                    Text("Timeline").font(.system(size: 10)).foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                                VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                            
                             NavigationLink(destination: GuessMovieView()) {
-                                VStack(spacing: 6) {
-                                    Text("❓").font(.system(size: 26))
-                                    Text("Guess").font(.system(size: 10)).foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                                VStack(spacing: 6) { Text("❓").font(.system(size: 26)); Text("Guess").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                        }
-                        .padding(.horizontal)
+                        }.padding(.horizontal)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            ForEach(collections, id: \.0) { title, query, poster in
-                                NavigationLink(destination: MovieListView(title: title, movies: staffMovies, fixedQuery: query)) {
+                            ForEach(collections, id: \.0) { title, query, _ in
+                                NavigationLink(destination: MovieListView(title: title, movies: [], fixedQuery: query)) {
                                     ZStack(alignment: .bottomLeading) {
-                                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                            .frame(height: 100)
-                                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                                            .overlay(Color.black.opacity(0.35))
-                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                        RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial).frame(height: 100)
+                                            .overlay(Image(systemName: "star.fill").font(.largeTitle).foregroundColor(.white.opacity(0.3)))
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
                                 }
                             }
-                        }
-                        .padding(.horizontal)
+                        }.padding(.horizontal)
                         
-                        SectionWithSeeAll(title: "Staff Picks", movies: staffMovies, query: "staff picks")
-                        SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies, query: "editor choice")
-                        SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies, query: "hidden gems")
+                        SectionWithSeeAll(title: "Staff Picks", movies: staffMovies, query: "top rated movies")
+                        SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies, query: "award winning movies")
+                        SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies, query: "underrated movies")
                         
                         Spacer().frame(height: 120)
                     }
@@ -109,50 +79,38 @@ struct ExploreView: View {
         }
         .task {
             async let s = APIService.shared.topRated()
-            async let e = APIService.shared.popular()
-            async let h = APIService.shared.discoverMovies(minRating: 7.5, minVotes: 100)
-            do {
-                staffMovies = try await s.filter { !($0.adult ?? false) }
-                editorMovies = try await e.filter { !($0.adult ?? false) }
-                hiddenMovies = try await h.filter { !($0.adult ?? false) }
-            } catch {}
+            async let e = APIService.shared.discoverMovies(minRating: 8.0, minVotes: 500)
+            async let h = APIService.shared.discoverMovies(minRating: 7.0, minVotes: 50)
+            staffMovies = (try? await s)?.filter { !($0.adult ?? false) } ?? []
+            editorMovies = (try? await e)?.filter { !($0.adult ?? false) } ?? []
+            hiddenMovies = (try? await h)?.filter { !($0.adult ?? false) } ?? []
         }
-        .fullScreenCover(isPresented: $showRandom) {
+        .sheet(isPresented: $showRandom) {
             if let movie = randomMovie {
-                MovieDetailView(movie: movie)
-                    .overlay(alignment: .topTrailing) {
-                        Button { showRandom = false } label: {
-                            Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
-                        }
-                    }
+                NavigationStack {
+                    MovieDetailView(movie: movie)
+                        .overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } }
+                }
             }
         }
     }
 }
 
 struct SectionWithSeeAll: View {
-    let title: String
-    let movies: [Movie]
-    var query: String = ""
-    
+    let title: String; let movies: [Movie]; var query: String = ""
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white)
                     Spacer()
-                    NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: query)) {
-                        Text("See All").font(.caption).foregroundColor(.gray)
-                    }
+                    NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: query)) { Text("See All").font(.caption).foregroundColor(.gray) }
                 }.padding(.horizontal)
-                
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 10) {
                         ForEach(movies.prefix(15)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                CachedAsyncImage(url: movie.posterURL)
-                                    .frame(width: 105, height: 158)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                CachedAsyncImage(url: movie.posterURL).frame(width: 105, height: 158).clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                         }
                     }.padding(.horizontal)
