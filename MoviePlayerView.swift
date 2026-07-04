@@ -1,35 +1,27 @@
 import SwiftUI
 import AVKit
+import MediaPlayer
 
-// MARK: - MovieSource
+// MARK: - MovieSource (chỉ giữ nguồn streaming)
 enum MovieSource: String, CaseIterable {
-    case torrentio = "Torrentio"
-    case netflixCatalog = "Netflix Catalog"
-    case animeKitsu = "Anime Kitsu"
-    case torrentCatalogs = "Torrent Catalogs"
-    case onepace = "OnePace"
     case kkphim = "KKPhim"
     case ntlStream = "NTL Stream"
+    case animeKitsu = "Anime Kitsu"
     
     var manifestURL: String {
         switch self {
-        case .torrentio: return "https://torrentio.strem.fun/lite/manifest.json"
-        case .netflixCatalog: return "https://7a82163c306e-stremio-netflix-catalog-addon.baby-beamup.club/manifest.json"
-        case .animeKitsu: return "https://anime-kitsu.strem.fun/manifest.json"
-        case .torrentCatalogs: return "https://torrent-catalogs.strem.fun/manifest.json"
-        case .onepace: return "https://onepaceaddon-zoropogger.koyeb.app/manifest.json"
         case .kkphim: return "https://kkphim.trankhanh.io.vn/manifest.json"
         case .ntlStream: return "https://tnluannguyen-ntl-stream.hf.space/manifest.json"
+        case .animeKitsu: return "https://anime-kitsu.strem.fun/manifest.json"
         }
     }
 }
 
 // MARK: - StreamError
 enum StreamError: Error, LocalizedError {
-    case metadataOnly, noStreamAvailable, invalidURL, parseError(String), networkError(String)
+    case noStreamAvailable, invalidURL, parseError(String), networkError(String)
     var errorDescription: String? {
         switch self {
-        case .metadataOnly: return "Nguồn này không hỗ trợ xem trực tiếp (chỉ là catalog)"
         case .noStreamAvailable: return "Không tìm thấy link stream"
         case .invalidURL: return "URL không hợp lệ"
         case .parseError(let m): return "Lỗi parse: \(m)"
@@ -39,20 +31,12 @@ enum StreamError: Error, LocalizedError {
 }
 
 // MARK: - Response Models
-struct TorrentioStream: Codable {
-    let title: String?; let url: String?; let infoHash: String?
-    enum CodingKeys: String, CodingKey { case title, url, infoHash = "infoHash" }
-}
-struct TorrentioResponse: Codable { let streams: [TorrentioStream]? }
-
 struct AnimeKitsuStream: Codable { let title: String?; let url: String? }
 struct AnimeKitsuResponse: Codable { let streams: [AnimeKitsuStream]? }
 
-struct OnePaceStream: Codable { let title: String?; let url: String? }
-struct OnePaceResponse: Codable { let streams: [OnePaceStream]? }
-
 struct KKPhimSource: Codable { let url: String? }
-struct KKPhimEpisode: Codable { let sources: [KKPhimSource]? }
+struct KKPhimEpisode: Codable { let sources: [KKPhimSource]?; let subtitles: [KKPhimSubtitle]? }
+struct KKPhimSubtitle: Codable { let url: String?; let lang: String? }
 struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
 struct KKPhimMovie: Codable { let slug: String? }
 
@@ -62,83 +46,74 @@ struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
 // MARK: - MovieStreamService
 class MovieStreamService {
     static let shared = MovieStreamService()
+    private var currentSourceIndex = 0
     
-    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> URL? {
+    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> (URL, URL?) {
         switch source {
-        case .torrentio: return try await fetchTorrentio(imdbId: imdbId)
-        case .netflixCatalog: throw StreamError.metadataOnly
         case .animeKitsu: return try await fetchAnimeKitsu(imdbId: imdbId)
-        case .torrentCatalogs: throw StreamError.metadataOnly
-        case .onepace: return try await fetchOnePace(imdbId: imdbId)
         case .kkphim: return try await fetchKKPhim(imdbId: imdbId)
         case .ntlStream: return try await fetchNTLStream(imdbId: imdbId)
         }
     }
     
-    private func fetchTorrentio(imdbId: String) async throws -> URL? {
-        let urlString = "https://torrentio.strem.fun/stream/movie/\(imdbId).json"
-        var req = URLRequest(url: URL(string: urlString)!)
-        req.setValue("https://www.stremio.com", forHTTPHeaderField: "Referer")
-        let (data, _) = try await URLSession.shared.data(for: req)
-        let res = try JSONDecoder().decode(TorrentioResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url {
-            return URL(string: url)
+    func getNextSource(current: MovieSource) -> MovieSource {
+        let all = MovieSource.allCases
+        if let idx = all.firstIndex(of: current), idx + 1 < all.count {
+            return all[idx + 1]
         }
-        throw StreamError.noStreamAvailable
+        return all[0]
     }
     
-    private func fetchAnimeKitsu(imdbId: String) async throws -> URL? {
+    private func fetchAnimeKitsu(imdbId: String) async throws -> (URL, URL?) {
         let urlString = "https://anime-kitsu.strem.fun/stream/movie/\(imdbId).json"
         var req = URLRequest(url: URL(string: urlString)!)
         req.setValue("https://www.stremio.com", forHTTPHeaderField: "Referer")
         let (data, _) = try await URLSession.shared.data(for: req)
         let res = try JSONDecoder().decode(AnimeKitsuResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil })?.url { return URL(string: url) }
+        if let url = res.streams?.first(where: { $0.url != nil })?.url, let streamURL = URL(string: url) {
+            return (streamURL, nil)
+        }
         throw StreamError.noStreamAvailable
     }
     
-    private func fetchOnePace(imdbId: String) async throws -> URL? {
-        let urlString = "https://onepaceaddon-zoropogger.koyeb.app/stream/movie/\(imdbId).json"
-        var req = URLRequest(url: URL(string: urlString)!)
-        req.setValue("https://www.stremio.com", forHTTPHeaderField: "Referer")
-        let (data, _) = try await URLSession.shared.data(for: req)
-        let res = try JSONDecoder().decode(OnePaceResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil })?.url { return URL(string: url) }
-        throw StreamError.noStreamAvailable
-    }
-    
-    private func fetchKKPhim(imdbId: String) async throws -> URL? {
+    private func fetchKKPhim(imdbId: String) async throws -> (URL, URL?) {
         let searchURL = "https://kkphim.trankhanh.io.vn/api/search?keyword=\(imdbId)"
         var req = URLRequest(url: URL(string: searchURL)!)
         req.setValue("https://kkphim.trankhanh.io.vn", forHTTPHeaderField: "Referer")
         let (data, _) = try await URLSession.shared.data(for: req)
-        if let results = try? JSONDecoder().decode([KKPhimMovie].self, from: data), let slug = results.first?.slug {
-            return try await fetchKKPhimEpisodes(slug: slug)
+        
+        var slug: String?
+        if let results = try? JSONDecoder().decode([KKPhimMovie].self, from: data) {
+            slug = results.first?.slug
+        } else if let movie = try? JSONDecoder().decode(KKPhimMovie.self, from: data) {
+            slug = movie.slug
         }
-        if let movie = try? JSONDecoder().decode(KKPhimMovie.self, from: data), let slug = movie.slug {
-            return try await fetchKKPhimEpisodes(slug: slug)
+        guard let slug = slug else { throw StreamError.noStreamAvailable }
+        
+        let epURL = "https://kkphim.trankhanh.io.vn/api/movie/\(slug)"
+        var req2 = URLRequest(url: URL(string: epURL)!)
+        req2.setValue("https://kkphim.trankhanh.io.vn", forHTTPHeaderField: "Referer")
+        let (data2, _) = try await URLSession.shared.data(for: req2)
+        let res = try JSONDecoder().decode(KKPhimResponse.self, from: data2)
+        
+        if let episode = res.episodes?.first,
+           let sourceURL = episode.sources?.first?.url,
+           let streamURL = URL(string: sourceURL) {
+            let subURL = episode.subtitles?.first(where: { $0.lang?.contains("vi") ?? false || $0.lang?.contains("en") ?? false })?.url
+            return (streamURL, subURL != nil ? URL(string: subURL!) : nil)
         }
         throw StreamError.noStreamAvailable
     }
     
-    private func fetchKKPhimEpisodes(slug: String) async throws -> URL? {
-        let urlString = "https://kkphim.trankhanh.io.vn/api/movie/\(slug)"
-        var req = URLRequest(url: URL(string: urlString)!)
-        req.setValue("https://kkphim.trankhanh.io.vn", forHTTPHeaderField: "Referer")
-        let (data, _) = try await URLSession.shared.data(for: req)
-        let res = try JSONDecoder().decode(KKPhimResponse.self, from: data)
-        if let url = res.episodes?.first?.sources?.first?.url { return URL(string: url) }
-        throw StreamError.noStreamAvailable
-    }
-    
-    private func fetchNTLStream(imdbId: String) async throws -> URL? {
+    private func fetchNTLStream(imdbId: String) async throws -> (URL, URL?) {
         let urlString = "https://tnluannguyen-ntl-stream.hf.space/stream/movie/\(imdbId).json"
         var req = URLRequest(url: URL(string: urlString)!)
         req.setValue("https://www.stremio.com", forHTTPHeaderField: "Referer")
         let (data, _) = try await URLSession.shared.data(for: req)
         let res = try JSONDecoder().decode(NTLStreamResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url {
-            return URL(string: url)
+        if let url = res.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url,
+           let streamURL = URL(string: url) {
+            return (streamURL, nil)
         }
         throw StreamError.noStreamAvailable
     }
@@ -148,62 +123,84 @@ class MovieStreamService {
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     @Environment(\.dismiss) var dismiss
-    @State private var selectedSource: MovieSource = .torrentio
-    @State private var streamURL: URL?; @State private var isLoading = true
-    @State private var errorMessage: String?; @State private var player: AVPlayer?
+    @State private var selectedSource: MovieSource = .kkphim
+    @State private var streamURL: URL?; @State private var subtitleURL: URL?
+    @State private var isLoading = true; @State private var errorMessage: String?
+    @State private var player: AVPlayer?
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VStack(spacing: 0) {
-                HStack {
-                    Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 28)).foregroundColor(.white) }
-                    Spacer()
-                    VStack(spacing: 2) {
-                        Text(movieTitle).font(.headline).foregroundColor(.white).lineLimit(1)
-                        Menu {
-                            ForEach(MovieSource.allCases, id: \.self) { s in
-                                Button(s.rawValue) { selectedSource = s; Task { await loadStream() } }
-                            }
-                        } label: {
-                            HStack(spacing: 4) { Text(selectedSource.rawValue).font(.caption2).foregroundColor(.gray); Image(systemName: "chevron.down").font(.caption2).foregroundColor(.gray) }
-                        }
-                    }
-                    Spacer()
-                }.padding()
-                
-                if isLoading {
-                    VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang lấy link từ \(selectedSource.rawValue)...").foregroundColor(.gray).font(.caption) }.frame(maxHeight: .infinity)
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
-                        Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                        Button("Thử lại") { Task { await loadStream() } }.foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
-                        Text("Chọn nguồn khác:").foregroundColor(.gray).font(.caption).padding(.top)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(MovieSource.allCases, id: \.self) { s in Button(s.rawValue) { selectedSource = s; Task { await loadStream() } }.font(.caption).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial)) }
-                            }.padding(.horizontal)
-                        }
-                    }.frame(maxHeight: .infinity)
-                } else if let player = player {
-                    CustomVideoPlayer(player: player).onAppear { player.play() }.onDisappear { player.pause() }
+            
+            if isLoading {
+                VStack(spacing: 16) {
+                    ProgressView().tint(.white).scaleEffect(1.5)
+                    Text("Đang lấy link từ \(selectedSource.rawValue)...").foregroundColor(.gray).font(.caption)
                 }
+            } else if let errorMessage = errorMessage {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
+                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
+                    
+                    Button {
+                        selectedSource = MovieStreamService.shared.getNextSource(current: selectedSource)
+                        Task { await loadStream() }
+                    } label: {
+                        Label("Thử nguồn khác", systemImage: "arrow.triangle.2.circlepath")
+                            .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                    }
+                    
+                    Button { Task { await loadStream() } } label: {
+                        Text("Thử lại").foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
+                            .background(Capsule().fill(.white.opacity(0.15)))
+                    }
+                }
+            } else if let player = player {
+                CustomVideoPlayer(player: player)
+                    .ignoresSafeArea()
+                    .onAppear {
+                        player.play()
+                        setupAudioSession()
+                    }
+                    .onDisappear { player.pause() }
             }
-        }.task { await loadStream() }
+        }
+        .task { await loadStream() }
+    }
+    
+    private func setupAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Audio session error: \(error)")
+        }
     }
     
     private func loadStream() async {
         isLoading = true; errorMessage = nil; player = nil
         do {
             let imdbId = try await fetchIMDbId()
-            let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId)
+            let (stream, subtitle) = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId)
             await MainActor.run {
-                if let url = url { self.player = AVPlayer(url: url) } else { self.errorMessage = "Không tìm thấy link stream" }
+                self.streamURL = stream; self.subtitleURL = subtitle
+                let asset = AVURLAsset(url: stream)
+                let playerItem = AVPlayerItem(asset: asset)
+                
+                if let subURL = subtitle {
+                    let locale = Locale(identifier: "vi")
+                    let annotation = AVMetadataItem(propertiesOf: .commonIdentifierTitle, value: "Vietsub" as NSString)
+                    playerItem.externalMetadata = [annotation]
+                }
+                
+                self.player = AVPlayer(playerItem: playerItem)
                 self.isLoading = false
             }
-        } catch { await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false } }
+        } catch {
+            await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false }
+        }
     }
     
     private func fetchIMDbId() async throws -> String {
@@ -217,8 +214,36 @@ struct MoviePlayerView: View {
     }
 }
 
+// MARK: - Custom Video Player với PiP + Xoay ngang
 struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
-    func makeUIViewController(context: Context) -> AVPlayerViewController { let c = AVPlayerViewController(); c.player = player; c.showsPlaybackControls = true; c.videoGravity = .resizeAspect; return c }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
+    
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.showsPlaybackControls = true
+        controller.videoGravity = .resizeAspect
+        controller.allowsPictureInPicturePlayback = true
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        controller.updatesNowPlayingInfoCenter = true
+        
+        // Hỗ trợ xoay ngang
+        controller.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+}
+
+// MARK: - PiP Window Scene Delegate
+class PiPDelegate: NSObject, ObservableObject {
+    func enablePiP() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("PiP error: \(error)")
+        }
+    }
 }
