@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @State private var randomMovie: Movie?
+    @State private var showRandom = false
     
     init() {
         UITabBar.appearance().isHidden = true
@@ -12,7 +14,32 @@ struct MainTabView: View {
             ZStack {
                 HomeView().opacity(selectedTab == 0 ? 1 : 0)
                 SearchView().opacity(selectedTab == 1 ? 1 : 0)
-                LibraryView().opacity(selectedTab == 2 ? 1 : 0)
+                ExploreView().opacity(selectedTab == 2 ? 1 : 0)
+                LibraryView().opacity(selectedTab == 3 ? 1 : 0)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .shakeDetected)) { _ in
+                Task {
+                    do {
+                        let movies = try await APIService.shared.popular()
+                        if let movie = movies.randomElement() {
+                            randomMovie = movie
+                            showRandom = true
+                        }
+                    } catch {}
+                }
+            }
+            .fullScreenCover(isPresented: $showRandom) {
+                if let movie = randomMovie {
+                    NavigationStack {
+                        MovieDetailView(movie: movie)
+                            .overlay(alignment: .topTrailing) {
+                                Button { showRandom = false } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 30)).foregroundColor(.white).padding()
+                                }
+                            }
+                    }
+                }
             }
             
             HStack {
@@ -21,7 +48,9 @@ struct MainTabView: View {
                 Spacer()
                 TabButton(icon: "magnifyingglass", title: "Search", isSelected: selectedTab == 1) { selectedTab = 1 }
                 Spacer()
-                TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 2) { selectedTab = 2 }
+                TabButton(icon: "safari.fill", title: "Khám phá", isSelected: selectedTab == 2) { selectedTab = 2 }
+                Spacer()
+                TabButton(icon: "square.grid.2x2.fill", title: "Library", isSelected: selectedTab == 3) { selectedTab = 3 }
                 Spacer()
             }
             .padding(.vertical, 12)
@@ -59,4 +88,3 @@ struct TabButton: View {
         .animation(.spring(response: 0.3), value: isSelected)
     }
 }
-
