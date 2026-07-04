@@ -5,12 +5,14 @@ struct TimelineView: View {
     @State private var movies: [Movie] = []
     @State private var isLoading = false
     
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     Text("Movie Timeline")
                         .font(.title2).fontWeight(.bold).foregroundColor(.white)
                     
@@ -18,39 +20,31 @@ struct TimelineView: View {
                         .font(.headline).foregroundColor(.orange)
                     
                     Slider(value: $selectedYear, in: 1900...2026, step: 1)
-                        .tint(.orange)
-                        .padding(.horizontal)
-                        .onChange(of: selectedYear) { _ in
-                            Task { await loadMovies() }
-                        }
+                        .tint(.orange).padding(.horizontal)
+                        .onChange(of: selectedYear) { _ in Task { await loadMovies() } }
                     
                     if isLoading {
                         ProgressView().tint(.white)
                     }
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(movies.prefix(20)) { movie in
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 8) {
+                            ForEach(movies) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                    VStack(spacing: 5) {
-                                        CachedAsyncImage(url: movie.posterURL)
-                                            .frame(width: 120, height: 180)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        Text(movie.title)
-                                            .font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 120)
-                                    }
+                                    CachedAsyncImage(url: movie.posterURL)
+                                        .frame(height: 150)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                             }
                         }.padding(.horizontal)
                     }
                     
                     if movies.isEmpty && !isLoading {
-                        Text("Không có phim cho năm này").foregroundColor(.gray)
+                        Text("Không có phim").foregroundColor(.gray)
                     }
                     
                     Spacer()
-                }
-                .padding(.top)
+                }.padding(.top)
             }
         }
         .task { await loadMovies() }
