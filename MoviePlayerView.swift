@@ -2,7 +2,7 @@ import SwiftUI
 import AVKit
 import MediaPlayer
 
-// MARK: - MovieSource (chỉ giữ nguồn stream)
+// MARK: - MovieSource
 enum MovieSource: String, CaseIterable {
     case kkphim = "KKPhim"
     case ntlStream = "NTL Stream"
@@ -98,13 +98,40 @@ class MovieStreamService {
     }
 }
 
-// MARK: - Rotatable AVPlayerViewController (Ép xoay ngang)
+// MARK: - Force Rotate Modifier
+struct ForceRotateModifier: ViewModifier {
+    let orientation: UIInterfaceOrientation
+    
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
+                UIViewController.attemptRotationToDeviceOrientation()
+            }
+            .onDisappear {
+                UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+                UIViewController.attemptRotationToDeviceOrientation()
+            }
+    }
+}
+
+extension View {
+    func forceRotate(to orientation: UIInterfaceOrientation) -> some View {
+        self.modifier(ForceRotateModifier(orientation: orientation))
+    }
+}
+
+// MARK: - Rotatable PlayerViewController
 class RotatablePlayerViewController: AVPlayerViewController {
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .allButUpsideDown
     }
     override var shouldAutorotate: Bool {
         return true
+    }
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
 }
 
@@ -147,16 +174,9 @@ struct MoviePlayerView: View {
             } else if let player = player {
                 CustomVideoPlayer(player: player)
                     .ignoresSafeArea()
-                    .onAppear {
-                        player.play()
-                        // Ép xoay ngang ngay khi player xuất hiện
-                        UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-                    }
-                    .onDisappear {
-                        player.pause()
-                        // Trả về dọc khi thoát
-                        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-                    }
+                    .forceRotate(to: .landscapeRight)
+                    .onAppear { player.play() }
+                    .onDisappear { player.pause() }
             }
         }
         .task { await loadStream() }
@@ -182,7 +202,7 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Custom Video Player (dùng RotatablePlayerViewController)
+// MARK: - Custom Video Player
 struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     
