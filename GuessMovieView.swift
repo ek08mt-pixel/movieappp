@@ -2,8 +2,9 @@ import SwiftUI
 
 struct GuessMovieView: View {
     @State private var movie: Movie?
-    @State private var blurredPoster: Bool = true
-    @State private var showAnswer: Bool = false
+    @State private var options: [Movie] = []
+    @State private var showResult: Bool = false
+    @State private var isCorrect: Bool = false
     @State private var score: Int = 0
     
     var body: some View {
@@ -19,39 +20,47 @@ struct GuessMovieView: View {
                 
                 if let movie = movie {
                     CachedAsyncImage(url: movie.posterURL)
-                        .frame(width: 220, height: 330)
+                        .frame(width: 200, height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .blur(radius: blurredPoster ? 25 : 0)
-                        .animation(.easeInOut(duration: 0.5), value: blurredPoster)
+                        .blur(radius: 25)
                     
-                    if showAnswer {
+                    if showResult {
+                        Text(isCorrect ? "✅ Chính xác!" : "❌ Sai rồi!")
+                            .font(.title2).fontWeight(.bold)
+                            .foregroundColor(isCorrect ? .green : .red)
+                        
                         Text(movie.title)
-                            .font(.title).fontWeight(.heavy).foregroundColor(.white)
-                        Text(movie.overview)
-                            .foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal).lineLimit(3)
+                            .font(.title3).fontWeight(.heavy).foregroundColor(.white)
                     }
                     
-                    HStack(spacing: 16) {
-                        Button {
-                            blurredPoster = false; showAnswer = true
-                        } label: {
-                            Text("Xem đáp án").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 10)
-                                .background(Capsule().fill(.ultraThinMaterial))
-                        }
-                        
-                        Button {
-                            score += 1; loadNewMovie()
-                        } label: {
-                            Text("Đoán đúng! +1").foregroundColor(.black).padding(.horizontal, 16).padding(.vertical, 10)
-                                .background(Capsule().fill(Color.green))
-                        }
-                        
-                        Button { loadNewMovie() } label: {
-                            Text("Phim khác").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 10)
-                                .background(Capsule().fill(.ultraThinMaterial))
+                    VStack(spacing: 10) {
+                        ForEach(options) { option in
+                            Button {
+                                isCorrect = option.id == movie.id
+                                showResult = true
+                                if isCorrect { score += 1 }
+                            } label: {
+                                Text(option.title)
+                                    .font(.caption).fontWeight(.medium).foregroundColor(.white)
+                                    .frame(maxWidth: .infinity).padding(10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(showResult && option.id == movie.id ? Color.green.opacity(0.3) : .ultraThinMaterial)
+                                    )
+                            }
+                            .disabled(showResult)
                         }
                     }
-                    .font(.caption)
+                    .padding(.horizontal)
+                    
+                    Button {
+                        loadNewMovie()
+                    } label: {
+                        Text("Phim khác")
+                            .font(.caption).foregroundColor(.white)
+                            .padding(.horizontal, 20).padding(.vertical, 10)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                    }
                 }
                 
                 Spacer()
@@ -62,11 +71,18 @@ struct GuessMovieView: View {
     }
     
     func loadNewMovie() {
-        blurredPoster = true; showAnswer = false
+        showResult = false
         Task {
             do {
-                let movies = try await APIService.shared.popular()
-                movie = movies.filter { ($0.adult ?? false) == false }.randomElement()
+                let movies = try await APIService.shared.popular().filter { !($0.adult ?? false) }
+                if let correct = movies.randomElement() {
+                    movie = correct
+                    var opts = Array(movies.shuffled().prefix(4))
+                    if !opts.contains(where: { $0.id == correct.id }) {
+                        opts[Int.random(in: 0..<4)] = correct
+                    }
+                    options = opts
+                }
             } catch {}
         }
     }
