@@ -8,12 +8,14 @@ struct MoviePlayerView: View {
     @State private var selectedSource = 0
     @State private var isLoading = true
     
-    let sources: [(String, String)] = [
-        ("Vidsrc", "https://vidsrc.to/embed/movie/\(movieId)"),
-        ("Vidsrc 2", "https://vidsrc.xyz/embed/movie/\(movieId)"),
-        ("2Embed", "https://www.2embed.cc/embed/\(movieId)"),
-        ("Vidcloud", "https://vidcloud.icu/embed/movie/\(movieId)"),
-    ]
+    var sources: [(String, String)] {
+        [
+            ("Vidsrc", "https://vidsrc.to/embed/movie/\(movieId)"),
+            ("Vidsrc 2", "https://vidsrc.xyz/embed/movie/\(movieId)"),
+            ("2Embed", "https://www.2embed.cc/embed/\(movieId)"),
+            ("Vidcloud", "https://vidcloud.icu/embed/movie/\(movieId)"),
+        ]
+    }
     
     var body: some View {
         ZStack {
