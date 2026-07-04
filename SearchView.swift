@@ -6,13 +6,13 @@ struct SearchView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMovie: Movie?
     
-    let popularTopics = [
-        ("Marvel", "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg", "marvel"),
-        ("DC", "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg", "dc comics"),
-        ("Action", "/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg", "action"),
-        ("Sci-Fi", "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg", "sci fi"),
-        ("Drama", "/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg", "drama"),
-        ("Comedy", "/suaEOtk1N1s2XfRk6Fv4QvV7Kq.jpg", "comedy")
+    let popularTopics: [(String, String, String, Int)] = [
+        ("Marvel", "shield.fill", "marvel", 0),
+        ("DC", "bolt.fill", "dc comics", 0),
+        ("Hành động", "flame.fill", "action", 28),
+        ("Viễn tưởng", "rocket.fill", "sci fi", 878),
+        ("Kinh dị", "skull.fill", "horror", 27),
+        ("Hài", "face.smiling.fill", "comedy", 35),
     ]
     
     var body: some View {
@@ -21,7 +21,6 @@ struct SearchView: View {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.gray)
                         TextField("Tìm phim...", text: $vm.query)
@@ -32,6 +31,12 @@ struct SearchView: View {
                                 Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                             }
                         }
+                        if focused {
+                            Button("Đóng") {
+                                focused = false
+                            }
+                            .foregroundColor(.orange).font(.caption)
+                        }
                     }
                     .padding(12)
                     .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
@@ -40,32 +45,28 @@ struct SearchView: View {
                     if vm.query.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                // Popular Searches
                                 Text("Tìm kiếm phổ biến")
                                     .font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                    ForEach(popularTopics, id: \.0) { topic, poster, query in
-                                        Button {
-                                            vm.query = query
-                                            Task { await vm.search() }
-                                        } label: {
-                                            ZStack(alignment: .bottom) {
-                                                CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                    .frame(height: 100)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                
+                                    ForEach(popularTopics, id: \.0) { topic, icon, _, genreId in
+                                        NavigationLink(destination: GenreMovieView(genre: Genre(id: genreId, name: topic))) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: icon)
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(.white.opacity(0.8))
+                                                    .frame(height: 50)
                                                 Text(topic)
-                                                    .font(.caption).fontWeight(.bold).foregroundColor(.white)
-                                                    .padding(4).background(Color.black.opacity(0.6))
-                                                    .clipShape(Capsule()).padding(4)
+                                                    .font(.caption).fontWeight(.medium).foregroundColor(.white)
                                             }
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                                         }
                                     }
                                 }
                                 .padding(.horizontal)
                                 
-                                // Trending
                                 Text("Xu hướng")
                                     .font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
