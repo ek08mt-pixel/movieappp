@@ -2,7 +2,7 @@ import Foundation
 
 class APIService {
     static let shared = APIService()
-    private let apiKey = "de255b3301a0de96c84d462cf93d732f"
+    private let apiKey = "2d0a9f1b8c7e6d5f4a3b2c1d0e9f8a7b"
     private let baseURL = "https://api.themoviedb.org/3"
     
     private let decoder: JSONDecoder = {
