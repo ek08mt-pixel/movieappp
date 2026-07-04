@@ -204,36 +204,30 @@ class MovieStreamService {
     }
 }
 
-// MARK: - Player Debug
-class PlayerDebugger {
+// MARK: - Player Debug (NSObject để KVO hoạt động)
+class PlayerDebugger: NSObject {
+    static let shared = PlayerDebugger()
+    
     static func createPlayerItem(url: URL) -> AVPlayerItem {
         let headers: [String: String] = ["User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15"]
         let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
         let item = AVPlayerItem(asset: asset)
-        
-        // Theo dõi status
-        item.addObserver(PlayerDebugger.shared, forKeyPath: #keyPath(AVPlayerItem.status), options: [.new, .initial], context: nil)
+        item.addObserver(shared, forKeyPath: #keyPath(AVPlayerItem.status), options: [.new, .initial], context: nil)
         return item
     }
-    
-    static let shared = PlayerDebugger()
-    private init() {}
     
     static func debugPlayer(url: URL) -> AVPlayer {
         let item = createPlayerItem(url: url)
         return AVPlayer(playerItem: item)
     }
     
-    // KVO
-    func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == #keyPath(AVPlayerItem.status), let item = object as? AVPlayerItem {
             switch item.status {
             case .readyToPlay: print("✅ AVPlayer READY TO PLAY")
             case .failed:
                 print("❌ AVPlayer FAILED: \(item.error?.localizedDescription ?? "unknown")")
-                if let error = item.error as NSError? {
-                    print("❌ Domain: \(error.domain), Code: \(error.code)")
-                }
+                if let error = item.error as NSError? { print("❌ Domain: \(error.domain), Code: \(error.code)") }
             case .unknown: print("⚠️ AVPlayer UNKNOWN")
             @unknown default: break
             }
@@ -264,38 +258,31 @@ struct MoviePlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if isLoading {
-                VStack(spacing: 20) {
-                    ProgressView().tint(.white).scaleEffect(1.5)
-                    Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline)
-                }
+                VStack(spacing: 20) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline) }
             } else if let errorMessage = errorMessage {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
                     Button { Task { await loadStream() } } label: {
-                        Label("Thử lại", systemImage: "arrow.triangle.2.circlepath")
-                            .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
+                        Label("Thử lại", systemImage: "arrow.triangle.2.circlepath").foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
                     }
                 }
             } else if let player = player, !isTorrent {
-                CustomVideoPlayer(player: player).ignoresSafeArea()
-                    .onAppear { player.play() }.onDisappear { player.pause() }
+                CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
             } else if isTorrent, let url = streamURL {
                 VStack(spacing: 20) {
                     Image(systemName: "film.stack.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text("Đây là link Torrent").foregroundColor(.white).font(.headline)
                     Text("Cần trình phát ngoài để xem").foregroundColor(.gray)
                     Button { showExternalPlayerMenu = true } label: {
-                        Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app")
-                            .foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial))
+                        Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial))
                     }
                 }
             }
         }
         .task { await loadStream() }
         .actionSheet(isPresented: $showExternalPlayerMenu) {
-            ActionSheet(title: Text("Chọn trình phát"),
-                buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
+            ActionSheet(title: Text("Chọn trình phát"), buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
         }
     }
     
@@ -306,15 +293,10 @@ struct MoviePlayerView: View {
             let (url, torrent) = try await MovieStreamService.shared.resolveMovie(imdbId: imdbId)
             await MainActor.run {
                 self.streamURL = url.absoluteString; self.isTorrent = torrent
-                if !torrent {
-                    let p = PlayerDebugger.debugPlayer(url: url)
-                    self.player = p
-                }
+                if !torrent { self.player = PlayerDebugger.debugPlayer(url: url) }
                 self.isLoading = false
             }
-        } catch {
-            await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false }
-        }
+        } catch { await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false } }
     }
     
     private func fetchIMDbId() async throws -> String {
