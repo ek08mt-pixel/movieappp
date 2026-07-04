@@ -15,7 +15,6 @@ struct HomeView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
-                            // Hero Banner
                             ZStack(alignment: .bottomLeading) {
                                 TabView(selection: $currentIndex) {
                                     ForEach(Array(vm.trending.prefix(5).enumerated()), id: \.element.id) { i, movie in
@@ -49,20 +48,15 @@ struct HomeView: View {
                             .overlay(alignment: .topTrailing) {
                                 NavigationLink(destination: ProfileView()) {
                                     ZStack {
-                                        Circle()
-                                            .fill(.thinMaterial)
-                                            .frame(width: 36, height: 36)
-                                        
+                                        Circle().fill(.thinMaterial).frame(width: 36, height: 36)
                                         Image(systemName: appState.selectedAvatar)
-                                            .foregroundColor(.white.opacity(0.7))
-                                            .font(.system(size: 16))
+                                            .foregroundColor(.white.opacity(0.7)).font(.system(size: 16))
                                     }
                                     .shadow(color: .black.opacity(0.2), radius: 4)
                                 }
                                 .padding(.top, 50).padding(.trailing, 16)
                             }
                             
-                            // Genres
                             if !vm.genres.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
@@ -80,18 +74,13 @@ struct HomeView: View {
                                 .padding(.vertical, 12)
                             }
                             
-                            // Sections
                             SectionGrid(title: "🔥 Xu hướng", movies: vm.trending)
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
                             SectionGrid(title: "⭐ Đánh giá cao", movies: vm.topRated)
                             SectionGrid(title: "🎯 Phổ biến", movies: vm.popular)
-                            
-                            if !vm.trending.isEmpty {
-                                SectionGrid(title: "🎭 Phim hành động", movies: Array(vm.trending.shuffled().prefix(10)))
-                                SectionGrid(title: "🌍 Phim Âu Mỹ", movies: Array(vm.trending.shuffled().prefix(8)))
-                                SectionGrid(title: "🎌 Phim Châu Á", movies: Array(vm.trending.shuffled().prefix(8)))
-                            }
+                            SectionGrid(title: "🌍 Phim Âu Mỹ", movies: vm.usuk)
+                            SectionGrid(title: "🎌 Phim Châu Á", movies: vm.asian)
                             
                             Spacer().frame(height: 100)
                         }
@@ -104,7 +93,6 @@ struct HomeView: View {
     }
 }
 
-// MARK: - SectionGrid
 struct SectionGrid: View {
     let title: String
     let movies: [Movie]
