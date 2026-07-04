@@ -7,15 +7,22 @@ class MovieDetailViewModel: ObservableObject {
     @Published var similar: [Movie] = []
     
     func load(movieId: Int) async {
-        async let t = APIService.shared.trailer(movieId: movieId)
-        async let a = APIService.shared.actors(movieId: movieId)
-        async let s = APIService.shared.similar(movieId: movieId)
         do {
-            trailerKey = try await t
-            actors = try await a
-            similar = try await s
+            trailerKey = try await APIService.shared.trailer(movieId: movieId)
         } catch {
-            print("Error: \(error)")
+            print("Trailer error: \(error)")
+        }
+        
+        do {
+            actors = try await APIService.shared.actors(movieId: movieId)
+        } catch {
+            print("Actors error: \(error)")
+        }
+        
+        do {
+            similar = try await APIService.shared.similar(movieId: movieId)
+        } catch {
+            print("Similar error: \(error)")
         }
     }
 }
