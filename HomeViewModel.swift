@@ -15,52 +15,27 @@ class HomeViewModel: ObservableObject {
     func loadAll() async {
         isLoading = true
         
-        do {
-            trending = try await APIService.shared.trending()
-        } catch {
-            print("Trending error: \(error)")
-        }
+        async let t = APIService.shared.trending()
+        async let n = APIService.shared.nowPlaying()
+        async let u = APIService.shared.upcoming()
+        async let tr = APIService.shared.topRated()
+        async let p = APIService.shared.popular()
+        async let a = APIService.shared.moviesByGenre(genreId: 28)
+        async let us = APIService.shared.moviesByGenre(genreId: 12)
+        async let g = APIService.shared.genres()
         
         do {
-            nowPlaying = try await APIService.shared.nowPlaying()
+            let results = try await (t, n, u, tr, p, a, us, g)
+            trending = results.0
+            nowPlaying = results.1
+            upcoming = results.2
+            topRated = results.3
+            popular = results.4
+            asian = results.5
+            usuk = results.6
+            genres = results.7
         } catch {
-            print("NowPlaying error: \(error)")
-        }
-        
-        do {
-            upcoming = try await APIService.shared.upcoming()
-        } catch {
-            print("Upcoming error: \(error)")
-        }
-        
-        do {
-            topRated = try await APIService.shared.topRated()
-        } catch {
-            print("TopRated error: \(error)")
-        }
-        
-        do {
-            popular = try await APIService.shared.popular()
-        } catch {
-            print("Popular error: \(error)")
-        }
-        
-        do {
-            asian = try await APIService.shared.moviesByGenre(genreId: 28)
-        } catch {
-            print("Asian error: \(error)")
-        }
-        
-        do {
-            usuk = try await APIService.shared.moviesByGenre(genreId: 12)
-        } catch {
-            print("USUK error: \(error)")
-        }
-        
-        do {
-            genres = try await APIService.shared.genres()
-        } catch {
-            print("Genres error: \(error)")
+            print("Error: \(error)")
         }
         
         isLoading = false
