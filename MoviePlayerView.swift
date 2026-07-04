@@ -52,9 +52,7 @@ struct MoviePlayerView: View {
     private func fetchIMDbId() async {
         isLoading = true; errorMessage = nil
         let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=\(apiKey)"
-        guard let url = URL(string: urlString) else {
-            errorMessage = "URL không hợp lệ"; isLoading = false; return
-        }
+        guard let url = URL(string: urlString) else { errorMessage = "URL không hợp lệ"; isLoading = false; return }
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -73,18 +71,9 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - VidSrc WebView (nhúng trực tiếp)
+// MARK: - VidSrc WebView
 struct VidSrcWebView: UIViewRepresentable {
     let imdbId: String
-    @State private var selectedSource = 0
-    
-    // 4 nguồn VidSrc khác nhau
-    let sources: [(String, String)] = [
-        ("VidSrc 1", "https://vidsrc.to/embed/movie/\(imdbId)"),
-        ("VidSrc 2", "https://vidsrc.me/embed/movie?imdb=\(imdbId)"),
-        ("VidSrc 3", "https://vidsrc.xyz/embed/movie/\(imdbId)"),
-        ("VidSrc 4", "https://vidlink.pro/movie/\(imdbId)"),
-    ]
     
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -96,9 +85,12 @@ struct VidSrcWebView: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         
         let prefs = WKPreferences()
-        prefs.javaScriptEnabled = true
         prefs.javaScriptCanOpenWindowsAutomatically = true
         config.preferences = prefs
+        
+        let pagePrefs = WKWebpagePreferences()
+        pagePrefs.allowsContentJavaScript = true
+        config.defaultWebpagePreferences = pagePrefs
         
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.backgroundColor = .black
@@ -107,48 +99,32 @@ struct VidSrcWebView: UIViewRepresentable {
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.navigationDelegate = context.coordinator
         
-        // User-Agent iPhone thật
         webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
         
-        // Load nguồn mặc định
-        loadSource(0, in: webView)
+        let urlString = "https://vidsrc.to/embed/movie/\(imdbId)"
+        if let url = URL(string: urlString) {
+            var request = URLRequest(url: url)
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            request.setValue("https://vidsrc.to", forHTTPHeaderField: "Referer")
+            request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+            request.timeoutInterval = 30
+            webView.load(request)
+        }
         
         return webView
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
     
-    func loadSource(_ index: Int, in webView: WKWebView) {
-        let urlString = sources[index].1
-        guard let url = URL(string: urlString) else { return }
-        
-        var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://vidsrc.to", forHTTPHeaderField: "Referer")
-        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-        request.timeoutInterval = 30
-        
-        print("🌐 LOADING: \(urlString)")
-        webView.load(request)
-    }
-    
-    // MARK: - Coordinator
     class Coordinator: NSObject, WKNavigationDelegate {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ LOAD THÀNH CÔNG: \(webView.url?.absoluteString ?? "")")
-            
-            // Inject script tự động bấm Play
+            print("✅ LOAD XONG: \(webView.url?.absoluteString ?? "")")
             let script = """
             setTimeout(function() {
-                // Tìm và click nút play
                 var buttons = document.querySelectorAll('button, .play-button, .plyr__control--overlaid, [data-plyr="play"]');
                 for (var i = 0; i < buttons.length; i++) { buttons[i].click(); }
-                
-                // Tìm video và play
                 var videos = document.querySelectorAll('video');
-                for (var i = 0; i < videos.length; i++) {
-                    videos[i].play().catch(function(e) { console.log('Play error: ' + e); });
-                }
+                for (var i = 0; i < videos.length; i++) { videos[i].play().catch(function(e) { console.log('Play error: ' + e); }); }
             }, 2000);
             """
             webView.evaluateJavaScript(script, completionHandler: nil)
@@ -159,7 +135,7 @@ struct VidSrcWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ NAVIGATION LỖI: \(error.localizedDescription)")
+            print("❌ NAV LỖI: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
