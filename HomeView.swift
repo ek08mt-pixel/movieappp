@@ -4,6 +4,8 @@ struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
     @EnvironmentObject var appState: AppState
     @State private var currentIndex = 0
+    @State private var randomMovie: Movie?
+    @State private var showRandom = false
     
     var body: some View {
         NavigationStack {
@@ -47,11 +49,24 @@ struct HomeView: View {
                                 .padding()
                             }
                             .overlay(alignment: .topTrailing) {
-                                NavigationLink(destination: ProfileView()) {
-                                    ZStack {
-                                        Circle().fill(.thinMaterial).frame(width: 36, height: 36)
-                                        Image(systemName: appState.selectedAvatar)
-                                            .foregroundColor(.white.opacity(0.7)).font(.system(size: 16))
+                                HStack(spacing: 12) {
+                                    // Nút Random 🎲
+                                    Button {
+                                        randomMovie = vm.trending24h.randomElement()
+                                        showRandom = true
+                                    } label: {
+                                        ZStack {
+                                            Circle().fill(.thinMaterial).frame(width: 36, height: 36)
+                                            Text("🎲").font(.system(size: 18))
+                                        }
+                                    }
+                                    
+                                    NavigationLink(destination: ProfileView()) {
+                                        ZStack {
+                                            Circle().fill(.thinMaterial).frame(width: 36, height: 36)
+                                            Image(systemName: appState.selectedAvatar)
+                                                .foregroundColor(.white.opacity(0.7)).font(.system(size: 16))
+                                        }
                                     }
                                 }
                                 .padding(.top, 50).padding(.trailing, 16)
@@ -79,14 +94,12 @@ struct HomeView: View {
                             if let mod = vm.movieOfDay {
                                 VStack(alignment: .leading, spacing: 10) {
                                     Text("🌟 Movie of the Day")
-                                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
-                                        .padding(.horizontal, 20)
+                                        .font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
                                     
                                     NavigationLink(destination: MovieDetailView(movie: mod)) {
                                         ZStack(alignment: .bottomLeading) {
                                             CachedAsyncImage(url: mod.backdropURL)
-                                                .frame(height: 200)
-                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                .frame(height: 200).clipShape(RoundedRectangle(cornerRadius: 16))
                                             
                                             LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -94,10 +107,8 @@ struct HomeView: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(mod.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
                                                 Text(mod.overview).font(.caption).foregroundColor(.gray).lineLimit(2)
-                                            }
-                                            .padding()
-                                        }
-                                        .padding(.horizontal, 20)
+                                            }.padding()
+                                        }.padding(.horizontal, 20)
                                     }
                                 }
                                 .padding(.top, 24)
@@ -109,11 +120,10 @@ struct HomeView: View {
                             }
                             
                             // Because you liked
-                            if !appState.watchHistory.isEmpty {
-                                SectionGrid(title: "✨ Vì bạn đã xem \(appState.watchHistory.first?.title ?? "")", movies: vm.trending24h.shuffled())
+                            if let lastWatched = appState.watchHistory.last {
+                                SectionGrid(title: "✨ Vì bạn đã xem \(lastWatched.title)", movies: vm.trending24h.shuffled())
                             }
                             
-                            // Regular sections
                             SectionGrid(title: "🔥 24h qua", movies: vm.trending24h)
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
@@ -132,6 +142,18 @@ struct HomeView: View {
             .ignoresSafeArea(edges: .top)
         }
         .task { await vm.loadAll() }
+        .fullScreenCover(isPresented: $showRandom) {
+            if let movie = randomMovie {
+                NavigationStack {
+                    MovieDetailView(movie: movie)
+                        .overlay(alignment: .topTrailing) {
+                            Button { showRandom = false } label: {
+                                Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
+                            }
+                        }
+                }
+            }
+        }
     }
 }
 
