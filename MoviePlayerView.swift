@@ -42,38 +42,98 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-// MARK: - External Player Manager
+// MARK: - External Player Manager (Đã sửa encode + referer + log)
 class ExternalPlayerManager {
     static let shared = ExternalPlayerManager()
+    
     struct PlayerApp {
-        let name: String; let scheme: String
-        func buildURL(streamURL: String) -> URL? {
-            guard let encoded = streamURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+        let name: String
+        let scheme: String
+        
+        func buildURL(streamURL: String, referer: String = "https://phim.nguonc.com/") -> URL? {
+            // Encode toàn bộ link stream
+            guard let encodedStream = streamURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+                print("❌ [ExternalPlayer] Không thể encode URL: \(streamURL)")
+                return nil
+            }
+            
+            // Thêm referer vào link stream (định dạng link|referer=xxx)
+            let streamWithReferer = "\(encodedStream)%7Creferer%3D\(referer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+            
+            let finalURLString: String
             switch name {
-            case "Infuse": return URL(string: "infuse://x-callback-url/play?url=\(encoded)")
-            case "VLC": return URL(string: "vlc-x-callback://x-callback-url/stream?url=\(encoded)")
-            case "ViMu": return URL(string: "vimu://\(encoded)")
-            case "Outplayer": return URL(string: "outplayer://\(encoded)")
-            case "nPlayer": return URL(string: "nplayer-\(encoded)")
-            case "PlayerXtreme": return URL(string: "pxtreme://\(encoded)")
-            case "FileBrowser": return URL(string: "fbplayer://\(encoded)")
-            case "MX Player": return URL(string: "mxplayer://\(encoded)")
-            case "IINA": return URL(string: "iina://open?url=\(encoded)")
-            case "Safari": return URL(string: streamURL)
-            default: return nil
+            case "Infuse":
+                finalURLString = "infuse://x-callback-url/play?url=\(encodedStream)"
+            case "VLC":
+                finalURLString = "vlc-x-callback://x-callback-url/stream?url=\(encodedStream)"
+            case "ViMu":
+                finalURLString = "vimu://\(encodedStream)"
+            case "Outplayer":
+                finalURLString = "outplayer://\(encodedStream)"
+            case "nPlayer":
+                finalURLString = "nplayer-\(encodedStream)"
+            case "PlayerXtreme":
+                finalURLString = "pxtreme://\(encodedStream)"
+            case "FileBrowser":
+                finalURLString = "fbplayer://\(encodedStream)"
+            case "MX Player":
+                finalURLString = "mxplayer://\(encodedStream)"
+            case "IINA":
+                finalURLString = "iina://open?url=\(encodedStream)"
+            case "Safari":
+                finalURLString = streamURL
+            case "Copy Link":
+                // Không mở app, copy vào clipboard
+                UIPasteboard.general.string = streamURL
+                print("📋 [ExternalPlayer] Đã copy link: \(streamURL)")
+                return nil
+            default:
+                finalURLString = streamURL
+            }
+            
+            print("🔗 [ExternalPlayer] Final URL for \(name): \(finalURLString)")
+            return URL(string: finalURLString)
+        }
+    }
+    
+    let players: [PlayerApp] = [
+        PlayerApp(name: "Infuse", scheme: "infuse"),
+        PlayerApp(name: "VLC", scheme: "vlc-x-callback"),
+        PlayerApp(name: "ViMu", scheme: "vimu"),
+        PlayerApp(name: "Outplayer", scheme: "outplayer"),
+        PlayerApp(name: "nPlayer", scheme: "nplayer"),
+        PlayerApp(name: "PlayerXtreme", scheme: "pxtreme"),
+        PlayerApp(name: "FileBrowser", scheme: "fbplayer"),
+        PlayerApp(name: "MX Player", scheme: "mxplayer"),
+        PlayerApp(name: "IINA", scheme: "iina"),
+        PlayerApp(name: "Safari", scheme: "http"),
+        PlayerApp(name: "Copy Link", scheme: "copy"),
+    ]
+    
+    func openInPlayer(_ player: PlayerApp, streamURL: String) {
+        if player.name == "Copy Link" {
+            UIPasteboard.general.string = streamURL
+            print("📋 Đã copy link: \(streamURL)")
+            return
+        }
+        
+        guard let url = player.buildURL(streamURL: streamURL) else {
+            print("❌ Không thể tạo URL cho \(player.name)")
+            return
+        }
+        
+        print("🚀 Đang mở \(player.name) với URL: \(url.absoluteString)")
+        UIApplication.shared.open(url) { success in
+            if success {
+                print("✅ Đã mở \(player.name) thành công")
+            } else {
+                print("❌ Không thể mở \(player.name) - App có thể chưa được cài đặt")
             }
         }
     }
-    let players: [PlayerApp] = [
-        PlayerApp(name: "Infuse", scheme: "infuse"), PlayerApp(name: "VLC", scheme: "vlc-x-callback"),
-        PlayerApp(name: "ViMu", scheme: "vimu"), PlayerApp(name: "Outplayer", scheme: "outplayer"),
-        PlayerApp(name: "nPlayer", scheme: "nplayer"), PlayerApp(name: "PlayerXtreme", scheme: "pxtreme"),
-        PlayerApp(name: "FileBrowser", scheme: "fbplayer"), PlayerApp(name: "MX Player", scheme: "mxplayer"),
-        PlayerApp(name: "IINA", scheme: "iina"), PlayerApp(name: "Safari", scheme: "http"),
-    ]
-    func openInPlayer(_ player: PlayerApp, streamURL: String) {
-        guard let url = player.buildURL(streamURL: streamURL) else { return }
-        UIApplication.shared.open(url)
+    
+    func showCopyGuide() -> String {
+        return "Nếu trình phát báo lỗi, hãy copy link stream và dán vào mục 'Open Network Stream' hoặc 'Add URL' trong app."
     }
 }
 
@@ -95,7 +155,7 @@ class NetworkManager {
     func fetchJSON(from urlString: String, source: String, referer: String? = nil) async throws -> Data {
         guard let url = URL(string: urlString) else { throw StreamError.invalidURL }
         var req = URLRequest(url: url)
-        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         req.setValue("application/json, text/html, */*", forHTTPHeaderField: "Accept")
         if let ref = referer { req.setValue(ref, forHTTPHeaderField: "Referer") }
         req.timeoutInterval = 20
@@ -161,7 +221,6 @@ class NguoncProvider {
 // MARK: - MovieStreamService
 class MovieStreamService {
     static let shared = MovieStreamService()
-    
     func getStreamURL(for source: MovieSource, imdbId: String) async throws -> (URL, Bool) {
         switch source {
         case .nguonc: return (try await fetchNguonc(imdbId: imdbId), false)
@@ -171,14 +230,12 @@ class MovieStreamService {
         default: return (try await fetchStremio(source: source, imdbId: imdbId), true)
         }
     }
-    
     func resolveMovie(imdbId: String) async throws -> (URL, Bool) {
         for source in MovieSource.allCases {
             if let (url, isTorrent) = try? await getStreamURL(for: source, imdbId: imdbId) { return (url, isTorrent) }
         }
         throw StreamError.noStreamAvailable
     }
-    
     private func fetchStremio(source: MovieSource, imdbId: String) async throws -> URL {
         guard let manifest = source.manifestURL else { throw StreamError.invalidURL }
         let base = manifest.replacingOccurrences(of: "/manifest.json", with: "")
@@ -223,22 +280,14 @@ class MovieStreamService {
 // MARK: - Player Debug
 class PlayerDebugger: NSObject {
     static let shared = PlayerDebugger()
-    
     static func createPlayerItem(url: URL) -> AVPlayerItem {
-        let headers: [String: String] = [
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
-            "Referer": "https://phim.nguonc.com/"
-        ]
+        let headers: [String: String] = ["User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", "Referer": "https://phim.nguonc.com/"]
         let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
         let item = AVPlayerItem(asset: asset)
         item.addObserver(shared, forKeyPath: #keyPath(AVPlayerItem.status), options: [.new, .initial], context: nil)
         return item
     }
-    
-    static func debugPlayer(url: URL) -> AVPlayer {
-        return AVPlayer(playerItem: createPlayerItem(url: url))
-    }
-    
+    static func debugPlayer(url: URL) -> AVPlayer { return AVPlayer(playerItem: createPlayerItem(url: url)) }
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == #keyPath(AVPlayerItem.status), let item = object as? AVPlayerItem {
             switch item.status {
@@ -261,6 +310,7 @@ struct MoviePlayerView: View {
     @State private var streamURL: String?
     @State private var isTorrent = false
     @State private var showExternalPlayerMenu = false
+    @State private var showCopyGuide = false
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
@@ -294,15 +344,12 @@ struct MoviePlayerView: View {
                 }
             }
         }
-        .onAppear {
-            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-        }
-        .onDisappear {
-            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-        }
+        .onAppear { UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation") }
+        .onDisappear { UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation") }
         .task { await loadStream() }
         .actionSheet(isPresented: $showExternalPlayerMenu) {
-            ActionSheet(title: Text("Chọn trình phát"), buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
+            ActionSheet(title: Text("Chọn trình phát"), message: Text(ExternalPlayerManager.shared.showCopyGuide()),
+                buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
         }
     }
     
