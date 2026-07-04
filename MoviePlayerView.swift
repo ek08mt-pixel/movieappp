@@ -2,12 +2,38 @@ import SwiftUI
 import AVKit
 import MediaPlayer
 
-// MARK: - MovieSource
+// MARK: - MovieSource (9 nguồn)
 enum MovieSource: String, CaseIterable {
     case nguonc = "Nguồn C"
     case kkphim = "KKPhim"
     case ntlStream = "NTL Stream"
     case animeKitsu = "Anime Kitsu"
+    case stravo = "Stravo"
+    case mediafusion = "MediaFusion"
+    case torrentio = "Torrentio"
+    case flixnest = "FlixNest"
+    case dramacool = "DramaCool"
+    case hanime = "HAnime"
+    
+    var manifestURL: String? {
+        switch self {
+        case .stravo: return "https://stravo-clfk.onrender.com/auto/manifest.json"
+        case .mediafusion: return "https://mediafusion.elfhosted.com/manifest.json"
+        case .torrentio: return "https://torrentio.strem.fun/manifest.json"
+        case .flixnest: return "https://flixnest.app/flix-streams/manifest.json"
+        case .dramacool: return "https://stremio-dramacool-addon.xyz/manifest.json"
+        case .hanime: return "https://86f0740f37f6-hanime-stremio.baby-beamup.club/manifest.json"
+        default: return nil
+        }
+    }
+    
+    var isAPISource: Bool {
+        manifestURL == nil
+    }
+    
+    var isTorrentSource: Bool {
+        manifestURL != nil
+    }
 }
 
 // MARK: - StreamError
@@ -23,74 +49,98 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-// MARK: - Response Models
+// MARK: - External Player Manager
+class ExternalPlayerManager {
+    static let shared = ExternalPlayerManager()
+    
+    struct PlayerApp {
+        let name: String
+        let scheme: String
+        func buildURL(streamURL: String) -> URL? {
+            guard let encoded = streamURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+            let urlString: String
+            switch name {
+            case "Infuse": urlString = "infuse://x-callback-url/play?url=\(encoded)"
+            case "VLC": urlString = "vlc-x-callback://x-callback-url/stream?url=\(encoded)"
+            case "ViMu": urlString = "vimu://\(encoded)"
+            case "Outplayer": urlString = "outplayer://\(encoded)"
+            case "nPlayer": urlString = "nplayer-\(encoded)"
+            case "PlayerXtreme": urlString = "pxtreme://\(encoded)"
+            case "FileBrowser": urlString = "fbplayer://\(encoded)"
+            case "MX Player": urlString = "mxplayer://\(encoded)"
+            case "IINA": urlString = "iina://open?url=\(encoded)"
+            case "Safari": urlString = streamURL
+            default: return nil
+            }
+            return URL(string: urlString)
+        }
+    }
+    
+    let players: [PlayerApp] = [
+        PlayerApp(name: "Infuse", scheme: "infuse"),
+        PlayerApp(name: "VLC", scheme: "vlc-x-callback"),
+        PlayerApp(name: "ViMu", scheme: "vimu"),
+        PlayerApp(name: "Outplayer", scheme: "outplayer"),
+        PlayerApp(name: "nPlayer", scheme: "nplayer"),
+        PlayerApp(name: "PlayerXtreme", scheme: "pxtreme"),
+        PlayerApp(name: "FileBrowser", scheme: "fbplayer"),
+        PlayerApp(name: "MX Player", scheme: "mxplayer"),
+        PlayerApp(name: "IINA", scheme: "iina"),
+        PlayerApp(name: "Safari", scheme: "http"),
+    ]
+    
+    func openInPlayer(_ player: PlayerApp, streamURL: String) {
+        guard let url = player.buildURL(streamURL: streamURL) else { return }
+        UIApplication.shared.open(url)
+    }
+}
 
-// AnimeKitsu
+// MARK: - Response Models
 struct AnimeKitsuStream: Codable { let title: String?; let url: String? }
 struct AnimeKitsuResponse: Codable { let streams: [AnimeKitsuStream]? }
 
-// KKPhim
 struct KKPhimSource: Codable { let url: String? }
 struct KKPhimEpisode: Codable { let sources: [KKPhimSource]? }
 struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
 struct KKPhimMovie: Codable { let slug: String? }
 
-// NTL Stream
 struct NTLStreamItem: Codable { let name: String?; let title: String?; let url: String? }
 struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
 
-// Nguonc.com
-struct NguoncFilmItem: Codable {
-    let name: String?
-    let slug: String?
-    let thumb_url: String?
-    let poster_url: String?
+struct NguoncFilmItem: Codable { let name: String?; let slug: String?; let thumb_url: String?; let poster_url: String? }
+struct NguoncFilmListResponse: Codable { let items: [NguoncFilmItem]? }
+struct NguoncEpisode: Codable { let name: String?; let slug: String?; let link_embed: String?; let link_m3u8: String? }
+struct NguoncMovieDetail: Codable { let name: String?; let slug: String?; let thumb_url: String?; let poster_url: String? }
+struct NguoncFilmDetailResponse: Codable { let movie: NguoncMovieDetail?; let episodes: [NguoncEpisode]? }
+
+struct StremioStream: Codable {
+    let title: String?; let url: String?; let infoHash: String?; let name: String?
+    enum CodingKeys: String, CodingKey {
+        case title, url, name
+        case infoHash = "infoHash"
+    }
 }
-struct NguoncFilmListResponse: Codable {
-    let items: [NguoncFilmItem]?
-}
-struct NguoncEpisode: Codable {
-    let name: String?
-    let slug: String?
-    let link_embed: String?
-    let link_m3u8: String?
-}
-struct NguoncMovieDetail: Codable {
-    let name: String?
-    let slug: String?
-    let thumb_url: String?
-    let poster_url: String?
-    let description: String?
-    let year: String?
-}
-struct NguoncFilmDetailResponse: Codable {
-    let movie: NguoncMovieDetail?
-    let episodes: [NguoncEpisode]?
-}
+struct StremioResponse: Codable { let streams: [StremioStream]? }
 
 // MARK: - Nguonc Provider
 class NguoncProvider {
     static let shared = NguoncProvider()
     private let baseURL = "https://phim.nguonc.com/api"
     
-    func fetchFilmList() async throws -> [NguoncFilmItem] {
+    func searchFilm(keyword: String) async throws -> String? {
         let urlString = "\(baseURL)/films/phim-moi-cap-nhat"
         let req = URLRequest(url: URL(string: urlString)!)
         let (data, _) = try await URLSession.shared.data(for: req)
         let res = try JSONDecoder().decode(NguoncFilmListResponse.self, from: data)
-        return res.items ?? []
-    }
-    
-    func fetchMovieDetail(slug: String) async throws -> NguoncFilmDetailResponse {
-        let urlString = "\(baseURL)/film/\(slug)"
-        let req = URLRequest(url: URL(string: urlString)!)
-        let (data, _) = try await URLSession.shared.data(for: req)
-        return try JSONDecoder().decode(NguoncFilmDetailResponse.self, from: data)
+        return res.items?.first(where: { $0.name?.lowercased().contains(keyword.lowercased()) ?? false })?.slug
     }
     
     func fetchStreamURL(slug: String) async throws -> URL? {
-        let detail = try await fetchMovieDetail(slug: slug)
-        if let episodes = detail.episodes, !episodes.isEmpty {
+        let urlString = "\(baseURL)/film/\(slug)"
+        let req = URLRequest(url: URL(string: urlString)!)
+        let (data, _) = try await URLSession.shared.data(for: req)
+        let res = try JSONDecoder().decode(NguoncFilmDetailResponse.self, from: data)
+        if let episodes = res.episodes {
             for ep in episodes {
                 if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) { return url }
                 if let embed = ep.link_embed, let url = URL(string: embed) { return url }
@@ -98,42 +148,42 @@ class NguoncProvider {
         }
         throw StreamError.noStreamAvailable
     }
-    
-    func searchFilm(keyword: String) async throws -> String? {
-        let list = try await fetchFilmList()
-        if let match = list.first(where: { $0.name?.lowercased().contains(keyword.lowercased()) ?? false }) {
-            return match.slug
-        }
-        return nil
-    }
 }
 
 // MARK: - MovieStreamService
 class MovieStreamService {
     static let shared = MovieStreamService()
     
-    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> URL {
+    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> (URL, Bool) {
         switch source {
-        case .animeKitsu: return try await fetchAnimeKitsu(imdbId: imdbId)
-        case .kkphim: return try await fetchKKPhim(imdbId: imdbId)
-        case .ntlStream: return try await fetchNTLStream(imdbId: imdbId)
-        case .nguonc: return try await fetchNguonc(imdbId: imdbId)
+        case .nguonc: return (try await fetchNguonc(imdbId: imdbId), false)
+        case .kkphim: return (try await fetchKKPhim(imdbId: imdbId), false)
+        case .ntlStream: return (try await fetchNTLStream(imdbId: imdbId), false)
+        case .animeKitsu: return (try await fetchAnimeKitsu(imdbId: imdbId), false)
+        default: return (try await fetchStremio(source: source, imdbId: imdbId), true)
         }
     }
     
-    func getNextSource(current: MovieSource) -> MovieSource {
-        let all = MovieSource.allCases
-        if let idx = all.firstIndex(of: current), idx + 1 < all.count { return all[idx + 1] }
-        return all[0]
+    func resolveMovie(slug: String, imdbId: String) async throws -> (URL, Bool) {
+        for source in MovieSource.allCases {
+            if let (url, isTorrent) = try? await getStreamURL(for: source, imdbId: imdbId) {
+                return (url, isTorrent)
+            }
+        }
+        throw StreamError.noStreamAvailable
     }
     
-    func tryAllSources(imdbId: String) async throws -> URL {
-        for source in MovieSource.allCases {
-            do {
-                return try await getStreamURL(for: source, imdbId: imdbId)
-            } catch {
-                continue
-            }
+    private func fetchStremio(source: MovieSource, imdbId: String) async throws -> URL {
+        guard let manifest = source.manifestURL else { throw StreamError.invalidURL }
+        let base = manifest.replacingOccurrences(of: "/manifest.json", with: "")
+        let urlString = "\(base)/stream/movie/\(imdbId).json"
+        var req = URLRequest(url: URL(string: urlString)!)
+        req.setValue("https://www.stremio.com", forHTTPHeaderField: "Referer")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        let res = try JSONDecoder().decode(StremioResponse.self, from: data)
+        if let stream = res.streams?.first {
+            if let url = stream.url, !url.hasPrefix("magnet:"), let streamURL = URL(string: url) { return streamURL }
+            if let hash = stream.infoHash { return URL(string: "magnet:?xt=urn:btih:\(hash)")! }
         }
         throw StreamError.noStreamAvailable
     }
@@ -179,9 +229,7 @@ class MovieStreamService {
     
     private func fetchNguonc(imdbId: String) async throws -> URL {
         if let slug = try? await NguoncProvider.shared.searchFilm(keyword: imdbId),
-           let url = try? await NguoncProvider.shared.fetchStreamURL(slug: slug) {
-            return url
-        }
+           let url = try? await NguoncProvider.shared.fetchStreamURL(slug: slug) { return url }
         throw StreamError.noStreamAvailable
     }
 }
@@ -190,10 +238,12 @@ class MovieStreamService {
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     @Environment(\.dismiss) var dismiss
-    @State private var selectedSource: MovieSource = .nguonc
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var player: AVPlayer?
+    @State private var streamURL: String?
+    @State private var isTorrent = false
+    @State private var showExternalPlayerMenu = false
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
@@ -210,47 +260,55 @@ struct MoviePlayerView: View {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
                     Button {
-                        selectedSource = MovieStreamService.shared.getNextSource(current: selectedSource)
                         Task { await loadStream() }
                     } label: {
-                        Label("Thử nguồn khác", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Thử lại", systemImage: "arrow.triangle.2.circlepath")
                             .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
                     }
+                }
+            } else if let player = player, !isTorrent {
+                CustomVideoPlayer(player: player).ignoresSafeArea()
+                    .onAppear { player.play() }.onDisappear { player.pause() }
+            } else if isTorrent, let url = streamURL {
+                VStack(spacing: 20) {
+                    Image(systemName: "film.stack.fill").font(.system(size: 50)).foregroundColor(.gray)
+                    Text("Đây là link Torrent").foregroundColor(.white).font(.headline)
+                    Text("Cần trình phát ngoài để xem").foregroundColor(.gray)
+                    Button { showExternalPlayerMenu = true } label: {
+                        Label("Mở bằng trình phát ngoài", systemImage: "arrow.up.forward.app")
+                            .foregroundColor(.white).padding().background(Capsule().fill(.ultraThinMaterial))
+                    }
                     Button {
-                        Task {
-                            do {
-                                let imdbId = try await fetchIMDbId()
-                                let url = try await MovieStreamService.shared.tryAllSources(imdbId: imdbId)
-                                await MainActor.run { self.player = AVPlayer(url: url); self.errorMessage = nil }
-                            } catch {
-                                await MainActor.run { self.errorMessage = error.localizedDescription }
-                            }
-                        }
+                        if let url = URL(string: url) { self.player = AVPlayer(url: url); self.isTorrent = false }
                     } label: {
-                        Text("Thử tất cả nguồn").foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.white.opacity(0.15)))
+                        Text("Thử xem trong App").foregroundColor(.gray).padding().background(Capsule().fill(.white.opacity(0.1)))
                     }
                 }
-            } else if let player = player {
-                CustomVideoPlayer(player: player)
-                    .ignoresSafeArea()
-                    .onAppear { player.play() }
-                    .onDisappear { player.pause() }
             }
         }
         .task { await loadStream() }
+        .actionSheet(isPresented: $showExternalPlayerMenu) {
+            ActionSheet(title: Text("Chọn trình phát"), message: Text("Mở \(movieTitle) bằng:"), buttons: ExternalPlayerManager.shared.players.map { player in
+                    .default(Text(player.name)) {
+                        if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(player, streamURL: url) }
+                    }
+            } + [.cancel(Text("Hủy"))])
+        }
     }
     
     private func loadStream() async {
-        isLoading = true; errorMessage = nil; player = nil
+        isLoading = true; errorMessage = nil; player = nil; isTorrent = false
         do {
             let imdbId = try await fetchIMDbId()
-            let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId)
-            await MainActor.run { self.player = AVPlayer(url: url); self.isLoading = false }
-        } catch {
+            let (url, torrent) = try await MovieStreamService.shared.resolveMovie(slug: movieTitle, imdbId: imdbId)
             await MainActor.run {
-                self.errorMessage = error.localizedDescription
+                self.streamURL = url.absoluteString
+                self.isTorrent = torrent
+                if !torrent { self.player = AVPlayer(url: url) }
                 self.isLoading = false
             }
+        } catch {
+            await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false }
         }
     }
     
@@ -268,16 +326,9 @@ struct MoviePlayerView: View {
 // MARK: - Custom Video Player
 struct CustomVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
-    
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.player = player
-        controller.showsPlaybackControls = true
-        controller.videoGravity = .resizeAspect
-        controller.allowsPictureInPicturePlayback = true
-        controller.canStartPictureInPictureAutomaticallyFromInline = true
-        return controller
+        let c = AVPlayerViewController(); c.player = player; c.showsPlaybackControls = true
+        c.videoGravity = .resizeAspect; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true; return c
     }
-    
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
 }
