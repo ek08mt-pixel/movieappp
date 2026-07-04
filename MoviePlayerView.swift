@@ -26,23 +26,192 @@ enum MovieSource: String, CaseIterable {
         default: return nil
         }
     }
+    
+    var isAPI: Bool { manifestURL == nil }
+    var isStremio: Bool { manifestURL != nil }
 }
 
 // MARK: - StreamError
 enum StreamError: Error, LocalizedError {
-    case noStreamAvailable, invalidURL, parseError(String), networkError(String), playerError(String)
+    case noStreamAvailable, invalidURL, httpError(Int), parseError(String), networkError(String)
     var errorDescription: String? {
         switch self {
         case .noStreamAvailable: return "Không tìm thấy link stream"
         case .invalidURL: return "URL không hợp lệ"
-        case .parseError(let m): return "Lỗi parse: \(m)"
+        case .httpError(let code): return "Server lỗi HTTP \(code)"
+        case .parseError(let m): return "Lỗi parse JSON: \(m)"
         case .networkError(let m): return "Lỗi mạng: \(m)"
-        case .playerError(let m): return "Lỗi phát: \(m)"
         }
     }
 }
 
-// MARK: - External Player Manager (Đã sửa encode + referer + log)
+// MARK: - Link Resolver
+class LinkResolver {
+    static let shared = LinkResolver()
+    
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpCookieAcceptPolicy = .always
+        config.httpAdditionalHeaders = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
+            "Accept": "application/json, text/html, */*",
+            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
+        ]
+        return URLSession(configuration: config)
+    }()
+    
+    func fetchJSON(from urlString: String, source: String) async throws -> Data {
+        guard let url = URL(string: urlString) else { throw StreamError.invalidURL }
+        
+        // Tự động lấy domain làm Referer
+        let referer = url.host.map { "https://\($0)/" } ?? ""
+        
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        req.setValue("application/json, text/html, */*", forHTTPHeaderField: "Accept")
+        req.setValue(referer, forHTTPHeaderField: "Referer")
+        req.timeoutInterval = 20
+        
+        print("🌐 [\(source)] GỌI: \(urlString)")
+        print("🔗 [\(source)] Referer: \(referer)")
+        
+        let (data, response) = try await session.data(for: req)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw StreamError.networkError("Không phải HTTP response")
+        }
+        
+        print("📊 [\(source)] HTTP STATUS: \(httpResponse.statusCode)")
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let body = String(data: data, encoding: .utf8) {
+                print("❌ [\(source)] HTTP \(httpResponse.statusCode): \(body.prefix(1000))")
+            }
+            throw StreamError.httpError(httpResponse.statusCode)
+        }
+        
+        if let raw = String(data: data, encoding: .utf8) {
+            print("📄 [\(source)] RAW JSON (first 2000 chars): \(raw.prefix(2000))")
+        }
+        
+        return data
+    }
+    
+    func resolveFinalURL(_ urlString: String) async -> URL? {
+        guard let url = URL(string: urlString) else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        req.httpMethod = "HEAD"
+        do {
+            let (_, response) = try await session.data(for: req)
+            let finalURL = response.url ?? url
+            print("🔀 Redirect: \(urlString) -> \(finalURL.absoluteString)")
+            return finalURL
+        } catch {
+            return url
+        }
+    }
+}
+
+// MARK: - Response Models
+struct KKPhimSource: Codable { let url: String? }
+struct KKPhimEpisode: Codable { let sources: [KKPhimSource]? }
+struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
+struct KKPhimMovie: Codable { let slug: String? }
+
+struct NTLStreamItem: Codable { let name: String?; let title: String?; let url: String? }
+struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
+
+struct NguoncFilmItem: Codable { let name: String?; let slug: String? }
+struct NguoncFilmListResponse: Codable { let items: [NguoncFilmItem]? }
+struct NguoncEpisode: Codable { let link_embed: String?; let link_m3u8: String? }
+struct NguoncFilmDetailResponse: Codable { let episodes: [NguoncEpisode]? }
+
+struct StremioStream: Codable { let title: String?; let url: String?; let infoHash: String?; let name: String?
+    enum CodingKeys: String, CodingKey { case title, url, name; case infoHash = "infoHash" } }
+struct StremioResponse: Codable { let streams: [StremioStream]? }
+
+// MARK: - Source Manager (Fallback logic)
+class SourceManager {
+    static let shared = SourceManager()
+    
+    func resolveMovie(imdbId: String) async throws -> (URL, Bool) {
+        // 1. Thử 3 nguồn API trước
+        print("🔍 BẮT ĐẦU QUÉT 3 NGUỒN API...")
+        if let url = try? await fetchNguonc(imdbId) { return (url, false) }
+        if let url = try? await fetchKKPhim(imdbId) { return (url, false) }
+        if let url = try? await fetchNTLStream(imdbId) { return (url, false) }
+        
+        // 2. Thử 6 nguồn Stremio Manifest
+        print("🔍 API THẤT BẠI - CHUYỂN SANG STREMIO...")
+        let stremioSources: [MovieSource] = [.torrentio, .stravo, .mediafusion, .flixnest, .dramacool, .hanime, .animeKitsu]
+        for source in stremioSources {
+            if let url = try? await fetchStremio(source: source, imdbId: imdbId) {
+                return (url, true)
+            }
+        }
+        
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func fetchNguonc(_ imdbId: String) async throws -> URL {
+        print("🎯 THỬ NguonC...")
+        let data = try await LinkResolver.shared.fetchJSON(from: "https://phim.nguonc.com/api/films/phim-moi-cap-nhat", source: "NguonC")
+        let list = try JSONDecoder().decode(NguoncFilmListResponse.self, from: data)
+        guard let slug = list.items?.first(where: { $0.name?.lowercased().contains(imdbId.lowercased()) ?? false })?.slug else {
+            throw StreamError.noStreamAvailable
+        }
+        let detailData = try await LinkResolver.shared.fetchJSON(from: "https://phim.nguonc.com/api/film/\(slug)", source: "NguonC-Detail")
+        let detail = try JSONDecoder().decode(NguoncFilmDetailResponse.self, from: detailData)
+        if let episodes = detail.episodes {
+            for ep in episodes {
+                if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) {
+                    if let final = await LinkResolver.shared.resolveFinalURL(m3u8) { return final }
+                    return url
+                }
+                if let embed = ep.link_embed, let url = URL(string: embed) { return url }
+            }
+        }
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func fetchKKPhim(_ imdbId: String) async throws -> URL {
+        print("🎯 THỬ KKPhim...")
+        let data = try await LinkResolver.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/search?keyword=\(imdbId)", source: "KKPhim")
+        var slug: String?
+        if let r = try? JSONDecoder().decode([KKPhimMovie].self, from: data) { slug = r.first?.slug }
+        else if let r = try? JSONDecoder().decode(KKPhimMovie.self, from: data) { slug = r.slug }
+        guard let slug = slug else { throw StreamError.noStreamAvailable }
+        let epData = try await LinkResolver.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/movie/\(slug)", source: "KKPhim-Ep")
+        let ep = try JSONDecoder().decode(KKPhimResponse.self, from: epData)
+        if let url = ep.episodes?.first?.sources?.first?.url, let streamURL = URL(string: url) { return streamURL }
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func fetchNTLStream(_ imdbId: String) async throws -> URL {
+        print("🎯 THỬ NTL...")
+        let data = try await LinkResolver.shared.fetchJSON(from: "https://tnluannguyen-ntl-stream.hf.space/stream/movie/\(imdbId).json", source: "NTL")
+        let res = try JSONDecoder().decode(NTLStreamResponse.self, from: data)
+        if let url = res.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url,
+           let streamURL = URL(string: url) { return streamURL }
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func fetchStremio(source: MovieSource, imdbId: String) async throws -> URL {
+        guard let manifest = source.manifestURL else { throw StreamError.invalidURL }
+        let base = manifest.replacingOccurrences(of: "/manifest.json", with: "")
+        print("🎯 THỬ \(source.rawValue)...")
+        let data = try await LinkResolver.shared.fetchJSON(from: "\(base)/stream/movie/\(imdbId).json", source: source.rawValue)
+        let res = try JSONDecoder().decode(StremioResponse.self, from: data)
+        if let stream = res.streams?.first {
+            if let url = stream.url, !url.hasPrefix("magnet:"), let streamURL = URL(string: url) { return streamURL }
+            if let hash = stream.infoHash { return URL(string: "magnet:?xt=urn:btih:\(hash)")! }
+        }
+        throw StreamError.noStreamAvailable
+    }
+}
+
+// MARK: - External Player Manager
 class ExternalPlayerManager {
     static let shared = ExternalPlayerManager()
     
@@ -50,49 +219,25 @@ class ExternalPlayerManager {
         let name: String
         let scheme: String
         
-        func buildURL(streamURL: String, referer: String = "https://phim.nguonc.com/") -> URL? {
-            // Encode toàn bộ link stream
-            guard let encodedStream = streamURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                print("❌ [ExternalPlayer] Không thể encode URL: \(streamURL)")
-                return nil
-            }
-            
-            // Thêm referer vào link stream (định dạng link|referer=xxx)
-            let streamWithReferer = "\(encodedStream)%7Creferer%3D\(referer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-            
-            let finalURLString: String
+        func buildURL(streamURL: String) -> URL? {
+            guard let encoded = streamURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+            let urlString: String
             switch name {
-            case "Infuse":
-                finalURLString = "infuse://x-callback-url/play?url=\(encodedStream)"
-            case "VLC":
-                finalURLString = "vlc-x-callback://x-callback-url/stream?url=\(encodedStream)"
-            case "ViMu":
-                finalURLString = "vimu://\(encodedStream)"
-            case "Outplayer":
-                finalURLString = "outplayer://\(encodedStream)"
-            case "nPlayer":
-                finalURLString = "nplayer-\(encodedStream)"
-            case "PlayerXtreme":
-                finalURLString = "pxtreme://\(encodedStream)"
-            case "FileBrowser":
-                finalURLString = "fbplayer://\(encodedStream)"
-            case "MX Player":
-                finalURLString = "mxplayer://\(encodedStream)"
-            case "IINA":
-                finalURLString = "iina://open?url=\(encodedStream)"
-            case "Safari":
-                finalURLString = streamURL
-            case "Copy Link":
-                // Không mở app, copy vào clipboard
-                UIPasteboard.general.string = streamURL
-                print("📋 [ExternalPlayer] Đã copy link: \(streamURL)")
-                return nil
-            default:
-                finalURLString = streamURL
+            case "Infuse": urlString = "infuse://x-callback-url/play?url=\(encoded)"
+            case "VLC": urlString = "vlc-x-callback://x-callback-url/stream?url=\(encoded)"
+            case "ViMu": urlString = "vimu://\(encoded)"
+            case "Outplayer": urlString = "outplayer://\(encoded)"
+            case "nPlayer": urlString = "nplayer-\(encoded)"
+            case "PlayerXtreme": urlString = "pxtreme://\(encoded)"
+            case "FileBrowser": urlString = "fbplayer://\(encoded)"
+            case "MX Player": urlString = "mxplayer://\(encoded)"
+            case "IINA": urlString = "iina://open?url=\(encoded)"
+            case "Safari": return URL(string: streamURL)
+            case "Copy Link": UIPasteboard.general.string = streamURL; return nil
+            default: return nil
             }
-            
-            print("🔗 [ExternalPlayer] Final URL for \(name): \(finalURLString)")
-            return URL(string: finalURLString)
+            print("🔗 [External] \(name): \(urlString)")
+            return URL(string: urlString)
         }
     }
     
@@ -111,169 +256,9 @@ class ExternalPlayerManager {
     ]
     
     func openInPlayer(_ player: PlayerApp, streamURL: String) {
-        if player.name == "Copy Link" {
-            UIPasteboard.general.string = streamURL
-            print("📋 Đã copy link: \(streamURL)")
-            return
-        }
-        
-        guard let url = player.buildURL(streamURL: streamURL) else {
-            print("❌ Không thể tạo URL cho \(player.name)")
-            return
-        }
-        
-        print("🚀 Đang mở \(player.name) với URL: \(url.absoluteString)")
-        UIApplication.shared.open(url) { success in
-            if success {
-                print("✅ Đã mở \(player.name) thành công")
-            } else {
-                print("❌ Không thể mở \(player.name) - App có thể chưa được cài đặt")
-            }
-        }
-    }
-    
-    func showCopyGuide() -> String {
-        return "Nếu trình phát báo lỗi, hãy copy link stream và dán vào mục 'Open Network Stream' hoặc 'Add URL' trong app."
-    }
-}
-
-// MARK: - Network Manager
-class NetworkManager {
-    static let shared = NetworkManager()
-    
-    private let session: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.httpCookieAcceptPolicy = .always
-        config.httpAdditionalHeaders = [
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
-            "Accept": "application/json, text/html, */*",
-            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
-        ]
-        return URLSession(configuration: config)
-    }()
-    
-    func fetchJSON(from urlString: String, source: String, referer: String? = nil) async throws -> Data {
-        guard let url = URL(string: urlString) else { throw StreamError.invalidURL }
-        var req = URLRequest(url: url)
-        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        req.setValue("application/json, text/html, */*", forHTTPHeaderField: "Accept")
-        if let ref = referer { req.setValue(ref, forHTTPHeaderField: "Referer") }
-        req.timeoutInterval = 20
-        print("🌐 [\(source)] URL: \(urlString)")
-        let (data, response) = try await session.data(for: req)
-        if let httpResponse = response as? HTTPURLResponse { print("📊 [\(source)] HTTP: \(httpResponse.statusCode)") }
-        if let raw = String(data: data, encoding: .utf8) { print("📄 [\(source)] RAW: \(raw.prefix(1500))") }
-        return data
-    }
-    
-    func resolveFinalURL(_ urlString: String) async -> URL? {
-        guard let url = URL(string: urlString) else { return nil }
-        var req = URLRequest(url: url)
-        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        req.httpMethod = "HEAD"
-        do { let (_, response) = try await session.data(for: req); return response.url ?? url }
-        catch { return url }
-    }
-}
-
-// MARK: - Response Models
-struct AnimeKitsuStream: Codable { let title: String?; let url: String? }
-struct AnimeKitsuResponse: Codable { let streams: [AnimeKitsuStream]? }
-struct KKPhimSource: Codable { let url: String? }
-struct KKPhimEpisode: Codable { let sources: [KKPhimSource]? }
-struct KKPhimResponse: Codable { let episodes: [KKPhimEpisode]? }
-struct KKPhimMovie: Codable { let slug: String? }
-struct NTLStreamItem: Codable { let name: String?; let title: String?; let url: String? }
-struct NTLStreamResponse: Codable { let streams: [NTLStreamItem]? }
-struct NguoncFilmItem: Codable { let name: String?; let slug: String? }
-struct NguoncFilmListResponse: Codable { let items: [NguoncFilmItem]? }
-struct NguoncEpisode: Codable { let link_embed: String?; let link_m3u8: String? }
-struct NguoncFilmDetailResponse: Codable { let episodes: [NguoncEpisode]? }
-struct StremioStream: Codable { let title: String?; let url: String?; let infoHash: String?; let name: String?
-    enum CodingKeys: String, CodingKey { case title, url, name; case infoHash = "infoHash" } }
-struct StremioResponse: Codable { let streams: [StremioStream]? }
-
-// MARK: - Nguonc Provider
-class NguoncProvider {
-    static let shared = NguoncProvider()
-    private let baseURL = "https://phim.nguonc.com/api"
-    func searchFilm(keyword: String) async throws -> String? {
-        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/films/phim-moi-cap-nhat", source: "Nguonc", referer: "https://phim.nguonc.com/")
-        let res = try JSONDecoder().decode(NguoncFilmListResponse.self, from: data)
-        return res.items?.first(where: { $0.name?.lowercased().contains(keyword.lowercased()) ?? false })?.slug
-    }
-    func fetchStreamURL(slug: String) async throws -> URL? {
-        let data = try await NetworkManager.shared.fetchJSON(from: "\(baseURL)/film/\(slug)", source: "Nguonc", referer: "https://phim.nguonc.com/")
-        let res = try JSONDecoder().decode(NguoncFilmDetailResponse.self, from: data)
-        if let episodes = res.episodes {
-            for ep in episodes {
-                if let m3u8 = ep.link_m3u8, let url = URL(string: m3u8) {
-                    if let finalURL = await NetworkManager.shared.resolveFinalURL(m3u8) { return finalURL }
-                    return url
-                }
-                if let embed = ep.link_embed, let url = URL(string: embed) { return url }
-            }
-        }
-        throw StreamError.noStreamAvailable
-    }
-}
-
-// MARK: - MovieStreamService
-class MovieStreamService {
-    static let shared = MovieStreamService()
-    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> (URL, Bool) {
-        switch source {
-        case .nguonc: return (try await fetchNguonc(imdbId: imdbId), false)
-        case .kkphim: return (try await fetchKKPhim(imdbId: imdbId), false)
-        case .ntlStream: return (try await fetchNTLStream(imdbId: imdbId), false)
-        case .animeKitsu: return (try await fetchAnimeKitsu(imdbId: imdbId), false)
-        default: return (try await fetchStremio(source: source, imdbId: imdbId), true)
-        }
-    }
-    func resolveMovie(imdbId: String) async throws -> (URL, Bool) {
-        for source in MovieSource.allCases {
-            if let (url, isTorrent) = try? await getStreamURL(for: source, imdbId: imdbId) { return (url, isTorrent) }
-        }
-        throw StreamError.noStreamAvailable
-    }
-    private func fetchStremio(source: MovieSource, imdbId: String) async throws -> URL {
-        guard let manifest = source.manifestURL else { throw StreamError.invalidURL }
-        let base = manifest.replacingOccurrences(of: "/manifest.json", with: "")
-        let data = try await NetworkManager.shared.fetchJSON(from: "\(base)/stream/movie/\(imdbId).json", source: source.rawValue)
-        let res = try JSONDecoder().decode(StremioResponse.self, from: data)
-        if let stream = res.streams?.first {
-            if let url = stream.url, !url.hasPrefix("magnet:"), let streamURL = URL(string: url) { return streamURL }
-            if let hash = stream.infoHash { return URL(string: "magnet:?xt=urn:btih:\(hash)")! }
-        }
-        throw StreamError.noStreamAvailable
-    }
-    private func fetchAnimeKitsu(imdbId: String) async throws -> URL {
-        let data = try await NetworkManager.shared.fetchJSON(from: "https://anime-kitsu.strem.fun/stream/movie/\(imdbId).json", source: "AnimeKitsu")
-        let res = try JSONDecoder().decode(AnimeKitsuResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil })?.url, let streamURL = URL(string: url) { return streamURL }
-        throw StreamError.noStreamAvailable
-    }
-    private func fetchKKPhim(imdbId: String) async throws -> URL {
-        let data = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/search?keyword=\(imdbId)", source: "KKPhim", referer: "https://kkphim.trankhanh.io.vn/")
-        var slug: String?
-        if let r = try? JSONDecoder().decode([KKPhimMovie].self, from: data) { slug = r.first?.slug }
-        else if let r = try? JSONDecoder().decode(KKPhimMovie.self, from: data) { slug = r.slug }
-        guard let slug = slug else { throw StreamError.noStreamAvailable }
-        let data2 = try await NetworkManager.shared.fetchJSON(from: "https://kkphim.trankhanh.io.vn/api/movie/\(slug)", source: "KKPhim-Ep", referer: "https://kkphim.trankhanh.io.vn/")
-        let res = try JSONDecoder().decode(KKPhimResponse.self, from: data2)
-        if let url = res.episodes?.first?.sources?.first?.url, let streamURL = URL(string: url) { return streamURL }
-        throw StreamError.noStreamAvailable
-    }
-    private func fetchNTLStream(imdbId: String) async throws -> URL {
-        let data = try await NetworkManager.shared.fetchJSON(from: "https://tnluannguyen-ntl-stream.hf.space/stream/movie/\(imdbId).json", source: "NTL")
-        let res = try JSONDecoder().decode(NTLStreamResponse.self, from: data)
-        if let url = res.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url, let streamURL = URL(string: url) { return streamURL }
-        throw StreamError.noStreamAvailable
-    }
-    private func fetchNguonc(imdbId: String) async throws -> URL {
-        if let slug = try? await NguoncProvider.shared.searchFilm(keyword: imdbId),
-           let url = try? await NguoncProvider.shared.fetchStreamURL(slug: slug) { return url }
-        throw StreamError.noStreamAvailable
+        if player.name == "Copy Link" { return }
+        guard let url = player.buildURL(streamURL: streamURL) else { return }
+        UIApplication.shared.open(url)
     }
 }
 
@@ -281,7 +266,10 @@ class MovieStreamService {
 class PlayerDebugger: NSObject {
     static let shared = PlayerDebugger()
     static func createPlayerItem(url: URL) -> AVPlayerItem {
-        let headers: [String: String] = ["User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15", "Referer": "https://phim.nguonc.com/"]
+        let headers: [String: String] = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15",
+            "Referer": "https://phim.nguonc.com/"
+        ]
         let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
         let item = AVPlayerItem(asset: asset)
         item.addObserver(shared, forKeyPath: #keyPath(AVPlayerItem.status), options: [.new, .initial], context: nil)
@@ -293,8 +281,7 @@ class PlayerDebugger: NSObject {
             switch item.status {
             case .readyToPlay: print("✅ AVPlayer READY")
             case .failed: print("❌ AVPlayer FAILED: \(item.error?.localizedDescription ?? "")")
-            case .unknown: print("⚠️ AVPlayer UNKNOWN")
-            @unknown default: break
+            default: break
             }
         }
     }
@@ -310,7 +297,6 @@ struct MoviePlayerView: View {
     @State private var streamURL: String?
     @State private var isTorrent = false
     @State private var showExternalPlayerMenu = false
-    @State private var showCopyGuide = false
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     var body: some View {
@@ -330,11 +316,9 @@ struct MoviePlayerView: View {
             } else if let player = player, !isTorrent {
                 CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
                     .overlay(alignment: .topTrailing) {
-                        if streamURL != nil {
-                            Menu {
-                                ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in Button(p.name) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } }
-                            } label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
-                        }
+                        Menu {
+                            ForEach(ExternalPlayerManager.shared.players, id: \.name) { p in Button(p.name) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } }
+                        } label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
                     }
             } else if isTorrent {
                 VStack(spacing: 20) {
@@ -344,11 +328,9 @@ struct MoviePlayerView: View {
                 }
             }
         }
-        .onAppear { UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation") }
-        .onDisappear { UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation") }
         .task { await loadStream() }
         .actionSheet(isPresented: $showExternalPlayerMenu) {
-            ActionSheet(title: Text("Chọn trình phát"), message: Text(ExternalPlayerManager.shared.showCopyGuide()),
+            ActionSheet(title: Text("Chọn trình phát"), message: Text("Nếu lỗi, hãy chọn 'Copy Link' rồi dán vào app."),
                 buttons: ExternalPlayerManager.shared.players.map { p in .default(Text(p.name)) { if let url = streamURL { ExternalPlayerManager.shared.openInPlayer(p, streamURL: url) } } } + [.cancel()])
         }
     }
@@ -357,7 +339,7 @@ struct MoviePlayerView: View {
         isLoading = true; errorMessage = nil; player = nil; isTorrent = false
         do {
             let imdbId = try await fetchIMDbId()
-            let (url, torrent) = try await MovieStreamService.shared.resolveMovie(imdbId: imdbId)
+            let (url, torrent) = try await SourceManager.shared.resolveMovie(imdbId: imdbId)
             await MainActor.run {
                 self.streamURL = url.absoluteString; self.isTorrent = torrent
                 if !torrent { self.player = PlayerDebugger.debugPlayer(url: url) }
@@ -367,7 +349,7 @@ struct MoviePlayerView: View {
     }
     
     private func fetchIMDbId() async throws -> String {
-        let data = try await NetworkManager.shared.fetchJSON(from: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=\(apiKey)", source: "TMDB")
+        let data = try await LinkResolver.shared.fetchJSON(from: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=\(apiKey)", source: "TMDB")
         struct EID: Codable { let imdb_id: String? }
         let result = try JSONDecoder().decode(EID.self, from: data)
         guard let imdbId = result.imdb_id else { throw StreamError.noStreamAvailable }
