@@ -43,7 +43,12 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 HStack(spacing: 12) {
-                                    Button { if let movie = vm.trending24h.randomElement() { randomMovie = movie; showRandom = true } } label: {
+                                    Button {
+                                        if !vm.trending24h.isEmpty {
+                                            randomMovie = vm.trending24h.randomElement()
+                                            showRandom = true
+                                        }
+                                    } label: {
                                         ZStack { Circle().fill(.thinMaterial).frame(width: 36, height: 36); Text("🎲").font(.system(size: 18)) }
                                     }
                                     NavigationLink(destination: ProfileView()) {
@@ -102,7 +107,16 @@ struct HomeView: View {
         }
         .task { await vm.loadAll() }
         .sheet(isPresented: $showRandom) {
-            if let movie = randomMovie { NavigationStack { MovieDetailView(movie: movie).overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } } } }
+            if let movie = randomMovie {
+                NavigationStack {
+                    MovieDetailView(movie: movie)
+                        .overlay(alignment: .topTrailing) {
+                            Button { showRandom = false } label: {
+                                Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding()
+                            }
+                        }
+                }
+            }
         }
     }
 }
@@ -126,15 +140,9 @@ struct SectionGrid: View {
                                         .frame(width: 115, height: 172)
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
                                         .shadow(color: .black.opacity(0.3), radius: 3)
-                                    Text(movie.title)
-                                        .font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white)
-                                        .lineLimit(2).frame(width: 115, alignment: .leading)
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
-                                        Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
-                                    }
-                                }
-                                .frame(width: 115)
+                                    Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115, alignment: .leading)
+                                    HStack(spacing: 3) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray) }
+                                }.frame(width: 115)
                             }
                         }
                     }.padding(.horizontal, 20)
