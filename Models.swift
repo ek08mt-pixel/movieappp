@@ -1,15 +1,13 @@
 import Foundation
 
-// MARK: - Movie
 struct MovieResponse: Codable {
     let results: [Movie]
     let totalPages: Int?
     let page: Int?
     
     enum CodingKeys: String, CodingKey {
-        case results
+        case results, page
         case totalPages = "total_pages"
-        case page
     }
 }
 
@@ -67,7 +65,40 @@ struct Movie: Codable, Identifiable, Hashable {
     static func == (lhs: Movie, rhs: Movie) -> Bool { lhs.id == rhs.id }
 }
 
-// MARK: - Actor
+struct MovieDetail: Codable {
+    let id: Int
+    let title: String
+    let overview: String?
+    let posterPath: String?
+    let backdropPath: String?
+    let voteAverage: Double?
+    let releaseDate: String?
+    let runtime: Int?
+    let genres: [Genre]?
+    let tagline: String?
+    let credits: Credits?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, title, overview, runtime, tagline, genres, credits
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case releaseDate = "release_date"
+    }
+}
+
+struct Credits: Codable {
+    let cast: [Actor]
+    let crew: [Crew]
+}
+
+struct Crew: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let job: String
+    let department: String
+}
+
 struct ActorResponse: Codable {
     let cast: [Actor]
 }
@@ -99,7 +130,6 @@ struct ActorMoviesResponse: Codable {
     let cast: [Movie]
 }
 
-// MARK: - Others
 struct GenreResponse: Codable {
     let genres: [Genre]
 }
