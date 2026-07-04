@@ -10,10 +10,16 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
-                HomeView().tag(0)
-                SearchView().tag(1)
-                LibraryView().tag(2)
-            }
+    HomeView()
+        .tag(0)
+        .id(0)
+    SearchView()
+        .tag(1)
+        .id(1)
+    LibraryView()
+        .tag(2)
+        .id(2)
+}
             
             HStack {
                 Spacer()
