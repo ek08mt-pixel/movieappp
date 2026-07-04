@@ -1,15 +1,14 @@
 import SwiftUI
-import WebKit
+import AVKit
 
 struct MoviePlayerView: View {
     let movieId: Int
     let movieTitle: String
     @Environment(\.dismiss) var dismiss
-    @State private var imdbId: String?
+    @State private var streamURL: URL?
     @State private var isLoading = true
     @State private var errorMessage: String?
-    
-    private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
+    @State private var player: AVPlayer?
     
     var body: some View {
         ZStack {
@@ -29,161 +28,119 @@ struct MoviePlayerView: View {
                 if isLoading {
                     VStack(spacing: 16) {
                         ProgressView().tint(.white).scaleEffect(1.5)
-                        Text("Đang tải phim...").foregroundColor(.gray).font(.caption)
+                        Text("Đang trích xuất link phim...").foregroundColor(.gray).font(.caption)
                     }.frame(maxHeight: .infinity)
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                         Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                        Button("Thử lại") { Task { await fetchIMDbId() } }
+                        Button("Thử lại") { Task { await extractStream() } }
                             .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
                             .background(Capsule().fill(.ultraThinMaterial))
                     }.frame(maxHeight: .infinity)
-                } else if let imdbId = imdbId {
-                    PlayerWebView(imdbId: imdbId)
+                } else if let player = player {
+                    VideoPlayer(player: player)
+                        .onAppear { player.play() }
+                        .onDisappear { player.pause() }
                 }
             }
         }
-        .task { await fetchIMDbId() }
+        .task { await extractStream() }
     }
     
-    private func fetchIMDbId() async {
+    // MARK: - Trích xuất link stream .m3u8
+    private func extractStream() async {
         isLoading = true; errorMessage = nil
-        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=\(apiKey)"
-        guard let url = URL(string: urlString) else { errorMessage = "URL không hợp lệ"; isLoading = false; return }
+        
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                errorMessage = "Không thể kết nối đến TMDB"; isLoading = false; return
-            }
-            struct ExternalIDs: Codable { let imdb_id: String? }
-            let result = try JSONDecoder().decode(ExternalIDs.self, from: data)
+            // Bước 1: Lấy link stream từ multiembed
+            let embedURL = "https://multiembed.mov/directstream.php?video_id=\(movieId)&tmdb=1"
+            let streamLink = try await fetchStreamLink(from: embedURL)
+            
+            // Bước 2: Lấy link .m3u8 từ response
+            let m3u8Link = try await extractM3U8(from: streamLink)
+            
             await MainActor.run {
-                if let imdbId = result.imdb_id { self.imdbId = imdbId }
-                else { errorMessage = "Không tìm thấy IMDb ID" }
-                isLoading = false
+                if let url = URL(string: m3u8Link) {
+                    self.player = AVPlayer(url: url)
+                } else {
+                    self.errorMessage = "Link stream không hợp lệ"
+                }
+                self.isLoading = false
             }
         } catch {
-            await MainActor.run { errorMessage = "Lỗi: \(error.localizedDescription)"; isLoading = false }
+            await MainActor.run {
+                self.errorMessage = "Lỗi: \(error.localizedDescription)"
+                self.isLoading = false
+            }
         }
     }
-}
-
-// MARK: - Player WebView
-struct PlayerWebView: UIViewRepresentable {
-    let imdbId: String
     
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    func makeUIView(context: Context) -> WKWebView {
-        // Cấu hình
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
-        
-        let prefs = WKPreferences()
-        prefs.javaScriptEnabled = true
-        prefs.javaScriptCanOpenWindowsAutomatically = true
-        config.preferences = prefs
-        
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.backgroundColor = .black
-        webView.isOpaque = false
-        webView.scrollView.backgroundColor = .black
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.navigationDelegate = context.coordinator
-        
-        // User-Agent giả lập iPhone thật
-        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-        
-        // Load URL
-        let urlString = "https://vidsrc.to/embed/movie/\(imdbId)"
-        if let url = URL(string: urlString) {
-            var request = URLRequest(url: url)
-            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-            request.setValue("https://vidsrc.to", forHTTPHeaderField: "Referer")
-            request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-            request.timeoutInterval = 30
-            webView.load(request)
+    // Lấy HTML/JSON từ embed page
+    private func fetchStreamLink(from urlString: String) async throws -> String {
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
         }
         
-        return webView
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://multiembed.mov", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return String(data: data, encoding: .utf8) ?? ""
     }
     
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
-    
-    // MARK: - Coordinator
-    class Coordinator: NSObject, WKNavigationDelegate {
+    // Tìm link .m3u8 trong HTML
+    private func extractM3U8(from html: String) async throws -> String {
+        print("📄 HTML Response: \(html.prefix(1000))")
         
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ LOAD THÀNH CÔNG: \(webView.url?.absoluteString ?? "")")
-            
-            // Inject script để tự động bấm Play và debug
-            let debugScript = """
-            // Debug: In toàn bộ HTML ra console
-            console.log('=== DEBUG HTML START ===');
-            console.log(document.body.innerHTML.substring(0, 2000));
-            console.log('=== DEBUG HTML END ===');
-            
-            // Tìm và click nút Play
-            setTimeout(function() {
-                var playButtons = document.querySelectorAll('button, .play-button, .plyr__control--overlaid, [data-plyr="play"], video');
-                console.log('Tìm thấy ' + playButtons.length + ' phần tử video/play');
-                
-                for (var i = 0; i < playButtons.length; i++) {
-                    var el = playButtons[i];
-                    console.log('Phần tử ' + i + ': ' + el.tagName + ' - Class: ' + el.className);
-                    
-                    if (el.tagName === 'VIDEO') {
-                        el.play().then(function() { console.log('Video đã play'); }).catch(function(e) { console.log('Lỗi play: ' + e); });
-                        el.muted = false;
-                    } else {
-                        el.click();
-                        console.log('Đã click: ' + el.className);
-                    }
-                }
-            }, 2000);
-            
-            // Thử lại sau 5 giây
-            setTimeout(function() {
-                var videos = document.querySelectorAll('video');
-                for (var i = 0; i < videos.length; i++) {
-                    videos[i].play().catch(function(e) { console.log('Retry play error: ' + e); });
-                }
-            }, 5000);
-            """
-            
-            webView.evaluateJavaScript(debugScript) { result, error in
-                if let error = error {
-                    print("❌ LỖI JS: \(error.localizedDescription)")
+        // Tìm link .m3u8 bằng Regex
+        let patterns = [
+            #"https?://[^"'\s]+\.m3u8[^"'\s]*"#,
+            #"https?://[^"'\s]+\.mp4[^"'\s]*"#,
+            #""file"\s*:\s*"([^"]+)"#,
+            #"source\s*src\s*=\s*"([^"]+)"#,
+        ]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)) {
+                if let range = Range(match.range(at: 0), in: html) {
+                    let link = String(html[range])
+                    print("✅ Tìm thấy link: \(link)")
+                    return link
                 }
             }
         }
         
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("❌ LỖI PROVISIONAL: \(error.localizedDescription)")
-            let nsError = error as NSError
-            print("❌ Domain: \(nsError.domain) - Code: \(nsError.code)")
-            print("❌ URL thất bại: \(nsError.userInfo[NSURLErrorFailingURLStringErrorKey] ?? "unknown")")
+        // Fallback: Dùng nguồn khác
+        print("⚠️ Không tìm thấy .m3u8 trong HTML, thử nguồn dự phòng...")
+        return try await fetchFromBackupSource()
+    }
+    
+    // Nguồn dự phòng
+    private func fetchFromBackupSource() async throws -> String {
+        let backupURLs = [
+            "https://api.2embed.cc/embed/\(movieId)",
+            "https://vidlink.pro/movie/\(movieId)",
+        ]
+        
+        for urlString in backupURLs {
+            do {
+                let html = try await fetchStreamLink(from: urlString)
+                // Tìm iframe source
+                if let regex = try? NSRegularExpression(pattern: #"src\s*=\s*"([^"]+)""#, options: .caseInsensitive),
+                   let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                   let range = Range(match.range(at: 1), in: html) {
+                    let iframeURL = String(html[range])
+                    let iframeHTML = try await fetchStreamLink(from: iframeURL)
+                    return try await extractM3U8(from: iframeHTML)
+                }
+            } catch {
+                continue
+            }
         }
         
-        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ LỖI NAVIGATION: \(error.localizedDescription)")
-        }
-        
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🔄 ĐANG LOAD: \(webView.url?.absoluteString ?? "")")
-        }
-        
-        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            print("🔗 REQUEST: \(navigationAction.request.url?.absoluteString ?? "unknown")")
-            decisionHandler(.allow)
-        }
-        
-        func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-            completionHandler(.performDefaultHandling, nil)
-        }
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không thể trích xuất link từ các nguồn"])
     }
 }
