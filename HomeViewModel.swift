@@ -14,9 +14,13 @@ class HomeViewModel: ObservableObject {
         isLoading = true
         do {
             trending = try await APIService.shared.trending()
+            nowPlaying = try await APIService.shared.nowPlaying()
+            upcoming = try await APIService.shared.upcoming()
+            topRated = try await APIService.shared.topRated()
+            popular = try await APIService.shared.popular()
+            genres = try await APIService.shared.genres()
         } catch {
-            print("ERROR: \(error.localizedDescription)")
-            trending = []
+            print("Error: \(error)")
         }
         isLoading = false
     }
