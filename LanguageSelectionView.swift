@@ -2,7 +2,8 @@ import SwiftUI
 
 struct LanguageSelectionView: View {
     @EnvironmentObject var langManager: LanguageManager
-    @Environment(\.dismiss) var dismiss
+    @State private var showRestartAlert = false
+    @State private var selectedLang: AppLanguage?
     
     var body: some View {
         ZStack {
@@ -10,11 +11,8 @@ struct LanguageSelectionView: View {
             List {
                 ForEach(AppLanguage.allCases, id: \.self) { lang in
                     Button {
-                        langManager.setLanguage(lang)
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            exit(0)
-                        }
+                        selectedLang = lang
+                        showRestartAlert = true
                     } label: {
                         HStack {
                             Text(lang.displayName).foregroundColor(.white)
@@ -32,5 +30,16 @@ struct LanguageSelectionView: View {
         }
         .navigationTitle("Ngôn ngữ / Language")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Khởi động lại", isPresented: $showRestartAlert) {
+            Button("OK") {
+                if let lang = selectedLang {
+                    langManager.setLanguage(lang)
+                }
+                exit(0)
+            }
+            Button("Hủy", role: .cancel) {}
+        } message: {
+            Text("App cần khởi động lại để áp dụng ngôn ngữ mới.")
+        }
     }
 }
