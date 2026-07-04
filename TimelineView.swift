@@ -29,6 +29,7 @@ struct TimelineView: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                         Text(movie.title)
                                             .font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
+                                            .frame(height: 24)
                                         HStack(spacing: 2) {
                                             Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
                                             Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
