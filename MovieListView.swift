@@ -1,14 +1,9 @@
 import SwiftUI
 
 struct MovieListView: View {
-    let title: String
-    let movies: [Movie]
-    var fixedQuery: String = ""
-    @State private var allMovies: [Movie] = []
-    @State private var page = 1
-    @State private var isLoading = false
-    @State private var hasMore = true
-    
+    let title: String; let movies: [Movie]; var fixedQuery: String = ""
+    @State private var allMovies: [Movie] = []; @State private var page = 1
+    @State private var isLoading = false; @State private var hasMore = true
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 10)]
     
     var body: some View {
@@ -19,7 +14,7 @@ struct MovieListView: View {
                     ForEach(allMovies) { movie in
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack(spacing: 4) {
-                                CachedAsyncImage(url: movie.posterURL).frame(height: 165).clipShape(RoundedRectangle(cornerRadius: 10))
+                                CachedAsyncImage(url: movie.posterURL).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 10))
                                 Text(movie.title).font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white).lineLimit(2).frame(maxWidth: 110)
                                 HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray) }
                             }
@@ -31,17 +26,14 @@ struct MovieListView: View {
             }
         }
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-        .task {
-            allMovies = movies
-            if movies.isEmpty { await loadMore() }
-        }
+        .task { allMovies = movies; if allMovies.isEmpty || allMovies.count < 20 { await loadMore() } }
     }
     
     func loadMore() async {
         isLoading = true; page += 1
         let q = fixedQuery.isEmpty ? title : fixedQuery
         if let new = try? await APIService.shared.search(query: q, page: page), !new.isEmpty {
-            allMovies.append(contentsOf: new)
+            allMovies.append(contentsOf: new.filter { !($0.adult ?? false) })
         } else { hasMore = false }
         isLoading = false
     }
