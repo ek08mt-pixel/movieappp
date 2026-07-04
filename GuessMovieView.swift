@@ -45,7 +45,7 @@ struct GuessMovieView: View {
                                     .frame(maxWidth: .infinity).padding(10)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(showResult && option.id == movie.id ? Color.green.opacity(0.3) : .ultraThinMaterial)
+                                            .fill(showResult && option.id == movie.id ? AnyShapeStyle(Color.green.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial))
                                     )
                             }
                             .disabled(showResult)
