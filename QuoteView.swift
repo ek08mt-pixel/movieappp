@@ -3,7 +3,6 @@ import SwiftUI
 struct QuoteView: View {
     let movieId: Int
     @State private var detail: MovieDetail?
-    @State private var quotes: [String] = []
     
     let fakeQuotes = [
         "I'm the king of the world!",
@@ -20,10 +19,8 @@ struct QuoteView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let tagline = detail?.tagline, !tagline.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Quote nổi tiếng")
-                        .font(.headline).foregroundColor(.white)
-                    Text("\"\(tagline)\"")
-                        .font(.title3).italic().foregroundColor(.orange)
+                    Text("Quote nổi tiếng").font(.headline).foregroundColor(.white)
+                    Text("\"\(tagline)\"").font(.title3).italic().foregroundColor(.orange)
                 }
             }
             
@@ -37,22 +34,38 @@ struct QuoteView: View {
             if let genres = detail?.genres, !genres.isEmpty {
                 HStack {
                     Image(systemName: "film.fill").foregroundColor(.gray)
-                    Text(genres.map { $0.name }.joined(separator: ", "))
-                        .foregroundColor(.gray).font(.subheadline)
+                    Text(genres.map { $0.name }.joined(separator: ", ")).foregroundColor(.gray).font(.subheadline)
                 }
             }
             
-            Text("Quotes hay")
-                .font(.headline).foregroundColor(.white).padding(.top, 8)
+            // Seasons
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Seasons").font(.headline).foregroundColor(.white).padding(.top, 8)
+                
+                ForEach(1...5, id: \.self) { season in
+                    HStack {
+                        Text("Season \(season)")
+                            .foregroundColor(.white).font(.subheadline).fontWeight(.medium)
+                        Spacer()
+                        Text("\(Int.random(in: 6...13)) episodes")
+                            .foregroundColor(.gray).font(.caption)
+                        Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
+                    }
+                    .padding(.vertical, 4)
+                    
+                    if season < 5 {
+                        Divider().background(Color.white.opacity(0.1))
+                    }
+                }
+            }
+            
+            Text("Quotes hay").font(.headline).foregroundColor(.white).padding(.top, 8)
             
             ForEach(fakeQuotes.prefix(5), id: \.self) { quote in
                 HStack(alignment: .top, spacing: 8) {
-                    Text("\"")
-                        .font(.title).foregroundColor(.orange)
-                    Text(quote)
-                        .foregroundColor(.white).font(.subheadline).italic()
-                    Text("\"")
-                        .font(.title).foregroundColor(.orange)
+                    Text("\"").font(.title).foregroundColor(.orange)
+                    Text(quote).foregroundColor(.white).font(.subheadline).italic()
+                    Text("\"").font(.title).foregroundColor(.orange)
                 }
             }
         }
