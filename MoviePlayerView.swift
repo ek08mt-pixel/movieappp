@@ -12,14 +12,16 @@ struct MoviePlayerView: View {
     @State private var streamURL: String?
     @State private var errorMessage: String?
     
-    let sources: [(String, String, Bool)] = [
-        ("NTL Stream (Direct)", "", true),
-        ("Fmovies (USUK)", "https://fmovies.ps/filter?keyword=", false),
-        ("PhimCN (Vietsub)", "https://phimcn.site/search?keyword=", false),
-        ("Motphim (Vietsub)", "https://motphimtv.com/tim-kiem?q=", false),
-        ("VidLink (USUK)", "https://vidlink.pro/movie/", false),
-        ("MultiEmbed", "https://multiembed.mov/directstream.php?video_id=\(movieId)&tmdb=1", false),
-    ]
+    var sources: [(String, String, Bool)] {
+        [
+            ("NTL Stream (Direct)", "", true),
+            ("Fmovies (USUK)", "https://fmovies.ps/filter?keyword=\(searchQuery)", false),
+            ("PhimCN (Vietsub)", "https://phimcn.site/search?keyword=\(searchQuery)", false),
+            ("Motphim (Vietsub)", "https://motphimtv.com/tim-kiem?q=\(searchQuery)", false),
+            ("VidLink (USUK)", "https://vidlink.pro/movie/\(movieId)", false),
+            ("MultiEmbed", "https://multiembed.mov/directstream.php?video_id=\(movieId)&tmdb=1", false),
+        ]
+    }
     
     var searchQuery: String {
         movieTitle.replacingOccurrences(of: " ", with: "+")
@@ -58,10 +60,7 @@ struct MoviePlayerView: View {
                 } else if let player = player {
                     CustomVideoPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
                 } else {
-                    let urlString = sources[selectedSource].1
-                    if !urlString.isEmpty {
-                        CustomWebView(urlString: sources[selectedSource].1.contains("?") ? "\(urlString)\(searchQuery)" : urlString)
-                    }
+                    CustomWebView(urlString: sources[selectedSource].1)
                 }
             }
         }
@@ -73,7 +72,7 @@ struct MoviePlayerView: View {
         if sources[selectedSource].2 {
             loadNTLStream()
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { isLoading = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isLoading = false }
         }
     }
     
@@ -140,7 +139,9 @@ struct CustomWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
-        config.preferences.javaScriptEnabled = true
+        let pagePrefs = WKWebpagePreferences()
+        pagePrefs.allowsContentJavaScript = true
+        config.defaultWebpagePreferences = pagePrefs
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.backgroundColor = .black; webView.isOpaque = false
         webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
