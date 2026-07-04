@@ -84,7 +84,7 @@ struct ExploreView: View {
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                             ForEach(collections, id: \.0) { title, query, poster in
-                                NavigationLink(destination: MovieListView(title: title, movies: [])) {
+                                NavigationLink(destination: MovieListView(title: title, movies: staffMovies, fixedQuery: query)) {
                                     ZStack(alignment: .bottomLeading) {
                                         CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
                                             .frame(height: 100)
@@ -98,9 +98,9 @@ struct ExploreView: View {
                         }
                         .padding(.horizontal)
                         
-                        SectionWithSeeAll(title: "Staff Picks", movies: staffMovies)
-                        SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies)
-                        SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies)
+                        SectionWithSeeAll(title: "Staff Picks", movies: staffMovies, query: "staff picks")
+                        SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies, query: "editor choice")
+                        SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies, query: "hidden gems")
                         
                         Spacer().frame(height: 120)
                     }
@@ -133,6 +133,7 @@ struct ExploreView: View {
 struct SectionWithSeeAll: View {
     let title: String
     let movies: [Movie]
+    var query: String = ""
     
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
@@ -140,7 +141,7 @@ struct SectionWithSeeAll: View {
                 HStack {
                     Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white)
                     Spacer()
-                    NavigationLink(destination: MovieListView(title: title, movies: movies)) {
+                    NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: query)) {
                         Text("See All").font(.caption).foregroundColor(.gray)
                     }
                 }.padding(.horizontal)
