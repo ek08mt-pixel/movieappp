@@ -73,7 +73,7 @@ struct HomeView: View {
                             
                             if let mod = vm.movieOfDay {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("🌟 Movie of the Day").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
+                                    Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
                                     NavigationLink(destination: MovieDetailView(movie: mod)) {
                                         ZStack(alignment: .bottomLeading) {
                                             CachedAsyncImage(url: mod.backdropURL).aspectRatio(16/9, contentMode: .fill).frame(height: 200).clipShape(RoundedRectangle(cornerRadius: 16))
@@ -84,19 +84,19 @@ struct HomeView: View {
                                 }.padding(.top, 24)
                             }
                             
-                            if !appState.watchHistory.isEmpty { SectionGrid(title: "👀 Tiếp tục khám phá", movies: appState.watchHistory) }
-                            if let last = appState.watchHistory.last { SectionGrid(title: "✨ Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
+                            if !appState.watchHistory.isEmpty { SectionGrid(title: "Tiếp tục khám phá", movies: appState.watchHistory) }
+                            if let last = appState.watchHistory.last { SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
                             
-                            SectionGrid(title: "📺 TV Shows", movies: vm.trendingTV)
-                            SectionGrid(title: "🔥 24h qua", movies: vm.trending24h)
-                            SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
-                            SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
-                            SectionGrid(title: "⭐ Đánh giá cao", movies: vm.topRated)
-                            SectionGrid(title: "🇺🇸 Phim Âu Mỹ", movies: vm.usuk)
-                            SectionGrid(title: "🇰🇷 Phim Hàn Quốc", movies: vm.korean)
-                            SectionGrid(title: "🇯🇵 Phim Nhật Bản", movies: vm.japanese)
-                            SectionGrid(title: "🇻🇳 Phim Việt Nam", movies: vm.vietnamese)
-                            SectionGrid(title: "🎌 Anime", movies: vm.anime)
+                            SectionGrid(title: "TV Shows", movies: vm.trendingTV)
+                            SectionGrid(title: "24h qua", movies: vm.trending24h)
+                            SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
+                            SectionGrid(title: "Sắp chiếu", movies: vm.upcoming)
+                            SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
+                            SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
+                            SectionGrid(title: "Hàn Quốc", movies: vm.korean)
+                            SectionGrid(title: "Nhật Bản", movies: vm.japanese)
+                            SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
+                            SectionGrid(title: "Anime", movies: vm.anime)
                             
                             Spacer().frame(height: 120)
                         }
@@ -127,7 +127,7 @@ struct SectionGrid: View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white); Spacer()
+                    Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white); Spacer()
                     NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) }
                 }.padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
