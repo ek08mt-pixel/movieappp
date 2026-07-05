@@ -6,7 +6,6 @@ struct GuessMovieView: View {
     @State private var showResult = false
     @State private var isCorrect = false
     @State private var score = 0
-    @State private var usedMovieIds: Set<Int> = []
     @State private var isLoading = false
     
     var body: some View {
@@ -67,13 +66,19 @@ struct GuessMovieView: View {
                             }
                         }.padding(.horizontal)
                         
-                        Button { loadNewMovie() } label: {
-                            HStack { Image(systemName: "arrow.clockwise"); Text("Phim khác") }
-                                .font(.caption).foregroundColor(.white)
-                                .padding(.horizontal, 20).padding(.vertical, 10)
-                                .background(Capsule().fill(.ultraThinMaterial))
+                        Button {
+                            loadNewMovie()
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Phim khác")
+                            }
+                            .font(.caption).foregroundColor(.white)
+                            .padding(.horizontal, 20).padding(.vertical, 10)
+                            .background(Capsule().fill(.ultraThinMaterial))
                         }
                     }
+                    
                     Spacer().frame(height: 120)
                 }
             }
@@ -88,23 +93,21 @@ struct GuessMovieView: View {
         options = []
         
         Task {
-            let movies = (try? await APIService.shared.popular())?.filter { !($0.adult ?? false) && !usedMovieIds.contains($0.id) } ?? []
-            
-            if let correct = movies.randomElement() {
-                usedMovieIds.insert(correct.id)
-                var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
-                opts.append(correct)
-                let finalOpts = opts.shuffled()
-                
-                await MainActor.run {
-                    movie = correct
-                    options = finalOpts
-                    isLoading = false
+            if let movies = try? await APIService.shared.popular().filter({ !($0.adult ?? false) }) {
+                if let correct = movies.randomElement() {
+                    var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
+                    opts.append(correct)
+                    
+                    await MainActor.run {
+                        movie = correct
+                        options = opts.shuffled()
+                        isLoading = false
+                    }
+                } else {
+                    await MainActor.run { isLoading = false }
                 }
             } else {
-                usedMovieIds.removeAll()
                 await MainActor.run { isLoading = false }
-                loadNewMovie()
             }
         }
     }
