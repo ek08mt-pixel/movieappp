@@ -6,10 +6,15 @@ struct SearchView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMovie: Movie?
     
-    private let columns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    
+    let categoryPosters: [String: String] = [
+        "Marvel": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+        "DC": "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg",
+        "Hành động": "/aBw8zYuAljVM1FeK7bRITkfH4g8.jpg",
+        "Viễn tưởng": "/ghQrKrcEpAlkzBuNoO7jZAgUx1R.jpg",
+        "Kinh dị": "/vJ8cQMNknAY1R4vVxzBSMvQ1W4.jpg",
+        "Hài": "/hv7o3VgfsairBoQFAawgaQ4cR1m.jpg"
     ]
     
     var body: some View {
@@ -35,13 +40,12 @@ struct SearchView: View {
                                     ForEach(CategoryConfig.allCategories.prefix(6)) { category in
                                         NavigationLink(destination: CategoryFullView(category: category)) {
                                             ZStack(alignment: .bottom) {
-                                                RoundedRectangle(cornerRadius: 16)
-                                                    .fill(.ultraThinMaterial)
-                                                    .frame(height: 95)
-                                                    .overlay(
-                                                        Image(systemName: iconFor(category.name))
-                                                            .font(.system(size: 28)).foregroundColor(.white.opacity(0.3))
-                                                    )
+                                                CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(categoryPosters[category.name] ?? "")"))
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(height: 100)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                                    .overlay(Color.black.opacity(0.4))
+                                                    .clipShape(RoundedRectangle(cornerRadius: 14))
                                                 Text(category.name)
                                                     .font(.system(size: 12, weight: .bold)).foregroundColor(.white)
                                                     .padding(.vertical, 4).padding(.horizontal, 10)
@@ -71,14 +75,12 @@ struct SearchView: View {
                     } else if vm.results.isEmpty { Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer() }
                     else {
                         ScrollView {
-                            LazyVGrid(columns: columns, spacing: 14) {
+                            LazyVGrid(columns: columns, spacing: 16) {
                                 ForEach(vm.results) { movie in
                                     Button { selectedMovie = movie } label: {
                                         VStack(spacing: 4) {
                                             CachedAsyncImage(url: movie.posterURL)
-                                                .aspectRatio(2/3, contentMode: .fill)
-                                                .frame(maxWidth: .infinity)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8))
                                             Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                             HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
                                         }
@@ -93,17 +95,5 @@ struct SearchView: View {
             .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         }
         .onAppear { focused = true; Task { await vm.loadTrending() } }
-    }
-    
-    func iconFor(_ name: String) -> String {
-        switch name {
-        case "Marvel": return "shield.fill"
-        case "DC": return "bolt.fill"
-        case "Hành động": return "flame.fill"
-        case "Viễn tưởng": return "rocket.fill"
-        case "Kinh dị": return "skull.fill"
-        case "Hài": return "face.smiling.fill"
-        default: return "film.fill"
-        }
     }
 }
