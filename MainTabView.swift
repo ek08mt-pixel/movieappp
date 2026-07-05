@@ -15,74 +15,71 @@ struct MainTabView: View {
             }
             
             HStack(spacing: 12) {
-                // Khung 1: Home + Khám phá + Library
-                HStack(spacing: 36) {
+                HStack(spacing: 44) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) { selectedTab = 0 }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
                 }
-                .padding(.vertical, 14)
-                .padding(.horizontal, 28)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 32)
                 .background(
                     Capsule()
-                        .fill(.ultraThinMaterial.opacity(0.25))
-                        .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                        .fill(.ultraThinMaterial)
+                        .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
                 )
-                .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                )
+                .clipShape(Capsule())
                 
-                // Khung 2: Search - Capsule tròn
                 Button {
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.system(size: 26, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
-                        .frame(width: 56, height: 56)
+                        .frame(width: 58, height: 58)
                         .background(
                             Circle()
-                                .fill(.ultraThinMaterial.opacity(0.25))
-                                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                                .fill(.ultraThinMaterial)
+                                .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
                         )
-                        .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                        )
+                        .clipShape(Circle())
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, 6)
         }
         .ignoresSafeArea(.keyboard)
-        .sheet(isPresented: $showSearch) {
-            SearchView()
-        }
+        .sheet(isPresented: $showSearch) { SearchView() }
     }
 }
 
 struct LiquidTabIcon: View {
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
+    let icon: String; let isSelected: Bool; let action: () -> Void
     @State private var isPressed = false
     
     var body: some View {
         Button {
-            withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) {
-                isPressed = true
-            }
+            withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) { isPressed = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) {
-                    isPressed = false
-                }
+                withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) { isPressed = false }
             }
             action()
         } label: {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(.ultraThinMaterial.opacity(0.4))
-                        .frame(width: 56, height: 42)
+                        .fill(.ultraThinMaterial.opacity(0.5))
+                        .frame(width: 58, height: 42)
+                        .shadow(color: .white.opacity(0.05), radius: 4, y: 1)
                 }
-                
                 Image(systemName: icon)
-                    .font(.system(size: 24, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 26, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.45))
                     .scaleEffect(isPressed ? 0.8 : 1.0)
             }
