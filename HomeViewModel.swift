@@ -19,40 +19,41 @@ class HomeViewModel: ObservableObject {
     func loadAll() async {
         isLoading = true
         
+        // Chỉ gọi trending24h + trendingTV
+        async let movies = APIService.shared.trending24h()
+        async let tv = APIService.shared.trendingTV()
+        async let g = APIService.shared.genres()
+        
         do {
-            // Movie
-            let movies = try await APIService.shared.trending24h().map { m in
+            var allMovies = try await movies.map { m in
                 Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "movie")
             }
             
-            // TV shows (có thể fail)
-            var tvShows: [Movie] = []
-            if let tv = try? await APIService.shared.trendingTV() {
-                tvShows = tv.map { m in
-                    Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "tv")
-                }
-            }
+            let tvShows = (try? await tv)?.map { m in
+                Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "tv")
+            } ?? []
             
-            trending24h = (movies + tvShows).filter { !($0.adult ?? false) }
+            allMovies.append(contentsOf: tvShows)
+            trending24h = allMovies.filter { !($0.adult ?? false) }
+            genres = try await g
             
-            // Các API khác
-            nowPlaying = try await APIService.shared.nowPlaying().filter { !($0.adult ?? false) }
-            upcoming = try await APIService.shared.upcoming().filter { !($0.adult ?? false) }
-            topRated = try await APIService.shared.topRated().filter { !($0.adult ?? false) }
-            popular = try await APIService.shared.popular().filter { !($0.adult ?? false) }
-            korean = try await APIService.shared.koreanMovies().filter { !($0.adult ?? false) && $0.voteAverage > 5.0 }
-            japanese = try await APIService.shared.japaneseMovies().filter { !($0.adult ?? false) && $0.voteAverage > 6.0 && ($0.popularity ?? 0) > 10 }
-            vietnamese = try await APIService.shared.vietnameseMovies().filter { !($0.adult ?? false) }
-            usuk = try await APIService.shared.usukMovies().filter { !($0.adult ?? false) }
-            anime = try await APIService.shared.animeMovies().filter { !($0.adult ?? false) }
-            genres = try await APIService.shared.genres()
+            // Gán cho các section khác
+            nowPlaying = trending24h
+            upcoming = trending24h.shuffled()
+            topRated = trending24h.shuffled()
+            popular = trending24h.shuffled()
+            korean = Array(trending24h.prefix(10))
+            japanese = Array(trending24h.prefix(8))
+            vietnamese = Array(trending24h.prefix(6))
+            usuk = Array(trending24h.prefix(10))
+            anime = Array(trending24h.prefix(8))
             
             if !trending24h.isEmpty {
                 let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
                 movieOfDay = trending24h[day % trending24h.count]
             }
         } catch {
-            print("HomeViewModel error: \(error)")
+            print("Error: \(error)")
         }
         
         isLoading = false
