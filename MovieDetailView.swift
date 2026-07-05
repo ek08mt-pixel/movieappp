@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import AVKit
 
 struct MovieDetailView: View {
     let movie: Movie; var showBooking: Bool = false
@@ -7,6 +8,7 @@ struct MovieDetailView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     @State private var showTrailer = false
+    @State private var showPlayer = false
     @State private var showBookingSheet = false
     @State private var showFullOverview = false
     @State private var commentText = ""
@@ -17,7 +19,6 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
-                    // Backdrop
                     ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
@@ -31,7 +32,6 @@ struct MovieDetailView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
-                        // Poster + Info
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL)
                                 .aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150)
@@ -45,42 +45,48 @@ struct MovieDetailView: View {
                                     Text(movie.ratingText).foregroundColor(.white).font(.subheadline).bold()
                                     Text("•").foregroundColor(.gray); Text(movie.yearText).foregroundColor(.gray)
                                 }
-                                // Nội dung - bấm vào mở rộng ngay tại chỗ
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
+                                        .font(.system(size: 13)).foregroundColor(.gray)
                                         .lineLimit(showFullOverview ? nil : 4)
                                         .multilineTextAlignment(.leading)
                                         .fixedSize(horizontal: false, vertical: true)
-                                    
                                     if movie.overview.count > 200 {
                                         Button(showFullOverview ? "Thu gọn" : "Xem thêm") {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                showFullOverview.toggle()
-                                            }
+                                            withAnimation(.easeInOut(duration: 0.2)) { showFullOverview.toggle() }
                                         }
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.orange)
+                                        .font(.system(size: 12, weight: .medium)).foregroundColor(.orange)
                                     }
                                 }
                             }
                         }
                         
-                        // Nút chức năng
+                        // Nút: Xem + Hỏi AI + Lưu
                         HStack(spacing: 10) {
-                            if vm.trailerKey != nil {
-                                Button { showTrailer = true } label: {
-                                    Label("Trailer", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10)
-                                        .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                                        .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            // Nút Xem (gộp Trailer + Xem ngay)
+                            Menu {
+                                if vm.trailerKey != nil {
+                                    Button { showTrailer = true } label: {
+                                        Label("Trailer", systemImage: "play.tv")
+                                    }
                                 }
+                                Button { showPlayer = true } label: {
+                                    Label("Xem ngay", systemImage: "play.rectangle.fill")
+                                }
+                            } label: {
+                                Label("Xem", systemImage: "play.fill")
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
+                            
                             NavigationLink(destination: AskAIView(movie: movie)) {
                                 Label("Hỏi AI", systemImage: "brain").frame(maxWidth: .infinity).padding(.vertical, 10)
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
+                            
                             Button {
                                 if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } }
                                 else { appState.favorites.append(movie) }
@@ -161,6 +167,9 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showTrailer) {
             ZStack { Color.black.ignoresSafeArea(); WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea() }
                 .overlay(alignment: .topLeading) { Button { showTrailer = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding() } }
+        }
+        .fullScreenCover(isPresented: $showPlayer) {
+            MoviePlayerView(movieId: movie.id, movieTitle: movie.title)
         }
         .sheet(isPresented: $showBookingSheet) {
             NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea()
