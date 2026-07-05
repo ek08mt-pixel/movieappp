@@ -11,6 +11,7 @@ struct GenreMovieView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
+            
             if isLoading && movies.isEmpty {
                 ProgressView().tint(.white)
             } else if movies.isEmpty {
@@ -34,13 +35,27 @@ struct GenreMovieView: View {
                                 }
                             }
                         }
-                    }.padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 100)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
                 }
             }
         }
         .navigationTitle(genre.name)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(false)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Circle().fill(.ultraThinMaterial))
+                }
+            }
+        }
         .task {
             do { movies = try await APIService.shared.moviesByGenre(genreId: genre.id) } catch { movies = [] }
             isLoading = false
