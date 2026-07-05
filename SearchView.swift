@@ -22,7 +22,7 @@ struct SearchView: View {
                         TextField("Tìm phim...", text: $vm.query).focused($focused).foregroundColor(.white)
                             .onChange(of: vm.query) { _ in Task { await vm.search() } }
                         if !vm.query.isEmpty { Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) } }
-                        if focused { Button("Đóng") { focused = false }.foregroundColor(.orange).font(.caption) }
+                        if focused { Button("Đóng") { focused = false }.foregroundColor(.white).font(.caption) }
                     }
                     .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding()
                     
@@ -73,7 +73,16 @@ struct SearchView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 14) {
                                 ForEach(vm.results) { movie in
-                                    Button { selectedMovie = movie } label: { MovieGridCard(movie: movie) }
+                                    Button { selectedMovie = movie } label: {
+                                        VStack(spacing: 4) {
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(maxWidth: .infinity)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                            HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
+                                        }
+                                    }
                                 }
                             }.padding(.horizontal)
                         }
