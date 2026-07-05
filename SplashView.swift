@@ -2,110 +2,90 @@ import SwiftUI
 
 struct SplashView: View {
     @State private var isAnimating = false
-    @State private var scale: CGFloat = 0.8
+    @State private var scale: CGFloat = 0.7
     @State private var opacity: Double = 0
     
-    // Poster tông tối (horror/thriller)
-    let darkPosters: [String] = [
-        "/n6bUvigpBOqisP4apFP3FbhqEfA.jpg",  // Joker
-        "/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",  // Joker 2
-        "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg",  // The Dark Knight
-        "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",  // Parasite
-        "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",  // Fight Club
-        "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",  // Pulp Fiction
-        "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",  // The Matrix
-        "/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",  // Inception
-        "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",  // Interstellar
-        "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",  // Interstellar 2
-        "/7fn624j5lj3xTme2SgiLCeuedmO.jpg",  // Whiplash
-        "/aKuFiU82s5ISJDxRkETp9cZNkWV.jpg",  // GoodFellas
+    let posters: [String] = [
+        "/n6bUvigpBOqisP4apFP3FbhqEfA.jpg",
+        "/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+        "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg",
+        "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+        "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+        "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
+        "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+        "/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",
+        "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
     ]
     
     private let columns = [
-        GridItem(.flexible(), spacing: 6),
-        GridItem(.flexible(), spacing: 6),
-        GridItem(.flexible(), spacing: 6)
+        GridItem(.flexible(), spacing: 0),
+        GridItem(.flexible(), spacing: 0),
+        GridItem(.flexible(), spacing: 0)
     ]
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            // Background lưới ảnh mờ + nghiêng
-            GeometryReader { geo in
-                LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(darkPosters, id: \.self) { poster in
-                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w300\(poster)"))
-                            .aspectRatio(2/3, contentMode: .fill)
-                            .frame(height: geo.size.width / 3 * 1.5)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
+            // Lưới poster mờ mạnh, opacity thấp
+            LazyVGrid(columns: columns, spacing: 0) {
+                ForEach(posters, id: \.self) { poster in
+                    CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w300\(poster)"))
+                        .aspectRatio(2/3, contentMode: .fill)
+                        .frame(height: UIScreen.main.bounds.width / 3 * 1.5)
+                        .clipped()
                 }
-                .blur(radius: 10)
-                .rotation3DEffect(.degrees(18), axis: (x: 0, y: 1, z: 0))
-                .scaleEffect(1.4)
-                .offset(x: -30)
-                .opacity(0.5)
             }
+            .blur(radius: 25)
+            .opacity(0.25)
             .ignoresSafeArea()
             
-            // Gradient overlay
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.6),
-                    .black.opacity(0.85),
-                    .black.opacity(0.95)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            // Logo + Text trung tâm
-            VStack(spacing: 20) {
-                // Icon mèo
+            // Logo + Text
+            VStack(spacing: 24) {
+                // Logo đầu mèo viền
                 ZStack {
                     Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 2)
+                        .frame(width: 80, height: 80)
                     
-                    Image(systemName: "cat.fill")
-                        .font(.system(size: 45))
-                        .foregroundColor(.white.opacity(0.9))
+                    // Tai mèo trái
+                    Path { path in
+                        path.move(to: CGPoint(x: 20, y: 35))
+                        path.addLine(to: CGPoint(x: 10, y: 5))
+                        path.addLine(to: CGPoint(x: 35, y: 25))
+                    }
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 2)
+                    
+                    // Tai mèo phải
+                    Path { path in
+                        path.move(to: CGPoint(x: 60, y: 35))
+                        path.addLine(to: CGPoint(x: 70, y: 5))
+                        path.addLine(to: CGPoint(x: 45, y: 25))
+                    }
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 2)
                 }
-                .scaleEffect(isAnimating ? 1.1 : 1.0)
-                .animation(
-                    .easeInOut(duration: 2).repeatForever(autoreverses: true),
-                    value: isAnimating
-                )
+                .shadow(color: .gray.opacity(0.3), radius: 10)
+                .scaleEffect(scale)
                 
-                // Text EMCC
-                Text("EMCC")
-                    .font(.system(size: 40, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
-                    .tracking(6)
-                    .shadow(color: .white.opacity(0.3), radius: 10)
-                
-                // Subtitle
-                Text("Khám phá điện ảnh")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray.opacity(0.7))
-                    .tracking(2)
+                VStack(spacing: 8) {
+                    Text("EMCC")
+                        .font(.system(size: 38, weight: .bold, design: .default))
+                        .foregroundColor(.white)
+                        .tracking(2)
+                    
+                    Text("Khám phá điện ảnh")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                        .tracking(1)
+                }
+                .opacity(opacity)
             }
-            .scaleEffect(scale)
-            .opacity(opacity)
         }
         .onAppear {
-            // Logo thở
-            isAnimating = true
-            
-            // Hiệu ứng xuất hiện
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
                 scale = 1.0
+            }
+            withAnimation(.easeIn(duration: 1.0).delay(0.2)) {
                 opacity = 1.0
             }
         }
