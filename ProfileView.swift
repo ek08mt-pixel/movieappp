@@ -1,203 +1,162 @@
 import SwiftUI
+import AuthenticationServices
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var langManager: LanguageManager
-    @State private var showEditName = false
-    @State private var showLogin = false
-    @State private var loginName = ""
-    @State private var loginPassword = ""
-    @State private var confirmPassword = ""
+    @State private var showImagePicker = false
+    @State private var inputImage: UIImage?
+    @State private var isEditingName = false
+    @State private var tempName: String = ""
     
-    let avatars = ["person.fill", "cat.fill", "dog.fill", "rabbit.fill", "fish.fill", "pawprint.fill", "heart.fill", "star.fill", "crown.fill", "sparkles"]
+    let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill", "star.circle.fill", "heart.circle.fill", "bolt.circle.fill", "moon.circle.fill", "sun.max.circle.fill"]
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        Menu {
-                            ForEach(avatars, id: \.self) { icon in
-                                Button {
-                                    appState.selectedAvatar = icon
-                                    appState.saveToDisk()
-                                } label: {
-                                    Label(icon, systemImage: icon)
-                                }
-                            }
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(.thinMaterial)
-                                    .frame(width: 80, height: 80)
-                                    .shadow(color: .black.opacity(0.2), radius: 8)
-                                
+        ZStack {
+            Color.black.ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 24) {
+                    Text("Tài khoản")
+                        .font(.title2).fontWeight(.bold).foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 60)
+                    
+                    if appState.isLoggedIn {
+                        // Avatar
+                        VStack(spacing: 12) {
+                            if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
+                                Image(uiImage: uiImage)
+                                    .resizable().aspectRatio(contentMode: .fill)
+                                    .frame(width: 90, height: 90).clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
+                            } else {
                                 Image(systemName: appState.selectedAvatar)
-                                    .foregroundColor(.white.opacity(0.7))
-                                    .font(.system(size: 35))
+                                    .font(.system(size: 50)).foregroundColor(.white)
+                                    .frame(width: 90, height: 90)
+                                    .background(Circle().fill(.ultraThinMaterial))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
+                            }
+                            
+                            HStack(spacing: 16) {
+                                Button("Album") { showImagePicker = true }
+                                    .font(.caption).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 8)
+                                    .background(Capsule().fill(.ultraThinMaterial))
+                                Menu {
+                                    ForEach(avatars, id: \.self) { av in
+                                        Button { appState.selectedAvatar = av; appState.avatarImageData = nil } label: {
+                                            Label(av, systemImage: av)
+                                        }
+                                    }
+                                } label: {
+                                    Text("Avatar có sẵn").font(.caption).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 8)
+                                        .background(Capsule().fill(.ultraThinMaterial))
+                                }
                             }
                         }
-                        .padding(.top, 20)
                         
-                        if appState.isLoggedIn {
-                            Text(appState.userName)
-                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                            Button("Đăng xuất") {
-                                appState.isLoggedIn = false
-                                appState.userName = ""
-                                appState.saveToDisk()
-                            }
-                            .foregroundColor(.red).font(.caption)
-                        } else {
-                            Button {
-                                loginName = ""; loginPassword = ""; confirmPassword = ""
-                                showLogin = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "person.badge.key.fill")
-                                    Text("Đăng nhập / Tạo tài khoản")
+                        // Nickname
+                        VStack(spacing: 8) {
+                            if isEditingName {
+                                HStack(spacing: 8) {
+                                    TextField("Tên của bạn", text: $tempName)
+                                        .textFieldStyle(.plain).foregroundColor(.white)
+                                        .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                                    Button("Lưu") {
+                                        appState.nickname = tempName
+                                        isEditingName = false
+                                    }
+                                    .font(.caption).fontWeight(.bold).foregroundColor(.white)
+                                    .padding(.horizontal, 14).padding(.vertical, 10)
+                                    .background(Capsule().fill(.ultraThinMaterial))
+                                }.padding(.horizontal, 30)
+                            } else {
+                                Button {
+                                    tempName = appState.nickname
+                                    isEditingName = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Text(appState.nickname.isEmpty ? "Chưa đặt tên" : appState.nickname)
+                                            .font(.headline).foregroundColor(.white)
+                                        Image(systemName: "pencil").font(.system(size: 12)).foregroundColor(.gray)
+                                    }
                                 }
-                                .foregroundColor(.white.opacity(0.8))
-                                .padding(.horizontal, 20).padding(.vertical, 10)
+                            }
+                        }
+                        
+                        // Email
+                        Text(appState.email)
+                            .font(.caption).foregroundColor(.gray)
+                        
+                        // Logout
+                        Button {
+                            withAnimation { appState.logout() }
+                        } label: {
+                            Text("Đăng xuất").font(.caption).fontWeight(.medium).foregroundColor(.red)
+                                .padding(.horizontal, 24).padding(.vertical, 10)
+                                .background(Capsule().stroke(Color.red.opacity(0.4), lineWidth: 1))
+                        }
+                    } else {
+                        VStack(spacing: 16) {
+                            SignInWithAppleButton(.signIn) { request in
+                                request.requestedScopes = [.fullName, .email]
+                            } onCompletion: { result in
+                                switch result {
+                                case .success(let auth):
+                                    appState.isLoggedIn = true
+                                    if let credential = auth.credential as? ASAuthorizationAppleIDCredential {
+                                        appState.email = credential.email ?? "Apple User"
+                                        appState.nickname = credential.fullName?.givenName ?? ""
+                                    }
+                                case .failure: break
+                                }
+                            }
+                            .signInWithAppleButtonStyle(.white)
+                            .frame(height: 50)
+                            .clipShape(Capsule())
+                            .padding(.horizontal, 30)
+                            
+                            Button {
+                                withAnimation { appState.isLoggedIn = true; appState.email = "user@gmail.com" }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "envelope.fill").font(.system(size: 16))
+                                    Text("Đăng nhập với Gmail").font(.system(size: 15, weight: .medium))
+                                }
+                                .foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(Capsule().fill(.ultraThinMaterial))
-                            }
+                            }.padding(.horizontal, 30)
                         }
-                        
-                        // Stats
-                        NavigationLink(destination: StatsView()) {
-                            HStack {
-                                Image(systemName: "chart.bar.fill").foregroundColor(.orange)
-                                Text("Xem thống kê của bạn").foregroundColor(.white)
-                                Spacer()
-                                Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
-                            }
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
-                        }
-                        .padding(.horizontal)
-                        
-                        HStack(spacing: 0) {
-                            VStack(spacing: 4) {
-                                Text("\(appState.favorites.count)").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                                Text("Yêu thích").font(.caption).foregroundColor(.gray)
-                            }.frame(maxWidth: .infinity)
-                            VStack(spacing: 4) {
-                                Text("\(appState.watchHistory.count)").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                                Text("Đã xem").font(.caption).foregroundColor(.gray)
-                            }.frame(maxWidth: .infinity)
-                        }
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
-                        .padding(.horizontal)
-                        
-                        VStack(spacing: 1) {
-                            ProfileRow(icon: "pencil", title: "Đổi tên hiển thị") { showEditName = true }
-                            Divider().background(Color.white.opacity(0.1))
-                            
-                            NavigationLink(destination: LanguageSelectionView()) {
-                                HStack {
-                                    Image(systemName: "globe").foregroundColor(.white.opacity(0.6)).frame(width: 24)
-                                    Text("Ngôn ngữ").foregroundColor(.white)
-                                    Spacer()
-                                    Text(langManager.currentLanguage.displayName).foregroundColor(.gray).font(.caption)
-                                    Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
-                                }.padding()
-                            }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            
-                            // Director search
-                            NavigationLink(destination: DirectorSearchView()) {
-                                HStack {
-                                    Image(systemName: "megaphone.fill").foregroundColor(.white.opacity(0.6)).frame(width: 24)
-                                    Text("Tìm đạo diễn").foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
-                                }.padding()
-                            }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            ProfileRow(icon: "doc.text", title: "Chính sách & Điều khoản") {}
-                            Divider().background(Color.white.opacity(0.1))
-                            ProfileRow(icon: "info.circle", title: "Phiên bản 1.0") {}
-                        }
-                        .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
-                        .padding(.horizontal)
-                        
-                        Text("Made with ♥ by emmewchamchi")
-                            .font(.system(size: 11)).foregroundColor(.gray.opacity(0.5))
-                            .padding(.bottom, 100)
                     }
+                    
+                    Spacer().frame(height: 40)
                 }
             }
-            .navigationTitle("Tài khoản")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .sheet(isPresented: $showEditName) {
-            NavigationStack {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    VStack(spacing: 20) {
-                        TextField("Nhập tên mới", text: $loginName)
-                            .textFieldStyle(.plain).foregroundColor(.white).padding()
-                            .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                        Button("Lưu") {
-                            if !loginName.isEmpty { appState.userName = loginName; appState.saveToDisk() }
-                            showEditName = false
-                        }
-                        .fontWeight(.bold).foregroundColor(.white)
-                        .frame(maxWidth: .infinity).padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.2)))
-                    }.padding()
-                }
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showEditName = false } } }
-            }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $inputImage)
         }
-        .sheet(isPresented: $showLogin) {
-            NavigationStack {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            Text("Đăng nhập / Đăng ký").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                            TextField("Tên người dùng", text: $loginName).textFieldStyle(.plain).foregroundColor(.white).padding()
-                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            SecureField("Mật khẩu", text: $loginPassword).textFieldStyle(.plain).foregroundColor(.white).padding()
-                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            SecureField("Xác nhận mật khẩu", text: $confirmPassword).textFieldStyle(.plain).foregroundColor(.white).padding()
-                                .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                            Button {
-                                if !loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty {
-                                    appState.userName = loginName; appState.isLoggedIn = true; appState.saveToDisk(); showLogin = false
-                                }
-                            } label: {
-                                Text(loginPassword.isEmpty ? "Đăng ký" : "Xác nhận").fontWeight(.bold).foregroundColor(.white)
-                                    .frame(maxWidth: .infinity).padding()
-                                    .background(RoundedRectangle(cornerRadius: 12)
-                                        .fill(!loginName.isEmpty && loginPassword == confirmPassword && !loginPassword.isEmpty ? Color.blue.opacity(0.6) : Color.gray.opacity(0.3)))
-                            }
-                            .disabled(loginName.isEmpty || loginPassword != confirmPassword || loginPassword.isEmpty)
-                        }.padding()
-                    }
-                }
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Hủy") { showLogin = false } } }
+        .onChange(of: inputImage) { img in
+            if let img = img, let data = img.jpegData(compressionQuality: 0.7) {
+                appState.avatarImageData = data
+                appState.selectedAvatar = ""
             }
         }
     }
 }
 
-struct ProfileRow: View {
-    let icon: String; let title: String; let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon).foregroundColor(.white.opacity(0.6)).frame(width: 24)
-                Text(title).foregroundColor(.white); Spacer()
-                Image(systemName: "chevron.right").foregroundColor(.gray).font(.caption)
-            }.padding()
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) var dismiss
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController(); picker.delegate = context.coordinator; return picker
+    }
+    func updateUIViewController(_ ui: UIImagePickerController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ImagePicker
+        init(_ parent: ImagePicker) { self.parent = parent }
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let uiImage = info[.originalImage] as? UIImage { parent.image = uiImage }
+            parent.dismiss()
         }
     }
 }
