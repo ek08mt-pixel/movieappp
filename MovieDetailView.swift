@@ -11,8 +11,6 @@ struct MovieDetailView: View {
     @State private var showBookingSheet = false
     @State private var showFullOverview = false
     @State private var showImages = false
-    @State private var commentText = ""
-    @State private var comments: [String] = []
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -43,7 +41,6 @@ struct MovieDetailView: View {
                         }
                         HStack(spacing: 10) {
                             Button { showPlayer = true } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
-                            NavigationLink(destination: AskAIView(movie: movie).toolbar(.hidden, for: .tabBar)) { Label("Hỏi AI", systemImage: "brain").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) } } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                         }
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
@@ -51,7 +48,6 @@ struct MovieDetailView: View {
                         if !vm.images.isEmpty { VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } } }
                         if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
                         if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
-                        VStack(alignment: .leading, spacing: 12) { Text("Bình luận").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); HStack(spacing: 8) { TextField("...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial)); Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7)) } }; ForEach(comments, id: \.self) { c in HStack(alignment: .top, spacing: 8) { Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14))); VStack(alignment: .leading, spacing: 2) { Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white); Text(c).font(.caption).foregroundColor(.gray) }; Spacer() } } }.padding(.top, 8)
                     }.padding(.horizontal, 20)
                     Spacer().frame(height: 100)
                 }
@@ -64,5 +60,7 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
 }
+
 struct MovieImagesView: View { let images: [URL]; let title: String; @Environment(\.dismiss) var dismiss; var body: some View { ZStack { Color.black.opacity(0.95).ignoresSafeArea(); VStack(spacing: 0) { HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding(); TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always)) } } } }
+
 struct WebView: UIViewRepresentable { let urlString: String; func makeUIView(context: Context) -> WKWebView { let wv = WKWebView(); wv.backgroundColor = .black; wv.isOpaque = false; if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }; return wv }; func updateUIView(_ uiView: WKWebView, context: Context) {} }
