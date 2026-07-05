@@ -259,3 +259,15 @@ extension Movie {
         )
     }
 }
+func movieImages(movieId: Int) async throws -> [URL] {
+    let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
+    guard let url = URL(string: urlString) else { return [] }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    struct ImageResponse: Codable { let backdrops: [ImageItem]? }
+    struct ImageItem: Codable { let file_path: String? }
+    let res = try decoder.decode(ImageResponse.self, from: data)
+    return res.backdrops?.compactMap { item in
+        guard let path = item.file_path else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w780\(path)")
+    } ?? []
+}
