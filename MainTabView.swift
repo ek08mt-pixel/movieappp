@@ -14,48 +14,46 @@ struct MainTabView: View {
                 LibraryView().opacity(selectedTab == 2 ? 1 : 0)
             }
             
-            // Liquid Glass Tab Bar + Search riêng
-            HStack(spacing: 0) {
-                // Tab bar chính - 3 icon
-                HStack(spacing: 32) {
+            // 2 khung Liquid Glass riêng biệt, sát nhau
+            HStack(spacing: 8) {
+                // Khung 1: Home + Khám phá + Library
+                HStack(spacing: 20) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) { selectedTab = 0 }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 18)
                 .background(
-                    RoundedRectangle(cornerRadius: 100)
-                        .fill(.clear)
-                        .background(.ultraThinMaterial.opacity(0.3))
-                        .blur(radius: 0.5)
+                    Capsule()
+                        .fill(.ultraThinMaterial.opacity(0.25))
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                        )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 100))
-                .shadow(color: .white.opacity(0.03), radius: 2, y: -1)
+                .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
                 
-                Spacer()
-                
-                // Nút Search riêng biệt - nổi bật hơn
+                // Khung 2: Search
                 Button {
-                    withAnimation(.interpolatingSpring(stiffness: 400, damping: 15)) {}
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.8))
                         .frame(width: 44, height: 44)
                         .background(
                             Circle()
-                                .fill(.clear)
-                                .background(.ultraThinMaterial.opacity(0.3))
-                                .blur(radius: 0.5)
+                                .fill(.ultraThinMaterial.opacity(0.25))
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                                )
                         )
-                        .clipShape(Circle())
-                        .shadow(color: .white.opacity(0.05), radius: 4, y: 0)
+                        .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 22)
+            .padding(.bottom, 24)
         }
         .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $showSearch) {
@@ -73,21 +71,29 @@ struct LiquidTabIcon: View {
     
     var body: some View {
         Button {
-            withAnimation(.interpolatingSpring(stiffness: 400, damping: 15)) {
+            withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) {
                 isPressed = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                withAnimation(.interpolatingSpring(stiffness: 400, damping: 15)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) {
                     isPressed = false
                 }
             }
             action()
         } label: {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: isSelected ? .bold : .regular))
-                .foregroundColor(isSelected ? .white : .white.opacity(0.4))
-                .scaleEffect(isPressed ? 0.75 : 1.0)
-                .shadow(color: isSelected ? .white.opacity(0.3) : .clear, radius: 6)
+            ZStack {
+                // Bọc khung bo tròn khi chọn
+                if isSelected {
+                    Capsule()
+                        .fill(.ultraThinMaterial.opacity(0.4))
+                        .frame(width: 44, height: 32)
+                }
+                
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: isSelected ? .bold : .regular))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+                    .scaleEffect(isPressed ? 0.8 : 1.0)
+            }
         }
     }
 }
