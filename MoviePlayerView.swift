@@ -80,86 +80,15 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             
             if isLoading {
-                VStack(spacing: 20) {
-                    ProgressView().tint(.white).scaleEffect(1.5)
-                    Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline)
-                }
+                LoadingView()
             } else if let errorMessage = errorMessage {
-                VStack(spacing: 20) {
-                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
-                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal)
-                    
-                    // Grid chọn nguồn đẹp
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(0..<sources.count, id: \.self) { i in
-                            Button {
-                                selectedSource = i; loadSource()
-                            } label: {
-                                VStack(spacing: 6) {
-                                    Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "circle"))
-                                        .font(.system(size: 20))
-                                        .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .gray))
-                                    Text(sources[i].0.components(separatedBy: " ").first ?? "")
-                                        .font(.system(size: 10)).foregroundColor(.white).lineLimit(1)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(selectedSource == i ? .white.opacity(0.15) : .ultraThinMaterial)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(selectedSource == i ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
-                                        )
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    HStack(spacing: 12) {
-                        Button("Thử lại") { loadSource() }
-                            .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
-                            .background(Capsule().fill(.ultraThinMaterial)).font(.caption)
-                        if let url = streamURL {
-                            Menu {
-                                Button("VLC") { ExternalPlayerManager.shared.open("VLC", url: url) }
-                                Button("Infuse") { ExternalPlayerManager.shared.open("Infuse", url: url) }
-                                Button("Copy Link") { ExternalPlayerManager.shared.open("Copy", url: url) }
-                            } label: {
-                                Label("Mở bằng...", systemImage: "arrow.up.forward.app")
-                                    .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
-                                    .background(Capsule().fill(.orange.opacity(0.6))).font(.caption)
-                            }
-                        }
-                    }
-                }
+                ErrorView(errorMessage: errorMessage, sourceStatus: $sourceStatus, selectedSource: $selectedSource, streamURL: streamURL, sources: sources, onRetry: { loadSource() }, onSelectSource: { i in selectedSource = i; loadSource() })
             } else if let player = player {
-                FullScreenPlayer(player: player).ignoresSafeArea()
+                PlayerView(player: player, sourceName: sources[selectedSource].0, onSourceTap: { showSourceMenu = true })
                     .onAppear { player.play(); lockToLandscape() }
                     .onDisappear { player.pause(); unlockOrientation() }
-                    .overlay(alignment: .topTrailing) {
-                        Button { showSourceMenu = true } label: {
-                            ZStack {
-                                Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
-                                Text(sources[selectedSource].0.components(separatedBy: " ").first ?? "")
-                                    .font(.system(size: 8)).foregroundColor(.white)
-                            }
-                        }
-                        .padding(.top, 50).padding(.trailing, 16)
-                    }
             } else {
-                FullScreenWebView(urlString: sources[selectedSource].2).ignoresSafeArea()
-                    .overlay(alignment: .topTrailing) {
-                        Button { showSourceMenu = true } label: {
-                            ZStack {
-                                Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
-                                Text(sources[selectedSource].0.components(separatedBy: " ").first ?? "")
-                                    .font(.system(size: 8)).foregroundColor(.white)
-                            }
-                        }
-                        .padding(.top, 50).padding(.trailing, 16)
-                    }
+                WebViewWrapper(urlString: sources[selectedSource].2, sourceName: sources[selectedSource].0, onSourceTap: { showSourceMenu = true })
             }
         }
         .onAppear { lockToLandscape() }
@@ -173,12 +102,7 @@ struct MoviePlayerView: View {
     func loadSource() {
         isLoading = true; errorMessage = nil; player = nil; streamURL = nil
         sourceStatus[selectedSource] = nil
-        if sources[selectedSource].1 {
-            loadDirect()
-        } else {
-            isLoading = false
-            sourceStatus[selectedSource] = true
-        }
+        if sources[selectedSource].1 { loadDirect() } else { isLoading = false; sourceStatus[selectedSource] = true }
     }
     
     func loadDirect() {
@@ -186,19 +110,8 @@ struct MoviePlayerView: View {
             do {
                 let imdbId = try await fetchIMDb()
                 let url: URL = selectedSource == 0 ? try await fetchNTL(imdbId) : try await MediaFusionManager.shared.getBestURL(imdbId: imdbId)
-                await MainActor.run {
-                    self.streamURL = url.absoluteString
-                    self.player = AVPlayer(url: url)
-                    self.sourceStatus[selectedSource] = true
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = error.localizedDescription
-                    self.sourceStatus[selectedSource] = false
-                    self.isLoading = false
-                }
-            }
+                await MainActor.run { self.streamURL = url.absoluteString; self.player = AVPlayer(url: url); self.sourceStatus[selectedSource] = true; self.isLoading = false }
+            } catch { await MainActor.run { self.errorMessage = error.localizedDescription; self.sourceStatus[selectedSource] = false; self.isLoading = false } }
         }
     }
     
@@ -222,12 +135,100 @@ struct MoviePlayerView: View {
     
     func lockToLandscape() {
         UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceOrientation()
     }
-    
     func unlockOrientation() {
         UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceOrientation()
+    }
+}
+
+// MARK: - Subviews
+struct LoadingView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            ProgressView().tint(.white).scaleEffect(1.5)
+            Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline)
+        }
+    }
+}
+
+struct ErrorView: View {
+    let errorMessage: String
+    @Binding var sourceStatus: [Int: Bool]
+    @Binding var selectedSource: Int
+    let streamURL: String?
+    let sources: [(String, Bool, String)]
+    let onRetry: () -> Void
+    let onSelectSource: (Int) -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
+            Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal)
+            
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(0..<sources.count, id: \.self) { i in
+                    Button { onSelectSource(i) } label: {
+                        VStack(spacing: 6) {
+                            Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "circle"))
+                                .font(.system(size: 20))
+                                .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .gray))
+                            Text(sources[i].0.components(separatedBy: " ").first ?? "").font(.system(size: 10)).foregroundColor(.white).lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(selectedSource == i ? .white.opacity(0.15) : .ultraThinMaterial))
+                    }
+                }
+            }.padding(.horizontal)
+            
+            HStack(spacing: 12) {
+                Button("Thử lại", action: onRetry).foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
+                if let url = streamURL {
+                    Menu {
+                        Button("VLC") { ExternalPlayerManager.shared.open("VLC", url: url) }
+                        Button("Infuse") { ExternalPlayerManager.shared.open("Infuse", url: url) }
+                        Button("Copy Link") { ExternalPlayerManager.shared.open("Copy", url: url) }
+                    } label: {
+                        Label("Mở bằng...", systemImage: "arrow.up.forward.app").foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.orange.opacity(0.6))).font(.caption)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PlayerView: View {
+    let player: AVPlayer
+    let sourceName: String
+    let onSourceTap: () -> Void
+    
+    var body: some View {
+        FullScreenPlayer(player: player).ignoresSafeArea()
+            .overlay(alignment: .topTrailing) {
+                Button(action: onSourceTap) {
+                    ZStack {
+                        Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                        Text(sourceName.components(separatedBy: " ").first ?? "").font(.system(size: 8)).foregroundColor(.white)
+                    }
+                }.padding(.top, 50).padding(.trailing, 16)
+            }
+    }
+}
+
+struct WebViewWrapper: View {
+    let urlString: String
+    let sourceName: String
+    let onSourceTap: () -> Void
+    
+    var body: some View {
+        FullScreenWebView(urlString: urlString).ignoresSafeArea()
+            .overlay(alignment: .topTrailing) {
+                Button(action: onSourceTap) {
+                    ZStack {
+                        Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                        Text(sourceName.components(separatedBy: " ").first ?? "").font(.system(size: 8)).foregroundColor(.white)
+                    }
+                }.padding(.top, 50).padding(.trailing, 16)
+            }
     }
 }
 
@@ -250,36 +251,22 @@ struct SourceMenuView: View {
                                 selectedSource = i; onSelect(); dismiss()
                             } label: {
                                 VStack(spacing: 8) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(selectedSource == i ? .white.opacity(0.2) : .clear)
-                                            .frame(width: 44, height: 44)
-                                        Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "play.circle.fill"))
-                                            .font(.system(size: 24))
-                                            .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .white.opacity(0.6)))
-                                    }
-                                    Text(sources[i].0)
-                                        .font(.system(size: 9)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
-                                    if sourceStatus[i] == true { Text("✅ Hoạt động").font(.system(size: 8)).foregroundColor(.green) }
-                                    else if sourceStatus[i] == false { Text("❌ Không hoạt động").font(.system(size: 8)).foregroundColor(.red) }
+                                    Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "play.circle.fill"))
+                                        .font(.system(size: 24))
+                                        .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .white.opacity(0.6)))
+                                    Text(sources[i].0).font(.system(size: 9)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                    if sourceStatus[i] == true { Text("✅ OK").font(.system(size: 8)).foregroundColor(.green) }
+                                    else if sourceStatus[i] == false { Text("❌ Lỗi").font(.system(size: 8)).foregroundColor(.red) }
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedSource == i ? .white.opacity(0.1) : .ultraThinMaterial)
-                                )
+                                .frame(maxWidth: .infinity).padding(.vertical, 12)
+                                .background(RoundedRectangle(cornerRadius: 12).fill(selectedSource == i ? .white.opacity(0.1) : .ultraThinMaterial))
                             }
                         }
-                    }
-                    .padding()
+                    }.padding()
                 }
             }
-            .navigationTitle("Chọn nguồn phim")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) { Button("Xong") { dismiss() }.foregroundColor(.white) }
-            }
+            .navigationTitle("Chọn nguồn phim").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Xong") { dismiss() }.foregroundColor(.white) } }
         }
     }
 }
@@ -289,8 +276,7 @@ struct FullScreenPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let c = AVPlayerViewController(); c.player = player; c.showsPlaybackControls = true
-        c.videoGravity = .resizeAspectFill; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true
-        return c
+        c.videoGravity = .resizeAspectFill; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true; return c
     }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
 }
