@@ -21,19 +21,11 @@ struct MovieDetailView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ZStack(alignment: .topLeading) {
-                        CachedAsyncImage(url: movie.backdropURL).aspectRatio(16/9, contentMode: .fill)
-                            .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
-                            .overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
-                        
+                        CachedAsyncImage(url: movie.backdropURL).aspectRatio(16/9, contentMode: .fill).frame(width: UIScreen.main.bounds.width, height: 320).clipped().overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
                         HStack {
-                            Button { dismiss() } label: {
-                                Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
-                            }
+                            Button { dismiss() } label: { Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4) }
                             Spacer()
-                            Button { ost.toggle() } label: {
-                                Image(systemName: ost.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                                    .font(.system(size: 14)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial))
-                            }
+                            Button { ost.toggle() } label: { Image(systemName: ost.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill").font(.system(size: 14)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial)) }
                         }.padding(.top, 54).padding(.horizontal, 20)
                     }
                     
@@ -62,38 +54,18 @@ struct MovieDetailView: View {
                         if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        ForEach(vm.seasons) { season in
-                                            Button { withAnimation(.spring()) { selectedSeason = season } } label: {
-                                                VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)))
-                                            }
-                                        }
-                                    }
-                                }
-                                if let s = selectedSeason {
-                                    VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) }
-                                }
+                                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 10) { ForEach(vm.seasons) { season in Button { withAnimation(.spring()) { selectedSeason = season } } label: { VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))) } } } }
+                                if let s = selectedSeason { VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) } }
                             }
                         }
                         
-                        if !isTVShow, let runtime = vm.detail?.runtime, runtime > 0 {
-                            HStack(spacing: 12) { Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } }
-                        }
+                        if !isTVShow, let runtime = vm.detail?.runtime, runtime > 0 { HStack(spacing: 12) { Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
                         
-                        if !vm.images.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } }
-                        }
+                        if !vm.images.isEmpty { VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } } }
                         
-                        if !vm.actors.isEmpty {
-                            Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { actor in NavigationLink(destination: ActorDetailView(actor: actor)) { VStack(spacing: 6) { CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } }.padding(.horizontal) }
-                        }
+                        if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { actor in NavigationLink(destination: ActorDetailView(actor: actor)) { VStack(spacing: 6) { CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } }.padding(.horizontal) } }
                         
-                        if !vm.similar.isEmpty {
-                            Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } }.padding(.horizontal) }
-                        }
+                        if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } }.padding(.horizontal) } }
                         
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Bình luận").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
