@@ -7,7 +7,6 @@ struct ExploreView: View {
     @State private var editorMovies: [Movie] = []
     @State private var hiddenMovies: [Movie] = []
     
-    // 10 ô (bỏ Hàn Quốc, Nhật Bản)
     let collections: [(String, String, Int?, CategoryConfig.CategoryType)] = [
         ("Oscar", "oscar", 2959, .keyword),
         ("Cannes", "cannes", 133278, .keyword),
@@ -69,7 +68,6 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal)
                         
-                        // 10 ô
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                             ForEach(collections, id: \.0) { title, query, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId ?? 0))) {
@@ -84,20 +82,9 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal)
                         
-                        // Staff Picks - Top Rated
-                        if !staffMovies.isEmpty {
-                            SectionWithSeeAll(title: "Staff Picks", movies: staffMovies, query: "top rated best movies")
-                        }
-                        
-                        // Editor's Choice - Award Winning
-                        if !editorMovies.isEmpty {
-                            SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies, query: "award winning critic choice")
-                        }
-                        
-                        // Hidden Gems - Underrated
-                        if !hiddenMovies.isEmpty {
-                            SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies, query: "underrated hidden masterpiece")
-                        }
+                        if !staffMovies.isEmpty { SectionWithSeeAll(title: "Staff Picks", movies: staffMovies, query: "top rated best movies") }
+                        if !editorMovies.isEmpty { SectionWithSeeAll(title: "Editor's Choice", movies: editorMovies, query: "award winning critic choice") }
+                        if !hiddenMovies.isEmpty { SectionWithSeeAll(title: "Hidden Gems", movies: hiddenMovies, query: "underrated hidden masterpiece") }
                         
                         Spacer().frame(height: 120)
                     }
@@ -115,7 +102,7 @@ struct ExploreView: View {
     }
 }
 
-// MARK: - Section With See All (load 100+ phim)
+// MARK: - Section With See All
 struct SectionWithSeeAll: View {
     let title: String; let movies: [Movie]; var query: String = ""
     var body: some View {
@@ -129,16 +116,46 @@ struct SectionWithSeeAll: View {
                     }
                 }.padding(.horizontal)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 12) {
-                        ForEach(movies.prefix(15)) { movie in
+                    LazyHStack(spacing: 12) { ForEach(movies.prefix(15)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 105, height: 158).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Category Full View (Load 100+ phim)
+struct CategoryFullView: View {
+    let category: CategoryConfig
+    @State private var movies: [Movie] = []
+    @State private var isLoading = true
+    
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if isLoading && movies.isEmpty { ProgressView().tint(.white) }
+            else if movies.isEmpty { Text("Không tìm thấy phim").foregroundColor(.gray) }
+            else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                CachedAsyncImage(url: movie.posterURL)
-                                    .aspectRatio(2/3, contentMode: .fill).frame(width: 105, height: 158).clipShape(RoundedRectangle(cornerRadius: 10))
+                                VStack(spacing: 4) {
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).frame(height: 170).clipShape(RoundedRectangle(cornerRadius: 8))
+                                    Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                    HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
+                                }
                             }
                         }
                     }.padding(.horizontal)
                 }
             }
+        }
+        .navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
+        .task {
+            do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }
+            isLoading = false
         }
     }
 }
