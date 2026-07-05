@@ -1,5 +1,33 @@
 import SwiftUI
 
+// MARK: - Style Modifier tái sử dụng
+struct CardShadowModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
+    }
+}
+
+struct CardOverlayModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.8)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+extension View {
+    func cardShadow() -> some View { modifier(CardShadowModifier()) }
+    func cardOverlay() -> some View { modifier(CardOverlayModifier()) }
+}
+
+// MARK: - SearchView
 struct SearchView: View {
     @StateObject private var vm = SearchViewModel()
     @FocusState private var focused: Bool
@@ -32,27 +60,39 @@ struct SearchView: View {
                     if vm.query.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                Text("Tìm kiếm phổ biến").font(.headline).foregroundColor(.white).padding(.horizontal)
+                                Text("Tìm kiếm phổ biến")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal)
                                 
                                 CategoryGridView(topics: topics) { query in
                                     vm.query = query
                                     Task { await vm.search() }
                                 }
                                 
-                                Text("Xu hướng").font(.headline).foregroundColor(.white).padding(.horizontal)
+                                Text("Xu hướng")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal)
                                 
                                 ForEach(Array(vm.trending.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                     Button { selectedMovie = movie } label: {
                                         HStack(spacing: 12) {
-                                            Text("\(i+1)").font(.title3).fontWeight(.bold).foregroundColor(.gray).frame(width: 30)
+                                            Text("\(i+1)")
+                                                .font(.system(size: 18, weight: .bold))
+                                                .foregroundColor(.gray)
+                                                .frame(width: 30)
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill)
-                                                .frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .frame(width: 60, height: 90)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(movie.title).foregroundColor(.white).font(.subheadline).fontWeight(.semibold)
+                                                Text(movie.title)
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 14, weight: .semibold))
                                                 HStack {
-                                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption2)
-                                                    Text(movie.ratingText).foregroundColor(.gray).font(.caption2)
+                                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.system(size: 10))
+                                                    Text(movie.ratingText).foregroundColor(.gray).font(.system(size: 12))
                                                 }
                                             }
                                             Spacer()
@@ -78,7 +118,9 @@ struct SearchView: View {
                                                 .aspectRatio(2/3, contentMode: .fill)
                                                 .frame(maxWidth: .infinity)
                                                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
+                                            Text(movie.title)
+                                                .font(.system(size: 9, weight: .medium))
+                                                .foregroundColor(.white).lineLimit(2)
                                             HStack(spacing: 2) {
                                                 Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
                                                 Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
@@ -98,7 +140,7 @@ struct SearchView: View {
     }
 }
 
-// MARK: - Category Grid (Độc lập, không phụ thuộc biến ngoài)
+// MARK: - Category Grid
 struct CategoryGridView: View {
     let topics: [(String, String, String)]
     let onSelect: (String) -> Void
@@ -112,18 +154,16 @@ struct CategoryGridView: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(topics, id: \.0) { topic, query, poster in
-                CategoryCardView(
-                    title: topic,
-                    posterPath: poster,
-                    action: { onSelect(query) }
-                )
+                CategoryCardView(title: topic, posterPath: poster) {
+                    onSelect(query)
+                }
             }
         }
         .padding(.horizontal)
     }
 }
 
-// MARK: - Category Card (Độc lập, tự chứa style)
+// MARK: - Category Card
 struct CategoryCardView: View {
     let title: String
     let posterPath: String
@@ -136,25 +176,18 @@ struct CategoryCardView: View {
                     CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)"))
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geo.size.width, height: geo.size.height)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .blur(radius: 2)
-                        .overlay(
-                            LinearGradient(
-                                colors: [.clear, .black.opacity(0.7)],
-                                startPoint: .center,
-                                endPoint: .bottom
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .cardOverlay()
+                        .cardShadow()
                     
                     Text(title)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(Color.black.opacity(0.5))
+                        .padding(.horizontal, 10)
+                        .background(.ultraThinMaterial)
                         .clipShape(Capsule())
-                        .padding(6)
+                        .padding(8)
                 }
             }
             .aspectRatio(1, contentMode: .fit)
