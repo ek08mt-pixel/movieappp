@@ -24,24 +24,44 @@ struct ExploreView: View {
                 Color.black.ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 60).padding(.horizontal)
+                        Text("Khám phá")
+                            .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
+                            .padding(.top, 60).padding(.horizontal)
                         
                         HStack(spacing: 10) {
-                            Button { Task { let m = try? await APIService.shared.popular(); if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() { randomMovie = movie; showRandom = true } } } label: {
-                                VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                            Button {
+                                Task {
+                                    let m = try? await APIService.shared.popular()
+                                    if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() { randomMovie = movie; showRandom = true }
+                                }
+                            } label: {
+                                VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                            NavigationLink(destination: MoodPickerView()) { VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                            NavigationLink(destination: TimelineView()) { VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                            NavigationLink(destination: GuessMovieView()) { VStack(spacing: 6) { Text("❓").font(.system(size: 26)); Text("Guess").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
+                            NavigationLink(destination: MoodPickerView()) {
+                                VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                            }
+                            NavigationLink(destination: TimelineView()) {
+                                VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                            }
+                            NavigationLink(destination: GuessMovieView()) {
+                                VStack(spacing: 6) { Text("❓").font(.system(size: 26)); Text("Guess").font(.system(size: 10)).foregroundColor(.white) }
+                                    .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                            }
                         }.padding(.horizontal)
                         
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
                                     ZStack(alignment: .bottomLeading) {
                                         CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterMap[title] ?? "")"))
-                                            .aspectRatio(contentMode: .fill).frame(height: 110).clipShape(RoundedRectangle(cornerRadius: 14))
-                                            .overlay(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 14))
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(height: 110)
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                            .overlay(Color.black.opacity(0.35))
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
                                 }
@@ -59,7 +79,14 @@ struct ExploreView: View {
         }
         .task { loadData() }
         .sheet(isPresented: $showRandom) {
-            if let movie = randomMovie { NavigationStack { MovieDetailView(movie: movie).overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } } } }
+            if let movie = randomMovie {
+                NavigationStack {
+                    MovieDetailView(movie: movie)
+                        .overlay(alignment: .topTrailing) {
+                            Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() }
+                        }
+                }
+            }
         }
     }
     
@@ -75,10 +102,13 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 10) {
+                LazyHStack(spacing: 12) {
                     ForEach(movies.prefix(20)) { movie in
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
-                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10))
+                            CachedAsyncImage(url: movie.posterURL)
+                                .aspectRatio(2/3, contentMode: .fill)
+                                .frame(width: 110, height: 165)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }.padding(.horizontal)
@@ -91,31 +121,45 @@ struct CategoryFullView: View {
     let category: CategoryConfig
     @State private var movies: [Movie] = []
     @State private var isLoading = true
-    @Environment(\.dismiss) var dismiss
+    
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            if isLoading && movies.isEmpty { ProgressView().tint(.white) }
-            else if movies.isEmpty { Text("Không tìm thấy").foregroundColor(.gray) }
-            else {
+            if isLoading && movies.isEmpty {
+                ProgressView().tint(.white)
+            } else if movies.isEmpty {
+                Text("Không tìm thấy").foregroundColor(.gray)
+            } else {
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 14) {
+                    LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 VStack(spacing: 6) {
-                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).clipShape(RoundedRectangle(cornerRadius: 8))
-                                    Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                    HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
+                                    CachedAsyncImage(url: movie.posterURL)
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(maxWidth: .infinity)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    Text(movie.title)
+                                        .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                        Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                    }
                                 }
                             }
                         }
-                    }.padding(.horizontal).padding(.top, 80)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
                 }
             }
         }
-        .navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .navigationBarLeading) { Button { dismiss() } label: { Image(systemName: "chevron.left").foregroundColor(.white) } } }
+        .navigationTitle(category.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
         .task {
             do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }
             isLoading = false
