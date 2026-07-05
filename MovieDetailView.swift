@@ -13,6 +13,11 @@ struct MovieDetailView: View {
     
     var isTVShow: Bool { movie.mediaType == "tv" }
     
+    var releaseDateText: String {
+        if let date = movie.releaseDate, !date.isEmpty { return date }
+        return movie.yearText
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -33,7 +38,12 @@ struct MovieDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
-                                HStack(spacing: 6) { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption); Text(movie.ratingText).foregroundColor(.white).font(.caption).bold(); Text("•").foregroundColor(.gray); Text(movie.yearText).foregroundColor(.gray).font(.caption) }
+                                HStack(spacing: 6) {
+                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
+                                    Text(movie.ratingText).foregroundColor(.white).font(.caption).bold()
+                                    Text("•").foregroundColor(.gray)
+                                    Text(releaseDateText).foregroundColor(.gray).font(.caption)
+                                }
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                                     if movie.overview.count > 200 { Button(showFullOverview ? "Thu gọn" : "Xem thêm") { withAnimation { showFullOverview.toggle() } }.font(.system(size: 12, weight: .medium)).foregroundColor(.orange) }
@@ -49,7 +59,6 @@ struct MovieDetailView: View {
                         
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         
-                        // Seasons - chỉ hiện nếu là TV show và có seasons
                         if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
@@ -79,7 +88,6 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Runtime + Genres (chỉ hiện nếu là movie)
                         if !isTVShow, let runtime = vm.detail?.runtime, runtime > 0 {
                             HStack(spacing: 12) { Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } }
                         }
