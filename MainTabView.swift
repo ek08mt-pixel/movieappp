@@ -23,7 +23,6 @@ struct MainTabView: View {
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 28)
-                .frame(height: 64)
                 .background(
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.25))
@@ -31,14 +30,15 @@ struct MainTabView: View {
                 )
                 .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
                 
-                // Khung 2: Search - cao bằng khung 1
+                // Khung 2: Search - Capsule bo tròn, cao bằng khung 1
                 Button {
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
-                        .frame(width: 56, height: 64)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 24)
                         .background(
                             Capsule()
                                 .fill(.ultraThinMaterial.opacity(0.25))
