@@ -9,23 +9,33 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            ZStack {
-                HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
-                ExploreView().opacity(selectedTab == 1 ? 1 : 0)
-                LibraryView().opacity(selectedTab == 2 ? 1 : 0)
+            TabView(selection: $selectedTab) {
+                HomeView()
+                    .id(homeID)
+                    .tag(0)
+                ExploreView()
+                    .tag(1)
+                LibraryView()
+                    .tag(2)
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
             
             HStack(spacing: 12) {
                 HStack(spacing: 44) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                         if selectedTab == 0 {
-                            homeID = UUID()
+                            withAnimation(.easeInOut(duration: 0.2)) { homeID = UUID() }
                         } else {
-                            selectedTab = 0
+                            withAnimation(.interpolatingSpring(stiffness: 300, damping: 25)) { selectedTab = 0 }
                         }
                     }
-                    LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
-                    LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
+                    LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) {
+                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 25)) { selectedTab = 1 }
+                    }
+                    LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) {
+                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 25)) { selectedTab = 2 }
+                    }
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 32)
