@@ -1,49 +1,59 @@
 import AVKit
-import MediaPlayer
 
 class MusicManager: ObservableObject {
     static let shared = MusicManager()
     private var player: AVPlayer?
-    private var preloadedPlayer: AVPlayer?
+    private var fadeTimer: Timer?
     @Published var isPlaying = false
     @Published var isMusicEnabled = true
     
     private let defaultMusicURL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     
     init() {
-        preloadMusic()
         isMusicEnabled = UserDefaults.standard.bool(forKey: "musicEnabled")
+        preload()
     }
     
-    func preloadMusic() {
+    func preload() {
         guard let url = URL(string: defaultMusicURL) else { return }
-        let asset = AVURLAsset(url: url)
-        let item = AVPlayerItem(asset: asset)
-        preloadedPlayer = AVPlayer(playerItem: item)
-        preloadedPlayer?.volume = 0.15
+        player = AVPlayer(url: url)
+        player?.volume = 0
     }
     
     func play() {
         guard isMusicEnabled else { return }
         stop()
-        player = preloadedPlayer
-        player?.volume = 0
+        preload()
         player?.play()
         isPlaying = true
         
-        // Fade in 2 giây
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
-            guard let self = self, let p = self.player else { timer.invalidate(); return }
-            p.volume = min(p.volume + 0.0075, 0.15)
-            if p.volume >= 0.15 { timer.invalidate() }
+        // Fade in 3 giây
+        fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] t in
+            guard let p = self?.player else { t.invalidate(); return }
+            p.volume = min(p.volume + 0.005, 0.15)
+            if p.volume >= 0.15 { t.invalidate() }
+        }
+        
+        // Fade out sau 12 giây, rồi phát lại
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in
+            self?.fadeOutAndReplay()
+        }
+    }
+    
+    func fadeOutAndReplay() {
+        fadeTimer?.invalidate()
+        fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] t in
+            guard let p = self?.player else { t.invalidate(); return }
+            p.volume = max(p.volume - 0.01, 0)
+            if p.volume <= 0 { t.invalidate(); self?.play() }
         }
     }
     
     func stop() {
+        fadeTimer?.invalidate()
         player?.pause()
         player = nil
         isPlaying = false
-        preloadMusic()
     }
     
     func toggle() {
