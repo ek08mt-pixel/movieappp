@@ -11,12 +11,30 @@ struct MovieDetailView: View {
     @State private var showFullOverview = false
     @State private var commentText = ""
     @State private var comments: [String] = []
+    @State private var selectedSeason = 1
+    @State private var showSeasonPicker = false
+    @State private var selectedEpisode: Int?
+    @State private var showImages = false
+    
+    // Fake seasons data
+    let seasons = 1...5
+    let episodesPerSeason = [1: 8, 2: 10, 3: 12, 4: 10, 5: 6]
+    
+    // Ảnh mẫu từ phim
+    let movieImages = [
+        "https://image.tmdb.org/t/p/w780/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg",
+        "https://image.tmdb.org/t/p/w780/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg",
+        "https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
+        "https://image.tmdb.org/t/p/w780/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",
+        "https://image.tmdb.org/t/p/w780/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+    ]
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
+                    // Backdrop
                     ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
@@ -30,6 +48,7 @@ struct MovieDetailView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
+                        // Poster + Info
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL)
                                 .aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150)
@@ -57,10 +76,10 @@ struct MovieDetailView: View {
                             }
                         }
                         
+                        // Nút chức năng
                         HStack(spacing: 10) {
                             Button { showPlayer = true } label: {
-                                Label("Xem", systemImage: "play.fill")
-                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10)
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
@@ -86,6 +105,78 @@ struct MovieDetailView: View {
                                 Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10)
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            }
+                        }
+                        
+                        // Seasons
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Seasons").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    ForEach(Array(seasons), id: \.self) { season in
+                                        Button {
+                                            selectedSeason = season
+                                        } label: {
+                                            VStack(spacing: 4) {
+                                                Text("Season \(season)")
+                                                    .font(.system(size: 13, weight: selectedSeason == season ? .bold : .medium))
+                                                    .foregroundColor(selectedSeason == season ? .white : .gray)
+                                                Text("\(episodesPerSeason[season] ?? 0) tập")
+                                                    .font(.system(size: 10))
+                                                    .foregroundColor(.gray)
+                                            }
+                                            .padding(.vertical, 8).padding(.horizontal, 14)
+                                            .background(
+                                                Capsule()
+                                                    .fill(selectedSeason == season ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.05)))
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Episodes grid
+                            if let count = episodesPerSeason[selectedSeason] {
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                                    ForEach(1...count, id: \.self) { ep in
+                                        Button {
+                                            selectedEpisode = ep
+                                            showPlayer = true
+                                        } label: {
+                                            VStack(spacing: 4) {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(.ultraThinMaterial)
+                                                        .frame(height: 55)
+                                                    Image(systemName: "play.fill").foregroundColor(.white.opacity(0.6))
+                                                }
+                                                Text("Tập \(ep)").font(.system(size: 9)).foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Movie Images
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Hình ảnh").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                                Spacer()
+                                Button("Xem tất cả") { showImages = true }
+                                    .font(.system(size: 12)).foregroundColor(.orange)
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(movieImages, id: \.self) { imageURL in
+                                        CachedAsyncImage(url: URL(string: imageURL))
+                                            .aspectRatio(16/9, contentMode: .fill)
+                                            .frame(width: 160, height: 90)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                }
                             }
                         }
                         
@@ -123,10 +214,45 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showPlayer) {
             MoviePlayerView(movieId: movie.id, movieTitle: movie.title)
         }
+        .sheet(isPresented: $showImages) {
+            MovieImagesView(images: movieImages, title: movie.title)
+        }
         .sheet(isPresented: $showBookingSheet) {
             NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea()
                     .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } }
         }
+    }
+}
+
+// MARK: - Movie Images View (Liquid Glass)
+struct MovieImagesView: View {
+    let images: [String]
+    let title: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.95).ignoresSafeArea()
+            VStack(spacing: 0) {
+                HStack {
+                    Text(title).font(.headline).foregroundColor(.white)
+                    Spacer()
+                    Button("Đóng") { dismiss() }.foregroundColor(.gray)
+                }.padding()
+                
+                TabView {
+                    ForEach(images, id: \.self) { imageURL in
+                        CachedAsyncImage(url: URL(string: imageURL))
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal, 16)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+            }
+        }
+        .presentationBackground(.ultraThinMaterial)
     }
 }
 
