@@ -97,8 +97,6 @@ struct MoviePlayerView: View {
     @State private var showBrightnessSlider = false
     @State private var volumeTimer: Timer?
     @State private var brightnessTimer: Timer?
-    @State private var volDragStart: Float = 0
-    @State private var briDragStart: CGFloat = 0
     
     var volumeAsCGFloat: Binding<CGFloat> {
         Binding<CGFloat>(get: { CGFloat(volume) }, set: { volume = Float($0) })
@@ -113,75 +111,52 @@ struct MoviePlayerView: View {
             
             CustomPlayerVC(player: player)
                 .ignoresSafeArea()
-                .onAppear {
-                    player.play()
-                    player.volume = volume
-                    resetControlsTimer()
-                    setupTimeObserver()
-                }
+                .onAppear { player.play(); player.volume = volume; resetControlsTimer(); setupTimeObserver() }
                 .onDisappear { player.pause(); controlsTimer?.invalidate() }
                 .onTapGesture { toggleControls() }
             
-            // Volume - right
-            if showVolumeSlider {
+            // Volume - right side
+            if showVolumeSlider || showControls {
                 HStack {
                     Spacer()
-                    GlassSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill", label: "\(Int(volume * 100))")
+                    GlassSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill", label: "")
                         .frame(width: 56, height: 170)
-                        .padding(.trailing, 16)
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            
-            // Brightness - left
-            if showBrightnessSlider {
-                HStack {
-                    GlassSlider(value: brightnessAsCGFloat, icon: "sun.max.fill", label: "\(Int(brightness * 100))")
-                        .frame(width: 56, height: 170)
-                        .padding(.leading, 16)
-                        .transition(.scale.combined(with: .opacity))
-                    Spacer()
-                }
-            }
-            
-            // Volume touch zone (right 1/4 of screen, visible when controls shown)
-            if showControls && errorMessage == nil {
-                Color.clear
-                    .frame(width: 80)
-                    .position(x: UIScreen.main.bounds.width - 40, y: UIScreen.main.bounds.height / 2)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                if !showVolumeSlider {
+                        .padding(.trailing, 20)
+                        .opacity(showVolumeSlider ? 1 : 0.35)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
                                     showVolumeSlider = true
-                                    volDragStart = volume
+                                    let delta = Float(-value.translation.height / 180)
+                                    volume = min(max(volume + delta, 0), 1)
+                                    player.volume = volume
+                                    resetVolumeTimer()
                                 }
-                                let delta = Float(-value.translation.height / 200)
-                                volume = min(max(volDragStart + delta, 0), 1)
-                                player.volume = volume
-                                resetVolumeTimer()
-                            }
-                            .onEnded { _ in resetVolumeTimer() }
-                    )
-                
-                // Brightness touch zone (left 1/4)
-                Color.clear
-                    .frame(width: 80)
-                    .position(x: 40, y: UIScreen.main.bounds.height / 2)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                if !showBrightnessSlider {
+                                .onEnded { _ in resetVolumeTimer() }
+                        )
+                }
+            }
+            
+            // Brightness - left side
+            if showBrightnessSlider || showControls {
+                HStack {
+                    GlassSlider(value: brightnessAsCGFloat, icon: "sun.max.fill", label: "")
+                        .frame(width: 56, height: 170)
+                        .padding(.leading, 20)
+                        .opacity(showBrightnessSlider ? 1 : 0.35)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
                                     showBrightnessSlider = true
-                                    briDragStart = brightness
+                                    let delta = -value.translation.height / 180
+                                    brightness = min(max(brightness + delta, 0.01), 1)
+                                    UIScreen.main.brightness = brightness
+                                    resetBrightnessTimer()
                                 }
-                                let delta = -value.translation.height / 200
-                                brightness = min(max(briDragStart + delta, 0.01), 1)
-                                UIScreen.main.brightness = brightness
-                                resetBrightnessTimer()
-                            }
-                            .onEnded { _ in resetBrightnessTimer() }
-                    )
+                                .onEnded { _ in resetBrightnessTimer() }
+                        )
+                    Spacer()
+                }
             }
             
             if isLoading {
@@ -278,10 +253,49 @@ struct MoviePlayerView: View {
                     Spacer()
                 }
             }
+            
+            // Source Menu Overlay
+            if showSourceMenu {
+                ZStack {
+                    Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showSourceMenu = false }
+                    VStack(spacing: 0) {
+                        Spacer()
+                        VStack(spacing: 14) {
+                            Text("Chọn nguồn phát").font(.system(size: 16, weight: .bold)).foregroundColor(.white)
+                            ForEach(MovieSource.allCases, id: \.self) { src in
+                                Button {
+                                    selectedSource = src; showSourceMenu = false; loadStream()
+                                } label: {
+                                    HStack {
+                                        Circle()
+                                            .fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray))
+                                            .frame(width: 8, height: 8)
+                                        Text(src.rawValue).font(.system(size: 15)).foregroundColor(.white)
+                                        Spacer()
+                                        if selectedSource == src { Image(systemName: "checkmark").font(.caption).foregroundColor(.white) }
+                                    }
+                                    .padding(.horizontal, 20).padding(.vertical, 14)
+                                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                }
+                            }
+                            Text("© 2026 emmew. All rights reserved.")
+                                .font(.system(size: 9)).foregroundColor(.white.opacity(0.35)).padding(.top, 6)
+                        }
+                        .padding(24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(.ultraThinMaterial.opacity(0.3))
+                                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                        )
+                        .padding(.horizontal, 30)
+                        .padding(.bottom, 100)
+                    }
+                }
+            }
         }
         .statusBarHidden()
         .task { loadStream() }
-        .sheet(isPresented: $showSourceMenu) { SourceMenuView(selectedSource: $selectedSource, sourceStatus: $sourceStatus) { loadStream() } }
     }
     
     func loadStream() {
@@ -355,20 +369,21 @@ struct GlassSlider: View {
     let label: String
     
     var body: some View {
-        VStack(spacing: 10) {
-            Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.8))
+        VStack(spacing: 8) {
+            if !label.isEmpty { Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.8)) }
             ZStack(alignment: .bottom) {
                 Capsule().fill(.ultraThinMaterial.opacity(0.15))
                     .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                     .frame(width: 16)
                 Circle()
-                    .fill(Color.white.opacity(0.25))
-                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                    .frame(width: 30, height: 30)
+                    .fill(Color.white.opacity(0.3))
+                    .overlay(Circle().stroke(Color.white.opacity(0.4), lineWidth: 1))
+                    .frame(width: 32, height: 32)
+                    .shadow(color: .white.opacity(0.15), radius: 6)
                     .offset(y: -CGFloat(value) * 120)
                     .animation(.interpolatingSpring(stiffness: 200, damping: 15), value: value)
             }
-            Image(systemName: icon).font(.system(size: 14)).foregroundColor(.white.opacity(0.6))
+            Image(systemName: icon).font(.system(size: 13)).foregroundColor(.white.opacity(0.5))
         }
     }
 }
@@ -381,35 +396,4 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
         vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; return vc
     }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
-}
-
-// MARK: - Source Menu
-struct SourceMenuView: View {
-    @Binding var selectedSource: MovieSource
-    @Binding var sourceStatus: [MovieSource: Bool]
-    let onSelect: () -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
-            VStack(spacing: 16) {
-                Text("Chọn nguồn phát").font(.headline).foregroundColor(.white)
-                ForEach(MovieSource.allCases, id: \.self) { src in
-                    Button { selectedSource = src; onSelect(); dismiss() } label: {
-                        HStack {
-                            Circle().fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray)).frame(width: 8, height: 8)
-                            Text(src.rawValue).font(.subheadline).foregroundColor(.white)
-                            Spacer()
-                            if selectedSource == src { Image(systemName: "checkmark").font(.caption).foregroundColor(.white) }
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                    }
-                }
-                Button("Đóng") { dismiss() }.font(.caption).foregroundColor(.gray)
-            }.padding()
-        }
-    }
 }
