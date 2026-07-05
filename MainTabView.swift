@@ -21,8 +21,9 @@ struct MainTabView: View {
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
                 }
-                .padding(.vertical, 18)
+                .padding(.vertical, 14)
                 .padding(.horizontal, 28)
+                .frame(height: 64)
                 .background(
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.25))
@@ -30,18 +31,18 @@ struct MainTabView: View {
                 )
                 .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
                 
-                // Khung 2: Search - to bằng 3 tab kia
+                // Khung 2: Search - cao bằng khung 1
                 Button {
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
-                        .frame(width: 56, height: 56)
+                        .frame(width: 56, height: 64)
                         .background(
-                            Circle()
+                            Capsule()
                                 .fill(.ultraThinMaterial.opacity(0.25))
-                                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                         )
                         .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
                 }
@@ -78,7 +79,7 @@ struct LiquidTabIcon: View {
                 if isSelected {
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.4))
-                        .frame(width: 56, height: 40)
+                        .frame(width: 56, height: 44)
                 }
                 
                 Image(systemName: icon)
