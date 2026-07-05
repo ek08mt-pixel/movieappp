@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var trending24h: [Movie] = []
+    @Published var trendingTV: [Movie] = []
     @Published var nowPlaying: [Movie] = []
     @Published var upcoming: [Movie] = []
     @Published var topRated: [Movie] = []
@@ -18,7 +19,8 @@ class HomeViewModel: ObservableObject {
     func loadAll() async {
         isLoading = true
         
-        async let trendingTask = APIService.shared.trendingAll()
+        async let trendingTask = APIService.shared.trending24h()
+        async let trendingTVTask = APIService.shared.trendingTV()
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
@@ -30,6 +32,7 @@ class HomeViewModel: ObservableObject {
         async let genresTask = APIService.shared.genres()
         
         trending24h = (try? await trendingTask) ?? []
+        trendingTV = (try? await trendingTVTask) ?? []
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
         topRated = (try? await topRatedTask) ?? []
