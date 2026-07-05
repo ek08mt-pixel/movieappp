@@ -158,7 +158,6 @@ struct MovieDetailView: View {
                 }
             }
             .presentationDetents([.medium, .large])
-            .presentationBackground(.ultraThinMaterial)
         }
         .fullScreenCover(isPresented: $showTrailer) {
             ZStack { Color.black.ignoresSafeArea(); WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea() }
