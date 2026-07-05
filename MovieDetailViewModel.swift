@@ -7,8 +7,9 @@ class MovieDetailViewModel: ObservableObject {
     @Published var similar: [Movie] = []
     @Published var images: [URL] = []
     @Published var detail: MovieDetail?
+    @Published var seasons: [SeasonInfo] = []
     
-    func load(movieId: Int) async {
+    func load(movieId: Int, mediaType: String?) async {
         async let t = APIService.shared.trailer(movieId: movieId)
         async let a = APIService.shared.actors(movieId: movieId)
         async let s = APIService.shared.similar(movieId: movieId)
@@ -21,8 +22,11 @@ class MovieDetailViewModel: ObservableObject {
             similar = try await s
             images = try await i
             detail = try await d
-        } catch {
-            print("Error: \(error)")
+            seasons = []
+        } catch { print("Error: \(error)") }
+        
+        if mediaType == "tv" {
+            if let tv = try? await APIService.shared.fetchTVSeasons(tvId: movieId) { seasons = tv }
         }
     }
 }
