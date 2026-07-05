@@ -14,16 +14,9 @@ class APIService {
         return d
     }()
     
+    // MARK: - Movies
     func trending24h() async throws -> [Movie] {
         let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results
-    }
-    
-    func trendingWeek() async throws -> [Movie] {
-        let urlString = "\(baseURL)/trending/movie/week?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
@@ -121,6 +114,14 @@ class APIService {
     
     func moviesByGenre(genreId: Int, page: Int = 1) async throws -> [Movie] {
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results
+    }
+    
+    func discoverByKeyword(keywordId: Int) async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
