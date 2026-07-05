@@ -7,7 +7,6 @@ struct MovieDetailView: View {
     @StateObject private var vm = MovieDetailViewModel()
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
-    @State private var showTrailer = false
     @State private var showPlayer = false
     @State private var showBookingSheet = false
     @State private var showFullOverview = false
@@ -19,16 +18,37 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
-                    ZStack(alignment: .topLeading) {
+                    // Backdrop + nút Play lớn ở giữa
+                    ZStack {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
                             .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
                             .overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
                         
-                        Button { dismiss() } label: {
-                            Image(systemName: "chevron.left.circle.fill")
-                                .font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
-                        }.padding(.top, 54).padding(.leading, 20)
+                        // Nút Play to giữa backdrop
+                        Button { showPlayer = true } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                    .frame(width: 64, height: 64)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 28)).foregroundColor(.white)
+                            }
+                        }
+                        
+                        // Nút Back
+                        VStack {
+                            HStack {
+                                Button { dismiss() } label: {
+                                    Image(systemName: "chevron.left.circle.fill")
+                                        .font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
+                                }
+                                Spacer()
+                            }
+                            .padding(.top, 54).padding(.leading, 20)
+                            Spacer()
+                        }
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
@@ -49,13 +69,11 @@ struct MovieDetailView: View {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
                                         .font(.system(size: 13)).foregroundColor(.gray)
                                         .lineLimit(showFullOverview ? nil : 4)
-                                        .multilineTextAlignment(.leading)
-                                        .fixedSize(horizontal: false, vertical: true)
+                                        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                                     if movie.overview.count > 200 {
                                         Button(showFullOverview ? "Thu gọn" : "Xem thêm") {
                                             withAnimation(.easeInOut(duration: 0.2)) { showFullOverview.toggle() }
-                                        }
-                                        .font(.system(size: 12, weight: .medium)).foregroundColor(.orange)
+                                        }.font(.system(size: 12, weight: .medium)).foregroundColor(.orange)
                                     }
                                 }
                             }
@@ -63,30 +81,17 @@ struct MovieDetailView: View {
                         
                         // Nút: Xem + Hỏi AI + Lưu
                         HStack(spacing: 10) {
-                            // Nút Xem (gộp Trailer + Xem ngay)
-                            Menu {
-                                if vm.trailerKey != nil {
-                                    Button { showTrailer = true } label: {
-                                        Label("Trailer", systemImage: "play.tv")
-                                    }
-                                }
-                                Button { showPlayer = true } label: {
-                                    Label("Xem ngay", systemImage: "play.rectangle.fill")
-                                }
-                            } label: {
+                            Button { showPlayer = true } label: {
                                 Label("Xem", systemImage: "play.fill")
                                     .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                    .background(.ultraThinMaterial)
-                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
-                            
                             NavigationLink(destination: AskAIView(movie: movie)) {
                                 Label("Hỏi AI", systemImage: "brain").frame(maxWidth: .infinity).padding(.vertical, 10)
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
-                            
                             Button {
                                 if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } }
                                 else { appState.favorites.append(movie) }
@@ -164,10 +169,6 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true)
         .task { await vm.load(movieId: movie.id) }
-        .fullScreenCover(isPresented: $showTrailer) {
-            ZStack { Color.black.ignoresSafeArea(); WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea() }
-                .overlay(alignment: .topLeading) { Button { showTrailer = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding() } }
-        }
         .fullScreenCover(isPresented: $showPlayer) {
             MoviePlayerView(movieId: movie.id, movieTitle: movie.title)
         }
