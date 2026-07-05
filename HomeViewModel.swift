@@ -30,28 +30,33 @@ class HomeViewModel: ObservableObject {
         async let us = APIService.shared.usukMovies()
         async let an = APIService.shared.animeMovies()
         async let g = APIService.shared.genres()
+        async let tv = APIService.shared.trendingTV()
         
         do {
-            let results = try await (d, n, u, tr, p, ko, ja, vi, us, an, g)
-            trending24h = results.0.filter { !($0.adult ?? false) }
-            nowPlaying = results.1.filter { !($0.adult ?? false) }
-            upcoming = results.2.filter { !($0.adult ?? false) }
-            topRated = results.3.filter { !($0.adult ?? false) }
-            popular = results.4.filter { !($0.adult ?? false) }
-            korean = results.5.filter { !($0.adult ?? false) && $0.voteAverage > 5.0 && !($0.overview.lowercased().contains("sex")) && !($0.title.lowercased().contains("av")) }
-            japanese = results.6.filter { !($0.adult ?? false) && $0.voteAverage > 6.0 && ($0.popularity ?? 0) > 10 && !($0.overview.lowercased().contains("sex")) && !($0.title.lowercased().contains("av")) }
-            vietnamese = results.7.filter { !($0.adult ?? false) }
-            usuk = results.8.filter { !($0.adult ?? false) }
-            anime = results.9.filter { !($0.adult ?? false) }
-            genres = results.10
+            var movies = try await d
+            var tvShows = try await tv
+            
+            // Gán mediaType cho từng loại
+            movies = movies.map { m in Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "movie") }
+            tvShows = tvShows.map { m in Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "tv") }
+            
+            trending24h = (movies + tvShows).filter { !($0.adult ?? false) }
+            nowPlaying = try await n.filter { !($0.adult ?? false) }
+            upcoming = try await u.filter { !($0.adult ?? false) }
+            topRated = try await tr.filter { !($0.adult ?? false) }
+            popular = try await p.filter { !($0.adult ?? false) }
+            korean = try await ko.filter { !($0.adult ?? false) && $0.voteAverage > 5.0 }
+            japanese = try await ja.filter { !($0.adult ?? false) && $0.voteAverage > 6.0 && ($0.popularity ?? 0) > 10 }
+            vietnamese = try await vi.filter { !($0.adult ?? false) }
+            usuk = try await us.filter { !($0.adult ?? false) }
+            anime = try await an.filter { !($0.adult ?? false) }
+            genres = try await g
             
             if !trending24h.isEmpty {
                 let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
                 movieOfDay = trending24h[day % trending24h.count]
             }
-        } catch {
-            print("Error: \(error)")
-        }
+        } catch { print("Error: \(error)") }
         
         isLoading = false
     }
