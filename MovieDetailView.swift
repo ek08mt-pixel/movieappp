@@ -118,6 +118,7 @@ struct MovieDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id) }
         .fullScreenCover(isPresented: $showPlayer) {
             MoviePlayerView(movieId: movie.id, movieTitle: movie.title)
