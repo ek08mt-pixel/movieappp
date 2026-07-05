@@ -64,7 +64,7 @@ struct MovieDetailView: View {
                 }
             }.ignoresSafeArea(edges: .top)
         }
-        .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
+        } .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .onAppear { Task { await ost.playOST(for: movie.title) } }
         .onDisappear { ost.stop() }
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
