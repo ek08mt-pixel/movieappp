@@ -130,7 +130,7 @@ class APIService {
     
     func search(query: String, page: Int = 1) async throws -> [Movie] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "\(baseURL)/search/movie?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
+        let urlString = "\(baseURL)/search/multi?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
@@ -190,8 +190,9 @@ class APIService {
         return response.results.map { $0.withPlaceholder() }
     }
     
-    func similar(movieId: Int) async throws -> [Movie] {
-        let urlString = "\(baseURL)/movie/\(movieId)/similar?api_key=\(apiKey)&language=\(language)"
+    func similar(movieId: Int, mediaType: String? = nil) async throws -> [Movie] {
+        let type = mediaType ?? "movie"
+        let urlString = "\(baseURL)/\(type)/\(movieId)/similar?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
@@ -205,16 +206,25 @@ class APIService {
         return try? decoder.decode(MovieDetail.self, from: data)
     }
     
-    func trailer(movieId: Int) async throws -> String? {
-        let urlString = "\(baseURL)/movie/\(movieId)/videos?api_key=\(apiKey)"
+    func tvDetail(tvId: Int) async throws -> MovieDetail? {
+        let urlString = "\(baseURL)/tv/\(tvId)?api_key=\(apiKey)&language=\(language)&append_to_response=credits"
+        guard let url = URL(string: urlString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try? decoder.decode(MovieDetail.self, from: data)
+    }
+    
+    func trailer(movieId: Int, mediaType: String? = nil) async throws -> String? {
+        let type = mediaType ?? "movie"
+        let urlString = "\(baseURL)/\(type)/\(movieId)/videos?api_key=\(apiKey)"
         guard let url = URL(string: urlString) else { return nil }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(VideoResponse.self, from: data)
         return response.results.first(where: { $0.site == "YouTube" && ($0.type == "Trailer" || $0.type == "Teaser") })?.key
     }
     
-    func actors(movieId: Int) async throws -> [Actor] {
-        let urlString = "\(baseURL)/movie/\(movieId)/credits?api_key=\(apiKey)&language=\(language)"
+    func actors(movieId: Int, mediaType: String? = nil) async throws -> [Actor] {
+        let type = mediaType ?? "movie"
+        let urlString = "\(baseURL)/\(type)/\(movieId)/credits?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(ActorResponse.self, from: data)
@@ -236,8 +246,9 @@ class APIService {
         return response.cast.map { $0.withPlaceholder() }
     }
     
-    func movieImages(movieId: Int) async throws -> [URL] {
-        let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
+    func movieImages(movieId: Int, mediaType: String? = nil) async throws -> [URL] {
+        let type = mediaType ?? "movie"
+        let urlString = "\(baseURL)/\(type)/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         struct IR: Codable { let backdrops: [II]? }; struct II: Codable { let file_path: String? }
@@ -245,18 +256,28 @@ class APIService {
         return res.backdrops?.compactMap { $0.file_path != nil ? URL(string: "https://image.tmdb.org/t/p/w780\($0.file_path!)") : nil } ?? []
     }
     
-    // MARK: - TV Seasons
-    func fetchTVSeasons(tvId: Int) async throws -> [SeasonInfo] {
+    // MARK: - TV Seasons & Episodes
+    func fetchTVSeasons(tvId: Int) async throws -> [TVSeason] {
         let urlString = "\(baseURL)/tv/\(tvId)?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
-        struct TVR: Codable { let seasons: [TVS]? }
-        struct TVS: Codable { let season_number: Int?; let name: String?; let episode_count: Int?; let poster_path: String? }
-        let res = try decoder.decode(TVR.self, from: data)
-        return res.seasons?.compactMap { s in
-            guard let num = s.season_number, num > 0, let name = s.name, let count = s.episode_count else { return nil }
-            return SeasonInfo(id: num, name: name, episodeCount: count, posterURL: s.poster_path != nil ? URL(string: "https://image.tmdb.org/t/p/w200\(s.poster_path!)") : nil)
-        } ?? []
+        let detail = try decoder.decode(MovieDetail.self, from: data)
+        return detail.seasons?.filter { $0.seasonNumber > 0 } ?? []
+    }
+    
+    func fetchSeasonDetail(tvId: Int, seasonNumber: Int) async throws -> TVSeasonDetail {
+        let urlString = "\(baseURL)/tv/\(tvId)/season/\(seasonNumber)?api_key=\(apiKey)&language=\(language)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try decoder.decode(TVSeasonDetail.self, from: data)
+    }
+    
+    func fetchExternalIDs(tvId: Int) async throws -> String? {
+        let urlString = "\(baseURL)/tv/\(tvId)/external_ids?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct E: Codable { let imdb_id: String? }
+        return try decoder.decode(E.self, from: data).imdb_id
     }
     
     // MARK: - Search TV
