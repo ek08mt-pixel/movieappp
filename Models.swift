@@ -45,6 +45,7 @@ struct Movie: Codable, Identifiable, Hashable {
         guard let date = releaseDate, date.count >= 4 else { return "N/A" }
         return String(date.prefix(4))
     }
+    var isTVShow: Bool { mediaType == "tv" }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
     static func == (lhs: Movie, rhs: Movie) -> Bool { lhs.id == rhs.id }
 }
@@ -55,10 +56,68 @@ struct MovieDetail: Codable {
     let voteAverage: Double?; let releaseDate: String?
     let runtime: Int?; let genres: [Genre]?; let tagline: String?
     let credits: Credits?
+    let numberOfSeasons: Int?
+    let numberOfEpisodes: Int?
+    let seasons: [TVSeason]?
     enum CodingKeys: String, CodingKey {
         case id, title, overview, runtime, tagline, genres, credits
         case posterPath = "poster_path"; case backdropPath = "backdrop_path"
         case voteAverage = "vote_average"; case releaseDate = "release_date"
+        case numberOfSeasons = "number_of_seasons"
+        case numberOfEpisodes = "number_of_episodes"
+        case seasons
+    }
+}
+
+struct TVSeason: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let seasonNumber: Int
+    let episodeCount: Int
+    let posterPath: String?
+    let overview: String?
+    enum CodingKeys: String, CodingKey {
+        case id, name, overview
+        case seasonNumber = "season_number"
+        case episodeCount = "episode_count"
+        case posterPath = "poster_path"
+    }
+    var posterURL: URL? {
+        guard let path = posterPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w200\(path)")
+    }
+}
+
+struct TVSeasonDetail: Codable {
+    let id: Int
+    let name: String
+    let seasonNumber: Int
+    let episodes: [TVEpisode]
+    enum CodingKeys: String, CodingKey {
+        case id, name, episodes
+        case seasonNumber = "season_number"
+    }
+}
+
+struct TVEpisode: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let episodeNumber: Int
+    let seasonNumber: Int
+    let overview: String?
+    let stillPath: String?
+    let runtime: Int?
+    let airDate: String?
+    enum CodingKeys: String, CodingKey {
+        case id, name, overview, runtime
+        case episodeNumber = "episode_number"
+        case seasonNumber = "season_number"
+        case stillPath = "still_path"
+        case airDate = "air_date"
+    }
+    var stillURL: URL? {
+        guard let path = stillPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w300\(path)")
     }
 }
 
