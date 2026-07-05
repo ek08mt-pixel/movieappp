@@ -1,12 +1,6 @@
 import SwiftUI
 import AVKit
 
-// MARK: - Rotatable Player VC
-class RotatablePlayerVC: AVPlayerViewController {
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .allButUpsideDown }
-    override var shouldAutorotate: Bool { true }
-}
-
 // MARK: - MoviePlayerView
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
@@ -16,7 +10,7 @@ struct MoviePlayerView: View {
     @State private var errorMessage: String?
     @State private var selectedSource = 0
     @State private var showOverlay = true
-    @State private var sourceStatus: [Int: Bool] = [:]
+    @State private var isPlaying = true
     
     let sources = ["NTL Stream", "VidLink", "MultiEmbed"]
     
@@ -33,24 +27,23 @@ struct MoviePlayerView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                    HStack(spacing: 12) {
-                        Button("Thử lại") { loadStream() }.foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
-                        ForEach(0..<sources.count, id: \.self) { i in
-                            Button(sources[i]) { selectedSource = i; loadStream() }
-                                .foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.white.opacity(0.15))).font(.caption2)
-                        }
+                    Button("Thử lại") { loadStream() }.foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10).background(Capsule().fill(.ultraThinMaterial))
+                    ForEach(0..<sources.count, id: \.self) { i in
+                        Button(sources[i]) { selectedSource = i; loadStream() }
+                            .foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.white.opacity(0.15))).font(.caption2)
                     }
                 }
             } else if let player = player {
-                // Player với overlay SwiftUI
                 ZStack {
-                    RotatablePlayerView(player: player)
+                    // AVPlayerLayer trực tiếp - không khung đen
+                    VideoPlayerView(player: player)
                         .ignoresSafeArea()
                         .onTapGesture { withAnimation(.easeInOut(duration: 0.3)) { showOverlay.toggle() } }
                     
+                    // Overlay Netflix-style
                     if showOverlay {
                         VStack {
-                            // Top bar
+                            // Top bar - Nút Back
                             HStack {
                                 Button {
                                     UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
@@ -59,55 +52,62 @@ struct MoviePlayerView: View {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 18, weight: .bold))
                                         .foregroundColor(.white)
-                                        .padding(10)
+                                        .padding(12)
                                         .background(Circle().fill(.ultraThinMaterial))
                                 }
                                 Spacer()
-                                Text(movieTitle).font(.headline).foregroundColor(.white).lineLimit(1)
-                                Spacer()
-                                Text(sources[selectedSource]).font(.caption2).foregroundColor(.gray)
-                                    .padding(6).background(Capsule().fill(.ultraThinMaterial))
                             }
-                            .padding(.horizontal, 16).padding(.top, 50)
+                            .padding(.horizontal, 20).padding(.top, 50)
                             
                             Spacer()
                             
                             // Bottom controls
-                            HStack(spacing: 20) {
-                                // Nút chọn nguồn
+                            HStack(spacing: 24) {
+                                // Play/Pause
+                                Button {
+                                    if isPlaying { player.pause() } else { player.play() }
+                                    isPlaying.toggle()
+                                } label: {
+                                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                        .font(.system(size: 28)).foregroundColor(.white)
+                                }
+                                
+                                Spacer()
+                                
+                                // Tua lại 10s
+                                Button {
+                                    let newTime = CMTime(seconds: max(player.currentTime().seconds - 10, 0), preferredTimescale: 600)
+                                    player.seek(to: newTime)
+                                } label: {
+                                    Image(systemName: "gobackward.10")
+                                        .font(.system(size: 22)).foregroundColor(.white)
+                                }
+                                
+                                // Tua tới 10s
+                                Button {
+                                    let newTime = CMTime(seconds: player.currentTime().seconds + 10, preferredTimescale: 600)
+                                    player.seek(to: newTime)
+                                } label: {
+                                    Image(systemName: "goforward.10")
+                                        .font(.system(size: 22)).foregroundColor(.white)
+                                }
+                                
+                                Spacer()
+                                
+                                // Chọn nguồn
                                 Menu {
                                     ForEach(0..<sources.count, id: \.self) { i in
                                         Button(sources[i]) { selectedSource = i; loadStream() }
                                     }
                                 } label: {
-                                    Label("Đổi nguồn", systemImage: "list.bullet")
-                                        .font(.caption).foregroundColor(.white)
-                                        .padding(.horizontal, 12).padding(.vertical, 8)
-                                        .background(Capsule().fill(.ultraThinMaterial))
-                                }
-                                
-                                Spacer()
-                                
-                                // PiP
-                                Button {
-                                    player.pause()
-                                } label: {
-                                    Image(systemName: "pause.circle.fill")
-                                        .font(.system(size: 36)).foregroundColor(.white)
-                                }
-                                
-                                Spacer()
-                                
-                                // Tua nhanh
-                                Button {
-                                    player.seek(to: CMTime(seconds: player.currentTime().seconds + 10, preferredTimescale: 600))
-                                } label: {
-                                    Image(systemName: "goforward.10")
-                                        .font(.system(size: 24)).foregroundColor(.white)
+                                    Image(systemName: "list.bullet")
+                                        .font(.system(size: 20)).foregroundColor(.white)
                                 }
                             }
-                            .padding(.horizontal, 24).padding(.bottom, 40)
-                            .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                            .padding(.horizontal, 32).padding(.bottom, 40)
+                            .background(
+                                LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .top, endPoint: .bottom)
+                            )
                         }
                         .transition(.opacity)
                     }
@@ -156,12 +156,31 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Rotatable Player View
-struct RotatablePlayerView: UIViewControllerRepresentable {
+// MARK: - VideoPlayerView (AVPlayerLayer - không khung đen)
+struct VideoPlayerView: UIViewRepresentable {
     let player: AVPlayer
-    func makeUIViewController(context: Context) -> RotatablePlayerVC {
-        let c = RotatablePlayerVC(); c.player = player; c.showsPlaybackControls = false
-        c.videoGravity = .resizeAspect; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true; return c
+    
+    func makeUIView(context: Context) -> PlayerUIView {
+        let view = PlayerUIView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspectFill
+        return view
     }
-    func updateUIViewController(_ ui: RotatablePlayerVC, context: Context) {}
+    
+    func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+}
+
+class PlayerUIView: UIView {
+    var playerLayer: AVPlayerLayer {
+        return layer as! AVPlayerLayer
+    }
+    override class var layerClass: AnyClass {
+        return AVPlayerLayer.self
+    }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer.frame = bounds
+    }
 }
