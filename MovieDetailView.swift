@@ -4,6 +4,7 @@ import WebKit
 struct MovieDetailView: View {
     let movie: Movie; var showBooking: Bool = false
     @StateObject private var vm = MovieDetailViewModel()
+    @StateObject private var music = MusicManager.shared
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     @State private var showPlayer = false; @State private var showBookingSheet = false
@@ -12,11 +13,7 @@ struct MovieDetailView: View {
     @State private var selectedSeason: SeasonInfo?
     
     var isTVShow: Bool { movie.mediaType == "tv" }
-    
-    var releaseDateText: String {
-        if let date = movie.releaseDate, !date.isEmpty { return date }
-        return movie.yearText
-    }
+    var releaseDateText: String { if let date = movie.releaseDate, !date.isEmpty { return date }; return movie.yearText }
     
     var body: some View {
         ZStack {
@@ -27,9 +24,18 @@ struct MovieDetailView: View {
                         CachedAsyncImage(url: movie.backdropURL).aspectRatio(16/9, contentMode: .fill)
                             .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
                             .overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
-                        Button { dismiss() } label: {
-                            Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
-                        }.padding(.top, 54).padding(.leading, 20)
+                        
+                        HStack {
+                            Button { dismiss() } label: {
+                                Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
+                            }
+                            Spacer()
+                            Button { music.toggle() } label: {
+                                Image(systemName: music.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                                    .font(.system(size: 14)).foregroundColor(.white)
+                                    .padding(8).background(Circle().fill(.ultraThinMaterial))
+                            }
+                        }.padding(.top, 54).padding(.horizontal, 20)
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
@@ -66,24 +72,13 @@ struct MovieDetailView: View {
                                     HStack(spacing: 10) {
                                         ForEach(vm.seasons) { season in
                                             Button { withAnimation(.spring()) { selectedSeason = season } } label: {
-                                                VStack(spacing: 6) {
-                                                    Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray)
-                                                    Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5))
-                                                }.padding(.vertical, 10).padding(.horizontal, 16)
-                                                .background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)))
+                                                VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)))
                                             }
                                         }
                                     }
                                 }
                                 if let s = selectedSeason {
-                                    VStack(spacing: 6) {
-                                        ForEach(1...s.episodeCount, id: \.self) { ep in
-                                            Button { showPlayer = true } label: {
-                                                HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4)
-                                            }
-                                            if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) }
-                                        }
-                                    }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
+                                    VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
                                 }
                             }
                         }
@@ -117,6 +112,8 @@ struct MovieDetailView: View {
             }.ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
+        .onAppear { music.play() }
+        .onDisappear { music.stop() }
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
         .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title) }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
