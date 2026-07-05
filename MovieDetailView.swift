@@ -32,8 +32,7 @@ struct MovieDetailView: View {
                             Spacer()
                             Button { ost.toggle() } label: {
                                 Image(systemName: ost.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                                    .font(.system(size: 14)).foregroundColor(.white)
-                                    .padding(8).background(Circle().fill(.ultraThinMaterial))
+                                    .font(.system(size: 14)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial))
                             }
                         }.padding(.top, 54).padding(.horizontal, 20)
                     }
