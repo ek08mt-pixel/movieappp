@@ -98,12 +98,15 @@ struct MoviePlayerView: View {
     @State private var showBrightnessSlider = false
     @State private var volumeTimer: Timer?
     @State private var brightnessTimer: Timer?
+    @State private var volumeDragStart: Float = 0
+    @State private var briDragStart: CGFloat = 0
+    @State private var pipController: AVPictureInPictureController?
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            CustomPlayerVC(player: player)
+            CustomPlayerVC(player: player, pipController: $pipController)
                 .ignoresSafeArea()
                 .onAppear {
                     forceLandscape()
@@ -115,56 +118,49 @@ struct MoviePlayerView: View {
                 .onDisappear {
                     player.pause()
                     controlsTimer?.invalidate()
-                    forcePortrait()
                 }
                 .onTapGesture { toggleControls() }
             
-            // Volume slider - chỉ hiện khi vuốt
             if showVolumeSlider {
                 HStack {
                     Spacer()
                     TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
-                        .padding(.trailing, 12)
-                        .transition(.opacity.combined(with: .scale(scale: 0.5)))
+                        .padding(.trailing, 14)
+                        .transition(.opacity)
                 }
             }
             
-            // Brightness slider - chỉ hiện khi vuốt
             if showBrightnessSlider {
                 HStack {
                     TinySlider(value: brightness, icon: "sun.max.fill")
-                        .padding(.leading, 12)
-                        .transition(.opacity.combined(with: .scale(scale: 0.5)))
+                        .padding(.leading, 14)
+                        .transition(.opacity)
                     Spacer()
                 }
             }
             
-            // Volume drag zone (phải)
             Color.clear
-                .contentShape(Rectangle())
-                .frame(width: 80)
-                .position(x: UIScreen.main.bounds.width - 40, y: UIScreen.main.bounds.height / 2)
+                .frame(width: 70)
+                .position(x: UIScreen.main.bounds.width - 35, y: UIScreen.main.bounds.height / 2)
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { v in
-                            showVolumeSlider = true
-                            volume = min(max(volume + Float(-v.translation.height / 120), 0), 1)
+                            if !showVolumeSlider { showVolumeSlider = true; volumeDragStart = volume }
+                            volume = min(max(volumeDragStart + Float(-v.translation.height / 100), 0), 1)
                             player.volume = volume
                             resetVolumeTimer()
                         }
                         .onEnded { _ in resetVolumeTimer() }
                 )
             
-            // Brightness drag zone (trái)
             Color.clear
-                .contentShape(Rectangle())
-                .frame(width: 80)
-                .position(x: 40, y: UIScreen.main.bounds.height / 2)
+                .frame(width: 70)
+                .position(x: 35, y: UIScreen.main.bounds.height / 2)
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { v in
-                            showBrightnessSlider = true
-                            brightness = min(max(brightness + (-v.translation.height / 120), 0.01), 1)
+                            if !showBrightnessSlider { showBrightnessSlider = true; briDragStart = brightness }
+                            brightness = min(max(briDragStart + (-v.translation.height / 100), 0.01), 1)
                             UIScreen.main.brightness = brightness
                             resetBrightnessTimer()
                         }
@@ -230,11 +226,11 @@ struct MoviePlayerView: View {
                                     .background(Capsule().fill(.ultraThinMaterial.opacity(0.25))).overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                             Spacer()
-                            Button { if let pip = findPiPController() { pip.startPictureInPicture() } } label: {
+                            Button { pipController?.startPictureInPicture() } label: {
                                 Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
                                     .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
-                            Button { forcePortrait() } label: {
+                            Button { forcePortrait(); dismiss() } label: {
                                 Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
                                     .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
@@ -244,7 +240,7 @@ struct MoviePlayerView: View {
                 
                 VStack {
                     HStack {
-                        Button { dismiss() } label: {
+                        Button { forcePortrait(); dismiss() } label: {
                             Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
                                 .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                         }
@@ -260,10 +256,9 @@ struct MoviePlayerView: View {
                 }
             }
             
-            // Source popup
             if showSourceMenu {
                 ZStack {
-                    Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false }
+                    Color.clear.ignoresSafeArea().onTapGesture { showSourceMenu = false }
                     VStack(spacing: 8) {
                         Text("nguồn phát").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
                         ForEach(MovieSource.allCases, id: \.self) { src in
@@ -273,20 +268,16 @@ struct MoviePlayerView: View {
                                     Text(src.rawValue).font(.system(size: 12, design: .rounded)).foregroundColor(.white)
                                     if selectedSource == src { Image(systemName: "checkmark").font(.system(size: 9)).foregroundColor(.white) }
                                 }.padding(.horizontal, 12).padding(.vertical, 8)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
-                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4)))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                             }
                         }
-                        Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.25))
+                        Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
                     }
                     .padding(14)
-                    .background(
-                        ZStack {
-                            CachedAsyncImage(url: posterURL).aspectRatio(contentMode: .fill).blur(radius: 25).opacity(0.2)
-                            RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5))
-                        }
-                    )
-                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5)))
+                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.2), lineWidth: 0.8))
+                    .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
                     .frame(width: 170)
                 }
             }
@@ -334,32 +325,11 @@ struct MoviePlayerView: View {
         }
     }
     
-    func seek(_ sec: Double) {
-        let newTime = max(0, min(currentTime + sec, duration))
-        player.seek(to: CMTime(seconds: newTime, preferredTimescale: 600))
-        currentTime = newTime
-    }
-    
+    func seek(_ sec: Double) { let t = max(0, min(currentTime + sec, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
     func toggleControls() { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
-    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.4)) { showVolumeSlider = false } } }
-    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.4)) { showBrightnessSlider = false } } }
-    
-    func findPiPController() -> AVPictureInPictureController? {
-        guard let playerLayer = findPlayerLayer() else { return nil }
-        if AVPictureInPictureController.isPictureInPictureSupported() { return AVPictureInPictureController(playerLayer: playerLayer) }
-        return nil
-    }
-    
-    func findPlayerLayer() -> AVPlayerLayer? {
-        func search(in view: UIView) -> AVPlayerLayer? {
-            if let layer = view.layer as? AVPlayerLayer { return layer }
-            for subview in view.subviews { if let found = search(in: subview) { return found } }
-            return nil
-        }
-        guard let window = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.windows.first }).first else { return nil }
-        return search(in: window)
-    }
+    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false } } }
+    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false } } }
     
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
@@ -383,6 +353,7 @@ struct TinySlider: View {
 // MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
+    @Binding var pipController: AVPictureInPictureController?
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
@@ -390,6 +361,12 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
         vc.showsPlaybackControls = false
         vc.videoGravity = .resizeAspect
         vc.allowsPictureInPicturePlayback = true
+        DispatchQueue.main.async {
+            if let playerLayer = vc.view.layer.sublayers?.first as? AVPlayerLayer,
+               AVPictureInPictureController.isPictureInPictureSupported() {
+                pipController = AVPictureInPictureController(playerLayer: playerLayer)
+            }
+        }
         return vc
     }
     
