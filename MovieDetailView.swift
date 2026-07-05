@@ -1,6 +1,5 @@
 import SwiftUI
 import WebKit
-import AVKit
 
 struct MovieDetailView: View {
     let movie: Movie; var showBooking: Bool = false
@@ -18,37 +17,16 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
-                    // Backdrop + nút Play lớn ở giữa
-                    ZStack {
+                    ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
                             .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
                             .overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
                         
-                        // Nút Play to giữa backdrop
-                        Button { showPlayer = true } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .frame(width: 64, height: 64)
-                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 28)).foregroundColor(.white)
-                            }
-                        }
-                        
-                        // Nút Back
-                        VStack {
-                            HStack {
-                                Button { dismiss() } label: {
-                                    Image(systemName: "chevron.left.circle.fill")
-                                        .font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
-                                }
-                                Spacer()
-                            }
-                            .padding(.top, 54).padding(.leading, 20)
-                            Spacer()
-                        }
+                        Button { dismiss() } label: {
+                            Image(systemName: "chevron.left.circle.fill")
+                                .font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
+                        }.padding(.top, 54).padding(.leading, 20)
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
@@ -72,14 +50,13 @@ struct MovieDetailView: View {
                                         .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                                     if movie.overview.count > 200 {
                                         Button(showFullOverview ? "Thu gọn" : "Xem thêm") {
-                                            withAnimation(.easeInOut(duration: 0.2)) { showFullOverview.toggle() }
+                                            withAnimation { showFullOverview.toggle() }
                                         }.font(.system(size: 12, weight: .medium)).foregroundColor(.orange)
                                     }
                                 }
                             }
                         }
                         
-                        // Nút: Xem + Hỏi AI + Lưu
                         HStack(spacing: 10) {
                             Button { showPlayer = true } label: {
                                 Label("Xem", systemImage: "play.fill")
@@ -117,48 +94,21 @@ struct MovieDetailView: View {
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(vm.actors.prefix(15)) { actor in
-                                        NavigationLink(destination: ActorDetailView(actor: actor)) {
-                                            VStack(spacing: 6) {
-                                                CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 64, height: 64).clipShape(Circle())
-                                                Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 64)
-                                            }
-                                        }
-                                    }
-                                }.padding(.horizontal)
+                                HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { actor in NavigationLink(destination: ActorDetailView(actor: actor)) { VStack(spacing: 6) { CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 64, height: 64).clipShape(Circle()); Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 64) } } } }.padding(.horizontal)
                             }
                         }
                         
                         if !vm.similar.isEmpty {
                             Text("Phim tương tự").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 12) {
-                                    ForEach(vm.similar.prefix(12)) { m in
-                                        NavigationLink(destination: MovieDetailView(movie: m)) {
-                                            VStack(spacing: 6) {
-                                                CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4)
-                                                Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120)
-                                            }
-                                        }
-                                    }
-                                }.padding(.horizontal)
+                                LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } }.padding(.horizontal)
                             }
                         }
                         
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Bình luận").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
-                            HStack(spacing: 8) {
-                                TextField("Viết bình luận...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                                Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7)) }
-                            }
-                            ForEach(comments, id: \.self) { c in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14)))
-                                    VStack(alignment: .leading, spacing: 2) { Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white); Text(c).font(.caption).foregroundColor(.gray) }
-                                    Spacer()
-                                }
-                            }
+                            HStack(spacing: 8) { TextField("Viết bình luận...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial)); Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7)) } }
+                            ForEach(comments, id: \.self) { c in HStack(alignment: .top, spacing: 8) { Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14))); VStack(alignment: .leading, spacing: 2) { Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white); Text(c).font(.caption).foregroundColor(.gray) }; Spacer() } }
                         }.padding(.top, 8)
                     }
                     .padding(.horizontal, 20)
