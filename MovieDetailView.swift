@@ -15,12 +15,6 @@ struct MovieDetailView: View {
     @State private var selectedSeason = 1
     @State private var selectedEpisode: Int?
     
-    // Giả lập seasons cho phim bộ (có thể bật/tắt)
-    var hasSeasons: Bool {
-        // Phim có id chia hết cho 3 coi như phim bộ để demo
-        return movie.id % 3 == 0
-    }
-    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -97,57 +91,61 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Seasons
-                        if hasSeasons {
+                        // Seasons (chỉ hiện nếu có thật từ API)
+                        if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
-                                        ForEach(1...5, id: \.self) { s in
+                                        ForEach(vm.seasons) { season in
                                             Button {
-                                                withAnimation(.spring()) { selectedSeason = s }
+                                                withAnimation(.spring()) { selectedSeason = season.id }
                                             } label: {
                                                 VStack(spacing: 6) {
-                                                    Text("S\(s)")
-                                                        .font(.system(size: 13, weight: selectedSeason == s ? .bold : .medium))
-                                                        .foregroundColor(selectedSeason == s ? .white : .gray)
+                                                    Text(season.name)
+                                                        .font(.system(size: 13, weight: selectedSeason == season.id ? .bold : .medium))
+                                                        .foregroundColor(selectedSeason == season.id ? .white : .gray)
+                                                    Text("\(season.episodeCount) tập")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(selectedSeason == season.id ? .white.opacity(0.7) : .gray.opacity(0.5))
                                                 }
-                                                .frame(width: 48, height: 48)
+                                                .padding(.vertical, 10).padding(.horizontal, 16)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 14)
-                                                        .fill(selectedSeason == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04)))
-                                                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason == s ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))
+                                                        .fill(selectedSeason == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04)))
+                                                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))
                                                 )
                                             }
                                         }
                                     }
                                 }
                                 
-                                let count = [1:8, 2:10, 3:12, 4:10, 5:6][selectedSeason] ?? 8
-                                VStack(spacing: 6) {
-                                    ForEach(1...count, id: \.self) { ep in
-                                        Button { selectedEpisode = ep; showPlayer = true } label: {
-                                            HStack(spacing: 12) {
-                                                ZStack {
-                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32)
-                                                    Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                                if let currentSeason = vm.seasons.first(where: { $0.id == selectedSeason }) {
+                                    VStack(spacing: 6) {
+                                        ForEach(1...currentSeason.episodeCount, id: \.self) { ep in
+                                            Button { selectedEpisode = ep; showPlayer = true } label: {
+                                                HStack(spacing: 12) {
+                                                    ZStack {
+                                                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32)
+                                                        Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                                                    }
+                                                    Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white)
+                                                    Spacer()
+                                                    Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray)
                                                 }
-                                                Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white)
-                                                Spacer()
-                                                Text("\(Int.random(in: 40...60))p").font(.system(size: 11)).foregroundColor(.gray)
+                                                .padding(.vertical, 4)
                                             }
-                                            .padding(.vertical, 4)
+                                            if ep < currentSeason.episodeCount { Divider().background(Color.white.opacity(0.05)) }
                                         }
-                                        if ep < count { Divider().background(Color.white.opacity(0.05)) }
                                     }
+                                    .padding(12)
+                                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
                                 }
-                                .padding(12)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
                             }
                         }
                         
-                        // Images
+                        // Images (chỉ hiện nếu có)
                         if !vm.images.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
@@ -168,7 +166,14 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        QuoteView(movieId: movie.id)
+                        if let runtime = vm.detail?.runtime, runtime > 0 {
+                            HStack(spacing: 12) {
+                                Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray)
+                                if let genres = vm.detail?.genres, !genres.isEmpty {
+                                    Text(genres.prefix(3).map { $0.name }.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray)
+                                }
+                            }
+                        }
                         
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
@@ -211,7 +216,6 @@ struct MovieDetailView: View {
 struct MovieImagesView: View {
     let images: [URL]; let title: String
     @Environment(\.dismiss) var dismiss
-    
     var body: some View {
         ZStack {
             Color.black.opacity(0.95).ignoresSafeArea()
@@ -219,11 +223,7 @@ struct MovieImagesView: View {
                 HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding()
                 TabView {
                     ForEach(images, id: \.self) { url in
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal, 16)
+                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16)
                     }
                 }.tabViewStyle(.page(indexDisplayMode: .always))
             }
