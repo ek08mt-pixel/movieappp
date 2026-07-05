@@ -2,104 +2,118 @@ import SwiftUI
 
 struct GuessMovieView: View {
     @State private var movie: Movie?
-    @State private var options: [Movie] = []
-    @State private var showResult = false
-    @State private var isCorrect = false
-    @State private var score = 0
-    @State private var isLoading = false
+    @State private var showHint = false
+    @State private var guessed = false
+    @State private var inputText = ""
+    @State private var message = ""
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: 16) {
-                    Text("Đoán phim qua Poster")
-                        .font(.title2).fontWeight(.bold).foregroundColor(.white).padding(.top, 20)
-                    
-                    Text("Score: \(score)")
-                        .font(.headline).foregroundColor(.orange)
-                    
-                    if isLoading {
-                        ProgressView().tint(.white).padding(.vertical, 100)
-                    } else if let movie = movie {
-                        CachedAsyncImage(url: movie.posterURL)
-                            .aspectRatio(2/3, contentMode: .fill)
-                            .frame(width: 180, height: 270)
+            VStack(spacing: 0) {
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left").foregroundColor(.white).font(.system(size: 18, weight: .medium))
+                    }
+                    Spacer()
+                    Text("Guess Movie").font(.headline).fontWeight(.bold).foregroundColor(.white)
+                    Spacer()
+                    Button {
+                        loadNewMovie()
+                    } label: {
+                        Image(systemName: "arrow.clockwise").foregroundColor(.white).font(.system(size: 18))
+                    }
+                }.padding()
+                
+                Spacer()
+                
+                if let movie = movie {
+                    VStack(spacing: 20) {
+                        CachedAsyncImage(url: movie.backdropURL ?? movie.posterURL)
+                            .aspectRatio(16/9, contentMode: .fill)
+                            .frame(width: 300, height: 180)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .blur(radius: showResult ? 0 : 25)
-                            .animation(.easeInOut(duration: 0.5), value: showResult)
+                            .blur(radius: guessed ? 0 : 20)
                         
-                        if showResult {
-                            Text(isCorrect ? "✅ Chính xác!" : "❌ Sai rồi!")
-                                .font(.title2).fontWeight(.bold)
-                                .foregroundColor(isCorrect ? .green : .red)
-                            Text(movie.title)
-                                .font(.title3).fontWeight(.heavy).foregroundColor(.white)
-                            Text(movie.overview)
-                                .font(.caption).foregroundColor(.gray).lineLimit(3).padding(.horizontal)
+                        if showHint && !guessed {
+                            VStack(spacing: 6) {
+                                Text("Gợi ý:").font(.caption).foregroundColor(.white.opacity(0.6))
+                                Text(movie.overview).font(.caption).foregroundColor(.white).lineLimit(4).multilineTextAlignment(.center)
+                                Text("Năm: \(movie.yearText)").font(.caption).foregroundColor(.white.opacity(0.7))
+                                Text("⭐ \(movie.ratingText)").font(.caption).foregroundColor(.yellow)
+                            }.padding(.horizontal)
                         }
                         
-                        VStack(spacing: 8) {
-                            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                                Button {
-                                    isCorrect = option.id == movie.id
-                                    showResult = true
-                                    if isCorrect { score += 1 }
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Text(["A", "B", "C", "D"][index])
-                                            .font(.caption).fontWeight(.bold).foregroundColor(.orange).frame(width: 20)
-                                        Text(option.title)
-                                            .font(.caption).fontWeight(.medium).foregroundColor(.white)
-                                        Spacer()
-                                    }
-                                    .padding(10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(showResult && option.id == movie.id
-                                                  ? AnyShapeStyle(Color.green.opacity(0.3))
-                                                  : AnyShapeStyle(.ultraThinMaterial))
-                                    )
-                                }.disabled(showResult)
-                            }
-                        }.padding(.horizontal)
-                        
-                        Button { loadNewMovie() } label: {
-                            HStack { Image(systemName: "arrow.clockwise"); Text("Phim khác") }
-                                .font(.caption).foregroundColor(.white)
-                                .padding(.horizontal, 20).padding(.vertical, 10)
+                        if !guessed {
+                            HStack(spacing: 8) {
+                                TextField("Nhập tên phim...", text: $inputText)
+                                    .textFieldStyle(.plain)
+                                    .foregroundColor(.white)
+                                    .padding(12)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                                
+                                Button("Đoán") {
+                                    checkGuess(movie)
+                                }
+                                .font(.caption).fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16).padding(.vertical, 12)
                                 .background(Capsule().fill(.ultraThinMaterial))
+                            }.padding(.horizontal, 30)
+                            
+                            Button("Xem gợi ý") {
+                                withAnimation { showHint = true }
+                            }
+                            .font(.caption).foregroundColor(.white.opacity(0.6))
+                        }
+                        
+                        if !message.isEmpty {
+                            Text(message)
+                                .font(.caption).fontWeight(.medium)
+                                .foregroundColor(message.contains("✅") ? .green : .white)
+                                .padding()
+                        }
+                        
+                        if guessed {
+                            VStack(spacing: 8) {
+                                Text(movie.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                Text(movie.yearText).font(.caption).foregroundColor(.gray)
+                                Text("⭐ \(movie.ratingText)").font(.caption).foregroundColor(.yellow)
+                                Button("Phim mới") { loadNewMovie() }
+                                    .font(.caption).foregroundColor(.white)
+                                    .padding(.horizontal, 20).padding(.vertical, 8)
+                                    .background(Capsule().fill(.ultraThinMaterial))
+                            }
                         }
                     }
-                    Spacer().frame(height: 120)
+                } else {
+                    ProgressView().tint(.white)
                 }
+                
+                Spacer()
             }
         }
-        .task { loadNewMovie() }
+        .navigationBarHidden(true)
+        .onAppear { loadNewMovie() }
     }
     
     func loadNewMovie() {
-        isLoading = true
-        showResult = false
-        movie = nil
-        options = []
-        
+        guessed = false; showHint = false; inputText = ""; message = ""
         Task {
-            let movies = (try? await APIService.shared.popular())?.filter { !($0.adult ?? false) } ?? []
-            
-            if let correct = movies.randomElement() {
-                var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
-                opts.append(correct)
-                let finalOptions = opts.shuffled()
-                
-                await MainActor.run {
-                    movie = correct
-                    options = finalOptions
-                    isLoading = false
-                }
-            } else {
-                await MainActor.run { isLoading = false }
-            }
+            let movies = (try? await APIService.shared.popular()) ?? []
+            movie = movies.filter { !($0.adult ?? false) && !($0.overview.isEmpty) && ($0.popularity ?? 0) > 10 }.randomElement()
+        }
+    }
+    
+    func checkGuess(_ movie: Movie) {
+        let guess = inputText.trimmingCharacters(in: .whitespaces).lowercased()
+        let real = movie.title.lowercased()
+        if guess == real {
+            message = "✅ Chính xác!"
+            guessed = true
+        } else {
+            message = "❌ Sai rồi, thử lại!"
         }
     }
 }
