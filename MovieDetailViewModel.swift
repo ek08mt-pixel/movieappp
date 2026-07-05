@@ -21,7 +21,7 @@ class MovieDetailViewModel: ObservableObject {
             async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: "tv")
             async let seasonsTask = APIService.shared.fetchTVSeasons(tvId: movieId)
             
-            detail = await detailTask
+            detail = try? await detailTask
             actors = (try? await actorsTask) ?? []
             similar = (try? await similarTask) ?? []
             images = (try? await imagesTask) ?? []
@@ -32,7 +32,7 @@ class MovieDetailViewModel: ObservableObject {
             async let similarTask = APIService.shared.similar(movieId: movieId)
             async let imagesTask = APIService.shared.movieImages(movieId: movieId)
             
-            detail = await detailTask
+            detail = try? await detailTask
             actors = (try? await actorsTask) ?? []
             similar = (try? await similarTask) ?? []
             images = (try? await imagesTask) ?? []
