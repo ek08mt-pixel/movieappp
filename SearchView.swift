@@ -20,7 +20,6 @@ struct SearchView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.gray)
                         TextField("Tìm phim...", text: $vm.query).focused($focused).foregroundColor(.white)
@@ -33,45 +32,14 @@ struct SearchView: View {
                     if vm.query.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                Text("Tìm kiếm phổ biến")
-                                    .font(.headline).foregroundColor(.white).padding(.horizontal)
+                                Text("Tìm kiếm phổ biến").font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
-                                // 6 ô đều, 3x2
-                                LazyVGrid(columns: [
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12)
-                                ], spacing: 12) {
-                                    ForEach(topics, id: \.0) { topic, query, poster in
-                                        Button {
-                                            vm.query = query; Task { await vm.search() }
-                                        } label: {
-                                            ZStack(alignment: .bottom) {
-                                                CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                    .aspectRatio(contentMode: .fill)
-                                                    .frame(height: 95)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    .blur(radius: 2)
-                                                    .overlay(
-                                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
-                                                    )
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                
-                                                Text(topic)
-                                                    .font(.system(size: 11)).fontWeight(.bold).foregroundColor(.white)
-                                                    .padding(.vertical, 4).padding(.horizontal, 8)
-                                                    .background(Color.black.opacity(0.5))
-                                                    .clipShape(Capsule())
-                                                    .padding(6)
-                                            }
-                                        }
-                                    }
+                                CategoryGridView(topics: topics) { query in
+                                    vm.query = query
+                                    Task { await vm.search() }
                                 }
-                                .padding(.horizontal)
                                 
-                                // Xu hướng
-                                Text("Xu hướng")
-                                    .font(.headline).foregroundColor(.white).padding(.horizontal)
+                                Text("Xu hướng").font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
                                 ForEach(Array(vm.trending.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                     Button { selectedMovie = movie } label: {
@@ -108,7 +76,8 @@ struct SearchView: View {
                                         VStack(spacing: 4) {
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill)
-                                                .frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .frame(maxWidth: .infinity)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
                                             Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
                                             HStack(spacing: 2) {
                                                 Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
@@ -126,5 +95,69 @@ struct SearchView: View {
             .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         }
         .onAppear { focused = true; Task { await vm.loadTrending() } }
+    }
+}
+
+// MARK: - Category Grid (Độc lập, không phụ thuộc biến ngoài)
+struct CategoryGridView: View {
+    let topics: [(String, String, String)]
+    let onSelect: (String) -> Void
+    
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+    
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(topics, id: \.0) { topic, query, poster in
+                CategoryCardView(
+                    title: topic,
+                    posterPath: poster,
+                    action: { onSelect(query) }
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+// MARK: - Category Card (Độc lập, tự chứa style)
+struct CategoryCardView: View {
+    let title: String
+    let posterPath: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            GeometryReader { geo in
+                ZStack(alignment: .bottom) {
+                    CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)"))
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .blur(radius: 2)
+                        .overlay(
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.7)],
+                                startPoint: .center,
+                                endPoint: .bottom
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    
+                    Text(title)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(Capsule())
+                        .padding(6)
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+        }
     }
 }
