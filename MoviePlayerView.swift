@@ -53,9 +53,13 @@ class ExternalPlayerManager {
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     @Environment(\.dismiss) var dismiss
-    @State private var isLoading = true; @State private var selectedSource = 0
-    @State private var player: AVPlayer?; @State private var errorMessage: String?
+    @State private var isLoading = true
+    @State private var selectedSource = 0
+    @State private var player: AVPlayer?
+    @State private var errorMessage: String?
     @State private var streamURL: String?
+    @State private var sourceStatus: [Int: Bool] = [:]
+    @State private var showSourceMenu = false
     
     var sq: String { movieTitle.replacingOccurrences(of: " ", with: "+") }
     
@@ -74,45 +78,107 @@ struct MoviePlayerView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
+            
             if isLoading {
-                VStack(spacing: 20) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline) }
+                VStack(spacing: 20) {
+                    ProgressView().tint(.white).scaleEffect(1.5)
+                    Text("Đợi Mew tí...").foregroundColor(.white.opacity(0.7)).font(.headline)
+                }
             } else if let errorMessage = errorMessage {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
-                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
-                    HStack(spacing: 8) {
-                        Button("Thử lại") { loadSource() }.foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
-                        Menu { ForEach(0..<sources.count, id: \.self) { i in Button(sources[i].0) { selectedSource = i; loadSource() } } }
-                        label: { Label("Đổi nguồn", systemImage: "list.bullet").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) }
+                    Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal)
+                    
+                    // Grid chọn nguồn đẹp
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(0..<sources.count, id: \.self) { i in
+                            Button {
+                                selectedSource = i; loadSource()
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "circle"))
+                                        .font(.system(size: 20))
+                                        .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .gray))
+                                    Text(sources[i].0.components(separatedBy: " ").first ?? "")
+                                        .font(.system(size: 10)).foregroundColor(.white).lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(selectedSource == i ? .white.opacity(0.15) : .ultraThinMaterial)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(selectedSource == i ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
                     }
-                    if let url = streamURL {
-                        HStack(spacing: 8) {
-                            Button("VLC") { ExternalPlayerManager.shared.open("VLC", url: url) }.foregroundColor(.orange).font(.caption2)
-                            Button("Infuse") { ExternalPlayerManager.shared.open("Infuse", url: url) }.foregroundColor(.orange).font(.caption2)
-                            Button("Copy") { ExternalPlayerManager.shared.open("Copy", url: url) }.foregroundColor(.gray).font(.caption2)
+                    .padding(.horizontal)
+                    
+                    HStack(spacing: 12) {
+                        Button("Thử lại") { loadSource() }
+                            .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
+                            .background(Capsule().fill(.ultraThinMaterial)).font(.caption)
+                        if let url = streamURL {
+                            Menu {
+                                Button("VLC") { ExternalPlayerManager.shared.open("VLC", url: url) }
+                                Button("Infuse") { ExternalPlayerManager.shared.open("Infuse", url: url) }
+                                Button("Copy Link") { ExternalPlayerManager.shared.open("Copy", url: url) }
+                            } label: {
+                                Label("Mở bằng...", systemImage: "arrow.up.forward.app")
+                                    .foregroundColor(.white).padding(.horizontal, 20).padding(.vertical, 10)
+                                    .background(Capsule().fill(.orange.opacity(0.6))).font(.caption)
+                            }
                         }
                     }
                 }
             } else if let player = player {
-                FullScreenPlayer(player: player).ignoresSafeArea().onAppear { player.play() }.onDisappear { player.pause() }
+                FullScreenPlayer(player: player).ignoresSafeArea()
+                    .onAppear { player.play(); lockToLandscape() }
+                    .onDisappear { player.pause(); unlockOrientation() }
                     .overlay(alignment: .topTrailing) {
-                        Menu { ForEach(0..<sources.count, id: \.self) { i in Button(sources[i].0) { selectedSource = i; loadSource() } } }
-                        label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
+                        Button { showSourceMenu = true } label: {
+                            ZStack {
+                                Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                                Text(sources[selectedSource].0.components(separatedBy: " ").first ?? "")
+                                    .font(.system(size: 8)).foregroundColor(.white)
+                            }
+                        }
+                        .padding(.top, 50).padding(.trailing, 16)
                     }
             } else {
                 FullScreenWebView(urlString: sources[selectedSource].2).ignoresSafeArea()
                     .overlay(alignment: .topTrailing) {
-                        Menu { ForEach(0..<sources.count, id: \.self) { i in Button(sources[i].0) { selectedSource = i; loadSource() } } }
-                        label: { Image(systemName: "ellipsis.circle.fill").font(.system(size: 24)).foregroundColor(.white).padding() }
+                        Button { showSourceMenu = true } label: {
+                            ZStack {
+                                Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                                Text(sources[selectedSource].0.components(separatedBy: " ").first ?? "")
+                                    .font(.system(size: 8)).foregroundColor(.white)
+                            }
+                        }
+                        .padding(.top, 50).padding(.trailing, 16)
                     }
             }
         }
+        .onAppear { lockToLandscape() }
+        .onDisappear { unlockOrientation() }
         .task { loadSource() }
+        .sheet(isPresented: $showSourceMenu) {
+            SourceMenuView(sources: sources, selectedSource: $selectedSource, sourceStatus: $sourceStatus, onSelect: { loadSource() })
+        }
     }
     
     func loadSource() {
         isLoading = true; errorMessage = nil; player = nil; streamURL = nil
-        if sources[selectedSource].1 { loadDirect() } else { isLoading = false }
+        sourceStatus[selectedSource] = nil
+        if sources[selectedSource].1 {
+            loadDirect()
+        } else {
+            isLoading = false
+            sourceStatus[selectedSource] = true
+        }
     }
     
     func loadDirect() {
@@ -120,8 +186,19 @@ struct MoviePlayerView: View {
             do {
                 let imdbId = try await fetchIMDb()
                 let url: URL = selectedSource == 0 ? try await fetchNTL(imdbId) : try await MediaFusionManager.shared.getBestURL(imdbId: imdbId)
-                await MainActor.run { self.streamURL = url.absoluteString; self.player = AVPlayer(url: url); self.isLoading = false }
-            } catch { await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false } }
+                await MainActor.run {
+                    self.streamURL = url.absoluteString
+                    self.player = AVPlayer(url: url)
+                    self.sourceStatus[selectedSource] = true
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.sourceStatus[selectedSource] = false
+                    self.isLoading = false
+                }
+            }
         }
     }
     
@@ -142,18 +219,83 @@ struct MoviePlayerView: View {
         guard let id = try JSONDecoder().decode(E.self, from: data).imdb_id else { throw StreamError.noStreamAvailable }
         return id
     }
+    
+    func lockToLandscape() {
+        UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceOrientation()
+    }
+    
+    func unlockOrientation() {
+        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceOrientation()
+    }
 }
 
-// MARK: - Subviews
+// MARK: - Source Menu
+struct SourceMenuView: View {
+    let sources: [(String, Bool, String)]
+    @Binding var selectedSource: Int
+    @Binding var sourceStatus: [Int: Bool]
+    let onSelect: () -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.opacity(0.95).ignoresSafeArea()
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(0..<sources.count, id: \.self) { i in
+                            Button {
+                                selectedSource = i; onSelect(); dismiss()
+                            } label: {
+                                VStack(spacing: 8) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(selectedSource == i ? .white.opacity(0.2) : .clear)
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: sourceStatus[i] == true ? "checkmark.circle.fill" : (sourceStatus[i] == false ? "xmark.circle.fill" : "play.circle.fill"))
+                                            .font(.system(size: 24))
+                                            .foregroundColor(sourceStatus[i] == true ? .green : (sourceStatus[i] == false ? .red : .white.opacity(0.6)))
+                                    }
+                                    Text(sources[i].0)
+                                        .font(.system(size: 9)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                    if sourceStatus[i] == true { Text("✅ Hoạt động").font(.system(size: 8)).foregroundColor(.green) }
+                                    else if sourceStatus[i] == false { Text("❌ Không hoạt động").font(.system(size: 8)).foregroundColor(.red) }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(selectedSource == i ? .white.opacity(0.1) : .ultraThinMaterial)
+                                )
+                            }
+                        }
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("Chọn nguồn phim")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { Button("Xong") { dismiss() }.foregroundColor(.white) }
+            }
+        }
+    }
+}
+
+// MARK: - Full Screen Player
 struct FullScreenPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let c = AVPlayerViewController(); c.player = player; c.showsPlaybackControls = true
-        c.videoGravity = .resizeAspectFill; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true; return c
+        c.videoGravity = .resizeAspectFill; c.allowsPictureInPicturePlayback = true; c.canStartPictureInPictureAutomaticallyFromInline = true
+        return c
     }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
 }
 
+// MARK: - Full Screen WebView
 struct FullScreenWebView: UIViewRepresentable {
     let urlString: String
     func makeUIView(context: Context) -> WKWebView {
