@@ -153,7 +153,7 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
-        .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode) }
+        .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.backdropURL ?? movie.posterURL) }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
