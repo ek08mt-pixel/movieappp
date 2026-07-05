@@ -87,6 +87,7 @@ struct HomeView: View {
                             if !appState.watchHistory.isEmpty { SectionGrid(title: "👀 Tiếp tục khám phá", movies: appState.watchHistory) }
                             if let last = appState.watchHistory.last { SectionGrid(title: "✨ Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
                             
+                            SectionGrid(title: "📺 TV Shows", movies: vm.trendingTV)
                             SectionGrid(title: "🔥 24h qua", movies: vm.trending24h)
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
