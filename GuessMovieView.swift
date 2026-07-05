@@ -14,17 +14,21 @@ struct GuessMovieView: View {
             VStack(spacing: 0) {
                 HStack {
                     Button { dismiss() } label: {
-                        Image(systemName: "chevron.left").foregroundColor(.white).font(.system(size: 18, weight: .medium))
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white).font(.system(size: 18, weight: .medium))
                     }
                     Spacer()
-                    Text("Guess Movie").font(.headline).fontWeight(.bold).foregroundColor(.white)
+                    Text("Guess Movie")
+                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
                     Spacer()
-                    Button {
-                        loadNewMovie()
-                    } label: {
-                        Image(systemName: "arrow.clockwise").foregroundColor(.white).font(.system(size: 18))
+                    Button { loadNewMovie() } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.white).font(.system(size: 18))
                     }
-                }.padding()
+                }
+                .padding(.horizontal)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
                 
                 Spacer()
                 
@@ -32,7 +36,7 @@ struct GuessMovieView: View {
                     VStack(spacing: 20) {
                         CachedAsyncImage(url: movie.backdropURL ?? movie.posterURL)
                             .aspectRatio(16/9, contentMode: .fill)
-                            .frame(width: 300, height: 180)
+                            .frame(width: 320, height: 190)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .blur(radius: guessed ? 0 : 20)
                         
@@ -48,31 +52,21 @@ struct GuessMovieView: View {
                         if !guessed {
                             HStack(spacing: 8) {
                                 TextField("Nhập tên phim...", text: $inputText)
-                                    .textFieldStyle(.plain)
-                                    .foregroundColor(.white)
-                                    .padding(12)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                                
-                                Button("Đoán") {
-                                    checkGuess(movie)
-                                }
-                                .font(.caption).fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16).padding(.vertical, 12)
-                                .background(Capsule().fill(.ultraThinMaterial))
+                                    .textFieldStyle(.plain).foregroundColor(.white)
+                                    .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                                Button("Đoán") { checkGuess(movie) }
+                                    .font(.caption).fontWeight(.bold).foregroundColor(.white)
+                                    .padding(.horizontal, 16).padding(.vertical, 12)
+                                    .background(Capsule().fill(.ultraThinMaterial))
                             }.padding(.horizontal, 30)
                             
-                            Button("Xem gợi ý") {
-                                withAnimation { showHint = true }
-                            }
-                            .font(.caption).foregroundColor(.white.opacity(0.6))
+                            Button("Xem gợi ý") { withAnimation { showHint = true } }
+                                .font(.caption).foregroundColor(.white.opacity(0.6))
                         }
                         
                         if !message.isEmpty {
-                            Text(message)
-                                .font(.caption).fontWeight(.medium)
-                                .foregroundColor(message.contains("✅") ? .green : .white)
-                                .padding()
+                            Text(message).font(.caption).fontWeight(.medium)
+                                .foregroundColor(message.contains("✅") ? .green : .white).padding()
                         }
                         
                         if guessed {
@@ -109,11 +103,7 @@ struct GuessMovieView: View {
     func checkGuess(_ movie: Movie) {
         let guess = inputText.trimmingCharacters(in: .whitespaces).lowercased()
         let real = movie.title.lowercased()
-        if guess == real {
-            message = "✅ Chính xác!"
-            guessed = true
-        } else {
-            message = "❌ Sai rồi, thử lại!"
-        }
+        if guess == real { message = "✅ Chính xác!"; guessed = true }
+        else { message = "❌ Sai rồi, thử lại!" }
     }
 }
