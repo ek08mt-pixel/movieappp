@@ -19,8 +19,10 @@ struct SearchView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
+            ZStack(alignment: .topLeading) {
+                LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+                
                 VStack(spacing: 0) {
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.gray)
@@ -29,7 +31,7 @@ struct SearchView: View {
                         if !vm.query.isEmpty { Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) } }
                         if focused { Button("Đóng") { focused = false }.foregroundColor(.white).font(.caption) }
                     }
-                    .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding()
+                    .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding(.horizontal).padding(.top, 54)
                     
                     if vm.query.isEmpty {
                         ScrollView {
@@ -78,20 +80,22 @@ struct SearchView: View {
                             LazyVGrid(columns: columns, spacing: 16) {
                                 ForEach(vm.results) { movie in
                                     Button { selectedMovie = movie } label: {
-                                        VStack(spacing: 4) {
+                                        VStack(spacing: 6) {
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                                             Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                             HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
                                         }
+                                        .padding(6)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.2)))
                                     }
                                 }
-                            }.padding(.horizontal)
+                            }.padding(.horizontal, 16)
                         }
                     }
                 }
             }
-            .navigationTitle("Tìm kiếm").navigationBarTitleDisplayMode(.inline)
             .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         }
         .onAppear { focused = true; Task { await vm.loadTrending() } }
