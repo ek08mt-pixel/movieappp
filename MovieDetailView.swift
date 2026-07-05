@@ -17,6 +17,7 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
+                    // Backdrop
                     ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
@@ -30,6 +31,7 @@ struct MovieDetailView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
+                        // Poster + Info
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL)
                                 .aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150)
@@ -43,13 +45,29 @@ struct MovieDetailView: View {
                                     Text(movie.ratingText).foregroundColor(.white).font(.subheadline).bold()
                                     Text("•").foregroundColor(.gray); Text(movie.yearText).foregroundColor(.gray)
                                 }
-                                Button { showFullOverview = true } label: {
+                                // Nội dung - bấm vào mở rộng ngay tại chỗ
+                                VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
-                                        .font(.system(size: 13)).foregroundColor(.gray).lineLimit(4)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.gray)
+                                        .lineLimit(showFullOverview ? nil : 4)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    
+                                    if movie.overview.count > 200 {
+                                        Button(showFullOverview ? "Thu gọn" : "Xem thêm") {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                showFullOverview.toggle()
+                                            }
+                                        }
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.orange)
+                                    }
                                 }
                             }
                         }
                         
+                        // Nút chức năng
                         HStack(spacing: 10) {
                             if vm.trailerKey != nil {
                                 Button { showTrailer = true } label: {
@@ -140,25 +158,6 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true)
         .task { await vm.load(movieId: movie.id) }
-        .sheet(isPresented: $showFullOverview) {
-            ZStack {
-                Color.black.opacity(0.95).ignoresSafeArea()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
-                            Spacer()
-                            Button("Đóng") { showFullOverview = false }.foregroundColor(.gray)
-                        }
-                        Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
-                            .font(.system(size: 16)).foregroundColor(.white.opacity(0.9))
-                            .multilineTextAlignment(.leading).lineSpacing(6)
-                        Spacer()
-                    }.padding(24)
-                }
-            }
-            .presentationDetents([.medium, .large])
-        }
         .fullScreenCover(isPresented: $showTrailer) {
             ZStack { Color.black.ignoresSafeArea(); WebView(urlString: "https://www.youtube.com/embed/\(vm.trailerKey ?? "")?autoplay=1").ignoresSafeArea() }
                 .overlay(alignment: .topLeading) { Button { showTrailer = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white.opacity(0.8)).padding() } }
