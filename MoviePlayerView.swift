@@ -1,12 +1,18 @@
 import SwiftUI
 import AVKit
 
+// MARK: - Rotatable Player VC (ép xoay)
+class RotatablePlayerVC: AVPlayerViewController {
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .allButUpsideDown }
+    override var shouldAutorotate: Bool { true }
+}
+
+// MARK: - MoviePlayerView
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     @Environment(\.dismiss) var dismiss
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @State private var showPlayer = false
     @State private var player: AVPlayer?
     
     var body: some View {
@@ -27,8 +33,17 @@ struct MoviePlayerView: View {
             } else if let player = player {
                 CustomPlayerVC(player: player)
                     .ignoresSafeArea()
-                    .onAppear { player.play() }
-                    .onDisappear { player.pause() }
+                    .onAppear {
+                        player.play()
+                        // Ép xoay ngang
+                        UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+                        UIViewController.attemptRotationToDeviceOrientation()
+                    }
+                    .onDisappear {
+                        player.pause()
+                        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+                        UIViewController.attemptRotationToDeviceOrientation()
+                    }
             }
         }
         .task { loadStream() }
@@ -65,20 +80,32 @@ struct MoviePlayerView: View {
     }
 }
 
-// AVPlayerViewController gốc - có sẵn: xoay ngang, PiP, nút Done, controls đẹp
+// MARK: - Custom Player VC (có nút xoay + PiP)
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
     
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let c = AVPlayerViewController()
+    func makeUIViewController(context: Context) -> RotatablePlayerVC {
+        let c = RotatablePlayerVC()
         c.player = player
         c.showsPlaybackControls = true
         c.videoGravity = .resizeAspect
         c.allowsPictureInPicturePlayback = true
         c.canStartPictureInPictureAutomaticallyFromInline = true
         c.updatesNowPlayingInfoCenter = true
+        
+        // Thêm nút xoay thủ công
+        let rotateAction = UIAction(title: "Xoay ngang", image: UIImage(systemName: "rotate.right")) { _ in
+            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+        let pipAction = UIAction(title: "PiP", image: UIImage(systemName: "pip.enter")) { _ in
+            // PiP tự động khi có AVPlayerViewController
+        }
+        let menu = UIMenu(title: "", children: [rotateAction, pipAction])
+        c.navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: menu)
+        
         return c
     }
     
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
+    func updateUIViewController(_ ui: RotatablePlayerVC, context: Context) {}
 }
