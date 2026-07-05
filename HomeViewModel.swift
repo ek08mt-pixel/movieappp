@@ -18,8 +18,7 @@ class HomeViewModel: ObservableObject {
     func loadAll() async {
         isLoading = true
         
-        async let trendingTask = APIService.shared.trending24h()
-        async let trendingTVTask = APIService.shared.trendingTV()
+        async let trendingTask = APIService.shared.trendingAll()
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
@@ -30,9 +29,7 @@ class HomeViewModel: ObservableObject {
         async let animeTask = APIService.shared.animeMovies()
         async let genresTask = APIService.shared.genres()
         
-        let movies = (try? await trendingTask) ?? []
-        let tvShows = (try? await trendingTVTask) ?? []
-        trending24h = (movies + tvShows).sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
+        trending24h = (try? await trendingTask) ?? []
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
         topRated = (try? await topRatedTask) ?? []
