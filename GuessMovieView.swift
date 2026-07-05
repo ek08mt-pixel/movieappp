@@ -9,27 +9,11 @@ struct GuessMovieView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
             VStack(spacing: 0) {
-                HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(.white).font(.system(size: 18, weight: .medium))
-                    }
-                    Spacer()
-                    Text("Guess Movie")
-                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
-                    Spacer()
-                    Button { loadNewMovie() } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.white).font(.system(size: 18))
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 60)
-                .padding(.bottom, 20)
-                
                 Spacer()
                 
                 if let movie = movie {
@@ -87,6 +71,20 @@ struct GuessMovieView: View {
                 
                 Spacer()
             }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(14)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    )
+            }
+            .padding(.top, 54)
+            .padding(.leading, 20)
         }
         .navigationBarHidden(true)
         .onAppear { loadNewMovie() }
