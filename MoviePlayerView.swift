@@ -29,10 +29,7 @@ class MediaFusionManager {
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL
     var errorDescription: String? {
-        switch self {
-        case .noStreamAvailable: return "Không tìm thấy link stream"
-        case .invalidURL: return "URL không hợp lệ"
-        }
+        switch self { case .noStreamAvailable: return "Không tìm thấy link stream"; case .invalidURL: return "URL không hợp lệ" }
     }
 }
 
@@ -84,9 +81,9 @@ struct MoviePlayerView: View {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 50)).foregroundColor(.gray)
                     Text(errorMessage).foregroundColor(.gray).multilineTextAlignment(.center).padding()
                     HStack(spacing: 8) {
-                        Button("Thử lại") { loadSource() }.foregroundColor(.white).padding(.h, 16).padding(.v, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
+                        Button("Thử lại") { loadSource() }.foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)).font(.caption)
                         Menu { ForEach(0..<sources.count, id: \.self) { i in Button(sources[i].0) { selectedSource = i; loadSource() } } }
-                        label: { Label("Đổi nguồn", systemImage: "list.bullet").foregroundColor(.white).padding(.h, 16).padding(.v, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) }
+                        label: { Label("Đổi nguồn", systemImage: "list.bullet").foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.white.opacity(0.15))).font(.caption) }
                     }
                     if let url = streamURL {
                         HStack(spacing: 8) {
