@@ -100,16 +100,14 @@ struct MoviePlayerView: View {
     @State private var brightnessTimer: Timer?
     @State private var volumeDragStart: Float = 0
     @State private var briDragStart: CGFloat = 0
-    @State private var pipController: AVPictureInPictureController?
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            CustomPlayerVC(player: player, pipController: $pipController)
+            CustomPlayerVC(player: player)
                 .ignoresSafeArea()
                 .onAppear {
-                    forceLandscape()
                     player.play()
                     player.volume = volume
                     resetControlsTimer()
@@ -121,6 +119,7 @@ struct MoviePlayerView: View {
                 }
                 .onTapGesture { toggleControls() }
             
+            // Volume slider
             if showVolumeSlider {
                 HStack {
                     Spacer()
@@ -130,6 +129,7 @@ struct MoviePlayerView: View {
                 }
             }
             
+            // Brightness slider
             if showBrightnessSlider {
                 HStack {
                     TinySlider(value: brightness, icon: "sun.max.fill")
@@ -139,6 +139,7 @@ struct MoviePlayerView: View {
                 }
             }
             
+            // Volume gesture
             Color.clear
                 .frame(width: 70)
                 .position(x: UIScreen.main.bounds.width - 35, y: UIScreen.main.bounds.height / 2)
@@ -153,6 +154,7 @@ struct MoviePlayerView: View {
                         .onEnded { _ in resetVolumeTimer() }
                 )
             
+            // Brightness gesture
             Color.clear
                 .frame(width: 70)
                 .position(x: 35, y: UIScreen.main.bounds.height / 2)
@@ -226,12 +228,8 @@ struct MoviePlayerView: View {
                                     .background(Capsule().fill(.ultraThinMaterial.opacity(0.25))).overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                             Spacer()
-                            Button { pipController?.startPictureInPicture() } label: {
+                            Button { dismiss() } label: {
                                 Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
-                                    .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                            }
-                            Button { forcePortrait(); dismiss() } label: {
-                                Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
                                     .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                         }.padding(.horizontal).padding(.bottom, 20)
@@ -240,7 +238,7 @@ struct MoviePlayerView: View {
                 
                 VStack {
                     HStack {
-                        Button { forcePortrait(); dismiss() } label: {
+                        Button { dismiss() } label: {
                             Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
                                 .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                         }
@@ -256,44 +254,36 @@ struct MoviePlayerView: View {
                 }
             }
             
+            // Source popup
             if showSourceMenu {
-                ZStack {
-                    Color.clear.ignoresSafeArea().onTapGesture { showSourceMenu = false }
-                    VStack(spacing: 8) {
-                        Text("nguồn phát").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
-                        ForEach(MovieSource.allCases, id: \.self) { src in
-                            Button { selectedSource = src; showSourceMenu = false; loadStream() } label: {
-                                HStack(spacing: 6) {
-                                    Circle().fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray)).frame(width: 5, height: 5)
-                                    Text(src.rawValue).font(.system(size: 12, design: .rounded)).foregroundColor(.white)
-                                    if selectedSource == src { Image(systemName: "checkmark").font(.system(size: 9)).foregroundColor(.white) }
-                                }.padding(.horizontal, 12).padding(.vertical, 8)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4)))
-                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                            }
+                Color.black.opacity(0.01)
+                    .ignoresSafeArea()
+                    .onTapGesture { showSourceMenu = false }
+                
+                VStack(spacing: 8) {
+                    Text("nguồn phát").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
+                    ForEach(MovieSource.allCases, id: \.self) { src in
+                        Button { selectedSource = src; showSourceMenu = false; loadStream() } label: {
+                            HStack(spacing: 6) {
+                                Circle().fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray)).frame(width: 5, height: 5)
+                                Text(src.rawValue).font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+                                if selectedSource == src { Image(systemName: "checkmark").font(.system(size: 9)).foregroundColor(.white) }
+                            }.padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                         }
-                        Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
                     }
-                    .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5)))
-                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.2), lineWidth: 0.8))
-                    .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
-                    .frame(width: 170)
+                    Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
                 }
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5)))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.2), lineWidth: 0.8))
+                .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
+                .frame(width: 170)
             }
         }
         .statusBarHidden()
         .task { loadStream() }
-    }
-    
-    func forceLandscape() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
-        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-    }
-    
-    func forcePortrait() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
-        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
     }
     
     func loadStream() {
@@ -353,7 +343,6 @@ struct TinySlider: View {
 // MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
-    @Binding var pipController: AVPictureInPictureController?
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
@@ -361,12 +350,6 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
         vc.showsPlaybackControls = false
         vc.videoGravity = .resizeAspect
         vc.allowsPictureInPicturePlayback = true
-        DispatchQueue.main.async {
-            if let playerLayer = vc.view.layer.sublayers?.first as? AVPlayerLayer,
-               AVPictureInPictureController.isPictureInPictureSupported() {
-                pipController = AVPictureInPictureController(playerLayer: playerLayer)
-            }
-        }
         return vc
     }
     
