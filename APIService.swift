@@ -5,23 +5,17 @@ class APIService {
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     private let baseURL = "https://api.themoviedb.org/3"
     
-    private var language: String {
-        LanguageManager.shared.currentLanguage.tmdbLanguage
-    }
+    private var language: String { LanguageManager.shared.currentLanguage.tmdbLanguage }
+    private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
     
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        return d
-    }()
-    
-    // MARK: - Movies (Load 5 trang)
+    // MARK: - Movies
     func trending24h() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -31,7 +25,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -41,7 +35,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -51,7 +45,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -61,7 +55,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -71,7 +65,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -81,7 +75,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -91,7 +85,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -101,7 +95,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -111,7 +105,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -129,7 +123,7 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholderIfNeeded() }
+        return response.results.map { $0.withPlaceholder() }
     }
     
     func moviesByGenre(genreId: Int, page: Int = 1) async throws -> [Movie] {
@@ -137,7 +131,7 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholderIfNeeded() }
+        return response.results.map { $0.withPlaceholder() }
     }
     
     func discoverByKeyword(keywordId: Int) async throws -> [Movie] {
@@ -146,7 +140,7 @@ class APIService {
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -155,24 +149,21 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholderIfNeeded() }
+        return response.results.map { $0.withPlaceholder() }
     }
     
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString: String
             switch type {
-            case .studio:
-                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
-            case .keyword:
-                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)&page=\(page)"
-            case .genre:
-                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+            case .studio: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+            case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)&page=\(page)"
+            case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
             }
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholderIfNeeded() }
+            return response.results.map { $0.withPlaceholder() }
         }
     }
     
@@ -185,7 +176,7 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholderIfNeeded() }
+        return response.results.map { $0.withPlaceholder() }
     }
     
     func similar(movieId: Int) async throws -> [Movie] {
@@ -193,7 +184,7 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholderIfNeeded() }
+        return response.results.map { $0.withPlaceholder() }
     }
     
     func movieDetail(movieId: Int) async throws -> MovieDetail? {
@@ -231,45 +222,42 @@ class APIService {
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(ActorMoviesResponse.self, from: data)
-        return response.cast.map { $0.withPlaceholderIfNeeded() }
+        return response.cast.map { $0.withPlaceholder() }
     }
     
-    // MARK: - Movie Images
     func movieImages(movieId: Int) async throws -> [URL] {
         let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
-        struct ImageResponse: Codable { let backdrops: [ImageItem]? }
-        struct ImageItem: Codable { let file_path: String? }
-        let res = try decoder.decode(ImageResponse.self, from: data)
-        return res.backdrops?.compactMap { item in
-            guard let path = item.file_path else { return nil }
-            return URL(string: "https://image.tmdb.org/t/p/w780\(path)")
+        struct IR: Codable { let backdrops: [II]? }; struct II: Codable { let file_path: String? }
+        let res = try decoder.decode(IR.self, from: data)
+        return res.backdrops?.compactMap { $0.file_path != nil ? URL(string: "https://image.tmdb.org/t/p/w780\($0.file_path!)") : nil } ?? []
+    }
+    
+    // MARK: - TV Seasons
+    func fetchTVSeasons(tvId: Int) async throws -> [SeasonInfo] {
+        let urlString = "\(baseURL)/tv/\(tvId)?api_key=\(apiKey)&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct TVR: Codable { let seasons: [TVS]? }
+        struct TVS: Codable { let season_number: Int?; let name: String?; let episode_count: Int?; let poster_path: String? }
+        let res = try decoder.decode(TVR.self, from: data)
+        return res.seasons?.compactMap { s in
+            guard let num = s.season_number, num > 0, let name = s.name, let count = s.episode_count else { return nil }
+            return SeasonInfo(id: num, name: name, episodeCount: count, posterURL: s.poster_path != nil ? URL(string: "https://image.tmdb.org/t/p/w200\(s.poster_path!)") : nil)
         } ?? []
     }
     
     // MARK: - Helper
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
-        var allMovies: [Movie] = []
-        for page in 1...5 {
-            let pageMovies = try await fetcher(page)
-            allMovies.append(contentsOf: pageMovies)
-            if pageMovies.count < 20 { break }
-        }
-        return allMovies
+        var all: [Movie] = []
+        for page in 1...5 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
+        return all
     }
 }
 
-// MARK: - Extension Movie
 extension Movie {
-    func withPlaceholderIfNeeded() -> Movie {
-        return Movie(
-            id: id, title: title, overview: overview,
-            posterPath: posterPath ?? "/placeholder.jpg",
-            backdropPath: backdropPath, voteAverage: voteAverage,
-            releaseDate: releaseDate, genreIds: genreIds,
-            originalTitle: originalTitle, popularity: popularity,
-            voteCount: voteCount, adult: adult, originalLanguage: originalLanguage
-        )
+    func withPlaceholder() -> Movie {
+        return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
     }
 }
