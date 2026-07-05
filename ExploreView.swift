@@ -85,9 +85,18 @@ struct CategoryFullView: View {
             if isLoading && movies.isEmpty { ProgressView().tint(.white) }
             else if movies.isEmpty { Text("Không tìm thấy").foregroundColor(.gray) }
             else { ScrollView { LazyVGrid(columns: columns, spacing: 16) { ForEach(movies) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { VStack(spacing: 6) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)); Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2); HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) } } } } }.padding(.horizontal) } }
-        }.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline).task { do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }; isLoading = false }
+        }
+        .navigationTitle(category.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) }
+            catch { movies = [] }
+            isLoading = false
+        }
     }
-}struct MovieGridCard: View {
+}
+
+struct MovieGridCard: View {
     let movie: Movie
     var body: some View {
         VStack(spacing: 4) {
