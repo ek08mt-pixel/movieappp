@@ -8,6 +8,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var images: [URL] = []
     @Published var seasons: [TVSeason] = []
     @Published var selectedSeason: TVSeasonDetail?
+    @Published var collectionMovies: [Movie] = []
     @Published var isLoading = false
     
     func load(movieId: Int, mediaType: String?) async {
@@ -36,6 +37,13 @@ class MovieDetailViewModel: ObservableObject {
             actors = (try? await actorsTask) ?? []
             similar = (try? await similarTask) ?? []
             images = (try? await imagesTask) ?? []
+            
+            // Load collection if exists
+            if let collectionId = detail?.belongsToCollection?.id {
+                if let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
+                    collectionMovies = colDetail.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+                }
+            }
         }
         isLoading = false
     }
