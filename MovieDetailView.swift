@@ -80,4 +80,4 @@ struct WebView: UIViewRepresentable {
     let urlString: String
     func makeUIView(context: Context) -> WKWebView { let wv = WKWebView(); wv.backgroundColor = .black; wv.isOpaque = false; if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }; return wv }
     func updateUIView(_ uiView: WKWebView, context: Context) {}
-} 
+}
