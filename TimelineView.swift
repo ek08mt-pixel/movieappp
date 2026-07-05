@@ -22,14 +22,14 @@ struct TimelineView: View {
                         LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(movies) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                    VStack(alignment: .leading, spacing: 6) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         CachedAsyncImage(url: movie.posterURL)
                                             .aspectRatio(2/3, contentMode: .fill)
-                                            .frame(height: 150)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .frame(height: 160)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
                                         Text(movie.title)
-                                            .font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
-                                            .frame(height: 26)
+                                            .font(.system(size: 10)).foregroundColor(.white).lineLimit(2)
+                                            .frame(height: 28)
                                         HStack(spacing: 2) {
                                             Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
                                             Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
@@ -37,7 +37,7 @@ struct TimelineView: View {
                                     }
                                 }
                             }
-                        }.padding(.horizontal)
+                        }.padding(.horizontal, 16)
                     }
                     
                     if movies.isEmpty && !isLoading { Text("Không có phim").foregroundColor(.gray) }
