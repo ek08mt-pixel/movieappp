@@ -15,7 +15,6 @@ struct MainTabView: View {
             }
             
             HStack(spacing: 12) {
-                // 3 tab chính
                 HStack(spacing: 44) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) { selectedTab = 0 }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
@@ -30,10 +29,9 @@ struct MainTabView: View {
                 )
                 .overlay(
                     Capsule()
-                        .stroke(Color.white.opacity(0.04), lineWidth: 0.5)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
                 )
                 
-                // Search - cao bằng 3 tab kia
                 Button {
                     showSearch = true
                 } label: {
@@ -49,7 +47,7 @@ struct MainTabView: View {
                         )
                         .overlay(
                             Capsule()
-                                .stroke(Color.white.opacity(0.04), lineWidth: 0.5)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
                         )
                 }
             }
