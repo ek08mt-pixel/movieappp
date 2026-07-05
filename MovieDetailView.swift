@@ -10,8 +10,10 @@ struct MovieDetailView: View {
     @State private var showPlayer = false; @State private var showBookingSheet = false
     @State private var showFullOverview = false; @State private var showImages = false
     @State private var commentText = ""; @State private var comments: [String] = []
+    @State private var selectedSeason: SeasonInfo?
     var isTVShow: Bool { movie.mediaType == "tv" }
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -20,19 +22,19 @@ struct MovieDetailView: View {
                     ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL).aspectRatio(16/9, contentMode: .fill).frame(width: UIScreen.main.bounds.width, height: 320).clipped().overlay(LinearGradient(colors: [.clear, .black], startPoint: .center, endPoint: .bottom))
                         HStack {
-                            Button { dismiss() } label: { Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white) }
+                            Button { dismiss() } label: { Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4) }
                             Spacer()
                             Button { ost.toggle() } label: { Image(systemName: ost.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill").font(.system(size: 14)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial)) }
                         }.padding(.top, 54).padding(.horizontal, 20)
                     }
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(alignment: .top, spacing: 14) {
-                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).offset(y: -45)
+                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.4), radius: 6).offset(y: -45)
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
                                 HStack(spacing: 6) { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption); Text(movie.ratingText).foregroundColor(.white).font(.caption).bold(); Text("•").foregroundColor(.gray); Text(releaseDateText).foregroundColor(.gray).font(.caption) }
-                                VStack(alignment: .leading, spacing: 4) { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true); if movie.overview.count > 200 { Button(showFullOverview ? "Thu gọn" : "Xem thêm") { withAnimation { showFullOverview.toggle() } }.font(.system(size: 12, weight: .medium)).foregroundColor(.orange) } }
+                                Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
                             }
                         }
                         HStack(spacing: 10) {
@@ -40,12 +42,23 @@ struct MovieDetailView: View {
                             NavigationLink(destination: AskAIView(movie: movie).toolbar(.hidden, for: .tabBar)) { Label("Hỏi AI", systemImage: "brain").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) } } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                         }
+                        if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 10) { ForEach(vm.seasons) { s in Button { } label: { VStack(spacing: 6) { Text(s.name).font(.system(size: 13)).foregroundColor(.white); Text("\(s.episodeCount) tập").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) } } } }
+                                ScrollView(.horizontal) { HStack(spacing: 10) { ForEach(vm.seasons) { s in Button { selectedSeason = s } label: { VStack(spacing: 6) { Text(s.name).font(.system(size: 13, weight: selectedSeason?.id == s.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == s.id ? .white : .gray); Text("\(s.episodeCount) tập").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == s.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04)))) } } } }
+                                if let s = selectedSeason { VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer() }.padding(.vertical, 4) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) } }
                             }
                         }
+                        if !isTVShow, let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
+                        if !vm.images.isEmpty { VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } } }
+                        if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
+                        if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Bình luận").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                            HStack(spacing: 8) { TextField("Viết bình luận...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial)); Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7)) } }
+                            ForEach(comments, id: \.self) { c in HStack(alignment: .top, spacing: 8) { Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14))); VStack(alignment: .leading, spacing: 2) { Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white); Text(c).font(.caption).foregroundColor(.gray) }; Spacer() } }
+                        }.padding(.top, 8)
                     }.padding(.horizontal, 20)
                     Spacer().frame(height: 100)
                 }
