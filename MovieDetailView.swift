@@ -49,10 +49,33 @@ struct MovieDetailView: View {
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
                         
-                        // MARK: - Seasons & Episodes
+                        // MARK: - Collection Parts (phần phim)
+                        if !vm.collectionMovies.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("📦 Các phần phim").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) {
+                                        ForEach(vm.collectionMovies) { part in
+                                            NavigationLink(destination: MovieDetailView(movie: part)) {
+                                                VStack(spacing: 6) {
+                                                    CachedAsyncImage(url: part.posterURL)
+                                                        .aspectRatio(2/3, contentMode: .fill)
+                                                        .frame(width: 100, height: 150)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100)
+                                                    Text(part.yearText).font(.system(size: 9)).foregroundColor(.gray)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // MARK: - Seasons & Episodes (TV show)
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Mùa & Tập").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                Text("🎬 Mùa & Tập").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                 ForEach(vm.seasons) { season in
                                     VStack(spacing: 0) {
                                         Button {
@@ -127,13 +150,7 @@ struct MovieDetailView: View {
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
         .fullScreenCover(isPresented: $showPlayer) {
-            MoviePlayerView(
-                movieId: movie.id,
-                movieTitle: movie.title,
-                mediaType: movie.mediaType,
-                seasonNumber: playSeason,
-                episodeNumber: playEpisode
-            )
+            MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode)
         }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
