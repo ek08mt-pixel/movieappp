@@ -8,7 +8,17 @@ class APIService {
     private var language: String { LanguageManager.shared.currentLanguage.tmdbLanguage }
     private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
     
-    // MARK: - Movies
+    // MARK: - Trending All (Movie + TV)
+    func trendingAll() async throws -> [Movie] {
+        try await fetchMultiplePages { [self] page in
+            let urlString = "\(baseURL)/trending/all/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.map { $0.withPlaceholder() }
+        }
+    }
+    
     func trending24h() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
@@ -109,7 +119,6 @@ class APIService {
         }
     }
     
-    // MARK: - Trending TV
     func trendingTV() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/tv/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
@@ -130,7 +139,7 @@ class APIService {
     
     func search(query: String, page: Int = 1) async throws -> [Movie] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "\(baseURL)/search/multi?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
+        let urlString = "\(baseURL)/search/movie?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
@@ -191,7 +200,7 @@ class APIService {
     }
     
     func similar(movieId: Int, mediaType: String? = nil) async throws -> [Movie] {
-        let type = mediaType ?? "movie"
+        let type = (mediaType == "tv") ? "tv" : "movie"
         let urlString = "\(baseURL)/\(type)/\(movieId)/similar?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -214,7 +223,7 @@ class APIService {
     }
     
     func trailer(movieId: Int, mediaType: String? = nil) async throws -> String? {
-        let type = mediaType ?? "movie"
+        let type = (mediaType == "tv") ? "tv" : "movie"
         let urlString = "\(baseURL)/\(type)/\(movieId)/videos?api_key=\(apiKey)"
         guard let url = URL(string: urlString) else { return nil }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -223,7 +232,7 @@ class APIService {
     }
     
     func actors(movieId: Int, mediaType: String? = nil) async throws -> [Actor] {
-        let type = mediaType ?? "movie"
+        let type = (mediaType == "tv") ? "tv" : "movie"
         let urlString = "\(baseURL)/\(type)/\(movieId)/credits?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -247,7 +256,7 @@ class APIService {
     }
     
     func movieImages(movieId: Int, mediaType: String? = nil) async throws -> [URL] {
-        let type = mediaType ?? "movie"
+        let type = (mediaType == "tv") ? "tv" : "movie"
         let urlString = "\(baseURL)/\(type)/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -258,11 +267,8 @@ class APIService {
     
     // MARK: - TV Seasons & Episodes
     func fetchTVSeasons(tvId: Int) async throws -> [TVSeason] {
-        let urlString = "\(baseURL)/tv/\(tvId)?api_key=\(apiKey)&language=\(language)"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let detail = try decoder.decode(MovieDetail.self, from: data)
-        return detail.seasons?.filter { $0.seasonNumber > 0 } ?? []
+        let detail = try await tvDetail(tvId: tvId)
+        return detail?.seasons?.filter { $0.seasonNumber > 0 } ?? []
     }
     
     func fetchSeasonDetail(tvId: Int, seasonNumber: Int) async throws -> TVSeasonDetail {
@@ -280,7 +286,6 @@ class APIService {
         return try decoder.decode(E.self, from: data).imdb_id
     }
     
-    // MARK: - Search TV
     func searchTVId(title: String) async throws -> Int? {
         let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
         let urlString = "\(baseURL)/search/tv?api_key=\(apiKey)&query=\(encoded)&language=\(language)"
