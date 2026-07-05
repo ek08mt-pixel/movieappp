@@ -1,62 +1,45 @@
 import SwiftUI
-import AVFoundation
 
 class AppState: ObservableObject {
     @Published var favorites: [Movie] = []
     @Published var watchHistory: [Movie] = []
-    @Published var searchHistory: [String] = []
     @Published var isLoggedIn = false
-    @Published var userName = ""
-    @Published var selectedAvatar = "person.fill"
+    @Published var email = ""
+    @Published var nickname = ""
+    @Published var selectedAvatar = "person.circle.fill"
+    @Published var avatarImageData: Data?
     
-    init() { loadFromDisk() }
-    func saveToDisk() {
+    init() { load() }
+    
+    func logout() { isLoggedIn = false; email = ""; nickname = ""; selectedAvatar = "person.circle.fill"; avatarImageData = nil; save() }
+    
+    func save() {
         UserDefaults.standard.set(isLoggedIn, forKey: "isLoggedIn")
-        UserDefaults.standard.set(userName, forKey: "userName")
-        UserDefaults.standard.set(selectedAvatar, forKey: "selectedAvatar")
+        UserDefaults.standard.set(email, forKey: "email")
+        UserDefaults.standard.set(nickname, forKey: "nickname")
+        UserDefaults.standard.set(selectedAvatar, forKey: "avatar")
+        UserDefaults.standard.set(avatarImageData, forKey: "avatarImage")
+        if let fav = try? JSONEncoder().encode(favorites) { UserDefaults.standard.set(fav, forKey: "favorites") }
+        if let hist = try? JSONEncoder().encode(watchHistory) { UserDefaults.standard.set(hist, forKey: "history") }
     }
-    func loadFromDisk() {
+    
+    func load() {
         isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")
-        userName = UserDefaults.standard.string(forKey: "userName") ?? ""
-        selectedAvatar = UserDefaults.standard.string(forKey: "selectedAvatar") ?? "person.fill"
+        email = UserDefaults.standard.string(forKey: "email") ?? ""
+        nickname = UserDefaults.standard.string(forKey: "nickname") ?? ""
+        selectedAvatar = UserDefaults.standard.string(forKey: "avatar") ?? "person.circle.fill"
+        avatarImageData = UserDefaults.standard.data(forKey: "avatarImage")
+        if let fav = UserDefaults.standard.data(forKey: "favorites"), let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
+        if let hist = UserDefaults.standard.data(forKey: "history"), let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
     }
 }
 
 @main
-struct EmmewApp: App {
-    @StateObject private var appState = AppState()
-    @StateObject private var langManager = LanguageManager.shared
-    @State private var showSplash = true
-    
-    init() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-        appearance.backgroundEffect = nil
-        appearance.shadowColor = .clear
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-        NotificationManager.shared.requestPermission()
-        
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Audio session error: \(error)")
-        }
-    }
-    
+struct AppEntry: App {
+    @StateObject var appState = AppState()
     var body: some Scene {
         WindowGroup {
-            if showSplash {
-                SplashView()
-                    .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { withAnimation(.easeOut(duration: 0.5)) { showSplash = false } } }
-            } else {
-                MainTabView()
-                    .environmentObject(appState)
-                    .environmentObject(langManager)
-                    .preferredColorScheme(.dark)
-            }
+            MainTabView().environmentObject(appState)
         }
     }
 }
