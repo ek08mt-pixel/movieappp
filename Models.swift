@@ -59,6 +59,7 @@ struct MovieDetail: Codable {
     let numberOfSeasons: Int?
     let numberOfEpisodes: Int?
     let seasons: [TVSeason]?
+    let belongsToCollection: MovieCollection?
     enum CodingKeys: String, CodingKey {
         case id, title, overview, runtime, tagline, genres, credits
         case posterPath = "poster_path"; case backdropPath = "backdrop_path"
@@ -66,7 +67,30 @@ struct MovieDetail: Codable {
         case numberOfSeasons = "number_of_seasons"
         case numberOfEpisodes = "number_of_episodes"
         case seasons
+        case belongsToCollection = "belongs_to_collection"
     }
+}
+
+struct MovieCollection: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let posterPath: String?
+    let backdropPath: String?
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+    }
+    var posterURL: URL? {
+        guard let path = posterPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w200\(path)")
+    }
+}
+
+struct CollectionDetail: Codable {
+    let id: Int
+    let name: String
+    let parts: [Movie]
 }
 
 struct TVSeason: Codable, Identifiable {
