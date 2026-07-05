@@ -248,6 +248,18 @@ class APIService {
         } ?? []
     }
     
+    // MARK: - Search TV
+    func searchTVId(title: String) async throws -> Int? {
+        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        let urlString = "\(baseURL)/search/tv?api_key=\(apiKey)&query=\(encoded)&language=\(language)"
+        guard let url = URL(string: urlString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct TVSearchResponse: Codable { let results: [TVResult]? }
+        struct TVResult: Codable { let id: Int; let name: String? }
+        let res = try decoder.decode(TVSearchResponse.self, from: data)
+        return res.results?.first?.id
+    }
+    
     // MARK: - Helper
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
