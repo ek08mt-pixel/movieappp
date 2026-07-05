@@ -109,6 +109,17 @@ class APIService {
         }
     }
     
+    // MARK: - Trending TV
+    func trendingTV() async throws -> [Movie] {
+        try await fetchMultiplePages { [self] page in
+            let urlString = "\(baseURL)/trending/tv/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.map { $0.withPlaceholder() }
+        }
+    }
+    
     func genres() async throws -> [Genre] {
         let urlString = "\(baseURL)/genre/movie/list?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
