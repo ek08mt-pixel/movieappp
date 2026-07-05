@@ -14,20 +14,11 @@ struct MovieDetailView: View {
     @State private var showImages = false
     @State private var selectedSeason = 1
     @State private var selectedEpisode: Int?
-    @State private var detail: MovieDetail?
     
-    // Lấy từ API thật
-    var seasons: [Int] {
-        guard let d = detail, let runtime = d.runtime, runtime > 0 else { return [] }
-        // Phim bộ thường có runtime ngắn hơn
-        if let tagline = d.tagline, tagline.lowercased().contains("season") {
-            return Array(1...5)
-        }
-        return []
-    }
-    
-    var episodesCount: Int {
-        Int.random(in: 6...13)
+    // Giả lập seasons cho phim bộ (có thể bật/tắt)
+    var hasSeasons: Bool {
+        // Phim có id chia hết cho 3 coi như phim bộ để demo
+        return movie.id % 3 == 0
     }
     
     var body: some View {
@@ -57,9 +48,9 @@ struct MovieDetailView: View {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
                                 HStack(spacing: 6) {
-                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.subheadline)
-                                    Text(movie.ratingText).foregroundColor(.white).font(.subheadline).bold()
-                                    Text("•").foregroundColor(.gray); Text(movie.yearText).foregroundColor(.gray)
+                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
+                                    Text(movie.ratingText).foregroundColor(.white).font(.caption).bold()
+                                    Text("•").foregroundColor(.gray); Text(movie.yearText).foregroundColor(.gray).font(.caption)
                                 }
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
@@ -81,7 +72,7 @@ struct MovieDetailView: View {
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
-                            NavigationLink(destination: AskAIView(movie: movie)) {
+                            NavigationLink(destination: AskAIView(movie: movie).toolbar(.hidden, for: .tabBar)) {
                                 Label("Hỏi AI", systemImage: "brain").frame(maxWidth: .infinity).padding(.vertical, 10)
                                     .background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
@@ -106,88 +97,61 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Seasons (nếu có)
-                        if !seasons.isEmpty {
+                        // Seasons
+                        if hasSeasons {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Seasons")
-                                    .font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                                Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
-                                        ForEach(seasons, id: \.self) { s in
+                                        ForEach(1...5, id: \.self) { s in
                                             Button {
                                                 withAnimation(.spring()) { selectedSeason = s }
                                             } label: {
                                                 VStack(spacing: 6) {
-                                                    Text("Season \(s)")
-                                                        .font(.system(size: 14, weight: selectedSeason == s ? .bold : .medium))
+                                                    Text("S\(s)")
+                                                        .font(.system(size: 13, weight: selectedSeason == s ? .bold : .medium))
                                                         .foregroundColor(selectedSeason == s ? .white : .gray)
-                                                    Text("\(episodesCount) tập")
-                                                        .font(.system(size: 11))
-                                                        .foregroundColor(selectedSeason == s ? .white.opacity(0.7) : .gray.opacity(0.6))
                                                 }
-                                                .padding(.vertical, 10).padding(.horizontal, 18)
+                                                .frame(width: 48, height: 48)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 14)
                                                         .fill(selectedSeason == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04)))
-                                                        .overlay(
-                                                            RoundedRectangle(cornerRadius: 14)
-                                                                .stroke(selectedSeason == s ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)
-                                                        )
+                                                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason == s ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))
                                                 )
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 2)
                                 }
                                 
-                                // Episodes
-                                VStack(spacing: 8) {
-                                    ForEach(1...episodesCount, id: \.self) { ep in
-                                        Button {
-                                            selectedEpisode = ep; showPlayer = true
-                                        } label: {
+                                let count = [1:8, 2:10, 3:12, 4:10, 5:6][selectedSeason] ?? 8
+                                VStack(spacing: 6) {
+                                    ForEach(1...count, id: \.self) { ep in
+                                        Button { selectedEpisode = ep; showPlayer = true } label: {
                                             HStack(spacing: 12) {
                                                 ZStack {
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(.ultraThinMaterial)
-                                                        .frame(width: 60, height: 38)
-                                                    Image(systemName: "play.fill")
-                                                        .font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
+                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32)
+                                                    Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
                                                 }
-                                                
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Tập \(ep)")
-                                                        .font(.system(size: 13, weight: .medium)).foregroundColor(.white)
-                                                    Text("\(Int.random(in: 40...60)) phút")
-                                                        .font(.system(size: 11)).foregroundColor(.gray)
-                                                }
+                                                Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white)
                                                 Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 12)).foregroundColor(.gray)
+                                                Text("\(Int.random(in: 40...60))p").font(.system(size: 11)).foregroundColor(.gray)
                                             }
-                                            .padding(.vertical, 6)
+                                            .padding(.vertical, 4)
                                         }
-                                        
-                                        if ep < episodesCount {
-                                            Divider().background(Color.white.opacity(0.06))
-                                        }
+                                        if ep < count { Divider().background(Color.white.opacity(0.05)) }
                                     }
                                 }
-                                .padding(14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(.ultraThinMaterial.opacity(0.3))
-                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.06), lineWidth: 0.5))
-                                )
+                                .padding(12)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
                             }
                         }
                         
-                        // Images từ API thật
+                        // Images
                         if !vm.images.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Text("Hình ảnh").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                                    Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                     Spacer()
                                     Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange)
                                 }
@@ -207,21 +171,21 @@ struct MovieDetailView: View {
                         QuoteView(movieId: movie.id)
                         
                         if !vm.actors.isEmpty {
-                            Text("Diễn viên").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                            Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { actor in NavigationLink(destination: ActorDetailView(actor: actor)) { VStack(spacing: 6) { CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 64, height: 64).clipShape(Circle()); Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 64) } } } }.padding(.horizontal)
+                                HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { actor in NavigationLink(destination: ActorDetailView(actor: actor)) { VStack(spacing: 6) { CachedAsyncImage(url: actor.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(actor.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } }.padding(.horizontal)
                             }
                         }
                         
                         if !vm.similar.isEmpty {
-                            Text("Phim tương tự").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                            Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } }.padding(.horizontal)
                             }
                         }
                         
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Bình luận").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                            Text("Bình luận").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             HStack(spacing: 8) { TextField("Viết bình luận...", text: $commentText).textFieldStyle(.plain).foregroundColor(.white).padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial)); Button { if !commentText.isEmpty { comments.append(commentText); commentText = "" } } label: { Text("Gửi").font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7)) } }
                             ForEach(comments, id: \.self) { c in HStack(alignment: .top, spacing: 8) { Circle().fill(.ultraThinMaterial).frame(width: 30, height: 30).overlay(Image(systemName: "person.fill").foregroundColor(.white.opacity(0.6)).font(.system(size: 14))); VStack(alignment: .leading, spacing: 2) { Text("Người dùng").font(.caption).fontWeight(.bold).foregroundColor(.white); Text(c).font(.caption).foregroundColor(.gray) }; Spacer() } }
                         }.padding(.top, 8)
@@ -234,16 +198,9 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true)
         .toolbar(.hidden, for: .tabBar)
-        .task {
-            await vm.load(movieId: movie.id)
-            detail = try? await APIService.shared.movieDetail(movieId: movie.id)
-        }
-        .fullScreenCover(isPresented: $showPlayer) {
-            MoviePlayerView(movieId: movie.id, movieTitle: movie.title)
-        }
-        .sheet(isPresented: $showImages) {
-            MovieImagesView(images: vm.images, title: movie.title)
-        }
+        .task { await vm.load(movieId: movie.id) }
+        .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title) }
+        .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) {
             NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea()
                     .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } }
