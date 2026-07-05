@@ -8,7 +8,6 @@ class APIService {
     private var language: String { LanguageManager.shared.currentLanguage.tmdbLanguage }
     private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
     
-    // MARK: - Trending
     func trendingAll() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/all/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
@@ -82,27 +81,29 @@ class APIService {
     }
     
     func koreanMovies() async throws -> [Movie] { try await discoverMovies(lang: "ko") }
-    func japaneseMovies() async throws -> [Movie] { try await discoverMovies(lang: "ja") }
+    func japaneseMovies() async throws -> [Movie] { try await discoverMovies(lang: "ja", minVotes: 50, minRating: 5.0) }
     func vietnameseMovies() async throws -> [Movie] { try await discoverMovies(lang: "vi") }
     func usukMovies() async throws -> [Movie] { try await discoverMovies(lang: "en") }
     
     func animeMovies() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
-            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&with_original_language=ja&sort_by=popularity.desc&language=\(language)&page=\(page)"
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&with_original_language=ja&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50&vote_average.gte=5.0"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholder() }
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
         }
     }
     
-    private func discoverMovies(lang: String) async throws -> [Movie] {
+    private func discoverMovies(lang: String, minVotes: Int? = nil, minRating: Double? = nil) async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
-            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+            var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=30"
+            if let v = minVotes { urlString += "&vote_count.gte=\(v)" }
+            if let r = minRating { urlString += "&vote_average.gte=\(r)" }
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.map { $0.withPlaceholder() }
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
         }
     }
     
@@ -249,7 +250,6 @@ class APIService {
         return res.backdrops?.compactMap { $0.file_path != nil ? URL(string: "https://image.tmdb.org/t/p/w780\($0.file_path!)") : nil } ?? []
     }
     
-    // MARK: - TV
     func fetchTVSeasons(tvId: Int) async throws -> [TVSeason] {
         let detail = try await tvDetail(tvId: tvId)
         return detail?.seasons?.filter { $0.seasonNumber > 0 } ?? []
@@ -270,7 +270,6 @@ class APIService {
         return try decoder.decode(E.self, from: data).imdb_id
     }
     
-    // MARK: - Helper
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
         for page in 1...5 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
