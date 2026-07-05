@@ -14,23 +14,19 @@ struct MainTabView: View {
                 LibraryView().opacity(selectedTab == 2 ? 1 : 0)
             }
             
-            // 2 khung Liquid Glass riêng biệt, sát nhau
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 // Khung 1: Home + Khám phá + Library
-                HStack(spacing: 20) {
+                HStack(spacing: 28) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) { selectedTab = 0 }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 24)
                 .background(
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.25))
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                        )
+                        .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                 )
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
                 
@@ -39,16 +35,13 @@ struct MainTabView: View {
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 52, height: 52)
                         .background(
                             Circle()
                                 .fill(.ultraThinMaterial.opacity(0.25))
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                                )
+                                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                         )
                         .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
                 }
@@ -82,15 +75,14 @@ struct LiquidTabIcon: View {
             action()
         } label: {
             ZStack {
-                // Bọc khung bo tròn khi chọn
                 if isSelected {
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.4))
-                        .frame(width: 44, height: 32)
+                        .frame(width: 52, height: 38)
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 22, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.45))
                     .scaleEffect(isPressed ? 0.8 : 1.0)
             }
