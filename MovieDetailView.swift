@@ -12,8 +12,6 @@ struct MovieDetailView: View {
     @State private var commentText = ""
     @State private var comments: [String] = []
     @State private var showImages = false
-    @State private var selectedSeason = 1
-    @State private var selectedEpisode: Int?
     
     var body: some View {
         ZStack {
@@ -49,8 +47,7 @@ struct MovieDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
                                         .font(.system(size: 13)).foregroundColor(.gray)
-                                        .lineLimit(showFullOverview ? nil : 4)
-                                        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                                        .lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                                     if movie.overview.count > 200 {
                                         Button(showFullOverview ? "Thu gọn" : "Xem thêm") {
                                             withAnimation { showFullOverview.toggle() }
@@ -91,75 +88,16 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Seasons (chỉ hiện nếu có thật từ API)
-                        if !vm.seasons.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        ForEach(vm.seasons) { season in
-                                            Button {
-                                                withAnimation(.spring()) { selectedSeason = season.id }
-                                            } label: {
-                                                VStack(spacing: 6) {
-                                                    Text(season.name)
-                                                        .font(.system(size: 13, weight: selectedSeason == season.id ? .bold : .medium))
-                                                        .foregroundColor(selectedSeason == season.id ? .white : .gray)
-                                                    Text("\(season.episodeCount) tập")
-                                                        .font(.system(size: 10))
-                                                        .foregroundColor(selectedSeason == season.id ? .white.opacity(0.7) : .gray.opacity(0.5))
-                                                }
-                                                .padding(.vertical, 10).padding(.horizontal, 16)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 14)
-                                                        .fill(selectedSeason == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04)))
-                                                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if let currentSeason = vm.seasons.first(where: { $0.id == selectedSeason }) {
-                                    VStack(spacing: 6) {
-                                        ForEach(1...currentSeason.episodeCount, id: \.self) { ep in
-                                            Button { selectedEpisode = ep; showPlayer = true } label: {
-                                                HStack(spacing: 12) {
-                                                    ZStack {
-                                                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32)
-                                                        Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
-                                                    }
-                                                    Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white)
-                                                    Spacer()
-                                                    Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray)
-                                                }
-                                                .padding(.vertical, 4)
-                                            }
-                                            if ep < currentSeason.episodeCount { Divider().background(Color.white.opacity(0.05)) }
-                                        }
-                                    }
-                                    .padding(12)
-                                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
-                                }
-                            }
-                        }
-                        
-                        // Images (chỉ hiện nếu có)
                         if !vm.images.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                    Spacer()
-                                    Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange)
+                                    Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange)
                                 }
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
                                         ForEach(vm.images.prefix(8), id: \.self) { url in
-                                            CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
-                                                .frame(width: 180, height: 100)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10))
                                         }
                                     }
                                 }
@@ -221,11 +159,7 @@ struct MovieImagesView: View {
             Color.black.opacity(0.95).ignoresSafeArea()
             VStack(spacing: 0) {
                 HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding()
-                TabView {
-                    ForEach(images, id: \.self) { url in
-                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16)
-                    }
-                }.tabViewStyle(.page(indexDisplayMode: .always))
+                TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always))
             }
         }
     }
