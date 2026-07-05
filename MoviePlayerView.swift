@@ -1,18 +1,10 @@
 import SwiftUI
 import AVKit
 
-// MARK: - MovieSource
 enum MovieSource: String, CaseIterable {
     case ntl = "NTL Stream"
     case mediafusion = "MediaFusion"
     case yastream = "YasStream"
-    case vidlink = "VidLink"
-    case multiembed = "MultiEmbed"
-    case fmovies = "Fmovies"
-    case sflix = "Sflix"
-    case hydrahd = "HydraHD"
-    case phimcn = "PhimCN"
-    case motphim = "Motphim"
     
     var manifestURL: String? {
         switch self {
@@ -25,7 +17,6 @@ enum MovieSource: String, CaseIterable {
     var isDirect: Bool { self == .ntl || self == .mediafusion || self == .yastream }
 }
 
-// MARK: - StreamError
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL
     var errorDescription: String? {
@@ -33,21 +24,21 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-// MARK: - MovieStreamService
 class MovieStreamService {
     static let shared = MovieStreamService()
     
-    func getStreamURL(for source: MovieSource, imdbId: String) async throws -> URL {
+    func getStreamURL(for source: MovieSource, imdbId: String, season: Int? = nil, episode: Int? = nil) async throws -> URL {
         switch source {
-        case .ntl: return try await fetchNTL(imdbId)
-        case .mediafusion: return try await fetchMediaFusion(imdbId)
-        case .yastream: return try await fetchStremio(manifest: source.manifestURL!, imdbId: imdbId)
-        default: throw StreamError.noStreamAvailable
+        case .ntl: return try await fetchNTL(imdbId, season: season, episode: episode)
+        case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode)
+        case .yastream: return try await fetchStremio(manifest: source.manifestURL!, imdbId: imdbId, season: season, episode: episode)
         }
     }
     
-    private func fetchNTL(_ id: String) async throws -> URL {
-        var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space/stream/movie/\(id).json")!)
+    private func fetchNTL(_ id: String, season: Int? = nil, episode: Int? = nil) async throws -> URL {
+        var path = "/stream/movie/\(id).json"
+        if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
+        var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
         struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
@@ -56,9 +47,11 @@ class MovieStreamService {
         return vu
     }
     
-    private func fetchMediaFusion(_ id: String) async throws -> URL {
+    private func fetchMediaFusion(_ id: String, season: Int? = nil, episode: Int? = nil) async throws -> URL {
         let cleanId = id.replacingOccurrences(of: "tt", with: "")
-        var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com/stream/movie/\(cleanId).json")!)
+        var path = "/stream/movie/\(cleanId).json"
+        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
+        var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
@@ -69,10 +62,12 @@ class MovieStreamService {
         return vu
     }
     
-    private func fetchStremio(manifest: String, imdbId: String) async throws -> URL {
+    private func fetchStremio(manifest: String, imdbId: String, season: Int? = nil, episode: Int? = nil) async throws -> URL {
         let base = manifest.replacingOccurrences(of: "/manifest.json", with: "")
         let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
-        var r = URLRequest(url: URL(string: "\(base)/stream/movie/\(cleanId).json")!)
+        var path = "/stream/movie/\(cleanId).json"
+        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
+        var r = URLRequest(url: URL(string: "\(base)\(path)")!)
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
@@ -84,9 +79,12 @@ class MovieStreamService {
     }
 }
 
-// MARK: - MoviePlayerView
 struct MoviePlayerView: View {
-    let movieId: Int; let movieTitle: String
+    let movieId: Int
+    let movieTitle: String
+    var mediaType: String? = nil
+    var seasonNumber: Int? = nil
+    var episodeNumber: Int? = nil    
     @Environment(\.dismiss) var dismiss
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -148,22 +146,24 @@ struct MoviePlayerView: View {
     
     func loadStream() {
         isLoading = true; errorMessage = nil; player = nil; sourceStatus[selectedSource] = nil
-        if selectedSource.isDirect {
-            Task {
-                do {
-                    let imdbId = try await fetchIMDbId()
-                    let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId)
-                    await MainActor.run { self.player = AVPlayer(url: url); self.sourceStatus[selectedSource] = true; self.isLoading = false }
-                } catch {
-                    await MainActor.run { self.errorMessage = error.localizedDescription; self.sourceStatus[selectedSource] = false; self.isLoading = false }
+        Task {
+            do {
+                let imdbId: String
+                if mediaType == "tv" {
+                    imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
+                } else {
+                    imdbId = try await fetchMovieIMDbId()
                 }
+                guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
+                let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
+                await MainActor.run { self.player = AVPlayer(url: url); self.sourceStatus[selectedSource] = true; self.isLoading = false }
+            } catch {
+                await MainActor.run { self.errorMessage = error.localizedDescription; self.sourceStatus[selectedSource] = false; self.isLoading = false }
             }
-        } else {
-            isLoading = false; sourceStatus[selectedSource] = true
         }
     }
     
-    func fetchIMDbId() async throws -> String {
+    func fetchMovieIMDbId() async throws -> String {
         let (d, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
         struct E: Codable { let imdb_id: String? }
         guard let id = try JSONDecoder().decode(E.self, from: d).imdb_id else { throw StreamError.noStreamAvailable }
@@ -171,7 +171,6 @@ struct MoviePlayerView: View {
     }
 }
 
-// MARK: - Source Menu
 struct SourceMenuView: View {
     @Binding var selectedSource: MovieSource
     @Binding var sourceStatus: [MovieSource: Bool]
@@ -193,8 +192,6 @@ struct SourceMenuView: View {
                                         .font(.system(size: 22))
                                         .foregroundColor(sourceStatus[source] == true ? .green : (sourceStatus[source] == false ? .red : .white.opacity(0.6)))
                                     Text(source.rawValue).font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
-                                    if sourceStatus[source] == true { Text("OK").font(.system(size: 8)).foregroundColor(.green) }
-                                    else if sourceStatus[source] == false { Text("Lỗi").font(.system(size: 8)).foregroundColor(.red) }
                                 }
                                 .frame(maxWidth: .infinity).padding(.vertical, 12)
                                 .background(
@@ -212,7 +209,6 @@ struct SourceMenuView: View {
     }
 }
 
-// MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
     func makeUIViewController(context: Context) -> AVPlayerViewController {
