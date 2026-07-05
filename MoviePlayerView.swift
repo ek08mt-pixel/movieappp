@@ -122,26 +122,66 @@ struct MoviePlayerView: View {
                 .onDisappear { player.pause(); controlsTimer?.invalidate() }
                 .onTapGesture { toggleControls() }
             
-            // Volume - right side, only when dragging
+            // Volume - right
             if showVolumeSlider {
                 HStack {
                     Spacer()
                     GlassSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill", label: "\(Int(volume * 100))")
-                        .frame(width: 48, height: 160)
-                        .padding(.trailing, 20)
+                        .frame(width: 56, height: 170)
+                        .padding(.trailing, 16)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
             
-            // Brightness - left side, only when dragging
+            // Brightness - left
             if showBrightnessSlider {
                 HStack {
                     GlassSlider(value: brightnessAsCGFloat, icon: "sun.max.fill", label: "\(Int(brightness * 100))")
-                        .frame(width: 48, height: 160)
-                        .padding(.leading, 20)
+                        .frame(width: 56, height: 170)
+                        .padding(.leading, 16)
                         .transition(.scale.combined(with: .opacity))
                     Spacer()
                 }
+            }
+            
+            // Volume touch zone (right 1/4 of screen, visible when controls shown)
+            if showControls && errorMessage == nil {
+                Color.clear
+                    .frame(width: 80)
+                    .position(x: UIScreen.main.bounds.width - 40, y: UIScreen.main.bounds.height / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                if !showVolumeSlider {
+                                    showVolumeSlider = true
+                                    volDragStart = volume
+                                }
+                                let delta = Float(-value.translation.height / 200)
+                                volume = min(max(volDragStart + delta, 0), 1)
+                                player.volume = volume
+                                resetVolumeTimer()
+                            }
+                            .onEnded { _ in resetVolumeTimer() }
+                    )
+                
+                // Brightness touch zone (left 1/4)
+                Color.clear
+                    .frame(width: 80)
+                    .position(x: 40, y: UIScreen.main.bounds.height / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                if !showBrightnessSlider {
+                                    showBrightnessSlider = true
+                                    briDragStart = brightness
+                                }
+                                let delta = -value.translation.height / 200
+                                brightness = min(max(briDragStart + delta, 0.01), 1)
+                                UIScreen.main.brightness = brightness
+                                resetBrightnessTimer()
+                            }
+                            .onEnded { _ in resetBrightnessTimer() }
+                    )
             }
             
             if isLoading {
@@ -166,7 +206,7 @@ struct MoviePlayerView: View {
             }
             
             if showControls && errorMessage == nil {
-                HStack(spacing: 56) {
+                HStack(spacing: 64) {
                     Button { seek(-10) } label: {
                         Image(systemName: "gobackward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6))
                             .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2)))
@@ -240,44 +280,8 @@ struct MoviePlayerView: View {
             }
         }
         .statusBarHidden()
-        .simultaneousGesture(volumeGesture)
-        .simultaneousGesture(brightnessGesture)
         .task { loadStream() }
         .sheet(isPresented: $showSourceMenu) { SourceMenuView(selectedSource: $selectedSource, sourceStatus: $sourceStatus) { loadStream() } }
-    }
-    
-    var volumeGesture: some Gesture {
-        DragGesture(minimumDistance: 5)
-            .onChanged { value in
-                let loc = value.startLocation
-                guard loc.x > UIScreen.main.bounds.width - 60 else { return }
-                if !showVolumeSlider {
-                    showVolumeSlider = true
-                    volDragStart = volume
-                }
-                let delta = Float(-value.translation.height / 200)
-                volume = min(max(volDragStart + delta, 0), 1)
-                player.volume = volume
-                resetVolumeTimer()
-            }
-            .onEnded { _ in resetVolumeTimer() }
-    }
-    
-    var brightnessGesture: some Gesture {
-        DragGesture(minimumDistance: 5)
-            .onChanged { value in
-                let loc = value.startLocation
-                guard loc.x < 60 else { return }
-                if !showBrightnessSlider {
-                    showBrightnessSlider = true
-                    briDragStart = brightness
-                }
-                let delta = -value.translation.height / 200
-                brightness = min(max(briDragStart + delta, 0.01), 1)
-                UIScreen.main.brightness = brightness
-                resetBrightnessTimer()
-            }
-            .onEnded { _ in resetBrightnessTimer() }
     }
     
     func loadStream() {
@@ -344,7 +348,7 @@ struct MoviePlayerView: View {
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
-// MARK: - Glass Slider (bubble style)
+// MARK: - Glass Slider
 struct GlassSlider: View {
     @Binding var value: CGFloat
     let icon: String
@@ -356,12 +360,12 @@ struct GlassSlider: View {
             ZStack(alignment: .bottom) {
                 Capsule().fill(.ultraThinMaterial.opacity(0.15))
                     .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-                    .frame(width: 10)
+                    .frame(width: 16)
                 Circle()
                     .fill(Color.white.opacity(0.25))
                     .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                    .frame(width: 24, height: 24)
-                    .offset(y: -CGFloat(value) * 130)
+                    .frame(width: 30, height: 30)
+                    .offset(y: -CGFloat(value) * 120)
                     .animation(.interpolatingSpring(stiffness: 200, damping: 15), value: value)
             }
             Image(systemName: icon).font(.system(size: 14)).foregroundColor(.white.opacity(0.6))
