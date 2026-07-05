@@ -20,57 +20,83 @@ struct SearchView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 VStack(spacing: 0) {
+                    // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.gray)
                         TextField("Tìm phim...", text: $vm.query).focused($focused).foregroundColor(.white)
                             .onChange(of: vm.query) { _ in Task { await vm.search() } }
                         if !vm.query.isEmpty { Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) } }
                         if focused { Button("Đóng") { focused = false }.foregroundColor(.orange).font(.caption) }
-                    }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding()
+                    }
+                    .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding()
                     
                     if vm.query.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                Text("Tìm kiếm phổ biến").font(.headline).foregroundColor(.white).padding(.horizontal)
+                                Text("Tìm kiếm phổ biến")
+                                    .font(.headline).foregroundColor(.white).padding(.horizontal)
                                 
+                                // 6 ô đều, 3x2
                                 LazyVGrid(columns: [
                                     GridItem(.flexible(), spacing: 12),
                                     GridItem(.flexible(), spacing: 12),
                                     GridItem(.flexible(), spacing: 12)
                                 ], spacing: 12) {
                                     ForEach(topics, id: \.0) { topic, query, poster in
-                                        Button { vm.query = query; Task { await vm.search() } } label: {
+                                        Button {
+                                            vm.query = query; Task { await vm.search() }
+                                        } label: {
                                             ZStack(alignment: .bottom) {
                                                 CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(poster)"))
-                                                    .aspectRatio(2/3, contentMode: .fill)
-                                                    .frame(height: 100)
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(height: 95)
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    .overlay(Color.black.opacity(0.3))
+                                                    .blur(radius: 2)
+                                                    .overlay(
+                                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                                    )
                                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                
                                                 Text(topic)
-                                                    .font(.system(size: 10)).fontWeight(.bold).foregroundColor(.white)
-                                                    .padding(4).background(Color.black.opacity(0.6))
-                                                    .clipShape(Capsule()).padding(6)
+                                                    .font(.system(size: 11)).fontWeight(.bold).foregroundColor(.white)
+                                                    .padding(.vertical, 4).padding(.horizontal, 8)
+                                                    .background(Color.black.opacity(0.5))
+                                                    .clipShape(Capsule())
+                                                    .padding(6)
                                             }
                                         }
                                     }
-                                }.padding(.horizontal)
+                                }
+                                .padding(.horizontal)
                                 
-                                Text("Xu hướng").font(.headline).foregroundColor(.white).padding(.horizontal)
+                                // Xu hướng
+                                Text("Xu hướng")
+                                    .font(.headline).foregroundColor(.white).padding(.horizontal)
+                                
                                 ForEach(Array(vm.trending.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                     Button { selectedMovie = movie } label: {
                                         HStack(spacing: 12) {
                                             Text("\(i+1)").font(.title3).fontWeight(.bold).foregroundColor(.gray).frame(width: 30)
-                                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
-                                            VStack(alignment: .leading, spacing: 4) { Text(movie.title).foregroundColor(.white).font(.subheadline).fontWeight(.semibold); HStack { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption2); Text(movie.ratingText).foregroundColor(.gray).font(.caption2) } }
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(movie.title).foregroundColor(.white).font(.subheadline).fontWeight(.semibold)
+                                                HStack {
+                                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption2)
+                                                    Text(movie.ratingText).foregroundColor(.gray).font(.caption2)
+                                                }
+                                            }
                                             Spacer()
                                         }.padding(.horizontal)
                                     }
                                 }
-                            }.padding(.bottom, 100)
+                            }
+                            .padding(.bottom, 100)
                         }
-                    } else if vm.results.isEmpty { Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer() }
-                    else {
+                    } else if vm.results.isEmpty {
+                        Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer()
+                    } else {
                         ScrollView {
                             LazyVGrid(columns: [
                                 GridItem(.flexible(), spacing: 12),
@@ -82,10 +108,12 @@ struct SearchView: View {
                                         VStack(spacing: 4) {
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill)
-                                                .frame(height: 160)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 8))
                                             Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
-                                            HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                            }
                                         }
                                     }
                                 }
