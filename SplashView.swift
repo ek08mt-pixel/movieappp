@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct SplashView: View {
-    @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
     
     var body: some View {
         ZStack {
-            // Background poster đẹp + blur + overlay tối
+            // Background poster + blur + overlay
             CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w780/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg"))
                 .aspectRatio(contentMode: .fill)
                 .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
@@ -15,50 +14,53 @@ struct SplashView: View {
                 .clipped()
                 .ignoresSafeArea()
             
-            // Logo + Text
-            VStack(spacing: 24) {
+            // Logo + Text - căn giữa tuyệt đối
+            VStack(spacing: 20) {
                 // Logo đầu mèo viền
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.4), lineWidth: 2)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 90, height: 90)
                     
+                    // Tai trái
                     Path { path in
-                        path.move(to: CGPoint(x: 20, y: 35))
-                        path.addLine(to: CGPoint(x: 10, y: 5))
-                        path.addLine(to: CGPoint(x: 35, y: 25))
+                        path.move(to: CGPoint(x: 24, y: 38))
+                        path.addLine(to: CGPoint(x: 14, y: 8))
+                        path.addLine(to: CGPoint(x: 38, y: 28))
                     }
                     .stroke(Color.white.opacity(0.4), lineWidth: 2)
                     
+                    // Tai phải
                     Path { path in
-                        path.move(to: CGPoint(x: 60, y: 35))
-                        path.addLine(to: CGPoint(x: 70, y: 5))
-                        path.addLine(to: CGPoint(x: 45, y: 25))
+                        path.move(to: CGPoint(x: 66, y: 38))
+                        path.addLine(to: CGPoint(x: 76, y: 8))
+                        path.addLine(to: CGPoint(x: 52, y: 28))
                     }
                     .stroke(Color.white.opacity(0.4), lineWidth: 2)
                 }
-                .shadow(color: .white.opacity(0.2), radius: 15)
-                .scaleEffect(scale)
+                .frame(width: 100, height: 100)
+                .shadow(color: .white.opacity(0.15), radius: 15)
                 
-                VStack(spacing: 8) {
+                // Text
+                VStack(spacing: 6) {
                     Text("EMCC")
-                        .font(.system(size: 38, weight: .bold, design: .default))
+                        .font(.system(size: 36, weight: .bold, design: .default))
                         .foregroundColor(.white)
-                        .tracking(2)
+                        .tracking(2.5)
                     
                     Text("Khám phá điện ảnh")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white.opacity(0.5))
                         .tracking(1)
                 }
-                .opacity(opacity)
+                .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.bottom, 40)
+            .opacity(opacity)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                scale = 1.0
-            }
-            withAnimation(.easeIn(duration: 0.8).delay(0.15)) {
+            withAnimation(.easeIn(duration: 0.8).delay(0.1)) {
                 opacity = 1.0
             }
         }
