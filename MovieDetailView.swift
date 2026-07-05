@@ -55,7 +55,7 @@ struct MovieDetailView: View {
                                 Text("📦 Các phần phim").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
-                                        ForEach(vm.collectionMovies) { part in
+                                        ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in
                                             NavigationLink(destination: MovieDetailView(movie: part)) {
                                                 VStack(spacing: 6) {
                                                     CachedAsyncImage(url: part.posterURL)
