@@ -234,31 +234,7 @@ class APIService {
         return response.cast.map { $0.withPlaceholderIfNeeded() }
     }
     
-    // MARK: - Helper
-    private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
-        var allMovies: [Movie] = []
-        for page in 1...5 {
-            let pageMovies = try await fetcher(page)
-            allMovies.append(contentsOf: pageMovies)
-            if pageMovies.count < 20 { break }
-        }
-        return allMovies
-    }
-}
-
-// MARK: - Extension Movie
-extension Movie {
-    func withPlaceholderIfNeeded() -> Movie {
-        return Movie(
-            id: id, title: title, overview: overview,
-            posterPath: posterPath ?? "/placeholder.jpg",
-            backdropPath: backdropPath, voteAverage: voteAverage,
-            releaseDate: releaseDate, genreIds: genreIds,
-            originalTitle: originalTitle, popularity: popularity,
-            voteCount: voteCount, adult: adult, originalLanguage: originalLanguage
-        )
-    }
-}    // MARK: - Movie Images
+    // MARK: - Movie Images
     func movieImages(movieId: Int) async throws -> [URL] {
         let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
