@@ -4,7 +4,7 @@ import WebKit
 struct MovieDetailView: View {
     let movie: Movie; var showBooking: Bool = false
     @StateObject private var vm = MovieDetailViewModel()
-    @StateObject private var music = MusicManager.shared
+    @StateObject private var ost = OSTManager.shared
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     @State private var showPlayer = false; @State private var showBookingSheet = false
@@ -30,8 +30,8 @@ struct MovieDetailView: View {
                                 Image(systemName: "chevron.left.circle.fill").font(.system(size: 30)).foregroundColor(.white).shadow(color: .black.opacity(0.5), radius: 4)
                             }
                             Spacer()
-                            Button { music.toggle() } label: {
-                                Image(systemName: music.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                            Button { ost.toggle() } label: {
+                                Image(systemName: ost.isMusicEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
                                     .font(.system(size: 14)).foregroundColor(.white)
                                     .padding(8).background(Circle().fill(.ultraThinMaterial))
                             }
@@ -44,12 +44,7 @@ struct MovieDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
-                                HStack(spacing: 6) {
-                                    Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption)
-                                    Text(movie.ratingText).foregroundColor(.white).font(.caption).bold()
-                                    Text("•").foregroundColor(.gray)
-                                    Text(releaseDateText).foregroundColor(.gray).font(.caption)
-                                }
+                                HStack(spacing: 6) { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption); Text(movie.ratingText).foregroundColor(.white).font(.caption).bold(); Text("•").foregroundColor(.gray); Text(releaseDateText).foregroundColor(.gray).font(.caption) }
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                                     if movie.overview.count > 200 { Button(showFullOverview ? "Thu gọn" : "Xem thêm") { withAnimation { showFullOverview.toggle() } }.font(.system(size: 12, weight: .medium)).foregroundColor(.orange) }
@@ -68,18 +63,8 @@ struct MovieDetailView: View {
                         if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        ForEach(vm.seasons) { season in
-                                            Button { withAnimation(.spring()) { selectedSeason = season } } label: {
-                                                VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)))
-                                            }
-                                        }
-                                    }
-                                }
-                                if let s = selectedSeason {
-                                    VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
-                                }
+                                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 10) { ForEach(vm.seasons) { season in Button { withAnimation(.spring()) { selectedSeason = season } } label: { VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))) } } } }
+                                if let s = selectedSeason { VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) } }
                             }
                         }
                         
@@ -112,8 +97,8 @@ struct MovieDetailView: View {
             }.ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
-        .onAppear { music.play() }
-        .onDisappear { music.stop() }
+        .onAppear { Task { await ost.playOST(for: movie.title) } }
+        .onDisappear { ost.stop() }
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
         .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title) }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
