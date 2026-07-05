@@ -2,34 +2,45 @@ import Foundation
 
 @MainActor
 class MovieDetailViewModel: ObservableObject {
-    @Published var trailerKey: String?
+    @Published var detail: MovieDetail?
     @Published var actors: [Actor] = []
     @Published var similar: [Movie] = []
     @Published var images: [URL] = []
-    @Published var detail: MovieDetail?
-    @Published var seasons: [SeasonInfo] = []
+    @Published var seasons: [TVSeason] = []
+    @Published var selectedSeason: TVSeasonDetail?
+    @Published var isLoading = false
     
     func load(movieId: Int, mediaType: String?) async {
-        async let t = APIService.shared.trailer(movieId: movieId)
-        async let a = APIService.shared.actors(movieId: movieId)
-        async let s = APIService.shared.similar(movieId: movieId)
-        async let i = APIService.shared.movieImages(movieId: movieId)
-        async let d = APIService.shared.movieDetail(movieId: movieId)
+        isLoading = true
+        let type = mediaType ?? "movie"
         
-        do {
-            trailerKey = try await t
-            actors = try await a
-            similar = try await s
-            images = try await i
-            detail = try await d
-            seasons = []
-        } catch { print("Error: \(error)") }
-        
-        // Chỉ tìm seasons nếu là TV show
-        if mediaType == "tv" {
-            if let tvId = try? await APIService.shared.searchTVId(title: detail?.title ?? ""), tvId > 0 {
-                if let tv = try? await APIService.shared.fetchTVSeasons(tvId: tvId) { seasons = tv }
-            }
+        if type == "tv" {
+            async let detailTask = APIService.shared.tvDetail(tvId: movieId)
+            async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: "tv")
+            async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: "tv")
+            async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: "tv")
+            async let seasonsTask = APIService.shared.fetchTVSeasons(tvId: movieId)
+            
+            detail = await detailTask
+            actors = (try? await actorsTask) ?? []
+            similar = (try? await similarTask) ?? []
+            images = (try? await imagesTask) ?? []
+            seasons = (try? await seasonsTask) ?? []
+        } else {
+            async let detailTask = APIService.shared.movieDetail(movieId: movieId)
+            async let actorsTask = APIService.shared.actors(movieId: movieId)
+            async let similarTask = APIService.shared.similar(movieId: movieId)
+            async let imagesTask = APIService.shared.movieImages(movieId: movieId)
+            
+            detail = await detailTask
+            actors = (try? await actorsTask) ?? []
+            similar = (try? await similarTask) ?? []
+            images = (try? await imagesTask) ?? []
         }
+        isLoading = false
+    }
+    
+    func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
+        selectedSeason = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber)
     }
 }
