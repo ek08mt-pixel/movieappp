@@ -91,7 +91,6 @@ struct HomeView: View {
                             SectionGrid(title: "🎬 Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                             SectionGrid(title: "📅 Sắp chiếu", movies: vm.upcoming)
                             SectionGrid(title: "⭐ Đánh giá cao", movies: vm.topRated)
-                            SectionGrid(title: "🎯 Phổ biến", movies: vm.popular)
                             SectionGrid(title: "🇺🇸 Phim Âu Mỹ", movies: vm.usuk)
                             SectionGrid(title: "🇰🇷 Phim Hàn Quốc", movies: vm.korean)
                             SectionGrid(title: "🇯🇵 Phim Nhật Bản", movies: vm.japanese)
