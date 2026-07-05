@@ -11,6 +11,8 @@ struct MovieDetailView: View {
     @State private var commentText = ""; @State private var comments: [String] = []
     @State private var selectedSeason: SeasonInfo?
     
+    var isTVShow: Bool { movie.mediaType == "tv" }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -47,8 +49,8 @@ struct MovieDetailView: View {
                         
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         
-                        // Seasons thật
-                        if !vm.seasons.isEmpty {
+                        // Seasons - chỉ hiện nếu là TV show và có seasons
+                        if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -68,11 +70,7 @@ struct MovieDetailView: View {
                                     VStack(spacing: 6) {
                                         ForEach(1...s.episodeCount, id: \.self) { ep in
                                             Button { showPlayer = true } label: {
-                                                HStack(spacing: 12) {
-                                                    ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }
-                                                    Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer()
-                                                    Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray)
-                                                }.padding(.vertical, 4)
+                                                HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4)
                                             }
                                             if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) }
                                         }
@@ -81,15 +79,13 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        if !vm.images.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }
-                                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } }
-                            }
+                        // Runtime + Genres (chỉ hiện nếu là movie)
+                        if !isTVShow, let runtime = vm.detail?.runtime, runtime > 0 {
+                            HStack(spacing: 12) { Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } }
                         }
                         
-                        if let runtime = vm.detail?.runtime, runtime > 0 {
-                            HStack(spacing: 12) { Label("\(runtime) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } }
+                        if !vm.images.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } }
                         }
                         
                         if !vm.actors.isEmpty {
@@ -122,10 +118,7 @@ struct MovieDetailView: View {
 
 struct MovieImagesView: View {
     let images: [URL]; let title: String; @Environment(\.dismiss) var dismiss
-    var body: some View {
-        ZStack { Color.black.opacity(0.95).ignoresSafeArea(); VStack(spacing: 0) { HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding()
-            TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always)) } }
-    }
+    var body: some View { ZStack { Color.black.opacity(0.95).ignoresSafeArea(); VStack(spacing: 0) { HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding(); TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always)) } } }
 }
 
 struct WebView: UIViewRepresentable {
