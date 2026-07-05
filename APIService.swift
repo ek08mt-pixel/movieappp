@@ -128,6 +128,14 @@ class APIService {
         return response.results
     }
     
+    func discoverByStudio(studioId: Int, page: Int = 1) async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(studioId)&sort_by=popularity.desc&page=\(page)&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results
+    }
+    
     func discoverMovies(year: Int? = nil, genreId: Int? = nil, minRating: Double? = nil, minVotes: Int? = nil, page: Int = 1) async throws -> [Movie] {
         var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&sort_by=popularity.desc&language=\(language)&page=\(page)"
         if let year = year { urlString += "&primary_release_year=\(year)" }
