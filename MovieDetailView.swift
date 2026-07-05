@@ -62,8 +62,18 @@ struct MovieDetailView: View {
                         if isTVShow && !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 10) { ForEach(vm.seasons) { season in Button { withAnimation(.spring()) { selectedSeason = season } } label: { VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5))) } } } }
-                                if let s = selectedSeason { VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) } }
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(vm.seasons) { season in
+                                            Button { withAnimation(.spring()) { selectedSeason = season } } label: {
+                                                VStack(spacing: 6) { Text(season.name).font(.system(size: 13, weight: selectedSeason?.id == season.id ? .bold : .medium)).foregroundColor(selectedSeason?.id == season.id ? .white : .gray); Text("\(season.episodeCount) tập").font(.system(size: 10)).foregroundColor(selectedSeason?.id == season.id ? .white.opacity(0.7) : .gray.opacity(0.5)) }.padding(.vertical, 10).padding(.horizontal, 16).background(RoundedRectangle(cornerRadius: 14).fill(selectedSeason?.id == season.id ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.white.opacity(0.04))).overlay(RoundedRectangle(cornerRadius: 14).stroke(selectedSeason?.id == season.id ? Color.white.opacity(0.2) : Color.white.opacity(0.05), lineWidth: 0.5)))
+                                            }
+                                        }
+                                    }
+                                }
+                                if let s = selectedSeason {
+                                    VStack(spacing: 6) { ForEach(1...s.episodeCount, id: \.self) { ep in Button { showPlayer = true } label: { HStack(spacing: 12) { ZStack { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 48, height: 32); Image(systemName: "play.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Text("Tập \(ep)").font(.system(size: 13, weight: .medium)).foregroundColor(.white); Spacer(); Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray) }.padding(.vertical, 4) }; if ep < s.episodeCount { Divider().background(Color.white.opacity(0.05)) } } }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2))) }
+                                }
                             }
                         }
                         
