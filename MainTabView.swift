@@ -3,20 +3,27 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
+    @State private var homeID = UUID()
     
     init() { UITabBar.appearance().isHidden = true }
     
     var body: some View {
         ZStack(alignment: .bottom) {
             ZStack {
-                HomeView().opacity(selectedTab == 0 ? 1 : 0)
+                HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
                 ExploreView().opacity(selectedTab == 1 ? 1 : 0)
                 LibraryView().opacity(selectedTab == 2 ? 1 : 0)
             }
             
             HStack(spacing: 12) {
                 HStack(spacing: 44) {
-                    LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) { selectedTab = 0 }
+                    LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
+                        if selectedTab == 0 {
+                            homeID = UUID()
+                        } else {
+                            selectedTab = 0
+                        }
+                    }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) { selectedTab = 1 }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) { selectedTab = 2 }
                 }
