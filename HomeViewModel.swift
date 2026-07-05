@@ -19,42 +19,40 @@ class HomeViewModel: ObservableObject {
     func loadAll() async {
         isLoading = true
         
-        // Chỉ gọi trending24h + trendingTV
         async let movies = APIService.shared.trending24h()
         async let tv = APIService.shared.trendingTV()
+        async let np = APIService.shared.nowPlaying()
+        async let up = APIService.shared.upcoming()
+        async let tr = APIService.shared.topRated()
+        async let pop = APIService.shared.popular()
+        async let ko = APIService.shared.koreanMovies()
+        async let ja = APIService.shared.japaneseMovies()
+        async let vi = APIService.shared.vietnameseMovies()
+        async let us = APIService.shared.usukMovies()
+        async let an = APIService.shared.animeMovies()
         async let g = APIService.shared.genres()
         
         do {
-            var allMovies = try await movies.map { m in
-                Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "movie")
-            }
+            let m = try await movies.map { Movie(id: $0.id, title: $0.title, overview: $0.overview, posterPath: $0.posterPath, backdropPath: $0.backdropPath, voteAverage: $0.voteAverage, releaseDate: $0.releaseDate, genreIds: $0.genreIds, originalTitle: $0.originalTitle, popularity: $0.popularity, voteCount: $0.voteCount, adult: $0.adult, originalLanguage: $0.originalLanguage, mediaType: "movie") }
+            let t = (try? await tv)?.map { Movie(id: $0.id, title: $0.title, overview: $0.overview, posterPath: $0.posterPath, backdropPath: $0.backdropPath, voteAverage: $0.voteAverage, releaseDate: $0.releaseDate, genreIds: $0.genreIds, originalTitle: $0.originalTitle, popularity: $0.popularity, voteCount: $0.voteCount, adult: $0.adult, originalLanguage: $0.originalLanguage, mediaType: "tv") } ?? []
             
-            let tvShows = (try? await tv)?.map { m in
-                Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath, backdropPath: m.backdropPath, voteAverage: m.voteAverage, releaseDate: m.releaseDate, genreIds: m.genreIds, originalTitle: m.originalTitle, popularity: m.popularity, voteCount: m.voteCount, adult: m.adult, originalLanguage: m.originalLanguage, mediaType: "tv")
-            } ?? []
-            
-            allMovies.append(contentsOf: tvShows)
-            trending24h = allMovies.filter { !($0.adult ?? false) }
+            trending24h = (m + t).filter { !($0.adult ?? false) }
+            nowPlaying = try await np.filter { !($0.adult ?? false) }
+            upcoming = try await up.filter { !($0.adult ?? false) }
+            topRated = try await tr.filter { !($0.adult ?? false) }
+            popular = try await pop.filter { !($0.adult ?? false) }
+            korean = try await ko.filter { !($0.adult ?? false) && $0.voteAverage > 5.0 }
+            japanese = try await ja.filter { !($0.adult ?? false) && $0.voteAverage > 6.0 && ($0.popularity ?? 0) > 10 }
+            vietnamese = try await vi.filter { !($0.adult ?? false) }
+            usuk = try await us.filter { !($0.adult ?? false) }
+            anime = try await an.filter { !($0.adult ?? false) }
             genres = try await g
-            
-            // Gán cho các section khác
-            nowPlaying = trending24h
-            upcoming = trending24h.shuffled()
-            topRated = trending24h.shuffled()
-            popular = trending24h.shuffled()
-            korean = Array(trending24h.prefix(10))
-            japanese = Array(trending24h.prefix(8))
-            vietnamese = Array(trending24h.prefix(6))
-            usuk = Array(trending24h.prefix(10))
-            anime = Array(trending24h.prefix(8))
             
             if !trending24h.isEmpty {
                 let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
                 movieOfDay = trending24h[day % trending24h.count]
             }
-        } catch {
-            print("Error: \(error)")
-        }
+        } catch { print("Error: \(error)") }
         
         isLoading = false
     }
