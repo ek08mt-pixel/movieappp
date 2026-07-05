@@ -9,7 +9,7 @@ struct GenreMovieView: View {
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             
             if isLoading && movies.isEmpty {
@@ -37,25 +37,26 @@ struct GenreMovieView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.top, 80)
                     .padding(.bottom, 100)
                 }
             }
-        }
-        .navigationTitle(genre.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(8)
-                        .background(Circle().fill(.ultraThinMaterial))
-                }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    )
             }
+            .padding(.top, 50)
+            .padding(.leading, 16)
         }
+        .navigationBarHidden(true)
         .task {
             do { movies = try await APIService.shared.moviesByGenre(genreId: genre.id) } catch { movies = [] }
             isLoading = false
