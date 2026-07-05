@@ -11,6 +11,9 @@ struct MovieDetailView: View {
     @State private var showBookingSheet = false
     @State private var showFullOverview = false
     @State private var showImages = false
+    @State private var playSeason: Int? = nil
+    @State private var playEpisode: Int? = nil
+    @State private var expandedSeason: Int? = nil
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -45,6 +48,74 @@ struct MovieDetailView: View {
                         }
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
+                        
+                        // MARK: - Seasons & Episodes
+                        if !vm.seasons.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Mùa & Tập").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                ForEach(vm.seasons) { season in
+                                    VStack(spacing: 0) {
+                                        Button {
+                                            withAnimation {
+                                                expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber
+                                                if expandedSeason == season.seasonNumber {
+                                                    Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
+                                                }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                if let url = season.posterURL {
+                                                    CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60).overlay(Image(systemName: "tv").foregroundColor(.white.opacity(0.5)))
+                                                }
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(season.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
+                                                    Text("\(season.episodeCount) tập").font(.system(size: 11)).foregroundColor(.gray)
+                                                }
+                                                Spacer()
+                                                Image(systemName: expandedSeason == season.seasonNumber ? "chevron.up" : "chevron.down").foregroundColor(.gray).font(.caption)
+                                            }
+                                            .padding(.vertical, 8)
+                                        }
+                                        
+                                        if expandedSeason == season.seasonNumber {
+                                            Divider().background(Color.white.opacity(0.15))
+                                            if let detail = vm.selectedSeason, detail.seasonNumber == season.seasonNumber {
+                                                LazyVStack(spacing: 6) {
+                                                    ForEach(detail.episodes) { ep in
+                                                        Button {
+                                                            playSeason = season.seasonNumber
+                                                            playEpisode = ep.episodeNumber
+                                                            showPlayer = true
+                                                        } label: {
+                                                            HStack(spacing: 10) {
+                                                                if let still = ep.stillURL {
+                                                                    CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                                } else {
+                                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                                                                }
+                                                                VStack(alignment: .leading, spacing: 2) {
+                                                                    Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                                                                    Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                                                                    if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
+                                                                }
+                                                                Spacer()
+                                                                Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6)).font(.system(size: 18))
+                                                            }
+                                                            .padding(.vertical, 6)
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                ProgressView().tint(.white).padding()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                         if !vm.images.isEmpty { VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.orange) }; ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } } }
                         if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
                         if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
@@ -55,7 +126,15 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
-        .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title) }
+        .fullScreenCover(isPresented: $showPlayer) {
+            MoviePlayerView(
+                movieId: movie.id,
+                movieTitle: movie.title,
+                mediaType: movie.mediaType,
+                seasonNumber: playSeason,
+                episodeNumber: playEpisode
+            )
+        }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
