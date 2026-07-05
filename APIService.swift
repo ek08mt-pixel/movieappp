@@ -258,16 +258,42 @@ extension Movie {
             voteCount: voteCount, adult: adult, originalLanguage: originalLanguage
         )
     }
+}    // MARK: - Movie Images
+    func movieImages(movieId: Int) async throws -> [URL] {
+        let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct ImageResponse: Codable { let backdrops: [ImageItem]? }
+        struct ImageItem: Codable { let file_path: String? }
+        let res = try decoder.decode(ImageResponse.self, from: data)
+        return res.backdrops?.compactMap { item in
+            guard let path = item.file_path else { return nil }
+            return URL(string: "https://image.tmdb.org/t/p/w780\(path)")
+        } ?? []
+    }
+    
+    // MARK: - Helper
+    private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
+        var allMovies: [Movie] = []
+        for page in 1...5 {
+            let pageMovies = try await fetcher(page)
+            allMovies.append(contentsOf: pageMovies)
+            if pageMovies.count < 20 { break }
+        }
+        return allMovies
+    }
 }
-func movieImages(movieId: Int) async throws -> [URL] {
-    let urlString = "\(baseURL)/movie/\(movieId)/images?api_key=\(apiKey)&language=\(language)"
-    guard let url = URL(string: urlString) else { return [] }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    struct ImageResponse: Codable { let backdrops: [ImageItem]? }
-    struct ImageItem: Codable { let file_path: String? }
-    let res = try decoder.decode(ImageResponse.self, from: data)
-    return res.backdrops?.compactMap { item in
-        guard let path = item.file_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w780\(path)")
-    } ?? []
+
+// MARK: - Extension Movie
+extension Movie {
+    func withPlaceholderIfNeeded() -> Movie {
+        return Movie(
+            id: id, title: title, overview: overview,
+            posterPath: posterPath ?? "/placeholder.jpg",
+            backdropPath: backdropPath, voteAverage: voteAverage,
+            releaseDate: releaseDate, genreIds: genreIds,
+            originalTitle: originalTitle, popularity: popularity,
+            voteCount: voteCount, adult: adult, originalLanguage: originalLanguage
+        )
+    }
 }
