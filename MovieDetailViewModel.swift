@@ -25,8 +25,9 @@ class MovieDetailViewModel: ObservableObject {
             seasons = []
         } catch { print("Error: \(error)") }
         
-        if let title = detail?.title {
-            if let tvId = try? await APIService.shared.searchTVId(title: title) {
+        // Chỉ tìm seasons nếu là TV show
+        if mediaType == "tv" {
+            if let tvId = try? await APIService.shared.searchTVId(title: detail?.title ?? ""), tvId > 0 {
                 if let tv = try? await APIService.shared.fetchTVSeasons(tvId: tvId) { seasons = tv }
             }
         }
