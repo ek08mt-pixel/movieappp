@@ -33,10 +33,8 @@ struct GuessMovieView: View {
                             Text(isCorrect ? "✅ Chính xác!" : "❌ Sai rồi!")
                                 .font(.title2).fontWeight(.bold)
                                 .foregroundColor(isCorrect ? .green : .red)
-                            
                             Text(movie.title)
                                 .font(.title3).fontWeight(.heavy).foregroundColor(.white)
-                            
                             Text(movie.overview)
                                 .font(.caption).foregroundColor(.gray).lineLimit(3).padding(.horizontal)
                         }
@@ -66,19 +64,13 @@ struct GuessMovieView: View {
                             }
                         }.padding(.horizontal)
                         
-                        Button {
-                            loadNewMovie()
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Phim khác")
-                            }
-                            .font(.caption).foregroundColor(.white)
-                            .padding(.horizontal, 20).padding(.vertical, 10)
-                            .background(Capsule().fill(.ultraThinMaterial))
+                        Button { loadNewMovie() } label: {
+                            HStack { Image(systemName: "arrow.clockwise"); Text("Phim khác") }
+                                .font(.caption).foregroundColor(.white)
+                                .padding(.horizontal, 20).padding(.vertical, 10)
+                                .background(Capsule().fill(.ultraThinMaterial))
                         }
                     }
-                    
                     Spacer().frame(height: 120)
                 }
             }
@@ -93,18 +85,17 @@ struct GuessMovieView: View {
         options = []
         
         Task {
-            if let movies = try? await APIService.shared.popular().filter({ !($0.adult ?? false) }) {
-                if let correct = movies.randomElement() {
-                    var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
-                    opts.append(correct)
-                    
-                    await MainActor.run {
-                        movie = correct
-                        options = opts.shuffled()
-                        isLoading = false
-                    }
-                } else {
-                    await MainActor.run { isLoading = false }
+            let movies = (try? await APIService.shared.popular())?.filter { !($0.adult ?? false) } ?? []
+            
+            if let correct = movies.randomElement() {
+                var opts = Array(movies.filter { $0.id != correct.id }.shuffled().prefix(3))
+                opts.append(correct)
+                let finalOptions = opts.shuffled()
+                
+                await MainActor.run {
+                    movie = correct
+                    options = finalOptions
+                    isLoading = false
                 }
             } else {
                 await MainActor.run { isLoading = false }
