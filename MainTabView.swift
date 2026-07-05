@@ -30,19 +30,18 @@ struct MainTabView: View {
                 )
                 .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
                 
-                // Khung 2: Search - Capsule bo tròn, cao bằng khung 1
+                // Khung 2: Search - Capsule tròn
                 Button {
                     showSearch = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 24)
+                        .frame(width: 56, height: 56)
                         .background(
-                            Capsule()
+                            Circle()
                                 .fill(.ultraThinMaterial.opacity(0.25))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                         )
                         .shadow(color: .black.opacity(0.1), radius: 10, y: 3)
                 }
@@ -79,7 +78,7 @@ struct LiquidTabIcon: View {
                 if isSelected {
                     Capsule()
                         .fill(.ultraThinMaterial.opacity(0.4))
-                        .frame(width: 56, height: 44)
+                        .frame(width: 56, height: 42)
                 }
                 
                 Image(systemName: icon)
