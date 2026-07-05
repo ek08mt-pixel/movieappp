@@ -158,4 +158,30 @@ struct CategoryFullView: View {
             isLoading = false
         }
     }
+}// MARK: - Movie Grid Card
+struct MovieGridCard: View {
+    let movie: Movie
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            if let url = movie.posterURL {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(2/3, contentMode: .fill)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 170)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.ultraThinMaterial)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 170)
+                    .overlay(Image(systemName: "film.fill").foregroundColor(.gray))
+            }
+            Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+            HStack(spacing: 2) {
+                Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+            }
+        }
+    }
 }
