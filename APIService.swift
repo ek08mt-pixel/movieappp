@@ -248,6 +248,30 @@ class APIService {
         } ?? []
     }
     
+    // MARK: - TV Seasons
+    func tvSeasons(movieId: Int) async throws -> [MovieDetailViewModel.SeasonInfo] {
+        let urlString = "\(baseURL)/tv/\(movieId)?api_key=\(apiKey)&language=\(language)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        
+        struct TVResponse: Codable { let seasons: [TVSeason]? }
+        struct TVSeason: Codable {
+            let season_number: Int?
+            let name: String?
+            let episode_count: Int?
+            let poster_path: String?
+        }
+        
+        guard let res = try? decoder.decode(TVResponse.self, from: data),
+              let seasons = res.seasons else { return [] }
+        
+        return seasons.compactMap { s in
+            guard let num = s.season_number, num > 0, let name = s.name, let count = s.episode_count else { return nil }
+            let posterURL: URL? = s.poster_path != nil ? URL(string: "https://image.tmdb.org/t/p/w200\(s.poster_path!)") : nil
+            return MovieDetailViewModel.SeasonInfo(id: num, name: name, episodeCount: count, posterURL: posterURL)
+        }
+    }
+    
     // MARK: - Helper
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var allMovies: [Movie] = []
