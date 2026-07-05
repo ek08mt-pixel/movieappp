@@ -78,6 +78,7 @@ struct MoviePlayerView: View {
     var mediaType: String? = nil
     var seasonNumber: Int? = nil
     var episodeNumber: Int? = nil
+    var posterURL: URL?
     
     @Environment(\.dismiss) var dismiss
     @State private var player = AVPlayer()
@@ -98,12 +99,8 @@ struct MoviePlayerView: View {
     @State private var volumeTimer: Timer?
     @State private var brightnessTimer: Timer?
     
-    var volumeAsCGFloat: Binding<CGFloat> {
-        Binding<CGFloat>(get: { CGFloat(volume) }, set: { volume = Float($0) })
-    }
-    var brightnessAsCGFloat: Binding<CGFloat> {
-        Binding<CGFloat>(get: { brightness }, set: { brightness = $0; UIScreen.main.brightness = $0 })
-    }
+    var volumeAsCGFloat: Binding<CGFloat> { Binding<CGFloat>(get: { CGFloat(volume) }, set: { volume = Float($0) }) }
+    var brightnessAsCGFloat: Binding<CGFloat> { Binding<CGFloat>(get: { brightness }, set: { brightness = $0; UIScreen.main.brightness = $0 }) }
     
     var body: some View {
         ZStack {
@@ -115,53 +112,37 @@ struct MoviePlayerView: View {
                 .onDisappear { player.pause(); controlsTimer?.invalidate() }
                 .onTapGesture { toggleControls() }
             
-            // Volume - right side
+            // Volume - right
             if showVolumeSlider || showControls {
                 HStack {
                     Spacer()
-                    GlassSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill", label: "")
-                        .frame(width: 56, height: 170)
-                        .padding(.trailing, 20)
-                        .opacity(showVolumeSlider ? 1 : 0.35)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    showVolumeSlider = true
-                                    let delta = Float(-value.translation.height / 180)
-                                    volume = min(max(volume + delta, 0), 1)
-                                    player.volume = volume
-                                    resetVolumeTimer()
-                                }
-                                .onEnded { _ in resetVolumeTimer() }
-                        )
+                    MiniSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
+                        .opacity(showVolumeSlider ? 1 : 0.3)
+                        .gesture(DragGesture().onChanged { v in
+                            showVolumeSlider = true
+                            volume = min(max(volume + Float(-v.translation.height / 140), 0), 1)
+                            player.volume = volume; resetVolumeTimer()
+                        }.onEnded { _ in resetVolumeTimer() })
+                        .padding(.trailing, 16)
                 }
             }
             
-            // Brightness - left side
+            // Brightness - left
             if showBrightnessSlider || showControls {
                 HStack {
-                    GlassSlider(value: brightnessAsCGFloat, icon: "sun.max.fill", label: "")
-                        .frame(width: 56, height: 170)
-                        .padding(.leading, 20)
-                        .opacity(showBrightnessSlider ? 1 : 0.35)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    showBrightnessSlider = true
-                                    let delta = -value.translation.height / 180
-                                    brightness = min(max(brightness + delta, 0.01), 1)
-                                    UIScreen.main.brightness = brightness
-                                    resetBrightnessTimer()
-                                }
-                                .onEnded { _ in resetBrightnessTimer() }
-                        )
+                    MiniSlider(value: brightnessAsCGFloat, icon: "sun.max.fill")
+                        .opacity(showBrightnessSlider ? 1 : 0.3)
+                        .gesture(DragGesture().onChanged { v in
+                            showBrightnessSlider = true
+                            brightness = min(max(brightness + (-v.translation.height / 140), 0.01), 1)
+                            UIScreen.main.brightness = brightness; resetBrightnessTimer()
+                        }.onEnded { _ in resetBrightnessTimer() })
+                        .padding(.leading, 16)
                     Spacer()
                 }
             }
             
-            if isLoading {
-                VStack(spacing: 12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) }
-            }
+            if isLoading { VStack(spacing: 12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) } }
             
             if let err = errorMessage, !isLoading {
                 VStack(spacing: 14) {
@@ -184,113 +165,88 @@ struct MoviePlayerView: View {
                 HStack(spacing: 64) {
                     Button { seek(-10) } label: {
                         Image(systemName: "gobackward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6))
-                            .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2)))
-                            .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                            .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                     }
                     Button { player.rate == 0 ? player.play() : player.pause() } label: {
                         Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28, weight: .bold)).foregroundColor(.white)
-                            .padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                            .padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                     }
                     Button { seek(10) } label: {
                         Image(systemName: "goforward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6))
-                            .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2)))
-                            .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                            .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                     }
                 }
                 
                 VStack {
                     Spacer()
                     VStack(spacing: 6) {
-                        Slider(value: $currentTime, in: 0...max(duration, 1)) { editing in
-                            isSeeking = editing
-                            if !editing { player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)) }
-                        }.accentColor(.white).padding(.horizontal)
-                        HStack {
-                            Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7))
-                            Spacer()
-                            Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))
-                        }.padding(.horizontal)
+                        Slider(value: $currentTime, in: 0...max(duration, 1)) { editing in isSeeking = editing; if !editing { player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)) } }.accentColor(.white).padding(.horizontal)
+                        HStack { Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7)); Spacer(); Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal)
                         HStack {
                             Button { showSourceMenu = true } label: {
-                                Text(selectedSource.rawValue).font(.caption2).foregroundColor(.white.opacity(0.8))
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.25)))
-                                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                                Text(selectedSource.rawValue).font(.caption2).foregroundColor(.white.opacity(0.8)).padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.25))).overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                             Spacer()
                             Button { if let pipVC = findPiPController() { pipVC.startPictureInPicture() } } label: {
-                                Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
-                                    .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
-                                    .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                                Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                             Button { toggleOrientation() } label: {
-                                Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
-                                    .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
-                                    .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                                Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                         }.padding(.horizontal).padding(.bottom, 20)
-                    }
-                    .background(LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom))
+                    }.background(LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom))
                 }
                 
                 VStack {
                     HStack {
                         Button { dismiss() } label: {
-                            Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
-                                .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
-                                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                            Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                         }
                         Spacer()
                         Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
                         Spacer()
                         Button { showSourceMenu = true } label: {
-                            Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 14)).foregroundColor(.white)
-                                .padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
-                                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                            Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 14)).foregroundColor(.white).padding(10)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                         }
                     }.padding(.horizontal, 12).padding(.top, 50)
                     Spacer()
                 }
             }
             
-            // Source Menu Overlay
+            // Source menu popup
             if showSourceMenu {
                 ZStack {
-                    Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showSourceMenu = false }
-                    VStack(spacing: 0) {
-                        Spacer()
-                        VStack(spacing: 14) {
-                            Text("Chọn nguồn phát").font(.system(size: 16, weight: .bold)).foregroundColor(.white)
-                            ForEach(MovieSource.allCases, id: \.self) { src in
-                                Button {
-                                    selectedSource = src; showSourceMenu = false; loadStream()
-                                } label: {
-                                    HStack {
-                                        Circle()
-                                            .fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray))
-                                            .frame(width: 8, height: 8)
-                                        Text(src.rawValue).font(.system(size: 15)).foregroundColor(.white)
-                                        Spacer()
-                                        if selectedSource == src { Image(systemName: "checkmark").font(.caption).foregroundColor(.white) }
-                                    }
-                                    .padding(.horizontal, 20).padding(.vertical, 14)
-                                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
-                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                                }
+                    Color.black.opacity(0.4).ignoresSafeArea().onTapGesture { showSourceMenu = false }
+                    VStack(spacing: 12) {
+                        Text("🎬 Chọn nguồn").font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.white)
+                        ForEach(MovieSource.allCases, id: \.self) { src in
+                            Button { selectedSource = src; showSourceMenu = false; loadStream() } label: {
+                                HStack {
+                                    Circle().fill(sourceStatus[src] == true ? Color.green : (sourceStatus[src] == false ? Color.red : Color.gray)).frame(width: 6, height: 6)
+                                    Text(src.rawValue).font(.system(size: 13, design: .rounded)).foregroundColor(.white)
+                                    Spacer()
+                                    if selectedSource == src { Image(systemName: "checkmark").font(.caption2).foregroundColor(.white) }
+                                }.padding(.horizontal, 14).padding(.vertical, 10)
+                                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                             }
-                            Text("© 2026 emmew. All rights reserved.")
-                                .font(.system(size: 9)).foregroundColor(.white.opacity(0.35)).padding(.top, 6)
                         }
-                        .padding(24)
-                        .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(.ultraThinMaterial.opacity(0.3))
-                                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-                        )
-                        .padding(.horizontal, 30)
-                        .padding(.bottom, 100)
+                        Text("© 2026 emmew. All rights reserved.").font(.system(size: 8, design: .rounded)).foregroundColor(.white.opacity(0.3)).padding(.top, 2)
                     }
+                    .padding(16)
+                    .background(
+                        ZStack {
+                            CachedAsyncImage(url: posterURL).aspectRatio(contentMode: .fill).blur(radius: 30).opacity(0.3)
+                            RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.35))
+                        }.clipShape(RoundedRectangle(cornerRadius: 20))
+                    )
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    .padding(.horizontal, 50)
                 }
             }
         }
@@ -326,64 +282,31 @@ struct MoviePlayerView: View {
             if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }
         }
     }
-    
-    func seek(_ sec: Double) {
-        let newTime = max(0, min(currentTime + sec, duration))
-        player.seek(to: CMTime(seconds: newTime, preferredTimescale: 600))
-        currentTime = newTime
-    }
-    
+    func seek(_ sec: Double) { let t = max(0, min(currentTime + sec, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
     func toggleControls() { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.5)) { showVolumeSlider = false } } }
     func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.5)) { showBrightnessSlider = false } } }
-    
-    func toggleOrientation() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
-        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: windowScene.interfaceOrientation == .portrait ? .landscapeRight : .portrait))
-    }
-    
-    func findPiPController() -> AVPictureInPictureController? {
-        guard let playerLayer = findPlayerLayer() else { return nil }
-        if AVPictureInPictureController.isPictureInPictureSupported() { return AVPictureInPictureController(playerLayer: playerLayer) }
-        return nil
-    }
-    
+    func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: ws.interfaceOrientation == .portrait ? .landscapeRight : .portrait)) }
+    func findPiPController() -> AVPictureInPictureController? { guard let pl = findPlayerLayer() else { return nil }; if AVPictureInPictureController.isPictureInPictureSupported() { return AVPictureInPictureController(playerLayer: pl) }; return nil }
     func findPlayerLayer() -> AVPlayerLayer? {
-        func search(in view: UIView) -> AVPlayerLayer? {
-            if let layer = view.layer as? AVPlayerLayer { return layer }
-            for subview in view.subviews { if let found = search(in: subview) { return found } }
-            return nil
-        }
-        guard let window = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.windows.first }).first else { return nil }
-        return search(in: window)
+        func s(in v: UIView) -> AVPlayerLayer? { if let l = v.layer as? AVPlayerLayer { return l }; for sv in v.subviews { if let f = s(in: sv) { return f } }; return nil }
+        return (UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.windows.first }.first).flatMap { s(in: $0) }
     }
-    
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
-// MARK: - Glass Slider
-struct GlassSlider: View {
+// MARK: - Mini Slider
+struct MiniSlider: View {
     @Binding var value: CGFloat
     let icon: String
-    let label: String
-    
     var body: some View {
-        VStack(spacing: 8) {
-            if !label.isEmpty { Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.8)) }
+        VStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
             ZStack(alignment: .bottom) {
-                Capsule().fill(.ultraThinMaterial.opacity(0.15))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-                    .frame(width: 16)
-                Circle()
-                    .fill(Color.white.opacity(0.3))
-                    .overlay(Circle().stroke(Color.white.opacity(0.4), lineWidth: 1))
-                    .frame(width: 32, height: 32)
-                    .shadow(color: .white.opacity(0.15), radius: 6)
-                    .offset(y: -CGFloat(value) * 120)
-                    .animation(.interpolatingSpring(stiffness: 200, damping: 15), value: value)
+                Capsule().fill(.ultraThinMaterial.opacity(0.15)).overlay(Capsule().stroke(Color.white.opacity(0.06), lineWidth: 0.5)).frame(width: 10, height: 80)
+                Circle().fill(Color.white.opacity(0.35)).overlay(Circle().stroke(Color.white.opacity(0.5), lineWidth: 1)).frame(width: 22, height: 22).shadow(color: .white.opacity(0.1), radius: 4).offset(y: -value * 70).animation(.interpolatingSpring(stiffness: 200, damping: 15), value: value)
             }
-            Image(systemName: icon).font(.system(size: 13)).foregroundColor(.white.opacity(0.5))
         }
     }
 }
@@ -391,9 +314,6 @@ struct GlassSlider: View {
 // MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false
-        vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; return vc
-    }
+    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; return vc }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
 }
