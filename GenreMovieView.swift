@@ -3,65 +3,47 @@ import SwiftUI
 struct GenreMovieView: View {
     let genre: Genre
     @State private var movies: [Movie] = []
-    @State private var page = 1
     @State private var isLoading = true
-    @State private var hasMore = true
+    @Environment(\.dismiss) var dismiss
     
-    private let columns = [GridItem(.adaptive(minimum: 110), spacing: 10)]
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            
             if isLoading && movies.isEmpty {
                 ProgressView().tint(.white)
+            } else if movies.isEmpty {
+                Text("Không có phim").foregroundColor(.gray)
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 6) {
                                     CachedAsyncImage(url: movie.posterURL)
-                                        .frame(height: 165)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(maxWidth: .infinity)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
                                     Text(movie.title)
-                                        .font(.system(size: 10)).fontWeight(.medium).foregroundColor(.white)
-                                        .lineLimit(2).frame(maxWidth: 110)
-                                }
-                            }
-                            .onAppear {
-                                if movie == movies.last && hasMore && !isLoading {
-                                    Task { await loadMore() }
+                                        .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                        Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                    }
                                 }
                             }
                         }
-                        
-                        if isLoading {
-                            ProgressView().tint(.white).frame(maxWidth: .infinity).padding()
-                        }
-                    }
-                    .padding()
+                    }.padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 100)
                 }
             }
         }
-        .navigationTitle(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+        .navigationTitle(genre.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadMore() }
-    }
-    
-    func loadMore() async {
-        isLoading = true
-        do {
-            let newMovies = try await APIService.shared.moviesByGenre(genreId: genre.id)
-            if newMovies.isEmpty {
-                hasMore = false
-            } else {
-                movies.append(contentsOf: newMovies)
-            }
-            page += 1
-        } catch {
-            hasMore = false
+        .navigationBarBackButtonHidden(false)
+        .task {
+            do { movies = try await APIService.shared.moviesByGenre(genreId: genre.id) } catch { movies = [] }
+            isLoading = false
         }
-        isLoading = false
     }
 }
