@@ -122,7 +122,7 @@ struct SourceCell: View {
     let name: String; let isSelected: Bool; let status: Bool?
     var icon: String { status == true ? "checkmark.circle.fill" : (status == false ? "xmark.circle.fill" : "circle") }
     var color: Color { status == true ? .green : (status == false ? .red : .gray) }
-    var body: some View { VStack(spacing: 4) { Image(systemName: icon).font(.system(size: 18)).foregroundColor(color); Text(name).font(.system(size: 9)).foregroundColor(.white).lineLimit(1) }.frame(maxWidth: .infinity).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? .white.opacity(0.15) : .ultraThinMaterial)) }
+    var body: some View { VStack(spacing: 4) { Image(systemName: icon).font(.system(size: 18)).foregroundColor(color); Text(name).font(.system(size: 9)).foregroundColor(.white).lineLimit(1) }.frame(maxWidth: .infinity).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? AnyShapeStyle(Color.white.opacity(0.15)) : AnyShapeStyle(.ultraThinMaterial))) }
 }
 struct SourceMenu4: View {
     let src: [(String, Bool, String)]; @Binding var sel: Int; @Binding var status: [Int: Bool]; let pick: () -> Void; @Environment(\.dismiss) var d
@@ -138,7 +138,7 @@ struct SourceMenuGrid: View {
 }
 struct SourceMenuCell: View {
     let name: String; let isSelected: Bool; let status: Bool?
-    var body: some View { VStack(spacing: 6) { Image(systemName: status == true ? "checkmark.circle.fill" : (status == false ? "xmark.circle.fill" : "play.circle.fill")).font(.system(size: 22)).foregroundColor(status == true ? .green : (status == false ? .red : .white.opacity(0.6))); Text(name).font(.system(size: 9)).foregroundColor(.white).lineLimit(2); if status == true { Text("OK").font(.system(size: 8)).foregroundColor(.green) } else if status == false { Text("Lỗi").font(.system(size: 8)).foregroundColor(.red) } }.frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 12).fill(isSelected ? .white.opacity(0.1) : .ultraThinMaterial)) }
+    var body: some View { VStack(spacing: 6) { Image(systemName: status == true ? "checkmark.circle.fill" : (status == false ? "xmark.circle.fill" : "play.circle.fill")).font(.system(size: 22)).foregroundColor(status == true ? .green : (status == false ? .red : .white.opacity(0.6))); Text(name).font(.system(size: 9)).foregroundColor(.white).lineLimit(2); if status == true { Text("OK").font(.system(size: 8)).foregroundColor(.green) } else if status == false { Text("Lỗi").font(.system(size: 8)).foregroundColor(.red) } }.frame(maxWidth: .infinity).padding(.vertical, 12).background(RoundedRectangle(cornerRadius: 12).fill(isSelected ? AnyShapeStyle(Color.white.opacity(0.1)) : AnyShapeStyle(.ultraThinMaterial))) }
 }
 struct FullScreenPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
