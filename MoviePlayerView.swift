@@ -91,25 +91,20 @@ struct MoviePlayerView: View {
     @State private var duration: Double = 1
     @State private var isSeeking = false
     @State private var controlsTimer: Timer?
-    @State private var volume: Float = 1.0
+    @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
     @State private var brightness: CGFloat = UIScreen.main.brightness
     @State private var showVolumeSlider = false
     @State private var showBrightnessSlider = false
     @State private var volumeTimer: Timer?
     @State private var brightnessTimer: Timer?
+    @State private var volDragStart: Float = 0
+    @State private var briDragStart: CGFloat = 0
     
     var volumeAsCGFloat: Binding<CGFloat> {
-        Binding<CGFloat>(
-            get: { CGFloat(volume) },
-            set: { volume = Float($0); player.volume = Float($0) }
-        )
+        Binding<CGFloat>(get: { CGFloat(volume) }, set: { volume = Float($0) })
     }
-    
     var brightnessAsCGFloat: Binding<CGFloat> {
-        Binding<CGFloat>(
-            get: { brightness },
-            set: { brightness = $0; UIScreen.main.brightness = $0 }
-        )
+        Binding<CGFloat>(get: { brightness }, set: { brightness = $0; UIScreen.main.brightness = $0 })
     }
     
     var body: some View {
@@ -127,44 +122,32 @@ struct MoviePlayerView: View {
                 .onDisappear { player.pause(); controlsTimer?.invalidate() }
                 .onTapGesture { toggleControls() }
             
-            // Volume slider (right)
-            if showVolumeSlider || showControls {
+            // Volume - right side, only when dragging
+            if showVolumeSlider {
                 HStack {
                     Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill")
-                            .font(.system(size: 14)).foregroundColor(.white.opacity(0.7))
-                        VerticalSlider(value: volumeAsCGFloat, range: 0...1) { _ in resetVolumeTimer() }
-                            .frame(width: 30, height: 150)
-                        Text("\(Int(volume * 100))%").font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
-                    }
-                    .padding(.trailing, 8)
-                    .opacity(showVolumeSlider ? 1 : 0.4)
+                    GlassSlider(value: volumeAsCGFloat, icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill", label: "\(Int(volume * 100))")
+                        .frame(width: 48, height: 160)
+                        .padding(.trailing, 20)
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
             
-            // Brightness slider (left)
-            if showBrightnessSlider || showControls {
+            // Brightness - left side, only when dragging
+            if showBrightnessSlider {
                 HStack {
-                    VStack(spacing: 8) {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 14)).foregroundColor(.white.opacity(0.7))
-                        VerticalSlider(value: brightnessAsCGFloat, range: 0...1) { _ in resetBrightnessTimer() }
-                            .frame(width: 30, height: 150)
-                        Text("\(Int(brightness * 100))%").font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
-                    }
-                    .padding(.leading, 8)
-                    .opacity(showBrightnessSlider ? 1 : 0.4)
+                    GlassSlider(value: brightnessAsCGFloat, icon: "sun.max.fill", label: "\(Int(brightness * 100))")
+                        .frame(width: 48, height: 160)
+                        .padding(.leading, 20)
+                        .transition(.scale.combined(with: .opacity))
                     Spacer()
                 }
             }
             
-            // Loading
             if isLoading {
                 VStack(spacing: 12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) }
             }
             
-            // Error
             if let err = errorMessage, !isLoading {
                 VStack(spacing: 14) {
                     Image(systemName: "wifi.slash").font(.system(size: 36)).foregroundColor(.gray)
@@ -182,7 +165,6 @@ struct MoviePlayerView: View {
                 }
             }
             
-            // Main controls
             if showControls && errorMessage == nil {
                 HStack(spacing: 56) {
                     Button { seek(-10) } label: {
@@ -258,26 +240,44 @@ struct MoviePlayerView: View {
             }
         }
         .statusBarHidden()
-        .gesture(
-            DragGesture(minimumDistance: 10)
-                .onChanged { value in
-                    let loc = value.location
-                    if loc.x > UIScreen.main.bounds.width / 2 + 30 {
-                        showVolumeSlider = true
-                        let delta = -value.translation.height / 300
-                        volume = min(max(volume + Float(delta), 0), 1)
-                        player.volume = volume
-                    } else if loc.x < 50 {
-                        showBrightnessSlider = true
-                        let delta = -value.translation.height / 300
-                        brightness = min(max(brightness + delta, 0.01), 1)
-                        UIScreen.main.brightness = brightness
-                    }
-                }
-                .onEnded { _ in resetVolumeTimer(); resetBrightnessTimer() }
-        )
+        .simultaneousGesture(volumeGesture)
+        .simultaneousGesture(brightnessGesture)
         .task { loadStream() }
         .sheet(isPresented: $showSourceMenu) { SourceMenuView(selectedSource: $selectedSource, sourceStatus: $sourceStatus) { loadStream() } }
+    }
+    
+    var volumeGesture: some Gesture {
+        DragGesture(minimumDistance: 5)
+            .onChanged { value in
+                let loc = value.startLocation
+                guard loc.x > UIScreen.main.bounds.width - 60 else { return }
+                if !showVolumeSlider {
+                    showVolumeSlider = true
+                    volDragStart = volume
+                }
+                let delta = Float(-value.translation.height / 200)
+                volume = min(max(volDragStart + delta, 0), 1)
+                player.volume = volume
+                resetVolumeTimer()
+            }
+            .onEnded { _ in resetVolumeTimer() }
+    }
+    
+    var brightnessGesture: some Gesture {
+        DragGesture(minimumDistance: 5)
+            .onChanged { value in
+                let loc = value.startLocation
+                guard loc.x < 60 else { return }
+                if !showBrightnessSlider {
+                    showBrightnessSlider = true
+                    briDragStart = brightness
+                }
+                let delta = -value.translation.height / 200
+                brightness = min(max(briDragStart + delta, 0.01), 1)
+                UIScreen.main.brightness = brightness
+                resetBrightnessTimer()
+            }
+            .onEnded { _ in resetBrightnessTimer() }
     }
     
     func loadStream() {
@@ -344,26 +344,27 @@ struct MoviePlayerView: View {
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
-// MARK: - Vertical Slider
-struct VerticalSlider: View {
+// MARK: - Glass Slider (bubble style)
+struct GlassSlider: View {
     @Binding var value: CGFloat
-    let range: ClosedRange<CGFloat>
-    let onChanged: (CGFloat) -> Void
+    let icon: String
+    let label: String
     
     var body: some View {
-        GeometryReader { geo in
+        VStack(spacing: 10) {
+            Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.8))
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.25))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.7))
-                    .frame(height: geo.size.height * (value - range.lowerBound) / (range.upperBound - range.lowerBound))
+                Capsule().fill(.ultraThinMaterial.opacity(0.15))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .frame(width: 10)
+                Circle()
+                    .fill(Color.white.opacity(0.25))
+                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                    .frame(width: 24, height: 24)
+                    .offset(y: -CGFloat(value) * 130)
                     .animation(.interpolatingSpring(stiffness: 200, damping: 15), value: value)
             }
-            .gesture(DragGesture().onChanged { gesture in
-                let newValue = range.upperBound - (gesture.location.y / geo.size.height) * (range.upperBound - range.lowerBound)
-                value = min(max(newValue, range.lowerBound), range.upperBound)
-                onChanged(value)
-            })
+            Image(systemName: icon).font(.system(size: 14)).foregroundColor(.white.opacity(0.6))
         }
     }
 }
