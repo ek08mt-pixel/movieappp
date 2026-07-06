@@ -60,7 +60,7 @@ struct ActorDetailView: View {
                                 if let place = detail.placeOfBirth {
                                     infoRow(icon: "mappin.and.ellipse", title: "Nơi sinh", value: place)
                                 }
-                                infoRow(icon: "star.fill", title: "Độ phổ biến", value: String(format: "%.1f", actor.popularity ?? 0))
+                                infoRow(icon: "star.fill", title: "Độ phổ biến", value: String(format: "%.1f", actorDetail?.popularity ?? 0))
                                 infoRow(icon: "theatermasks.fill", title: "Nổi tiếng", value: detail.knownForDepartment ?? "Diễn viên")
                             }
                             .padding(.horizontal)
