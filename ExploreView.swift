@@ -19,40 +19,40 @@ struct ExploreView: View {
     ]
     
     var body: some View {
-        ZStack {
-            LinearGradient(colors: [Color(white: 0.12), Color(white: 0.05), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16)
-                    
-                    HStack(spacing: 10) {
-                        Button { Task { let m = try? await APIService.shared.popular(); if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() { randomMovie = movie; showRandom = true } } } label: {
-                            VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
-                        }
-                        NavigationLink(destination: MoodPickerView()) { VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                        NavigationLink(destination: TimelineView()) { VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                        NavigationLink(destination: GuessMovieView()) { VStack(spacing: 6) { Text("❓").font(.system(size: 26)); Text("Guess").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                    }.padding(.horizontal, 16)
-                    
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)], spacing: 15) {
-                        ForEach(collections, id: \.0) { title, tmdbId, type in
-                            NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
-                                ZStack(alignment: .bottomLeading) {
-                                    if let posterPath = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
-                                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 110).clipShape(RoundedRectangle(cornerRadius: 14)).overlay(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 14))
-                                    } else {
-                                        RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.1)], startPoint: .top, endPoint: .bottom)).frame(height: 110).overlay(Color.black.opacity(0.2))
+        NavigationStack {
+            ZStack {
+                LinearGradient(colors: [Color(white: 0.12), Color(white: 0.05), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16)
+                        
+                        HStack(spacing: 10) {
+                            Button { Task { let m = try? await APIService.shared.popular(); if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() { randomMovie = movie; showRandom = true } } } label: { VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
+                            NavigationLink(destination: MoodPickerView()) { VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
+                            NavigationLink(destination: TimelineView()) { VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
+                            NavigationLink(destination: GuessMovieView()) { VStack(spacing: 6) { Text("❓").font(.system(size: 26)); Text("Guess").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
+                        }.padding(.horizontal, 16)
+                        
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)], spacing: 15) {
+                            ForEach(collections, id: \.0) { title, tmdbId, type in
+                                NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
+                                    ZStack(alignment: .bottomLeading) {
+                                        if let posterPath = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
+                                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 110).clipShape(RoundedRectangle(cornerRadius: 14)).overlay(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 14))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.1)], startPoint: .top, endPoint: .bottom)).frame(height: 110).overlay(Color.black.opacity(0.2))
+                                        }
+                                        Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
-                                    Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                 }
                             }
-                        }
-                    }.padding(.horizontal, 16)
-                    
-                    if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
-                    if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
-                    if !hiddenMovies.isEmpty { movieRow(title: "Hidden Gems", movies: hiddenMovies) }
-                    Spacer().frame(height: 120)
+                        }.padding(.horizontal, 16)
+                        
+                        if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
+                        if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
+                        if !hiddenMovies.isEmpty { movieRow(title: "Hidden Gems", movies: hiddenMovies) }
+                        Spacer().frame(height: 120)
+                    }
                 }
             }
         }
