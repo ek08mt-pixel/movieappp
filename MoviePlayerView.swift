@@ -48,7 +48,7 @@ class MovieStreamService {
             group.addTask { try? await self.fetchStremio(imdbId: imdbId, season: season, episode: episode) }
             
             for try await result in group {
-                if let url = result { return url }
+                if let url = result { group.cancelAll(); return url }
             }
             throw StreamError.noStreamAvailable
         }
@@ -143,11 +143,7 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                 .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData() }
-                .onDisappear {
-                    player.pause()
-                    player.replaceCurrentItem(with: nil)
-                    controlsTimer?.invalidate()
-                }
+                .onDisappear { player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate() }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
@@ -161,8 +157,7 @@ struct MoviePlayerView: View {
                     Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7))
                     Button { dismiss() } label: {
                         Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6))
-                            .padding(.horizontal, 16).padding(.vertical, 8)
-                            .background(Capsule().fill(.ultraThinMaterial))
+                            .padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial))
                     }
                 }
             }
@@ -268,7 +263,8 @@ struct MoviePlayerView: View {
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
     
     func loadStream() {
-        if let cached = cachedStreamURL, seasonNumber == nil {
+        // Chỉ dùng cached URL khi không có season/episode (phim lẻ hoặc tập đầu)
+        if let cached = cachedStreamURL, seasonNumber == nil, episodeNumber == nil {
             let item = AVPlayerItem(url: cached)
             player.replaceCurrentItem(with: item)
             player.play()
