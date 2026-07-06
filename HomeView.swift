@@ -20,7 +20,6 @@ struct HomeView: View {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = movie.backdropURL {
                                             CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
                                                 .frame(width: UIScreen.main.bounds.width, height: 420)
                                                 .clipped()
                                         } else {
@@ -57,7 +56,6 @@ struct HomeView: View {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
                                             CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
                                                 .frame(height: 200)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                                         } else {
