@@ -65,6 +65,7 @@ struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
     @State private var selectedSource: MovieSource = .ntl; @State private var sourceStatus: [MovieSource: Bool] = [:]
@@ -161,6 +162,15 @@ struct MoviePlayerView: View {
                     player.play()
                     sourceStatus[selectedSource] = true
                     isLoading = false
+                }
+                // Lưu lịch sử xem
+                let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
+                await MainActor.run {
+                    if !appState.watchHistory.contains(where: { $0.id == movieId }) {
+                        appState.watchHistory.insert(m, at: 0)
+                        if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }
+                        appState.save()
+                    }
                 }
             } catch {
                 await MainActor.run {
