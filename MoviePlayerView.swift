@@ -17,46 +17,58 @@ enum StreamError: Error, LocalizedError {
 
 class MovieStreamService {
     static let shared = MovieStreamService()
-    func getStreamURL(for source: MovieSource, imdbId: String, season: Int? = nil, episode: Int? = nil) async throws -> URL {
+    func getStreamURL(for source: MovieSource, imdbId: String, season: Int? = nil, episode: Int? = nil, quality: String = "Auto") async throws -> URL {
         switch source {
-        case .ntl: return try await fetchNTL(imdbId, season: season, episode: episode)
-        case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode)
-        case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode)
+        case .ntl: return try await fetchNTL(imdbId, season: season, episode: episode, quality: quality)
+        case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode, quality: quality)
+        case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode, quality: quality)
         }
     }
-    private func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
+    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
         var path = "/stream/movie/\(id).json"
         if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
+        r.timeoutInterval = 8
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let quality: String? }
+        let res = try? JSONDecoder().decode(R.self, from: d)
+        let streams = res?.streams?.filter { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) } ?? []
+        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
+        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
-    private func fetchMediaFusion(_ id: String, season: Int?, episode: Int?) async throws -> URL {
+    private func fetchMediaFusion(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
         let cleanId = id.replacingOccurrences(of: "tt", with: "")
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
+        r.timeoutInterval = 8
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String?; let quality: String? }
+        let res = try? JSONDecoder().decode(R.self, from: d)
+        let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
+        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
+        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
-    private func fetchStremio(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
+    private func fetchStremio(imdbId: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
         let base = "https://yastream.tamthai.de"
         let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "\(base)\(path)")!)
+        r.timeoutInterval = 8
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String?; let quality: String? }
+        let res = try? JSONDecoder().decode(R.self, from: d)
+        let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
+        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
+        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
 }
@@ -67,17 +79,34 @@ struct MoviePlayerView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     
-    @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .ntl; @State private var sourceStatus: [MovieSource: Bool] = [:]
-    @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
-    @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
-    @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
-    @State private var brightness: CGFloat = UIScreen.main.brightness; @State private var showVolumeSlider = false; @State private var showBrightnessSlider = false
-    @State private var volumeTimer: Timer?; @State private var brightnessTimer: Timer?; @State private var pipController: AVPictureInPictureController?
-    @State private var showOverlay = false; @State private var overlayOffset: CGFloat = UIScreen.main.bounds.height
-    @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
-    @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
-    @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
+    @State private var player = AVPlayer()
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var selectedSource: MovieSource = .ntl
+    @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var showSourceMenu = false
+    @State private var showSettings = false
+    @State private var showControls = true
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 1
+    @State private var isSeeking = false
+    @State private var controlsTimer: Timer?
+    @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
+    @State private var brightness: CGFloat = UIScreen.main.brightness
+    @State private var showVolumeSlider = false
+    @State private var showBrightnessSlider = false
+    @State private var volumeTimer: Timer?
+    @State private var brightnessTimer: Timer?
+    @State private var pipController: AVPictureInPictureController?
+    @State private var showOverlay = false
+    @State private var overlayOffset: CGFloat = UIScreen.main.bounds.height
+    @State private var similarMovies: [Movie] = []
+    @State private var seasons: [TVSeason] = []
+    @State private var selectedSeasonDetail: TVSeasonDetail?
+    @State private var selectedSeasonNumber: Int?
+    @State private var currentMovie: Movie?
+    @State private var collectionMovies: [Movie] = []
+    @State private var selectedMovie: Movie?
     @State private var selectedQuality: String = "Auto"
     
     let qualities = ["Auto", "1080p", "720p", "480p", "360p"]
@@ -146,51 +175,60 @@ struct MoviePlayerView: View {
     var sourcePopup: some View { VStack(spacing:8){Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8)); ForEach(MovieSource.allCases,id:\.self){src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:6){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:5,height:5);Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white);if selectedSource==src{Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white)}}.padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))}}; Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.3))}.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:170) }
     
     var settingsPopup: some View {
-        VStack(spacing: 10) {
-            Text("cài đặt").font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
+        VStack(spacing: 12) {
+            Text("Cài đặt").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(.white)
             
-            VStack(spacing: 6) {
-                Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
-                Picker("Chất lượng", selection: $selectedQuality) {
+            VStack(spacing: 10) {
+                Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+                VStack(spacing: 8) {
                     ForEach(qualities, id: \.self) { q in
-                        Text(q).tag(q)
+                        Button {
+                            selectedQuality = q
+                            loadStream()
+                            showSettings = false
+                        } label: {
+                            HStack {
+                                Text(q).font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
+                                    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
+                                Spacer()
+                                if selectedQuality == q {
+                                    Image(systemName: "checkmark").font(.caption).foregroundColor(.white)
+                                }
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(selectedQuality == q ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.2))
+                            )
+                        }
                     }
                 }
-                .pickerStyle(.segmented)
-                .colorMultiply(.white)
             }
             
-            Divider().background(Color.white.opacity(0.15))
+            Divider().background(Color.white.opacity(0.1))
             
             VStack(spacing: 6) {
-                Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
-                Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+                Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+                Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
             }
             
-            Divider().background(Color.white.opacity(0.15))
+            Divider().background(Color.white.opacity(0.1))
             
             VStack(spacing: 6) {
-                Text("Tốc độ").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
-                Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+                Text("Tốc độ").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+                Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
             }
             
-            Divider().background(Color.white.opacity(0.15))
-            
-            VStack(spacing: 6) {
-                Text("Âm thanh").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
-                Text("Stereo").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
-            }
-            
-            Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
+            Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.2)).padding(.top, 4)
         }
-        .padding(16)
-        .frame(width: 220)
+        .padding(18)
+        .frame(width: 200)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial.opacity(0.6))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.2), lineWidth: 1))
+            RoundedRectangle(cornerRadius: 22)
+                .fill(.ultraThinMaterial.opacity(0.7))
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.white.opacity(0.25), lineWidth: 1))
         )
-        .shadow(color: .black.opacity(0.3), radius: 15, y: 8)
+        .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
     }
     
     @ViewBuilder func settingRow(title:String,value:String)->some View { HStack{Text(title).font(.system(size:12,design:.rounded)).foregroundColor(.white.opacity(0.7));Spacer();Text(value).font(.system(size:12,design:.rounded)).foregroundColor(.white)};Divider().background(Color.white.opacity(0.1)) }
@@ -206,7 +244,7 @@ struct MoviePlayerView: View {
                 if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
                 else { imdbId = try await fetchMovieIMDbId() }
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
-                let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
+                let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber, quality: selectedQuality)
                 let item = AVPlayerItem(url: url)
                 await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
                 let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
