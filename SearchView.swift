@@ -8,15 +8,6 @@ struct SearchView: View {
     
     private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     
-    let categoryPosters: [String: String] = [
-        "Marvel": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
-        "DC": "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg",
-        "Hành động": "/aBw8zYuAljVM1FeK7bRITkfH4g8.jpg",
-        "Viễn tưởng": "/ghQrKrcEpAlkzBuNoO7jZAgUx1R.jpg",
-        "Kinh dị": "/vJ8cQMNknAY1R4vVxzBSMvQ1W4.jpg",
-        "Hài": "/hv7o3VgfsairBoQFAawgaQ4cR1m.jpg"
-    ]
-    
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
@@ -33,57 +24,47 @@ struct SearchView: View {
                     .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)).padding(.horizontal).padding(.top, 54)
                     
                     if vm.query.isEmpty {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 20) {
-                                Text("Tìm kiếm phổ biến").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(.horizontal).padding(.top, 16)
-                                
-                                LazyVGrid(columns: columns, spacing: 15) {
-                                    ForEach(CategoryConfig.allCategories.prefix(6)) { category in
-                                        NavigationLink(destination: CategoryFullView(category: category)) {
-                                            ZStack(alignment: .bottom) {
-                                                if let poster = categoryPosters[category.name], let url = URL(string: "https://image.tmdb.org/t/p/w500\(poster)") {
-                                                    CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14)).overlay(Color.black.opacity(0.4)).clipShape(RoundedRectangle(cornerRadius: 14))
-                                                } else {
-                                                    RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.1)], startPoint: .top, endPoint: .bottom)).frame(height: 100)
-                                                }
-                                                Text(category.name).font(.system(size: 12, weight: .bold)).foregroundColor(.white).padding(.vertical, 4).padding(.horizontal, 10).background(.ultraThinMaterial).clipShape(Capsule()).padding(8)
-                                            }
-                                        }
-                                    }
-                                }.padding(.horizontal, 16)
-                                
-                                Text("Xu hướng").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(.horizontal)
-                                ForEach(Array(vm.trending.prefix(10).enumerated()), id: \.element.id) { i, movie in
-                                    Button { selectedMovie = movie } label: {
-                                        HStack(spacing: 12) {
-                                            Text("\(i+1)").font(.system(size: 18, weight: .bold)).foregroundColor(.gray).frame(width: 30)
-                                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
-                                                .overlay(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.12)).opacity(movie.posterURL == nil ? 1 : 0))
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(movie.title).foregroundColor(.white).font(.system(size: 14, weight: .semibold))
-                                                HStack { Image(systemName: "star.fill").foregroundColor(.yellow).font(.system(size: 10)); Text(movie.ratingText).foregroundColor(.gray).font(.system(size: 12)) }
-                                            }
-                                            Spacer()
-                                        }.padding(.horizontal)
-                                    }
-                                }
-                            }.padding(.bottom, 100)
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            Text("Tìm phim, TV show...")
+                                .foregroundColor(.gray)
                         }
-                    } else if vm.results.isEmpty { Spacer(); Text("Không tìm thấy").foregroundColor(.gray); Spacer() }
-                    else {
+                        .frame(maxHeight: .infinity)
+                    } else if vm.results.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "movieclapper")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            Text("Không tìm thấy")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxHeight: .infinity)
+                    } else {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 15) {
                                 ForEach(vm.results) { movie in
                                     Button { selectedMovie = movie } label: {
                                         VStack(spacing: 6) {
-                                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 3)
-                                                .overlay(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.12)).opacity(movie.posterURL == nil ? 1 : 0))
-                                            Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                            HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .shadow(color: .black.opacity(0.3), radius: 3)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(Color(white: 0.12))
+                                                        .opacity(movie.posterURL == nil ? 1 : 0)
+                                                )
+                                            Text(movie.title)
+                                                .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                            }
                                         }
                                     }
                                 }
-                            }.padding(.horizontal, 16)
+                            }.padding(.horizontal, 16).padding(.bottom, 100)
                         }
                     }
                 }
