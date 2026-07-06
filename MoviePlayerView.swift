@@ -10,22 +10,10 @@ class IMDBCache {
     func set(_ id: Int, value: String) { cache[id] = value; if let d = try? JSONEncoder().encode(cache) { UserDefaults.standard.set(d, forKey: "imdbCache_v3") } }
 }
 
-enum MovieSource: String, CaseIterable {
-    case ntl = "NTL"
-    case mediafusion = "MediaFusion"
-    case yastream = "YasStream"
-    case nguonc = "NguonC"
-}
-
+enum MovieSource: String, CaseIterable { case ntl="NTL", mediafusion="MediaFusion", yastream="YasStream", nguonc="NguonC" }
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL, wrongEpisode
-    var errorDescription: String? {
-        switch self {
-        case .noStreamAvailable: return "Không tìm thấy link"
-        case .invalidURL: return "URL lỗi"
-        case .wrongEpisode: return "Không tìm thấy tập này"
-        }
-    }
+    var errorDescription: String? { switch self { case .noStreamAvailable: return "Không tìm thấy link"; case .invalidURL: return "URL lỗi"; case .wrongEpisode: return "Không tìm thấy tập này" } }
 }
 
 class MovieStreamService {
@@ -42,49 +30,41 @@ class MovieStreamService {
         }
     }
     
-    // MARK: - NTL
     func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         var path = "/stream/movie/\(id).json"
-        if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
-        var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
-        r.timeoutInterval = 15; r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
-        let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url,
-              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        if let s=season, let e=episode { path="/stream/series/\(id):\(s):\(e).json" }
+        var r=URLRequest(url:URL(string:"https://tnluannguyen-ntl-stream.hf.space\(path)")!)
+        r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent")
+        let (d,_)=try await URLSession.shared.data(for:r)
+        struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?}
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{$0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true)})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     
-    // MARK: - MediaFusion
     func fetchMediaFusion(_ id: String, season: Int?, episode: Int?) async throws -> URL {
-        let cleanId = id.replacingOccurrences(of: "tt", with: "")
-        var path = "/stream/movie/\(cleanId).json"
-        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
-        var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
-        r.timeoutInterval = 15; r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
-        r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
-        let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil })?.url,
-              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        let cleanId=id.replacingOccurrences(of:"tt",with:"")
+        var path="/stream/movie/\(cleanId).json"
+        if let s=season, let e=episode { path="/stream/series/\(cleanId):\(s):\(e).json" }
+        var r=URLRequest(url:URL(string:"https://mediafusion.elfhosted.com\(path)")!)
+        r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent"); r.setValue("https://mediafusion.elfhosted.com/",forHTTPHeaderField:"Referer")
+        let (d,_)=try await URLSession.shared.data(for:r)
+        struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?; let type:String?; let infoHash:String?}
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     
-    // MARK: - YasStream
     func fetchStremio(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
-        let base = "https://yastream.tamthai.de"; let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
-        var path = "/stream/movie/\(cleanId).json"
-        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
-        var r = URLRequest(url: URL(string: "\(base)\(path)")!)
-        r.timeoutInterval = 15; r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent"); r.setValue(base, forHTTPHeaderField: "Referer")
-        let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil })?.url,
-              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        let base="https://yastream.tamthai.de"; let cleanId=imdbId.replacingOccurrences(of:"tt",with:"")
+        var path="/stream/movie/\(cleanId).json"
+        if let s=season, let e=episode { path="/stream/series/\(cleanId):\(s):\(e).json" }
+        var r=URLRequest(url:URL(string:"\(base)\(path)")!)
+        r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent"); r.setValue(base,forHTTPHeaderField:"Referer")
+        let (d,_)=try await URLSession.shared.data(for:r)
+        struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?; let type:String?; let infoHash:String?}
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     
-    // MARK: - NguonC
     func fetchNguonC(title: String, season: Int, episode: Int) async throws -> URL {
         let slug = try await findNguonCSlug(title: title)
         guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { throw StreamError.noStreamAvailable }
@@ -100,18 +80,21 @@ class MovieStreamService {
     }
     
     private func findNguonCSlug(title: String) async throws -> String {
-        var keywords = [title]
-        if let firstWord = title.components(separatedBy: " ").first, firstWord != title {
-            keywords.append(firstWord)
-        }
+        let keywords = [
+            title,
+            title.lowercased(),
+            title.replacingOccurrences(of: " ", with: "-").lowercased(),
+            title.folding(options: .diacriticInsensitive, locale: .current)
+        ]
         for kw in keywords {
             let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
             guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { continue }
             let (data, _) = try await URLSession.shared.data(from: url)
             struct SR: Codable { let data: [SF]? }
-            struct SF: Codable { let slug: String? }
+            struct SF: Codable { let slug: String?; let name: String? }
             if let films = try? JSONDecoder().decode(SR.self, from: data).data,
-               let slug = films.first?.slug { return slug }
+               let film = films.first(where: { $0.name?.lowercased().contains(title.lowercased()) ?? false }) ?? films.first,
+               let slug = film.slug { return slug }
         }
         throw StreamError.noStreamAvailable
     }
