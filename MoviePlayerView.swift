@@ -82,8 +82,8 @@ struct MoviePlayerView: View {
     
     @Environment(\.dismiss) var dismiss
     @State private var player = AVPlayer()
-    @State private var isLoading = true
-    @State private var errorMessage: String?
+    error @State private var isLoading = true
+    @State private varMessage: String?
     @State private var selectedSource: MovieSource = .ntl
     @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false
@@ -100,12 +100,13 @@ struct MoviePlayerView: View {
     @State private var brightnessTimer: Timer?
     @State private var volumeDragStart: Float = 0
     @State private var briDragStart: CGFloat = 0
+    @State private var isFullscreen = false
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            CustomPlayerVC(player: player)
+            CustomPlayerVC(player: player, isFullscreen: $isFullscreen)
                 .ignoresSafeArea()
                 .onAppear {
                     player.play()
@@ -228,8 +229,9 @@ struct MoviePlayerView: View {
                                     .background(Capsule().fill(.ultraThinMaterial.opacity(0.25))).overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                             Spacer()
-                            Button { dismiss() } label: {
-                                Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
+                            Button { toggleFullscreen() } label: {
+                                Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
                                     .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                             }
                         }.padding(.horizontal).padding(.bottom, 20)
@@ -284,6 +286,16 @@ struct MoviePlayerView: View {
         }
         .statusBarHidden()
         .task { loadStream() }
+    }
+    
+    func toggleFullscreen() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        if isFullscreen {
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        } else {
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+        }
+        isFullscreen.toggle()
     }
     
     func loadStream() {
@@ -343,6 +355,7 @@ struct TinySlider: View {
 // MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
+    @Binding var isFullscreen: Bool
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
