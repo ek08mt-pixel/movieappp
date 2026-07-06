@@ -13,7 +13,13 @@ class IMDBCache {
 enum MovieSource: String, CaseIterable { case ntl="NTL", mediafusion="MediaFusion", yastream="YasStream", nguonc="NguonC" }
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL, wrongEpisode
-    var errorDescription: String? { switch self { case .noStreamAvailable: return "Không tìm thấy link"; case .invalidURL: return "URL lỗi"; case .wrongEpisode: return "Không tìm thấy tập này" } }
+    var errorDescription: String? {
+        switch self {
+        case .noStreamAvailable: return "Không tìm thấy link"
+        case .invalidURL: return "URL lỗi"
+        case .wrongEpisode: return "Không tìm thấy tập này"
+        }
+    }
 }
 
 class MovieStreamService {
@@ -69,41 +75,35 @@ class MovieStreamService {
         let slug = try await findNguonCSlug(title: title)
         guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { throw StreamError.noStreamAvailable }
         let (dd, _) = try await URLSession.shared.data(from: dtUrl)
-        struct DR: Codable { let episodes: [EP]? }
-        struct EP: Codable { let id: Int; let link: String?; let season: Int?; let episode: Int? }
-        guard let detail = try? JSONDecoder().decode(DR.self, from: dd),
-              let episodes = detail.episodes else { throw StreamError.noStreamAvailable }
         
-        let matched = episodes.filter { $0.season == season && $0.episode == episode }
+        struct FlexEP: Codable {
+            let id: Int?; let link: String?; let slug: String?; let season: Int?; let episode: Int?
+            let links: [FlexLink]?; let sources: [FlexLink]?
+        }
+        struct FlexLink: Codable {
+            let link: String?; let file: String?; let url: String?; let src: String?
+            let quality: String?; let label: String?
+        }
+        struct FlexDR: Codable {
+            let episodes: [FlexEP]?; let episode: [FlexEP]?; let data: FlexData?
+        }
+        struct FlexData: Codable { let episodes: [FlexEP]?; let episode: [FlexEP]? }
+        
+        let response = try JSONDecoder().decode(FlexDR.self, from: dd)
+        let allEpisodes = response.episodes ?? response.episode ?? response.data?.episodes ?? response.data?.episode ?? []
+        let matched = allEpisodes.filter { $0.season == season && $0.episode == episode }
+        
         for ep in matched {
-            guard let link = ep.link, !link.isEmpty else { continue }
-            if link.contains("embed") || link.contains(".php") {
-                if let embedURL = URL(string: link),
-                   let realURL = try? await extractVideoFromEmbed(embedURL: embedURL) {
-                    return realURL
-                }
-            } else if let url = URL(string: link) {
-                return url
+            if let link = ep.link, !link.isEmpty, !link.contains("embed"), !link.contains(".php"),
+               let url = URL(string: link) { return url }
+            let allLinks = (ep.links ?? []) + (ep.sources ?? [])
+            for l in allLinks {
+                let urlStr = l.link ?? l.file ?? l.url ?? l.src ?? ""
+                if !urlStr.isEmpty, !urlStr.contains("embed"), !urlStr.contains(".php"),
+                   let url = URL(string: urlStr) { return url }
             }
         }
         throw StreamError.wrongEpisode
-    }
-    
-    private func extractVideoFromEmbed(embedURL: URL) async throws -> URL {
-        let (data, _) = try await URLSession.shared.data(from: embedURL)
-        guard let html = String(data: data, encoding: .utf8) else { throw StreamError.noStreamAvailable }
-        
-        if let m3u8Range = html.range(of: "https?://[^\"'\\s]+\\.m3u8[^\"'\\s]*", options: .regularExpression),
-           let url = URL(string: String(html[m3u8Range])) {
-            return url
-        }
-        
-        if let mp4Range = html.range(of: "https?://[^\"'\\s]+\\.mp4[^\"'\\s]*", options: .regularExpression),
-           let url = URL(string: String(html[mp4Range])) {
-            return url
-        }
-        
-        throw StreamError.noStreamAvailable
     }
     
     private func findNguonCSlug(title: String) async throws -> String {
