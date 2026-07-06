@@ -57,17 +57,25 @@ struct ExploreView: View {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
                                     ZStack(alignment: .bottomLeading) {
-                                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterMap[title] ?? "")"))
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(height: 110)
-                                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                                            .overlay(Color.black.opacity(0.35))
-                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                        if let posterPath = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
+                                            CachedAsyncImage(url: url)
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 110)
+                                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                                .overlay(Color.black.opacity(0.35))
+                                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.1)], startPoint: .top, endPoint: .bottom))
+                                                .frame(height: 110)
+                                                .overlay(Color.black.opacity(0.2))
+                                        }
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
                                 }
                             }
-                        }.padding(.horizontal)
+                        }
+                        .padding(.horizontal, 16)
                         
                         if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
