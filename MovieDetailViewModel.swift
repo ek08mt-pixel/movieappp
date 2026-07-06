@@ -15,27 +15,19 @@ class MovieDetailViewModel: ObservableObject {
         isLoading = true
         let type = mediaType ?? "movie"
         
-        // Load detail trước
         if type == "tv" {
-            detail = try? await APIService.shared.tvDetail(tvId: movieId)
+            // Load seasons trực tiếp từ API
+            seasons = await loadSeasonsDirectly(tvId: movieId)
         } else {
             detail = try? await APIService.shared.movieDetail(movieId: movieId)
+            if let collectionId = detail?.belongsToCollection?.id {
+                if let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
+                    collectionMovies = colDetail.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+                }
+            }
         }
         isLoading = false
         
-        // Load collection ngay sau detail
-        if let collectionId = detail?.belongsToCollection?.id {
-            if let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
-                collectionMovies = colDetail.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-            }
-        }
-        
-        // Load seasons nếu là TV
-        if type == "tv" {
-            seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []
-        }
-        
-        // Load các phần còn lại song song
         async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: type)
         async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: type)
         async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: type)
@@ -43,6 +35,21 @@ class MovieDetailViewModel: ObservableObject {
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
+    }
+    
+    private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
+        let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
+        guard let url = URL(string: urlString) else { return [] }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct TVDetailResponse: Codable {
+                let seasons: [TVSeason]?
+            }
+            let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
+            return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
+        } catch {
+            return []
+        }
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
