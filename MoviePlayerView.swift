@@ -14,11 +14,7 @@ enum MovieSource: String, CaseIterable { case ntl="NTL", mediafusion="MediaFusio
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL, wrongEpisode
     var errorDescription: String? {
-        switch self {
-        case .noStreamAvailable: return "Không tìm thấy link"
-        case .invalidURL: return "URL lỗi"
-        case .wrongEpisode: return "Không tìm thấy tập này"
-        }
+        switch self { case .noStreamAvailable: return "Không tìm thấy link"; case .invalidURL: return "URL lỗi"; case .wrongEpisode: return "Không tìm thấy tập này" }
     }
 }
 
@@ -31,8 +27,8 @@ class MovieStreamService {
         case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode)
         case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode)
         case .nguonc:
-            guard let s = season, let e = episode else { throw StreamError.wrongEpisode }
-            return try await fetchNguonC(title: movieTitle, season: s, episode: e)
+            guard let ep = episode else { throw StreamError.wrongEpisode }
+            return try await fetchNguonC(title: movieTitle, episode: ep)
         }
     }
     
@@ -71,56 +67,56 @@ class MovieStreamService {
         return vu
     }
     
-    func fetchNguonC(title: String, season: Int, episode: Int) async throws -> URL {
+    func fetchNguonC(title: String, episode: Int) async throws -> URL {
         let slug = try await findNguonCSlug(title: title)
         guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { throw StreamError.noStreamAvailable }
-        let (dd, _) = try await URLSession.shared.data(from: dtUrl)
+        var r = URLRequest(url: dtUrl)
+        r.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (dd, _) = try await URLSession.shared.data(for: r)
         
-        struct FlexEP: Codable {
-            let id: Int?; let link: String?; let slug: String?; let season: Int?; let episode: Int?
-            let links: [FlexLink]?; let sources: [FlexLink]?
-        }
-        struct FlexLink: Codable {
-            let link: String?; let file: String?; let url: String?; let src: String?
-            let quality: String?; let label: String?
-        }
-        struct FlexDR: Codable {
-            let episodes: [FlexEP]?; let episode: [FlexEP]?; let data: FlexData?
-        }
-        struct FlexData: Codable { let episodes: [FlexEP]?; let episode: [FlexEP]? }
+        struct DR: Codable { let episodes: [EP]? }
+        struct EP: Codable { let id: Int?; let link: String?; let name: String?; let slug: String? }
         
-        let response = try JSONDecoder().decode(FlexDR.self, from: dd)
-        let allEpisodes = response.episodes ?? response.episode ?? response.data?.episodes ?? response.data?.episode ?? []
-        let matched = allEpisodes.filter { $0.season == season && $0.episode == episode }
+        guard let detail = try? JSONDecoder().decode(DR.self, from: dd),
+              let episodes = detail.episodes else { throw StreamError.noStreamAvailable }
         
-        for ep in matched {
-            if let link = ep.link, !link.isEmpty, !link.contains("embed"), !link.contains(".php"),
-               let url = URL(string: link) { return url }
-            let allLinks = (ep.links ?? []) + (ep.sources ?? [])
-            for l in allLinks {
-                let urlStr = l.link ?? l.file ?? l.url ?? l.src ?? ""
-                if !urlStr.isEmpty, !urlStr.contains("embed"), !urlStr.contains(".php"),
-                   let url = URL(string: urlStr) { return url }
+        // Parse định dạng "tập|link" hoặc "số|link"
+        for ep in episodes {
+            let linkStr = ep.link ?? ep.slug ?? ""
+            if linkStr.contains("|") {
+                let parts = linkStr.split(separator: "|")
+                if parts.count >= 2 {
+                    let epNum = Int(parts[0].trimmingCharacters(in: .whitespaces)) ?? -1
+                    let urlStr = String(parts[1])
+                    if epNum == episode, !urlStr.isEmpty, let embedURL = URL(string: urlStr) {
+                        // Nếu là embed, bóc tách link m3u8
+                        if urlStr.contains("embed") || urlStr.contains(".php") {
+                            do {
+                                return try await EmbedExtractor().extractM3U8(from: embedURL)
+                            } catch {
+                                throw StreamError.noStreamAvailable
+                            }
+                        }
+                        return embedURL
+                    }
+                }
             }
         }
         throw StreamError.wrongEpisode
     }
     
     private func findNguonCSlug(title: String) async throws -> String {
-        let keywords = [title, title.lowercased(),
-                        title.replacingOccurrences(of: " ", with: "-").lowercased(),
-                        title.folding(options: .diacriticInsensitive, locale: .current)]
-        for kw in keywords {
-            let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
-            guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { continue }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            struct SR: Codable { let data: [SF]? }
-            struct SF: Codable { let slug: String?; let name: String? }
-            if let films = try? JSONDecoder().decode(SR.self, from: data).data,
-               let film = films.first(where: { $0.name?.lowercased().contains(title.lowercased()) ?? false }) ?? films.first,
-               let slug = film.slug { return slug }
-        }
-        throw StreamError.noStreamAvailable
+        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { throw StreamError.noStreamAvailable }
+        var r = URLRequest(url: url)
+        r.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(from: r)
+        struct SR: Codable { let data: [SF]? }
+        struct SF: Codable { let slug: String?; let name: String? }
+        guard let films = try? JSONDecoder().decode(SR.self, from: data).data,
+              let film = films.first(where: { $0.name?.lowercased().contains(title.lowercased()) ?? false }) ?? films.first,
+              let slug = film.slug else { throw StreamError.noStreamAvailable }
+        return slug
     }
 }
 
@@ -204,6 +200,13 @@ struct MoviePlayerView: View {
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task {
             do {
+                if selectedSource == .nguonc {
+                    guard let ep = e else { throw StreamError.wrongEpisode }
+                    let url = try await MovieStreamService.shared.fetchNguonC(title: movieTitle, episode: ep)
+                    let item = AVPlayerItem(url: url)
+                    await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.nguonc] = true; isLoading = false }
+                    saveHistory(); return
+                }
                 let imdbId: String
                 if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
                 else { if let c = IMDBCache.shared.get(movieId) { imdbId = c } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
