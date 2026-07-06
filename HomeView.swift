@@ -79,4 +79,4 @@ struct SectionGrid: View {
             }.padding(.top, 24)
         }
     }
-}
+} 
