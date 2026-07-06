@@ -25,31 +25,40 @@ class MovieStreamService {
         }
     }
     private func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
-        var path = "/stream/movie/\(id).json"; if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
+        var path = "/stream/movie/\(id).json"
+        if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
+        struct R: Codable { let streams: [S]? }
+        struct S: Codable { let url: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     private func fetchMediaFusion(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         let cleanId = id.replacingOccurrences(of: "tt", with: "")
-        var path = "/stream/movie/\(cleanId).json"; if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
+        var path = "/stream/movie/\(cleanId).json"
+        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
-        r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent"); r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
+        r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
+        struct R: Codable { let streams: [S]? }
+        struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     private func fetchStremio(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
-        let base = "https://yastream.tamthai.de"; let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
-        var path = "/stream/movie/\(cleanId).json"; if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
+        let base = "https://yastream.tamthai.de"
+        let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
+        var path = "/stream/movie/\(cleanId).json"
+        if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "\(base)\(path)")!)
-        r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent"); r.setValue(base, forHTTPHeaderField: "Referer")
+        r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
+        struct R: Codable { let streams: [S]? }
+        struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
@@ -104,11 +113,7 @@ struct MoviePlayerView: View {
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
     }
     
-    func openMovie(_ movie: Movie) {
-        closeOverlay(); player.pause()
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie }
-    }
+    func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
     func closeOverlay() { withAnimation(.spring(response:0.25,dampingFraction:0.8)){overlayOffset=UIScreen.main.bounds.height}; DispatchQueue.main.asyncAfter(deadline:.now()+0.25){showOverlay=false} }
     
     var youtubeOverlay: some View {
@@ -129,8 +134,7 @@ struct MoviePlayerView: View {
                         }
                         if !similarMovies.isEmpty { VStack(alignment:.leading,spacing:8){Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(similarMovies.prefix(15)){movie in Button{openMovie(movie)}label:{VStack(spacing:4){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:90,height:135).clipShape(RoundedRectangle(cornerRadius:10));Text(movie.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:90)}}}}}} }
                     }.padding()
-                }
-                .clipped()
+                }.clipped()
             }
             .frame(height:UIScreen.main.bounds.height*0.55)
             .background(RoundedRectangle(cornerRadius:20).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:20).stroke(Color.white.opacity(0.15),lineWidth:0.5)))
@@ -156,5 +160,52 @@ struct MoviePlayerView: View {
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
 
-struct CustomPlayerVC: UIViewControllerRepresentable { let player:AVPlayer; @Binding var pipController:AVPictureInPictureController?; func makeUIViewController(context:Context)->AVPlayerViewController{let vc=AVPlayerViewController();vc.player=player;vc.showsPlaybackControls=false;vc.videoGravity=.resizeAspect;vc.allowsPictureInPicturePlayback=true;vc.canStartPictureInPictureAutomaticallyFromInline=true;return vc}; func updateUIViewController(_ ui:AVPlayerViewController,context:Context){DispatchQueue.main.async{if pipController==nil,let layer=ui.view.layer.sublayers?.first as? AVPlayerLayer{pipController=AVPictureInPictureController(playerLayer:layer)}}} }
-struct TinySlider: View { let value:CGFloat;let icon:String;var body:some View{VStack(spacing:4){Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5));ZStack(alignment:.bottom){Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60);Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y:-value*52)}}} }
+// MARK: - Custom Player VC
+struct CustomPlayerVC: UIViewControllerRepresentable {
+    let player: AVPlayer
+    @Binding var pipController: AVPictureInPictureController?
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let vc = AVPlayerViewController()
+        vc.player = player
+        vc.showsPlaybackControls = false
+        vc.videoGravity = .resizeAspect
+        vc.allowsPictureInPicturePlayback = true
+        vc.canStartPictureInPictureAutomaticallyFromInline = true
+        return vc
+    }
+
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
+        DispatchQueue.main.async {
+            if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
+                pipController = AVPictureInPictureController(playerLayer: layer)
+            }
+        }
+    }
+}
+
+// MARK: - Tiny Slider
+struct TinySlider: View {
+    let value: CGFloat
+    let icon: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+                .foregroundColor(.white.opacity(0.5))
+            ZStack(alignment: .bottom) {
+                Capsule()
+                    .fill(.ultraThinMaterial.opacity(0.1))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.04), lineWidth: 0.5))
+                    .frame(width: 6, height: 60)
+                Circle()
+                    .fill(.white.opacity(0.4))
+                    .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1))
+                    .frame(width: 16, height: 16)
+                    .shadow(color: .white.opacity(0.15), radius: 4)
+                    .offset(y: -value * 52)
+            }
+        }
+    }
+}
