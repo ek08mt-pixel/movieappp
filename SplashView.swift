@@ -7,7 +7,6 @@ struct SplashView: View {
     @State private var catScale: CGFloat = 0.3
     @State private var catOpacity: Double = 0
     @State private var catRotation: Double = -15
-    @State private var phase = 0
     @State private var particles: [Particle] = []
     @State private var glowOpacity: Double = 0
     
@@ -20,17 +19,14 @@ struct SplashView: View {
                 .transition(.opacity.animation(.easeInOut(duration: 0.6)))
         } else {
             ZStack {
-                // Background
                 LinearGradient(colors: [Color(hex: "#121212"), Color(hex: "#05100F")], startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
                 
-                // Scanlines overlay
                 ScanlinesView()
                     .opacity(0.12)
                     .blendMode(.overlay)
                     .ignoresSafeArea()
                 
-                // Particles
                 ForEach(particles) { particle in
                     Rectangle()
                         .fill(catColor.opacity(particle.opacity))
@@ -39,9 +35,7 @@ struct SplashView: View {
                         .blur(radius: 1)
                 }
                 
-                // Cat
                 ZStack {
-                    // Glow
                     CatPixelView()
                         .fill(catColor.opacity(0.5))
                         .blur(radius: 15)
@@ -58,14 +52,12 @@ struct SplashView: View {
                 .opacity(catOpacity)
                 .shadow(color: catColor.opacity(glowOpacity * 0.8), radius: 25, x: 0, y: 0)
                 
-                // Frame
                 RoundedRectangle(cornerRadius: 36)
                     .stroke(catColor.opacity(0.3), lineWidth: 2)
                     .frame(width: 170, height: 170)
                     .scaleEffect(catOpacity > 0.5 ? 1.0 : 1.2)
                     .opacity(catOpacity * 0.6)
                 
-                // EMCC text
                 Text("EMCC")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
@@ -74,7 +66,6 @@ struct SplashView: View {
                     .offset(y: 120)
                     .shadow(color: catColor.opacity(0.4), radius: 10)
                 
-                // Footer
                 Text("© 2026 Emmew, Inc. All Rights Reserved.")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.25))
@@ -82,7 +73,12 @@ struct SplashView: View {
                     .opacity(catOpacity)
             }
             .onReceive(timer) { _ in
-                updateParticles()
+                for i in particles.indices {
+                    particles[i].x += particles[i].vx
+                    particles[i].y += particles[i].vy
+                    particles[i].opacity -= 0.02
+                }
+                particles = particles.filter { $0.opacity > 0 }
             }
             .onAppear {
                 startAnimation()
@@ -95,7 +91,6 @@ struct SplashView: View {
         let screenH = UIScreen.main.bounds.height
         let centerY = screenH / 2
         
-        // Phase 0: Xuất hiện từ góc trái, nhỏ
         catOffsetX = -60
         catOffsetY = centerY
         catScale = 0.3
@@ -107,20 +102,17 @@ struct SplashView: View {
             glowOpacity = 0.6
         }
         
-        // Phase 1: Chạy sang phải
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             withAnimation(.easeInOut(duration: 0.8)) {
                 catOffsetX = screenW + 60
                 catScale = 0.7
                 catRotation = 5
             }
-            // Spawn particles
             for _ in 0..<20 {
                 spawnParticle(at: CGPoint(x: catOffsetX, y: centerY))
             }
         }
         
-        // Phase 2: Chạy ngược về trái
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeInOut(duration: 0.8)) {
                 catOffsetX = -100
@@ -129,7 +121,6 @@ struct SplashView: View {
             }
         }
         
-        // Phase 3: Nhảy vào giữa
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                 catOffsetX = 0
@@ -140,7 +131,6 @@ struct SplashView: View {
             }
         }
         
-        // Phase 4: Thu nhỏ, fade out, chuyển màn hình
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
             withAnimation(.easeIn(duration: 0.5)) {
                 catScale = 0.1
@@ -156,13 +146,20 @@ struct SplashView: View {
     }
     
     func spawnParticle(at point: CGPoint) {
-        for _ in 0..= 20 {
-            particles.removeFirst()
+        for _ in 0..<5 {
+            let p = Particle(
+                x: point.x + CGFloat.random(in: -10...10),
+                y: point.y + CGFloat.random(in: -10...10),
+                size: CGFloat.random(in: 2...5),
+                opacity: Double.random(in: 0.3...0.7),
+                vx: CGFloat.random(in: -4...(-1)),
+                vy: CGFloat.random(in: -2...2)
+            )
+            particles.append(p)
         }
     }
 }
 
-// MARK: - Cat Pixel Art Shape
 struct CatPixelView: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -171,16 +168,13 @@ struct CatPixelView: Shape {
         let cx = w / 2
         let cy = h / 2
         
-        // Head
         path.addEllipse(in: CGRect(x: cx - 22, y: cy - 18, width: 44, height: 36))
-        // Ears
         path.move(to: CGPoint(x: cx - 16, y: cy - 12))
         path.addLine(to: CGPoint(x: cx - 14, y: cy - 28))
         path.addLine(to: CGPoint(x: cx - 4, y: cy - 14))
         path.move(to: CGPoint(x: cx + 16, y: cy - 12))
         path.addLine(to: CGPoint(x: cx + 14, y: cy - 28))
         path.addLine(to: CGPoint(x: cx + 4, y: cy - 14))
-        // Whiskers
         path.move(to: CGPoint(x: cx - 18, y: cy + 2))
         path.addLine(to: CGPoint(x: cx - 32, y: cy - 2))
         path.move(to: CGPoint(x: cx - 18, y: cy + 8))
@@ -194,7 +188,6 @@ struct CatPixelView: Shape {
     }
 }
 
-// MARK: - Particle Model
 struct Particle: Identifiable {
     let id = UUID()
     var x: CGFloat
@@ -205,7 +198,6 @@ struct Particle: Identifiable {
     var vy: CGFloat
 }
 
-// MARK: - Scanlines Overlay
 struct ScanlinesView: View {
     var body: some View {
         Canvas { context, size in
@@ -219,7 +211,6 @@ struct ScanlinesView: View {
     }
 }
 
-// MARK: - Color Hex Extension
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
