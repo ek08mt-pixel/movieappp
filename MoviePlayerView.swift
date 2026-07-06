@@ -30,8 +30,7 @@ class MovieStreamService {
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }
-        struct S: Codable { let url: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
@@ -43,8 +42,7 @@ class MovieStreamService {
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }
-        struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
@@ -57,8 +55,7 @@ class MovieStreamService {
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }
-        struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.filter({ ($0.type == "url" || $0.type == "http") && $0.infoHash == nil }).first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
@@ -148,7 +145,33 @@ struct MoviePlayerView: View {
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
-    func loadStream() { isLoading=true;errorMessage=nil;sourceStatus[selectedSource]=nil; Task { do { let imdbId:String; if mediaType=="tv"{imdbId=try await APIService.shared.fetchExternalIDs(tvId:movieId) ?? ""}else{imdbId=try await fetchMovieIMDbId()}; guard !imdbId.isEmpty else{throw StreamError.noStreamAvailable}; let url=try await MovieStreamService.shared.getStreamURL(for:selectedSource,imdbId:imdbId,season:seasonNumber,episode:episodeNumber); let item=AVPlayerItem(url:url); await MainActor.run{player.replaceCurrentItem(with:item);sourceStatus[selectedSource]=true;isLoading=false} } catch { await MainActor.run{errorMessage=error.localizedDescription;sourceStatus[selectedSource]=false;isLoading=false} } } }
+    
+    func loadStream() {
+        isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
+        Task {
+            do {
+                let imdbId: String
+                if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
+                else { imdbId = try await fetchMovieIMDbId() }
+                guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
+                let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
+                let item = AVPlayerItem(url: url)
+                await MainActor.run {
+                    player.replaceCurrentItem(with: item)
+                    player.play()
+                    sourceStatus[selectedSource] = true
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    sourceStatus[selectedSource] = false
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
     func fetchMovieIMDbId() async throws -> String { let (d,_)=try await URLSession.shared.data(from:URL(string:"https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E:Codable{let imdb_id:String?}; guard let id=try JSONDecoder().decode(E.self,from:d).imdb_id else{throw StreamError.noStreamAvailable}; return id }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
@@ -160,7 +183,6 @@ struct MoviePlayerView: View {
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
 
-// MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
     @Binding var pipController: AVPictureInPictureController?
@@ -184,27 +206,16 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Tiny Slider
 struct TinySlider: View {
     let value: CGFloat
     let icon: String
 
     var body: some View {
         VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.5))
+            Image(systemName: icon).font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
             ZStack(alignment: .bottom) {
-                Capsule()
-                    .fill(.ultraThinMaterial.opacity(0.1))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.04), lineWidth: 0.5))
-                    .frame(width: 6, height: 60)
-                Circle()
-                    .fill(.white.opacity(0.4))
-                    .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1))
-                    .frame(width: 16, height: 16)
-                    .shadow(color: .white.opacity(0.15), radius: 4)
-                    .offset(y: -value * 52)
+                Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04), lineWidth: 0.5)).frame(width: 6, height: 60)
+                Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1)).frame(width: 16, height: 16).shadow(color: .white.opacity(0.15), radius: 4).offset(y: -value * 52)
             }
         }
     }
