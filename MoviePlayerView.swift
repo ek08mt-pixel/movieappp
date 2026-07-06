@@ -110,7 +110,7 @@ class MovieStreamService {
         guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { throw StreamError.noStreamAvailable }
         var r = URLRequest(url: url)
         r.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await URLSession.shared.data(from: r)
+        let (data, _) = try await URLSession.shared.data(for: r)
         struct SR: Codable { let data: [SF]? }
         struct SF: Codable { let slug: String?; let name: String? }
         guard let films = try? JSONDecoder().decode(SR.self, from: data).data,
