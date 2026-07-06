@@ -24,94 +24,88 @@ struct LibraryView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    tabBar
-                        .padding(.horizontal, 30)
-                        .padding(.top, 70)
+                    HStack(spacing: 0) {
+                        tabButton(.saved)
+                        tabButton(.watched)
+                    }
+                    .padding(4)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial.opacity(0.2))
+                            .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    )
+                    .padding(.horizontal, 30)
+                    .padding(.top, 70)
                     
                     if currentMovies.isEmpty {
-                        emptyView
+                        VStack(spacing: 12) {
+                            Image(systemName: selectedTab == .saved ? "bookmark.slash" : "eye.slash")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            Text(selectedTab == .saved ? "Chưa có phim đã lưu" : "Chưa có phim đã xem")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxHeight: .infinity)
                     } else {
-                        movieGrid
+                        ScrollView {
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 15),
+                                    GridItem(.flexible(), spacing: 15),
+                                    GridItem(.flexible(), spacing: 15)
+                                ],
+                                spacing: 15
+                            ) {
+                                ForEach(currentMovies) { movie in
+                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .aspectRatio(2/3, contentMode: .fill)
+                                            .frame(maxWidth: .infinity)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color(white: 0.12))
+                                                    .opacity(movie.posterURL == nil ? 1 : 0)
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                            .padding(.bottom, 100)
+                        }
                     }
                 }
             }
         }
     }
     
-    var tabBar: some View {
-        HStack(spacing: 0) {
-            tabButton(.saved)
-            tabButton(.watched)
-        }
-        .padding(4)
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial.opacity(0.2))
-                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-        )
-    }
-    
     func tabButton(_ tab: LibraryTab) -> some View {
-        Button {
+        let isSelected = selectedTab == tab
+        return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 selectedTab = tab
             }
         } label: {
             Text(tab.rawValue)
-                .font(.system(size: 14, weight: selectedTab == tab ? .bold : .regular))
-                .foregroundColor(selectedTab == tab ? .white : .gray)
+                .font(.system(size: 14, weight: isSelected ? .bold : .regular))
+                .foregroundColor(isSelected ? .white : .gray)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(
-                    selectedTab == tab
-                        ? AnyShapeStyle(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
-                        : AnyShapeStyle(Color.clear)
+                    Group {
+                        if isSelected {
+                            Capsule().fill(.ultraThinMaterial.opacity(0.5))
+                        } else {
+                            Capsule().fill(Color.clear)
+                        }
+                    }
                 )
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
-                        .stroke(selectedTab == tab ? Color.white.opacity(0.2) : Color.clear, lineWidth: 0.5)
+                        .stroke(isSelected ? Color.white.opacity(0.2) : Color.clear, lineWidth: 0.5)
                 )
         }
-    }
-    
-    var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: selectedTab == .saved ? "bookmark.slash" : "eye.slash")
-                .font(.system(size: 50))
-                .foregroundColor(.gray)
-            Text(selectedTab == .saved ? "Chưa có phim đã lưu" : "Chưa có phim đã xem")
-                .foregroundColor(.gray)
-        }
-        .frame(maxHeight: .infinity)
-    }
-    
-    var movieGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 15) {
-                ForEach(currentMovies) { movie in
-                    NavigationLink(destination: MovieDetailView(movie: movie)) {
-                        CachedAsyncImage(url: movie.posterURL)
-                            .aspectRatio(2/3, contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(white: 0.12))
-                                    .opacity(movie.posterURL == nil ? 1 : 0)
-                            )
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, 100)
-        }
-    }
-    
-    var columns: [GridItem] {
-        [GridItem(.flexible(), spacing: 15),
-         GridItem(.flexible(), spacing: 15),
-         GridItem(.flexible(), spacing: 15)]
     }
 }
