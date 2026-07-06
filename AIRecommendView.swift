@@ -50,7 +50,7 @@ struct AIRecommendView: View {
             if mood == "🎬 Tất cả" {
                 if let last = appState.watchHistory.last { recommendations = try await APIService.shared.similar(movieId: last.id) }
                 else { recommendations = try await APIService.shared.popular() }
-            } else if let genreId = genreMap[mood] { recommendations = try await APIService.shared.discoverMovies(genreId: genreId) }
+            } else if let genreId = genreMap[mood] { recommendations = try await APIService.shared.moviesByGenre(genreId: genreId }
         } catch { recommendations = [] }
         isLoading = false
     }
