@@ -100,15 +100,15 @@ struct MoviePlayerView: View {
     @State private var brightnessTimer: Timer?
     @State private var volumeDragStart: Float = 0
     @State private var briDragStart: CGFloat = 0
-    @State private var isFullscreen = false
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            CustomPlayerVC(player: player, isFullscreen: $isFullscreen)
+            CustomPlayerVC(player: player)
                 .ignoresSafeArea()
                 .onAppear {
+                    forceLandscape()
                     player.play()
                     player.volume = volume
                     resetControlsTimer()
@@ -117,6 +117,7 @@ struct MoviePlayerView: View {
                 .onDisappear {
                     player.pause()
                     controlsTimer?.invalidate()
+                    forcePortrait()
                 }
                 .onTapGesture { toggleControls() }
             
@@ -222,19 +223,6 @@ struct MoviePlayerView: View {
                             Spacer()
                             Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))
                         }.padding(.horizontal)
-                        HStack {
-                            Button { showSourceMenu = true } label: {
-                                Text(selectedSource.rawValue).font(.caption2).foregroundColor(.white.opacity(0.8))
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.25))).overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                            }
-                            Spacer()
-                            Button { toggleFullscreen() } label: {
-                                Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                                    .font(.system(size: 14)).foregroundColor(.white.opacity(0.8))
-                                    .padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                            }
-                        }.padding(.horizontal).padding(.bottom, 20)
                     }.background(LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom))
                 }
                 
@@ -288,14 +276,14 @@ struct MoviePlayerView: View {
         .task { loadStream() }
     }
     
-    func toggleFullscreen() {
+    func forceLandscape() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
-        if isFullscreen {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-        } else {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-        }
-        isFullscreen.toggle()
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+    }
+    
+    func forcePortrait() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
     }
     
     func loadStream() {
@@ -397,7 +385,6 @@ struct TinySlider: View {
 // MARK: - Custom Player VC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
-    @Binding var isFullscreen: Bool
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
