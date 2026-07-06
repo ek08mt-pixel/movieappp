@@ -16,7 +16,6 @@ class MovieDetailViewModel: ObservableObject {
         let type = mediaType ?? "movie"
         
         if type == "tv" {
-            // Load seasons trực tiếp từ API
             seasons = await loadSeasonsDirectly(tvId: movieId)
         } else {
             detail = try? await APIService.shared.movieDetail(movieId: movieId)
