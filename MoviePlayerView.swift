@@ -28,7 +28,7 @@ class MovieStreamService {
         var path = "/stream/movie/\(id).json"
         if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
-        r.timeoutInterval = 8
+        r.timeoutInterval = 15
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
         struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let quality: String? }
@@ -43,7 +43,7 @@ class MovieStreamService {
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
-        r.timeoutInterval = 8
+        r.timeoutInterval = 15
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
@@ -60,7 +60,7 @@ class MovieStreamService {
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "\(base)\(path)")!)
-        r.timeoutInterval = 8
+        r.timeoutInterval = 15
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
@@ -178,7 +178,9 @@ struct MoviePlayerView: View {
         VStack(spacing: 12) {
             Text("Cài đặt").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(.white)
             Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
-            ForEach(qualities, id: \.self) { q in qualityButton(q) }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(qualities, id: \.self) { q in qualityButton(q) }
+            }
             Divider().background(Color.white.opacity(0.1))
             Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
             Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
@@ -187,25 +189,19 @@ struct MoviePlayerView: View {
             Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
             Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.2)).padding(.top, 4)
         }
-        .padding(18).frame(width: 200)
+        .padding(18).frame(width: 220)
         .background(RoundedRectangle(cornerRadius: 22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.white.opacity(0.25), lineWidth: 1)))
         .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
     }
     
     func qualityButton(_ q: String) -> some View {
         Button {
-            selectedQuality = q
-            loadStream()
-            showSettings = false
+            selectedQuality = q; loadStream(); showSettings = false
         } label: {
-            HStack {
-                Text(q).font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
-                    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
-                Spacer()
-                if selectedQuality == q { Image(systemName: "checkmark").font(.caption).foregroundColor(.white) }
-            }
-            .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 10).fill(selectedQuality == q ? Color.white.opacity(0.15) : Color.white.opacity(0.05)))
+            Text(q).font(.system(size: 12, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
+                .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
+                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 8).fill(selectedQuality == q ? Color.white.opacity(0.2) : Color.white.opacity(0.05)))
         }
     }
     
