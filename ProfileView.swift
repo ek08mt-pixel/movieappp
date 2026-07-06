@@ -7,12 +7,15 @@ struct ProfileView: View {
     @State private var inputImage: UIImage?
     @State private var isEditingName = false
     @State private var tempName: String = ""
+    @Environment(\.dismiss) var dismiss
     
     let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill", "star.circle.fill", "heart.circle.fill", "bolt.circle.fill", "moon.circle.fill", "sun.max.circle.fill"]
     
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
             ScrollView {
                 VStack(spacing: 24) {
                     Text("Tài khoản")
@@ -42,7 +45,7 @@ struct ProfileView: View {
                                     .background(Capsule().fill(.ultraThinMaterial))
                                 Menu {
                                     ForEach(avatars, id: \.self) { av in
-                                        Button { appState.selectedAvatar = av; appState.avatarImageData = nil } label: {
+                                        Button { appState.selectedAvatar = av; appState.avatarImageData = nil; appState.save() } label: {
                                             Label(av, systemImage: av)
                                         }
                                     }
@@ -62,6 +65,7 @@ struct ProfileView: View {
                                         .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
                                     Button("Lưu") {
                                         appState.nickname = tempName
+                                        appState.save()
                                         isEditingName = false
                                     }
                                     .font(.caption).fontWeight(.bold).foregroundColor(.white)
@@ -82,11 +86,9 @@ struct ProfileView: View {
                             }
                         }
                         
-                        // Email
                         Text(appState.email)
                             .font(.caption).foregroundColor(.gray)
                         
-                        // Logout
                         Button {
                             withAnimation { appState.logout() }
                         } label: {
@@ -95,7 +97,14 @@ struct ProfileView: View {
                                 .background(Capsule().stroke(Color.red.opacity(0.4), lineWidth: 1))
                         }
                     } else {
+                        Spacer().frame(height: UIScreen.main.bounds.height * 0.2)
+                        
                         VStack(spacing: 16) {
+                            Text("Đăng nhập để đồng bộ danh sách phim yêu thích trên mọi thiết bị")
+                                .font(.caption).foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                            
                             SignInWithAppleButton(.signIn) { request in
                                 request.requestedScopes = [.fullName, .email]
                             } onCompletion: { result in
@@ -106,6 +115,7 @@ struct ProfileView: View {
                                         appState.email = credential.email ?? "Apple User"
                                         appState.nickname = credential.fullName?.givenName ?? ""
                                     }
+                                    appState.save()
                                 case .failure: break
                                 }
                             }
@@ -113,9 +123,10 @@ struct ProfileView: View {
                             .frame(height: 50)
                             .clipShape(Capsule())
                             .padding(.horizontal, 30)
+                            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
                             
                             Button {
-                                withAnimation { appState.isLoggedIn = true; appState.email = "user@gmail.com" }
+                                withAnimation { appState.isLoggedIn = true; appState.email = "user@gmail.com"; appState.save() }
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "envelope.fill").font(.system(size: 16))
@@ -123,14 +134,34 @@ struct ProfileView: View {
                                 }
                                 .foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(Capsule().fill(.ultraThinMaterial))
-                            }.padding(.horizontal, 30)
+                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                            }
+                            .padding(.horizontal, 30)
+                            .padding(.vertical, 10)
                         }
+                        
+                        Spacer().frame(height: UIScreen.main.bounds.height * 0.2)
                     }
                     
                     Spacer().frame(height: 40)
                 }
             }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(14)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    )
+            }
+            .padding(.top, 54)
+            .padding(.leading, 20)
         }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: $inputImage)
         }
@@ -138,6 +169,7 @@ struct ProfileView: View {
             if let img = img, let data = img.jpegData(compressionQuality: 0.7) {
                 appState.avatarImageData = data
                 appState.selectedAvatar = ""
+                appState.save()
             }
         }
     }
