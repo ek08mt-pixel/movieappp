@@ -40,31 +40,8 @@ struct LibraryView: View {
     
     var tabBar: some View {
         HStack(spacing: 0) {
-            ForEach(LibraryTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedTab = tab
-                    }
-                } label: {
-                    Text(tab.rawValue)
-                        .font(.system(size: 14, weight: selectedTab == tab ? .bold : .regular))
-                        .foregroundColor(selectedTab == tab ? .white : .gray)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            selectedTab == tab
-                                ? AnyShapeStyle(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
-                                : AnyShapeStyle(Color.clear)
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(
-                                    selectedTab == tab ? Color.white.opacity(0.2) : Color.clear,
-                                    lineWidth: 0.5
-                                )
-                        )
-                }
-            }
+            tabButton(.saved)
+            tabButton(.watched)
         }
         .padding(4)
         .background(
@@ -72,6 +49,30 @@ struct LibraryView: View {
                 .fill(.ultraThinMaterial.opacity(0.2))
                 .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
         )
+    }
+    
+    func tabButton(_ tab: LibraryTab) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = tab
+            }
+        } label: {
+            Text(tab.rawValue)
+                .font(.system(size: 14, weight: selectedTab == tab ? .bold : .regular))
+                .foregroundColor(selectedTab == tab ? .white : .gray)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    selectedTab == tab
+                        ? AnyShapeStyle(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
+                        : AnyShapeStyle(Color.clear)
+                )
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(selectedTab == tab ? Color.white.opacity(0.2) : Color.clear, lineWidth: 0.5)
+                )
+        }
     }
     
     var emptyView: some View {
@@ -87,14 +88,7 @@ struct LibraryView: View {
     
     var movieGrid: some View {
         ScrollView {
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 15),
-                    GridItem(.flexible(), spacing: 15),
-                    GridItem(.flexible(), spacing: 15)
-                ],
-                spacing: 15
-            ) {
+            LazyVGrid(columns: columns, spacing: 15) {
                 ForEach(currentMovies) { movie in
                     NavigationLink(destination: MovieDetailView(movie: movie)) {
                         CachedAsyncImage(url: movie.posterURL)
@@ -113,5 +107,11 @@ struct LibraryView: View {
             .padding(.top, 20)
             .padding(.bottom, 100)
         }
+    }
+    
+    var columns: [GridItem] {
+        [GridItem(.flexible(), spacing: 15),
+         GridItem(.flexible(), spacing: 15),
+         GridItem(.flexible(), spacing: 15)]
     }
 }
