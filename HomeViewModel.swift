@@ -17,9 +17,16 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = true
     
     func loadAll() async {
-        isLoading = true
-        
+        // Load nhanh trending trước
         async let trendingTask = APIService.shared.trending24h()
+        async let genresTask = APIService.shared.genres()
+        
+        trending24h = (try? await trendingTask) ?? []
+        genres = (try? await genresTask) ?? []
+        movieOfDay = trending24h.randomElement()
+        isLoading = false
+        
+        // Load các phần còn lại sau
         async let trendingTVTask = fetchTrendingTV()
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
@@ -29,9 +36,7 @@ class HomeViewModel: ObservableObject {
         async let vietnameseTask = APIService.shared.vietnameseMovies()
         async let usukTask = APIService.shared.usukMovies()
         async let animeTask = APIService.shared.animeMovies()
-        async let genresTask = APIService.shared.genres()
         
-        trending24h = (try? await trendingTask) ?? []
         trendingTV = (try? await trendingTVTask) ?? []
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
@@ -41,10 +46,6 @@ class HomeViewModel: ObservableObject {
         vietnamese = (try? await vietnameseTask) ?? []
         usuk = (try? await usukTask) ?? []
         anime = (try? await animeTask) ?? []
-        genres = (try? await genresTask) ?? []
-        movieOfDay = trending24h.randomElement()
-        
-        isLoading = false
     }
     
     private func fetchTrendingTV() async throws -> [Movie] {
