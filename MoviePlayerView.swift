@@ -191,7 +191,7 @@ struct MoviePlayerView: View {
                                     CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 10))
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2)
-                                        if let rt = movie.ratingText { Text("⭐ \(rt)").font(.caption).foregroundColor(.yellow) }
+                                        Text("⭐ \(movie.ratingText)").font(.caption).foregroundColor(.yellow)
                                         if !seasons.isEmpty {
                                             Text("\(seasons.count) mùa • \(seasons.reduce(0) { $0 + $1.episodeCount }) tập").font(.caption).foregroundColor(.gray)
                                         }
