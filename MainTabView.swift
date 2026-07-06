@@ -8,44 +8,42 @@ struct MainTabView: View {
     init() { UITabBar.appearance().isHidden = true }
     
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottom) {
-                TabView(selection: $selectedTab) {
-                    HomeView().id(homeID).tag(0)
-                    ExploreView().tag(1)
-                    LibraryView().tag(2)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .ignoresSafeArea()
-                
-                HStack(spacing: 12) {
-                    HStack(spacing: 44) {
-                        LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
-                            if selectedTab == 0 { homeID = UUID() }
-                            else { withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 0 } }
-                        }
-                        LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) {
-                            withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 1 }
-                        }
-                        LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) {
-                            withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 2 }
-                        }
-                    }
-                    .padding(.vertical, 14).padding(.horizontal, 32)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                    
-                    Button { showSearch = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 26, weight: .bold)).foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 14).padding(.horizontal, 20)
-                            .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-                    }
-                }
-                .padding(.bottom, 6)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                NavigationStack { HomeView().id(homeID) }.tag(0)
+                NavigationStack { ExploreView() }.tag(1)
+                NavigationStack { LibraryView() }.tag(2)
             }
-            .ignoresSafeArea(.keyboard)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
+            
+            HStack(spacing: 12) {
+                HStack(spacing: 44) {
+                    LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
+                        if selectedTab == 0 { homeID = UUID() }
+                        else { withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 0 } }
+                    }
+                    LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) {
+                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 1 }
+                    }
+                    LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) {
+                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 2 }
+                    }
+                }
+                .padding(.vertical, 14).padding(.horizontal, 32)
+                .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
+                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                
+                Button { showSearch = true } label: {
+                    Image(systemName: "magnifyingglass").font(.system(size: 26, weight: .bold)).foregroundColor(.white.opacity(0.8))
+                        .padding(.vertical, 14).padding(.horizontal, 20)
+                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
+                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                }
+            }
+            .padding(.bottom, 6)
         }
+        .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $showSearch) { SearchView() }
     }
 }
