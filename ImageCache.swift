@@ -27,7 +27,8 @@ struct CachedAsyncImage: View {
         Group {
             if let image = image {
                 Image(uiImage: image)
-                    .resizable().aspectRatio(contentMode: .fill)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             } else {
                 Rectangle()
                     .fill(LinearGradient(colors: [Color(white: 0.15), Color(white: 0.08)], startPoint: .top, endPoint: .bottom))
