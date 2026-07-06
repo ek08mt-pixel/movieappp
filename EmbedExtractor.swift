@@ -20,7 +20,6 @@ class EmbedExtractor: NSObject, WKNavigationDelegate {
             
             DispatchQueue.main.async {
                 let config = WKWebViewConfiguration()
-                config.mediaPlaybackRequiresUserAction = false
                 config.allowsInlineMediaPlayback = true
                 
                 let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
@@ -28,7 +27,6 @@ class EmbedExtractor: NSObject, WKNavigationDelegate {
                 wv.navigationDelegate = self
                 self.webView = wv
                 
-                // Lấy root view controller để add webview
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let rootVC = windowScene.windows.first?.rootViewController {
                     rootVC.view.addSubview(wv)
@@ -36,7 +34,6 @@ class EmbedExtractor: NSObject, WKNavigationDelegate {
                 
                 wv.load(URLRequest(url: embedURL))
                 
-                // Timeout 8s
                 self.timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: false) { _ in
                     wv.evaluateJavaScript("""
                         (function() {
@@ -75,7 +72,6 @@ class EmbedExtractor: NSObject, WKNavigationDelegate {
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Thử lấy link ngay khi load xong
         webView.evaluateJavaScript("""
             (function() {
                 var video = document.querySelector('video');
