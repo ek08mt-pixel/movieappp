@@ -99,6 +99,7 @@ struct MoviePlayerView: View {
     @State private var seasons: [TVSeason] = []
     @State private var selectedSeasonDetail: TVSeasonDetail?
     @State private var selectedSeasonNumber: Int?
+    @State private var currentMovie: Movie?
     
     var body: some View {
         ZStack {
@@ -106,7 +107,7 @@ struct MoviePlayerView: View {
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                 .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData() }
                 .onDisappear { player.pause(); controlsTimer?.invalidate() }
-                .onTapGesture { toggleControls() }
+                .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
             if showBrightnessSlider { HStack { TinySlider(value: brightness, icon: "sun.max.fill").padding(.leading, 14); Spacer() } }
@@ -117,7 +118,7 @@ struct MoviePlayerView: View {
             if isLoading { VStack(spacing: 12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) } }
             if let err = errorMessage, !isLoading { VStack(spacing: 14) { Image(systemName: "wifi.slash").font(.system(size: 36)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray); HStack(spacing: 8) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } }
             
-            if showControls && errorMessage == nil {
+            if showControls && errorMessage == nil && !showOverlay {
                 HStack(spacing: 64) {
                     Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5)) }
                     Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)) }
@@ -152,74 +153,107 @@ struct MoviePlayerView: View {
         }
         .statusBarHidden()
         .gesture(
-            DragGesture(minimumDistance: 50)
+            DragGesture(minimumDistance: 30)
                 .onChanged { v in
-                    if v.translation.height < -80 && v.startLocation.y > UIScreen.main.bounds.height - 80 {
+                    if !showOverlay && v.translation.height < -60 && v.startLocation.y > UIScreen.main.bounds.height - 200 {
                         showOverlay = true
                         overlayOffset = 300
                     }
+                    if showOverlay && v.translation.height > 60 {
+                        overlayOffset = v.translation.height
+                    }
                 }
                 .onEnded { v in
-                    if showOverlay { withAnimation(.spring()) { overlayOffset = 0 } }
+                    if showOverlay && v.translation.height > 120 { closeOverlay() }
+                    else if showOverlay { withAnimation(.spring()) { overlayOffset = 0 } }
                 }
         )
         .task { loadStream() }
     }
     
+    func closeOverlay() {
+        withAnimation(.spring()) { overlayOffset = UIScreen.main.bounds.height }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showOverlay = false }
+    }
+    
     var youtubeOverlay: some View {
         ZStack(alignment: .bottom) {
-            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { withAnimation(.spring()) { overlayOffset = UIScreen.main.bounds.height; DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showOverlay = false } } }
+            Color.black.opacity(0.4).ignoresSafeArea().onTapGesture { closeOverlay() }
             VStack(spacing: 0) {
                 Capsule().fill(.white.opacity(0.5)).frame(width: 40, height: 5).padding(.top, 10)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        if !seasons.isEmpty {
-                            Text("Cùng series").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 10) {
-                                    ForEach(seasons) { season in
-                                        Button {
-                                            selectedSeasonNumber = season.seasonNumber
-                                            Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber) }
-                                        } label: {
-                                            Text(season.name).font(.caption).fontWeight(selectedSeasonNumber == season.seasonNumber ? .bold : .regular)
-                                                .foregroundColor(selectedSeasonNumber == season.seasonNumber ? .white : .gray)
-                                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                                .background(Capsule().fill(selectedSeasonNumber == season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))
+                        // Phim đang xem
+                        if let movie = currentMovie {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                HStack(spacing: 12) {
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 10))
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2)
+                                        if let rt = movie.ratingText { Text("⭐ \(rt)").font(.caption).foregroundColor(.yellow) }
+                                        if !seasons.isEmpty {
+                                            Text("\(seasons.count) mùa • \(seasons.reduce(0) { $0 + $1.episodeCount }) tập").font(.caption).foregroundColor(.gray)
                                         }
                                     }
+                                    Spacer()
                                 }
-                            }
-                            if let detail = selectedSeasonDetail {
-                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                                    ForEach(detail.episodes) { ep in
-                                        Button {
-                                            seasonNumber = ep.seasonNumber
-                                            episodeNumber = ep.episodeNumber
-                                            loadStream()
-                                            withAnimation(.spring()) { overlayOffset = UIScreen.main.bounds.height; showOverlay = false }
-                                        } label: {
-                                            VStack(spacing: 4) {
-                                                ZStack {
-                                                    RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.3)).frame(height: 65)
-                                                    Image(systemName: "play.circle.fill").foregroundColor(.white.opacity(0.7)).font(.system(size: 22))
+                                .padding(12)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                
+                                if !seasons.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(seasons) { season in
+                                                Button {
+                                                    selectedSeasonNumber = season.seasonNumber
+                                                    Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber) }
+                                                } label: {
+                                                    Text(season.name).font(.caption).fontWeight(selectedSeasonNumber == season.seasonNumber ? .bold : .regular)
+                                                        .foregroundColor(selectedSeasonNumber == season.seasonNumber ? .white : .gray)
+                                                        .padding(.horizontal, 14).padding(.vertical, 8)
+                                                        .background(Capsule().fill(selectedSeasonNumber == season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))
                                                 }
-                                                Text("Tập \(ep.episodeNumber)").font(.system(size: 10)).foregroundColor(.white).lineLimit(1)
+                                            }
+                                        }
+                                    }
+                                    if let detail = selectedSeasonDetail {
+                                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                                            ForEach(detail.episodes) { ep in
+                                                Button {
+                                                    seasonNumber = ep.seasonNumber
+                                                    episodeNumber = ep.episodeNumber
+                                                    loadStream()
+                                                    closeOverlay()
+                                                } label: {
+                                                    VStack(spacing: 4) {
+                                                        ZStack {
+                                                            RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.3)).frame(height: 60)
+                                                            Image(systemName: "play.circle.fill").foregroundColor(.white.opacity(0.7)).font(.system(size: 20))
+                                                        }
+                                                        Text("Tập \(ep.episodeNumber)").font(.system(size: 9)).foregroundColor(.white).lineLimit(1)
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                        
+                        // Phim tương tự
                         if !similarMovies.isEmpty {
-                            Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(similarMovies.prefix(15)) { movie in
-                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                            VStack(spacing: 6) {
-                                                CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10))
-                                                Text(movie.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 110)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(similarMovies.prefix(15)) { movie in
+                                            NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                                VStack(spacing: 6) {
+                                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2).frame(width: 100)
+                                                }
                                             }
                                         }
                                     }
@@ -229,7 +263,7 @@ struct MoviePlayerView: View {
                     }.padding()
                 }
             }
-            .frame(height: UIScreen.main.bounds.height * 0.55)
+            .frame(height: UIScreen.main.bounds.height * 0.6)
             .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)))
             .offset(y: overlayOffset)
         }
@@ -264,7 +298,16 @@ struct MoviePlayerView: View {
     @ViewBuilder func settingRow(title: String, value: String) -> some View { HStack { Text(title).font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.7)); Spacer(); Text(value).font(.system(size: 12, design: .rounded)).foregroundColor(.white) }; Divider().background(Color.white.opacity(0.1)) }
     func popupBackground(action: @escaping () -> Void) -> some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture { action() } }
     
-    func loadOverlayData() { Task { similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []; if mediaType == "tv" { seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? [] } } }
+    func loadOverlayData() {
+        Task {
+            similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []
+            if mediaType == "tv" {
+                seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []
+            }
+            // Tạo currentMovie từ dữ liệu
+            currentMovie = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
+        }
+    }
     func loadStream() { isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil; Task { do { let imdbId: String; if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" } else { imdbId = try await fetchMovieIMDbId() }; guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }; let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber); let item = AVPlayerItem(url: url); await MainActor.run { player.replaceCurrentItem(with: item); sourceStatus[selectedSource] = true; isLoading = false } } catch { await MainActor.run { errorMessage = error.localizedDescription; sourceStatus[selectedSource] = false; isLoading = false } } } }
     func fetchMovieIMDbId() async throws -> String { let (d, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; guard let id = try JSONDecoder().decode(E.self, from: d).imdb_id else { throw StreamError.noStreamAvailable }; return id }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds } } }
