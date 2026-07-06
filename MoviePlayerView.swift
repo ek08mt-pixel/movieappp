@@ -70,34 +70,41 @@ class MovieStreamService {
     func fetchNguonC(title: String, episode: Int) async throws -> URL {
         let slug = try await findNguonCSlug(title: title)
         guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { throw StreamError.noStreamAvailable }
-        var r = URLRequest(url: dtUrl)
-        r.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        let (dd, _) = try await URLSession.shared.data(for: r)
+        var req = URLRequest(url: dtUrl)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (dd, _) = try await URLSession.shared.data(for: req)
         
-        struct DR: Codable { let episodes: [EP]? }
-        struct EP: Codable { let id: Int?; let link: String?; let name: String?; let slug: String? }
+        // Parse cấu trúc thực tế
+        struct NguonCResponse: Codable {
+            let movie: NguonCMovie?
+        }
+        struct NguonCMovie: Codable {
+            let episodes: [NguonCServer]?
+        }
+        struct NguonCServer: Codable {
+            let server_name: String?
+            let items: [NguonCItem]?
+        }
+        struct NguonCItem: Codable {
+            let name: String?
+            let slug: String?
+            let embed: String?
+        }
         
-        guard let detail = try? JSONDecoder().decode(DR.self, from: dd),
-              let episodes = detail.episodes else { throw StreamError.noStreamAvailable }
+        let response = try JSONDecoder().decode(NguonCResponse.self, from: dd)
+        let servers = response.movie?.episodes ?? []
         
-        // Parse định dạng "tập|link" hoặc "số|link"
-        for ep in episodes {
-            let linkStr = ep.link ?? ep.slug ?? ""
-            if linkStr.contains("|") {
-                let parts = linkStr.split(separator: "|")
-                if parts.count >= 2 {
-                    let epNum = Int(parts[0].trimmingCharacters(in: .whitespaces)) ?? -1
-                    let urlStr = String(parts[1])
-                    if epNum == episode, !urlStr.isEmpty, let embedURL = URL(string: urlStr) {
-                        // Nếu là embed, bóc tách link m3u8
-                        if urlStr.contains("embed") || urlStr.contains(".php") {
-                            do {
-                                return try await EmbedExtractor().extractM3U8(from: embedURL)
-                            } catch {
-                                throw StreamError.noStreamAvailable
-                            }
-                        }
-                        return embedURL
+        for server in servers {
+            guard let items = server.items else { continue }
+            for item in items {
+                if let name = item.name, Int(name) == episode,
+                   let embed = item.embed, !embed.isEmpty,
+                   let embedURL = URL(string: embed) {
+                    // Dùng EmbedExtractor để bóc tách m3u8
+                    do {
+                        return try await EmbedExtractor().extractM3U8(from: embedURL)
+                    } catch {
+                        throw StreamError.noStreamAvailable
                     }
                 }
             }
@@ -108,9 +115,9 @@ class MovieStreamService {
     private func findNguonCSlug(title: String) async throws -> String {
         let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
         guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { throw StreamError.noStreamAvailable }
-        var r = URLRequest(url: url)
-        r.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await URLSession.shared.data(for: r)
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: req)
         struct SR: Codable { let data: [SF]? }
         struct SF: Codable { let slug: String?; let name: String? }
         guard let films = try? JSONDecoder().decode(SR.self, from: data).data,
