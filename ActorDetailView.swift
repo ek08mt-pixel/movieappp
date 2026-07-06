@@ -12,7 +12,17 @@ struct ActorDetailView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+            // Blur background từ ảnh diễn viên
+            if let url = actor.profileURL {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .blur(radius: 60)
+                    .opacity(0.2)
+                    .ignoresSafeArea()
+            }
+            
+            LinearGradient(colors: [Color(white: 0.08).opacity(0.7), Color(white: 0.02).opacity(0.9), .black], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             
             if isLoading {
@@ -116,7 +126,10 @@ struct ActorDetailView: View {
                                                 Text(movie.title)
                                                     .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                             }
+                                            .scaleEffect(1.0)
+                                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: UUID())
                                         }
+                                        .buttonStyle(ScaleButtonStyle())
                                     }
                                 }
                                 .padding(.horizontal)
@@ -160,6 +173,14 @@ struct ActorDetailView: View {
     }
 }
 
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 struct ActorMoviesView: View {
     let actorName: String
     let movies: [Movie]
@@ -197,6 +218,7 @@ struct ActorMoviesView: View {
                                 }
                             }
                         }
+                        .buttonStyle(ScaleButtonStyle())
                     }
                 }
                 .padding(.horizontal, 16)
