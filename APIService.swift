@@ -126,7 +126,7 @@ class APIService {
     
     func searchTVShows(query: String, page: Int = 1) async throws -> [Movie] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "\(baseURL)/search/tv?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
+        let urlString = "\(baseURL)/search/tv?api_key=\(apiKey)&language=en-US&query=\(encoded)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
