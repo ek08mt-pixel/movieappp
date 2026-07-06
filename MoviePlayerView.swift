@@ -24,9 +24,9 @@ class MovieStreamService {
         case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode, quality: quality)
         }
     }
-    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality:, String) async throws -> URL {
-        var path = "/stream/m letovie/\(id).json"
-        if let s = season e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
+    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
+        var path = "/stream/movie/\(id).json"
+        if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
         r.timeoutInterval = 8
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
@@ -176,48 +176,19 @@ struct MoviePlayerView: View {
     
     var settingsPopup: some View {
         VStack(spacing: 12) {
-            Text("Cài đặt")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-            
-            Text("Chất lượng")
-                .font(.system(size: 11, design: .rounded))
-                .foregroundColor(.white.opacity(0.6))
-            
-            ForEach(qualities, id: \.self) { q in
-                qualityButton(q)
-            }
-            
+            Text("Cài đặt").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(.white)
+            Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+            ForEach(qualities, id: \.self) { q in qualityButton(q) }
             Divider().background(Color.white.opacity(0.1))
-            
-            Text("Phụ đề")
-                .font(.system(size: 11, design: .rounded))
-                .foregroundColor(.white.opacity(0.6))
-            Text("Không có sẵn")
-                .font(.system(size: 12, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
-            
+            Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+            Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
             Divider().background(Color.white.opacity(0.1))
-            
-            Text("Tốc độ")
-                .font(.system(size: 11, design: .rounded))
-                .foregroundColor(.white.opacity(0.6))
-            Text("1.0x")
-                .font(.system(size: 12, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
-            
-            Text("© 2026 emmew")
-                .font(.system(size: 7, design: .rounded))
-                .foregroundColor(.white.opacity(0.2))
-                .padding(.top, 4)
+            Text("Tốc độ").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
+            Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
+            Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.2)).padding(.top, 4)
         }
-        .padding(18)
-        .frame(width: 200)
-        .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(.ultraThinMaterial.opacity(0.7))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.white.opacity(0.25), lineWidth: 1))
-        )
+        .padding(18).frame(width: 200)
+        .background(RoundedRectangle(cornerRadius: 22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.white.opacity(0.25), lineWidth: 1)))
         .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
     }
     
@@ -228,22 +199,13 @@ struct MoviePlayerView: View {
             showSettings = false
         } label: {
             HStack {
-                Text(q)
-                    .font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
+                Text(q).font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
                     .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
                 Spacer()
-                if selectedQuality == q {
-                    Image(systemName: "checkmark")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
+                if selectedQuality == q { Image(systemName: "checkmark").font(.caption).foregroundColor(.white) }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(selectedQuality == q ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
-            )
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 10).fill(selectedQuality == q ? Color.white.opacity(0.15) : Color.white.opacity(0.05)))
         }
     }
     
