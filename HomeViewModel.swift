@@ -16,9 +16,7 @@ class HomeViewModel: ObservableObject {
     @Published var movieOfDay: Movie?
     @Published var isLoading = false
     
-    init() {
-        Task { await loadAll() }
-    }
+    init() { Task { await loadAll() } }
     
     func loadAll() async {
         isLoading = true
@@ -53,48 +51,32 @@ class HomeViewModel: ObservableObject {
     }
     
     private func loadTrendingTV() async -> [Movie] {
-        let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
-        guard let url = URL(string: urlString) else { return [] }
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            struct TVResponse: Codable {
-                let results: [TVResult]
-            }
-            struct TVResult: Codable {
-                let id: Int
-                let name: String?
-                let overview: String
-                let poster_path: String?
-                let backdrop_path: String?
-                let vote_average: Double
-                let first_air_date: String?
-                let genre_ids: [Int]?
-                let popularity: Double?
-                let vote_count: Int?
-                let original_language: String?
-            }
-            let response = try JSONDecoder().decode(TVResponse.self, from: data)
-            return response.results.map { tv in
-                Movie(
-                    id: tv.id,
-                    title: tv.name ?? "Unknown",
-                    overview: tv.overview,
-                    posterPath: tv.poster_path,
-                    backdropPath: tv.backdrop_path,
-                    voteAverage: tv.vote_average,
-                    releaseDate: tv.first_air_date,
-                    genreIds: tv.genre_ids,
-                    originalTitle: tv.name,
-                    popularity: tv.popularity,
-                    voteCount: tv.vote_count,
-                    adult: false,
-                    originalLanguage: tv.original_language,
-                    mediaType: "tv"
-                )
-            }
-        } catch {
-            print("TV Error: \(error)")
-            return []
+        var allTV: [Movie] = []
+        for page in 1...3 {
+            let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=\(page)"
+            guard let url = URL(string: urlString) else { continue }
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                struct TVResponse: Codable { let results: [TVResult] }
+                struct TVResult: Codable {
+                    let id: Int; let name: String?; let overview: String
+                    let poster_path: String?; let backdrop_path: String?
+                    let vote_average: Double; let first_air_date: String?
+                    let genre_ids: [Int]?; let popularity: Double?
+                    let vote_count: Int?; let original_language: String?
+                }
+                let response = try JSONDecoder().decode(TVResponse.self, from: data)
+                let tvShows = response.results.map { tv in
+                    Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
+                          posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
+                          voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
+                          genreIds: tv.genre_ids, originalTitle: tv.name,
+                          popularity: tv.popularity, voteCount: tv.vote_count,
+                          adult: false, originalLanguage: tv.original_language, mediaType: "tv")
+                }
+                allTV.append(contentsOf: tvShows)
+            } catch {}
         }
+        return allTV
     }
 }
