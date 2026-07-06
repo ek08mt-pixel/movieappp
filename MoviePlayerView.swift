@@ -42,26 +42,28 @@ class MovieStreamService {
     static let shared = MovieStreamService()
     
     func getBestStreamURL(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
-        async let ntlTask = try? fetchNTL(imdbId, season: season, episode: episode)
-        async let mfTask = try? fetchMediaFusion(imdbId, season: season, episode: episode)
-        async let ysTask = try? fetchStremio(imdbId: imdbId, season: season, episode: episode)
-        
-        let results = await [ntlTask, mfTask, ysTask].compactMap { $0 }
-        if let first = results.first { return first }
-        throw StreamError.noStreamAvailable
+        try await withThrowingTaskGroup(of: URL?.self) { group in
+            group.addTask { try? await self.fetchNTL(imdbId, season: season, episode: episode) }
+            group.addTask { try? await self.fetchMediaFusion(imdbId, season: season, episode: episode) }
+            group.addTask { try? await self.fetchStremio(imdbId: imdbId, season: season, episode: episode) }
+            
+            for try await result in group {
+                if let url = result { return url }
+            }
+            throw StreamError.noStreamAvailable
+        }
     }
     
     private func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         var path = "/stream/movie/\(id).json"
         if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
-        r.timeoutInterval = 30
+        r.timeoutInterval = 10
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
         struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
-        let res = try? JSONDecoder().decode(R.self, from: d)
-        let streams = res?.streams?.filter { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) } ?? []
-        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) })?.url,
+              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     
@@ -70,14 +72,13 @@ class MovieStreamService {
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
-        r.timeoutInterval = 30
+        r.timeoutInterval = 10
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
         struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        let res = try? JSONDecoder().decode(R.self, from: d)
-        let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
-        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil })?.url,
+              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
     
@@ -87,14 +88,13 @@ class MovieStreamService {
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "\(base)\(path)")!)
-        r.timeoutInterval = 30
+        r.timeoutInterval = 10
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
         struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
-        let res = try? JSONDecoder().decode(R.self, from: d)
-        let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
-        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = (try? JSONDecoder().decode(R.self, from: d))?.streams?.first(where: { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil })?.url,
+              let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
 }
@@ -143,7 +143,11 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                 .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData() }
-                .onDisappear { player.pause(); controlsTimer?.invalidate() }
+                .onDisappear {
+                    player.pause()
+                    player.replaceCurrentItem(with: nil)
+                    controlsTimer?.invalidate()
+                }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
@@ -264,7 +268,6 @@ struct MoviePlayerView: View {
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
     
     func loadStream() {
-        // Dùng cached URL nếu có
         if let cached = cachedStreamURL, seasonNumber == nil {
             let item = AVPlayerItem(url: cached)
             player.replaceCurrentItem(with: item)
@@ -323,7 +326,11 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false
         vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true
-        vc.canStartPictureInPictureAutomaticallyFromInline = true; return vc
+        vc.canStartPictureInPictureAutomaticallyFromInline = true
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
+        try? audioSession.setActive(true)
+        return vc
     }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
         DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } }
