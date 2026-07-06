@@ -2,87 +2,107 @@ import SwiftUI
 
 struct SplashView: View {
     @State private var isActive = false
-    @State private var catOffsetX: CGFloat = 0
+    @State private var catOffsetX: CGFloat = -80
     @State private var catOffsetY: CGFloat = 0
-    @State private var catScale: CGFloat = 0.4
+    @State private var catScale: CGFloat = 0.5
     @State private var catOpacity: Double = 0
-    @State private var catRotation: Double = 0
-    @State private var particles: [Particle] = []
+    @State private var catRotation: Double = -5
+    @State private var particles: [ParticleData] = []
     @State private var glowOpacity: Double = 0
-    @State private var phase = 0
+    @State private var frameScale: CGFloat = 0.9
     
-    let timer = Timer.publish(every: 0.04, on: .main, in: .common).autoconnect()
+    let timer = Timer.publish(every: 0.03, on: .main, in: .common).autoconnect()
     
     var body: some View {
         if isActive {
             MainTabView()
-                .transition(.opacity.animation(.easeInOut(duration: 0.6)))
+                .transition(.opacity.animation(.easeInOut(duration: 0.5)))
         } else {
             ZStack {
-                // Background Midnight Blue → Deep Black
-                LinearGradient(colors: [Color(hex: "#0F172A"), Color(hex: "#020617")], startPoint: .top, endPoint: .bottom)
+                // Background 3 màu gradient
+                LinearGradient(
+                    colors: [
+                        Color(hex: "#1A1A2E"),
+                        Color(hex: "#0D0D1A"),
+                        Color(hex: "#050508")
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                // Lớp blur overlay
+                Color.black.opacity(0.3)
+                    .blur(radius: 40)
                     .ignoresSafeArea()
                 
-                // Scanlines nhẹ
+                // Lớp trắng nhẹ ở giữa
+                RadialGradient(colors: [.white.opacity(0.05), .clear], center: .center, startRadius: 50, endRadius: 300)
+                    .ignoresSafeArea()
+                
+                // Scanlines
                 ScanlinesView()
-                    .opacity(0.08)
+                    .opacity(0.06)
                     .blendMode(.overlay)
                     .ignoresSafeArea()
                 
                 // Pixel dust particles
-                ForEach(particles) { particle in
+                ForEach(particles) { p in
                     Rectangle()
-                        .fill(.white.opacity(particle.opacity))
-                        .frame(width: particle.size, height: particle.size)
-                        .position(x: particle.x, y: particle.y)
+                        .fill(.white.opacity(p.opacity))
+                        .frame(width: p.size, height: p.size)
+                        .position(x: p.x, y: p.y)
                 }
                 
                 // Khung viền liquid glass
                 RoundedRectangle(cornerRadius: 36)
-                    .stroke(.white.opacity(0.3), lineWidth: 2)
+                    .stroke(
+                        LinearGradient(colors: [.white.opacity(0.4), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 2
+                    )
                     .frame(width: 180, height: 180)
-                    .opacity(catOpacity)
+                    .scaleEffect(frameScale)
+                    .opacity(catOpacity * 0.8)
                 
-                // Glow phía sau mèo
-                CatPixelShape()
-                    .fill(.white.opacity(0.2))
-                    .blur(radius: 16)
-                    .frame(width: 70, height: 70)
+                // Glow sau mèo
+                CatPixelView()
+                    .fill(.white.opacity(0.15))
+                    .blur(radius: 18)
+                    .frame(width: 60, height: 55)
                     .offset(x: catOffsetX, y: catOffsetY)
                     .scaleEffect(catScale)
                     .opacity(catOpacity)
                 
                 // Mèo pixel trắng
-                CatPixelShape()
+                CatPixelView()
                     .fill(.white)
-                    .frame(width: 70, height: 70)
+                    .frame(width: 60, height: 55)
                     .offset(x: catOffsetX, y: catOffsetY)
                     .scaleEffect(catScale)
                     .rotationEffect(.degrees(catRotation))
                     .opacity(catOpacity)
-                    .shadow(color: .white.opacity(glowOpacity * 0.6), radius: 20, x: 0, y: 0)
+                    .shadow(color: .white.opacity(glowOpacity * 0.7), radius: 25, x: 0, y: 0)
                 
-                // EMCC text
+                // Chữ EMCC
                 Text("EMCC")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                    .tracking(12)
-                    .opacity(catOpacity * 0.8)
-                    .offset(y: 130)
-                    .shadow(color: .white.opacity(0.3), radius: 10)
+                    .tracking(14)
+                    .opacity(catOpacity * 0.9)
+                    .offset(y: 125)
                 
                 // Footer
                 Text("© 2026 Emmew, Inc. All Rights Reserved.")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.25))
-                    .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height - 50)
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.3))
+                    .offset(y: UIScreen.main.bounds.height / 2 - 30)
                     .opacity(catOpacity)
             }
             .onReceive(timer) { _ in
                 for i in particles.indices {
                     particles[i].x += particles[i].vx
                     particles[i].y += particles[i].vy
-                    particles[i].opacity -= 0.015
+                    particles[i].opacity -= 0.02
                 }
                 particles = particles.filter { $0.opacity > 0 }
             }
@@ -93,83 +113,88 @@ struct SplashView: View {
     }
     
     func startAnimation() {
-        let screenW = UIScreen.main.bounds.width
-        
-        // Bắt đầu: trong khung, nhỏ, mờ
-        catOffsetX = 0
+        catOffsetX = -80
         catOffsetY = 0
-        catScale = 0.4
+        catScale = 0.5
         catOpacity = 0
-        catRotation = 0
+        catRotation = -5
         
-        // Phase 1: Xuất hiện
+        // Xuất hiện từ trái
         withAnimation(.easeOut(duration: 0.4)) {
             catOpacity = 1
-            catScale = 0.6
-            glowOpacity = 0.5
+            catScale = 0.7
+            glowOpacity = 0.6
+            frameScale = 1.0
         }
+        for _ in 0..<15 { spawnParticle(x: catOffsetX, y: catOffsetY) }
         
-        // Phase 2: Nhảy ra ngoài (scale to)
+        // Chạy sang phải
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) {
-                catScale = 1.1
-                glowOpacity = 0.9
-                catRotation = 10
-            }
-            for _ in 0..<30 { spawnParticle(x: catOffsetX, y: catOffsetY, count: 8) }
-        }
-        
-        // Phase 3: Lượn sang phải
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             withAnimation(.easeInOut(duration: 0.7)) {
-                catOffsetX = 40
-                catRotation = -8
-            }
-            for _ in 0..<20 { spawnParticle(x: catOffsetX, y: catOffsetY, count: 5, direction: -1) }
-        }
-        
-        // Phase 4: Lượn sang trái
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation(.easeInOut(duration: 0.7)) {
-                catOffsetX = -40
-                catRotation = 8
-            }
-            for _ in 0..<20 { spawnParticle(x: catOffsetX, y: catOffsetY, count: 5, direction: 1) }
-        }
-        
-        // Phase 5: Về giữa, thu nhỏ
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
-                catOffsetX = 0
-                catRotation = 0
+                catOffsetX = 90
+                catRotation = 3
                 catScale = 0.8
-                glowOpacity = 0.7
+                glowOpacity = 0.8
+            }
+            for _ in 0..<25 { spawnParticle(x: catOffsetX, y: catOffsetY) }
+        }
+        
+        // Lượn nhẹ
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                catOffsetX = 60
+                catOffsetY = -10
+                catRotation = -3
             }
         }
         
-        // Phase 6: Chui vào khung, biến mất
+        // Chạy ngược về trái, ra sau khung
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
+            withAnimation(.easeInOut(duration: 0.7)) {
+                catOffsetX = -100
+                catOffsetY = 5
+                catRotation = -8
+                catScale = 0.6
+            }
+            for _ in 0..<30 { spawnParticle(x: catOffsetX, y: catOffsetY) }
+        }
+        
+        // Nhảy vào giữa khung
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.7) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) {
+                catOffsetX = 0
+                catOffsetY = 0
+                catScale = 0.85
+                catRotation = 0
+                glowOpacity = 1.0
+            }
+            for _ in 0..<20 { spawnParticle(x: 0, y: 0) }
+        }
+        
+        // Thu nhỏ, biến mất
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-            withAnimation(.easeIn(duration: 0.5)) {
-                catScale = 0.1
+            withAnimation(.easeIn(duration: 0.4)) {
+                catScale = 0.05
                 catOpacity = 0
                 glowOpacity = 0
+                frameScale = 0.8
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                withAnimation(.easeInOut(duration: 0.6)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeInOut(duration: 0.5)) {
                     isActive = true
                 }
             }
         }
     }
     
-    func spawnParticle(x: CGFloat, y: CGFloat, count: Int, direction: CGFloat = 0) {
-        for _ in 0..<count {
-            let p = Particle(
-                x: x + CGFloat.random(in: -30...30),
-                y: y + CGFloat.random(in: -30...30),
+    func spawnParticle(x: CGFloat, y: CGFloat) {
+        for _ in 0..<4 {
+            let p = ParticleData(
+                x: x + CGFloat.random(in: -35...35),
+                y: y + CGFloat.random(in: -35...35),
                 size: CGFloat.random(in: 2...5),
-                opacity: Double.random(in: 0.4...0.9),
-                vx: direction != 0 ? direction * CGFloat.random(in: 2...6) : CGFloat.random(in: -4...4),
+                opacity: Double.random(in: 0.5...1.0),
+                vx: CGFloat.random(in: -3...3),
                 vy: CGFloat.random(in: -3...3)
             )
             particles.append(p)
@@ -177,8 +202,8 @@ struct SplashView: View {
     }
 }
 
-// MARK: - Cat Pixel Shape (white, 8-bit style)
-struct CatPixelShape: Shape {
+// MARK: - Cat Pixel View (nguyên con mèo dễ thương)
+struct CatPixelView: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let w = rect.width
@@ -186,35 +211,53 @@ struct CatPixelShape: Shape {
         let cx = w / 2
         let cy = h / 2
         
-        // Head - pixel vuông
-        path.addRect(CGRect(x: cx - 16, y: cy - 14, width: 12, height: 8))
-        path.addRect(CGRect(x: cx - 4, y: cy - 14, width: 12, height: 8))
-        path.addRect(CGRect(x: cx - 20, y: cy - 6, width: 8, height: 12))
-        path.addRect(CGRect(x: cx - 12, y: cy - 6, width: 8, height: 12))
-        path.addRect(CGRect(x: cx - 4, y: cy - 6, width: 8, height: 12))
-        path.addRect(CGRect(x: cx + 4, y: cy - 6, width: 8, height: 12))
-        path.addRect(CGRect(x: cx + 12, y: cy - 6, width: 8, height: 12))
-        path.addRect(CGRect(x: cx - 16, y: cy + 6, width: 8, height: 8))
-        path.addRect(CGRect(x: cx - 8, y: cy + 6, width: 8, height: 8))
-        path.addRect(CGRect(x: cx, y: cy + 6, width: 8, height: 8))
-        path.addRect(CGRect(x: cx + 8, y: cy + 6, width: 8, height: 8))
+        // Tai trái
+        path.addRect(CGRect(x: cx - 24, y: cy - 24, width: 8, height: 8))
+        // Tai phải
+        path.addRect(CGRect(x: cx + 16, y: cy - 24, width: 8, height: 8))
         
-        // Ears
-        path.addRect(CGRect(x: cx - 20, y: cy - 20, width: 8, height: 8))
-        path.addRect(CGRect(x: cx + 12, y: cy - 20, width: 8, height: 8))
+        // Đỉnh đầu
+        path.addRect(CGRect(x: cx - 16, y: cy - 18, width: 8, height: 4))
+        path.addRect(CGRect(x: cx - 8, y: cy - 18, width: 16, height: 4))
         
-        // Whiskers
-        path.addRect(CGRect(x: cx - 28, y: cy + 2, width: 8, height: 4))
-        path.addRect(CGRect(x: cx - 28, y: cy + 8, width: 8, height: 4))
-        path.addRect(CGRect(x: cx + 20, y: cy + 2, width: 8, height: 4))
-        path.addRect(CGRect(x: cx + 20, y: cy + 8, width: 8, height: 4))
+        // Mặt trên
+        path.addRect(CGRect(x: cx - 24, y: cy - 14, width: 8, height: 6))
+        path.addRect(CGRect(x: cx - 16, y: cy - 14, width: 12, height: 6))
+        path.addRect(CGRect(x: cx - 4, y: cy - 14, width: 12, height: 6))
+        path.addRect(CGRect(x: cx + 8, y: cy - 14, width: 12, height: 6))
+        path.addRect(CGRect(x: cx + 20, y: cy - 14, width: 4, height: 6))
+        
+        // Mắt
+        path.addRect(CGRect(x: cx - 16, y: cy - 8, width: 6, height: 4))
+        path.addRect(CGRect(x: cx + 10, y: cy - 8, width: 6, height: 4))
+        
+        // Mũi
+        path.addRect(CGRect(x: cx - 2, y: cy - 4, width: 4, height: 2))
+        
+        // Má
+        path.addRect(CGRect(x: cx - 22, y: cy - 2, width: 8, height: 8))
+        path.addRect(CGRect(x: cx - 14, y: cy - 2, width: 8, height: 8))
+        path.addRect(CGRect(x: cx - 6, y: cy - 2, width: 12, height: 8))
+        path.addRect(CGRect(x: cx + 6, y: cy - 2, width: 8, height: 8))
+        path.addRect(CGRect(x: cx + 14, y: cy - 2, width: 8, height: 8))
+        
+        // Cằm
+        path.addRect(CGRect(x: cx - 10, y: cy + 6, width: 20, height: 6))
+        
+        // Râu trái
+        path.addRect(CGRect(x: cx - 34, y: cy, width: 12, height: 3))
+        path.addRect(CGRect(x: cx - 34, y: cy + 5, width: 10, height: 3))
+        
+        // Râu phải
+        path.addRect(CGRect(x: cx + 22, y: cy, width: 12, height: 3))
+        path.addRect(CGRect(x: cx + 24, y: cy + 5, width: 10, height: 3))
         
         return path
     }
 }
 
-// MARK: - Particle Model
-struct Particle: Identifiable {
+// MARK: - Particle
+struct ParticleData: Identifiable {
     let id = UUID()
     var x: CGFloat
     var y: CGFloat
@@ -229,10 +272,7 @@ struct ScanlinesView: View {
     var body: some View {
         Canvas { context, size in
             for y in stride(from: 0, to: size.height, by: 3) {
-                context.fill(
-                    Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
-                    with: .color(.black.opacity(0.4))
-                )
+                context.fill(Path(CGRect(x: 0, y: y, width: size.width, height: 1)), with: .color(.black.opacity(0.4)))
             }
         }
     }
@@ -246,12 +286,9 @@ extension Color {
         Scanner(string: hex).scanHexInt64(&int)
         let a, r, g, b: UInt64
         switch hex.count {
-        case 6:
-            (a, r, g, b) = (255, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (255, 0, 0, 0)
+        case 6: (a, r, g, b) = (255, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        case 8: (a, r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        default: (a, r, g, b) = (255, 0, 0, 0)
         }
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
     }
