@@ -15,37 +15,34 @@ class MovieDetailViewModel: ObservableObject {
         isLoading = true
         let type = mediaType ?? "movie"
         
+        // Load detail trước
         if type == "tv" {
-            async let detailTask = APIService.shared.tvDetail(tvId: movieId)
-            async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: "tv")
-            async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: "tv")
-            async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: "tv")
-            async let seasonsTask = APIService.shared.fetchTVSeasons(tvId: movieId)
-            
-            detail = try? await detailTask
-            actors = (try? await actorsTask) ?? []
-            similar = (try? await similarTask) ?? []
-            images = (try? await imagesTask) ?? []
-            seasons = (try? await seasonsTask) ?? []
+            detail = try? await APIService.shared.tvDetail(tvId: movieId)
         } else {
-            async let detailTask = APIService.shared.movieDetail(movieId: movieId)
-            async let actorsTask = APIService.shared.actors(movieId: movieId)
-            async let similarTask = APIService.shared.similar(movieId: movieId)
-            async let imagesTask = APIService.shared.movieImages(movieId: movieId)
-            
-            detail = try? await detailTask
-            actors = (try? await actorsTask) ?? []
-            similar = (try? await similarTask) ?? []
-            images = (try? await imagesTask) ?? []
-            
-            // Load collection if exists
-            if let collectionId = detail?.belongsToCollection?.id {
-                if let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
-                    collectionMovies = colDetail.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-                }
-            }
+            detail = try? await APIService.shared.movieDetail(movieId: movieId)
         }
         isLoading = false
+        
+        // Load collection ngay sau detail
+        if let collectionId = detail?.belongsToCollection?.id {
+            if let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
+                collectionMovies = colDetail.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+            }
+        }
+        
+        // Load seasons nếu là TV
+        if type == "tv" {
+            seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []
+        }
+        
+        // Load các phần còn lại song song
+        async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: type)
+        async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: type)
+        async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: type)
+        
+        actors = (try? await actorsTask) ?? []
+        similar = (try? await similarTask) ?? []
+        images = (try? await imagesTask) ?? []
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
