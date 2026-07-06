@@ -82,8 +82,10 @@ struct MovieDetailView: View {
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
                         
                         if !vm.collectionMovies.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("📦 Các phần phim").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+    VStack(alignment: .leading, spacing: 10) {
+        Text("Cùng series")
+            .font(.title3).fontWeight(.bold).foregroundColor(.white)
+            .padding(.top, 8)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in
