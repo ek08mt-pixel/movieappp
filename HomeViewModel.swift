@@ -20,7 +20,7 @@ class HomeViewModel: ObservableObject {
         isLoading = true
         
         async let trendingTask = APIService.shared.trending24h()
-        async let trendingTVTask = APIService.shared.trendingTV()
+        async let trendingTVTask = fetchTrendingTV()
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
@@ -33,10 +33,6 @@ class HomeViewModel: ObservableObject {
         
         trending24h = (try? await trendingTask) ?? []
         trendingTV = (try? await trendingTVTask) ?? []
-        if trendingTV.isEmpty {
-            let all = (try? await APIService.shared.trendingAll()) ?? []
-            trendingTV = all.filter { $0.mediaType == "tv" }
-        }
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
         topRated = (try? await topRatedTask) ?? []
@@ -49,5 +45,15 @@ class HomeViewModel: ObservableObject {
         movieOfDay = trending24h.randomElement()
         
         isLoading = false
+    }
+    
+    private func fetchTrendingTV() async throws -> [Movie] {
+        let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try JSONDecoder().decode(MovieResponse.self, from: data)
+        return response.results.map { movie in
+            Movie(id: movie.id, title: movie.title, overview: movie.overview, posterPath: movie.posterPath, backdropPath: movie.backdropPath, voteAverage: movie.voteAverage, releaseDate: movie.releaseDate, genreIds: movie.genreIds, originalTitle: movie.originalTitle, popularity: movie.popularity, voteCount: movie.voteCount, adult: movie.adult, originalLanguage: movie.originalLanguage, mediaType: "tv")
+        }
     }
 }
