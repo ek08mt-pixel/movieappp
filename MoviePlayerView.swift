@@ -78,6 +78,9 @@ struct MoviePlayerView: View {
     @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
     @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
+    @State private var selectedQuality: String = "Auto"
+    
+    let qualities = ["Auto", "1080p", "720p", "480p", "360p"]
     
     var body: some View {
         ZStack {
@@ -141,7 +144,55 @@ struct MoviePlayerView: View {
     }
     
     var sourcePopup: some View { VStack(spacing:8){Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8)); ForEach(MovieSource.allCases,id:\.self){src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:6){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:5,height:5);Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white);if selectedSource==src{Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white)}}.padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))}}; Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.3))}.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:170) }
-    var settingsPopup: some View { VStack(spacing:8){Text("cài đặt").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8)); ScrollView{VStack(spacing:6){settingRow(title:"Chất lượng",value:"Tự động (theo nguồn)");settingRow(title:"Phụ đề",value:"Không có sẵn");settingRow(title:"Tốc độ",value:"1.0x");settingRow(title:"Âm thanh",value:"Stereo")}}.frame(maxHeight:150); Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.3))}.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:200) }
+    
+    var settingsPopup: some View {
+        VStack(spacing: 10) {
+            Text("cài đặt").font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
+            
+            VStack(spacing: 6) {
+                Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
+                Picker("Chất lượng", selection: $selectedQuality) {
+                    ForEach(qualities, id: \.self) { q in
+                        Text(q).tag(q)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .colorMultiply(.white)
+            }
+            
+            Divider().background(Color.white.opacity(0.15))
+            
+            VStack(spacing: 6) {
+                Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
+                Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+            }
+            
+            Divider().background(Color.white.opacity(0.15))
+            
+            VStack(spacing: 6) {
+                Text("Tốc độ").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
+                Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+            }
+            
+            Divider().background(Color.white.opacity(0.15))
+            
+            VStack(spacing: 6) {
+                Text("Âm thanh").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.5))
+                Text("Stereo").font(.system(size: 12, design: .rounded)).foregroundColor(.white)
+            }
+            
+            Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
+        }
+        .padding(16)
+        .frame(width: 220)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial.opacity(0.6))
+                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.2), lineWidth: 1))
+        )
+        .shadow(color: .black.opacity(0.3), radius: 15, y: 8)
+    }
+    
     @ViewBuilder func settingRow(title:String,value:String)->some View { HStack{Text(title).font(.system(size:12,design:.rounded)).foregroundColor(.white.opacity(0.7));Spacer();Text(value).font(.system(size:12,design:.rounded)).foregroundColor(.white)};Divider().background(Color.white.opacity(0.1)) }
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     
@@ -157,28 +208,10 @@ struct MoviePlayerView: View {
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
                 let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
                 let item = AVPlayerItem(url: url)
-                await MainActor.run {
-                    player.replaceCurrentItem(with: item)
-                    player.play()
-                    sourceStatus[selectedSource] = true
-                    isLoading = false
-                }
-                // Lưu lịch sử xem
+                await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
                 let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
-                await MainActor.run {
-                    if !appState.watchHistory.contains(where: { $0.id == movieId }) {
-                        appState.watchHistory.insert(m, at: 0)
-                        if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }
-                        appState.save()
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    sourceStatus[selectedSource] = false
-                    isLoading = false
-                }
-            }
+                await MainActor.run { if !appState.watchHistory.contains(where: { $0.id == movieId }) { appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() } }
+            } catch { await MainActor.run { errorMessage = error.localizedDescription; sourceStatus[selectedSource] = false; isLoading = false } }
         }
     }
     
