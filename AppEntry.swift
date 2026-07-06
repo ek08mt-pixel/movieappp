@@ -39,7 +39,7 @@ struct AppEntry: App {
     @StateObject var appState = AppState()
     var body: some Scene {
         WindowGroup {
-            MainTabView().environmentObject(appState)
+            SplashView().environmentObject(appState)
         }
     }
 }
