@@ -20,7 +20,6 @@ struct ActorDetailView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        // Avatar + Name
                         VStack(spacing: 12) {
                             if let url = actor.profileURL {
                                 CachedAsyncImage(url: url)
@@ -50,7 +49,6 @@ struct ActorDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 90)
                         
-                        // Thông tin
                         if let detail = actorDetail {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Thông tin").font(.headline).fontWeight(.bold).foregroundColor(.white)
@@ -60,12 +58,10 @@ struct ActorDetailView: View {
                                 if let place = detail.placeOfBirth {
                                     infoRow(icon: "mappin.and.ellipse", title: "Nơi sinh", value: place)
                                 }
-                                infoRow(icon: "star.fill", title: "Độ phổ biến", value: String(format: "%.1f", actorDetail?.popularity ?? 0))
                                 infoRow(icon: "theatermasks.fill", title: "Nổi tiếng", value: detail.knownForDepartment ?? "Diễn viên")
                             }
                             .padding(.horizontal)
                             
-                            // Tiểu sử
                             if let bio = detail.biography, !bio.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Tiểu sử").font(.headline).fontWeight(.bold).foregroundColor(.white)
@@ -83,7 +79,6 @@ struct ActorDetailView: View {
                             }
                         }
                         
-                        // Phim tiêu biểu
                         if !movies.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
