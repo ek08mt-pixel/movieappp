@@ -8,11 +8,11 @@ class SearchViewModel: ObservableObject {
     private var task: Task<Void, Never>?
     
     func loadTrending() async {
-        do {
-            trending = try await APIService.shared.trending24h()
-        } catch {
-            trending = []
-        }
+        async let movies = APIService.shared.trending24h()
+        async let tvShows = APIService.shared.trendingTV()
+        let m = (try? await movies) ?? []
+        let t = (try? await tvShows) ?? []
+        trending = (m + t).sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
     }
     
     func search() async {
@@ -22,7 +22,11 @@ class SearchViewModel: ObservableObject {
         task = Task {
             try? await Task.sleep(nanoseconds: 200_000_000)
             if !Task.isCancelled {
-                do { results = try await APIService.shared.search(query: q) } catch { results = [] }
+                async let movies = APIService.shared.search(query: q)
+                async let tvShows = APIService.shared.searchTV(query: q)
+                let m = (try? await movies) ?? []
+                let t = (try? await tvShows) ?? []
+                results = (m + t).sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
             }
         }
     }
