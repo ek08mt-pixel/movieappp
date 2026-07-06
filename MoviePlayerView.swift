@@ -20,10 +20,6 @@ class IMDBCache {
             UserDefaults.standard.set(data, forKey: "imdbCache_v2")
         }
     }
-    func clear() {
-        cache.removeAll()
-        UserDefaults.standard.removeObject(forKey: "imdbCache_v2")
-    }
 }
 
 enum MovieSource: String, CaseIterable {
@@ -262,7 +258,16 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
         }
     }
 }
-}
 
-struct TinySlider: View { let value:CGFloat; let icon:String; var body:some View { VStack(spacing:4){ Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5)); ZStack(alignment:.bottom){ Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60); Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y:-value*52) } } }
+struct TinySlider: View {
+    let value: CGFloat; let icon: String
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
+            ZStack(alignment: .bottom) {
+                Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04), lineWidth: 0.5)).frame(width: 6, height: 60)
+                Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1)).frame(width: 16, height: 16).shadow(color: .white.opacity(0.15), radius: 4).offset(y: -value * 52)
+            }
+        }
+    }
 }
