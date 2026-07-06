@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import MediaPlayer
 
 enum MovieSource: String, CaseIterable {
     case ntl = "NTL"
@@ -87,11 +88,13 @@ struct MoviePlayerView: View {
     @State private var showBrightnessSlider = false
     @State private var volumeTimer: Timer?
     @State private var brightnessTimer: Timer?
+    @State private var pipController: AVPictureInPictureController?
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            AVPlayerControllerRepresented(player: player)
+            
+            CustomPlayerVC(player: player, pipController: $pipController)
                 .ignoresSafeArea()
                 .onAppear {
                     player.play()
@@ -103,85 +106,125 @@ struct MoviePlayerView: View {
                 .onTapGesture { toggleControls() }
             
             if showVolumeSlider {
-                HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) }
+                HStack { Spacer()
+                    TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
+                        .padding(.trailing, 14)
+                }
             }
             if showBrightnessSlider {
-                HStack { TinySlider(value: brightness, icon: "sun.max.fill").padding(.leading, 14); Spacer() }
+                HStack {
+                    TinySlider(value: brightness, icon: "sun.max.fill")
+                        .padding(.leading, 14)
+                    Spacer()
+                }
             }
             
-            Color.clear.frame(width: 60).position(x: UIScreen.main.bounds.width-30, y: UIScreen.main.bounds.height/2)
-                .gesture(DragGesture(minimumDistance:0).onChanged { v in if !showVolumeSlider { showVolumeSlider = true }; volume = min(max(volume + Float(-v.translation.height/120), 0), 1); player.volume = volume; resetVolumeTimer() }.onEnded { _ in resetVolumeTimer() })
-            Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2)
-                .gesture(DragGesture(minimumDistance:0).onChanged { v in if !showBrightnessSlider { showBrightnessSlider = true }; brightness = min(max(brightness + (-v.translation.height/120), 0.01), 1); UIScreen.main.brightness = brightness; resetBrightnessTimer() }.onEnded { _ in resetBrightnessTimer() })
+            Color.clear.frame(width: 60).position(x: UIScreen.main.bounds.width - 30, y: UIScreen.main.bounds.height / 2)
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                    if !showVolumeSlider { showVolumeSlider = true }
+                    volume = min(max(volume + Float(-v.translation.height / 120), 0), 1)
+                    player.volume = volume
+                    resetVolumeTimer()
+                }.onEnded { _ in resetVolumeTimer() })
             
-            if isLoading { VStack(spacing:12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) } }
+            Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height / 2)
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                    if !showBrightnessSlider { showBrightnessSlider = true }
+                    brightness = min(max(brightness + (-v.translation.height / 120), 0.01), 1)
+                    UIScreen.main.brightness = brightness
+                    resetBrightnessTimer()
+                }.onEnded { _ in resetBrightnessTimer() })
+            
+            if isLoading {
+                VStack(spacing: 12) { ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6)) }
+            }
+            
             if let err = errorMessage, !isLoading {
-                VStack(spacing:14) { Image(systemName:"wifi.slash").font(.system(size:36)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray)
-                    HStack(spacing:8) { ForEach(MovieSource.allCases, id:\.self) { s in Button { selectedSource=s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white : .gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }
-                    Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)) }
+                VStack(spacing: 14) { Image(systemName: "wifi.slash").font(.system(size: 36)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray)
+                    HStack(spacing: 8) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }
+                    Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) }
             }
             
             if showControls && errorMessage == nil {
-                HStack(spacing:64) {
-                    Button { seek(-10) } label: { Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5)) }
-                    Button { player.rate==0 ? player.play() : player.pause() } label: { Image(systemName: player.rate==0 ? "play.fill" : "pause.fill").font(.system(size:28,weight:.bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15),lineWidth:0.5)) }
-                    Button { seek(10) } label: { Image(systemName:"goforward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5)) }
+                HStack(spacing: 64) {
+                    Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5)) }
+                    Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5)) }
+                    Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5)) }
                 }
+                
                 VStack { Spacer()
-                    VStack(spacing:6) {
-                        Slider(value: $currentTime, in: 0...max(duration,1)) { e in isSeeking=e; if !e { player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)) } }.accentColor(.white).padding(.horizontal)
+                    VStack(spacing: 6) {
+                        Slider(value: $currentTime, in: 0...max(duration, 1)) { e in isSeeking = e; if !e { player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)) } }.accentColor(.white).padding(.horizontal)
                         HStack { Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7)); Spacer(); Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal)
                         HStack {
-                            Button { showSourceMenu = true } label: { Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5)) }
+                            Button { pipController?.startPictureInPicture() } label: { Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
                             Spacer()
-                        }.padding(.horizontal).padding(.bottom,20)
-                    }.background(LinearGradient(colors:[.clear,.black.opacity(0.5)], startPoint:.top, endPoint:.bottom))
+                            Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
+                        }.padding(.horizontal).padding(.bottom, 20)
+                    }.background(LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom))
                 }
+                
                 VStack { HStack {
-                    Button { dismiss() } label: { Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5)) }
+                    Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
                     Spacer(); Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1); Spacer()
-                    Button { showSourceMenu = true } label: { Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5)) }
-                }.padding(.horizontal,12).padding(.top,50); Spacer() }
+                    Button { showSourceMenu = true } label: { Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 14)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
+                }.padding(.horizontal, 12).padding(.top, 50); Spacer() }
             }
             
             if showSourceMenu {
-                Color.black.opacity(0.01).ignoresSafeArea().onTapGesture { showSourceMenu=false }
-                VStack(spacing:8) {
-                    Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8))
-                    ForEach(MovieSource.allCases, id:\.self) { src in
-                        Button { selectedSource=src; showSourceMenu=false; loadStream() } label: {
-                            HStack(spacing:6) { Circle().fill(sourceStatus[src]==true ? .green : sourceStatus[src]==false ? .red : .gray).frame(width:5,height:5); Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white); if selectedSource==src { Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white) } }
-                            .padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))
+                Color.black.opacity(0.01).ignoresSafeArea().onTapGesture { showSourceMenu = false }
+                VStack(spacing: 8) {
+                    Text("nguồn phát").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
+                    ForEach(MovieSource.allCases, id: \.self) { src in
+                        Button { selectedSource = src; showSourceMenu = false; loadStream() } label: {
+                            HStack(spacing: 6) { Circle().fill(sourceStatus[src] == true ? .green : sourceStatus[src] == false ? .red : .gray).frame(width: 5, height: 5); Text(src.rawValue).font(.system(size: 12, design: .rounded)).foregroundColor(.white); if selectedSource == src { Image(systemName: "checkmark").font(.system(size: 9)).foregroundColor(.white) } }
+                            .padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                         }
                     }
-                    Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.3))
-                }.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:170)
+                    Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
+                }.padding(14).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.2), lineWidth: 0.8)).shadow(color: .black.opacity(0.2), radius: 10, y: 5).frame(width: 170)
             }
         }.statusBarHidden().task { loadStream() }
     }
     
-    func loadStream() { isLoading=true; errorMessage=nil; sourceStatus[selectedSource]=nil; Task { do { let imdbId: String; if mediaType=="tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" } else { imdbId = try await fetchMovieIMDbId() }; guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }; let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber); let item = AVPlayerItem(url: url); await MainActor.run { player.replaceCurrentItem(with: item); sourceStatus[selectedSource]=true; isLoading=false } } catch { await MainActor.run { errorMessage=error.localizedDescription; sourceStatus[selectedSource]=false; isLoading=false } } } }
-    func fetchMovieIMDbId() async throws -> String { let (d,_) = try await URLSession.shared.data(from: URL(string:"https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; guard let id = try JSONDecoder().decode(E.self, from: d).imdb_id else { throw StreamError.noStreamAvailable }; return id }
-    func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds:0.5, preferredTimescale:600), queue:.main) { t in if !isSeeking { currentTime=t.seconds }; if let d=player.currentItem?.duration, d.isNumeric { duration=d.seconds } } }
-    func seek(_ s: Double) { let t=max(0,min(currentTime+s,duration)); player.seek(to: CMTime(seconds:t, preferredTimescale:600)); currentTime=t }
-    func toggleControls() { withAnimation(.easeInOut(duration:0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
-    func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval:4, repeats:false) { _ in withAnimation(.easeInOut(duration:0.3)) { showControls=false } } }
-    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval:1.0, repeats:false) { _ in withAnimation(.easeInOut(duration:0.3)) { showVolumeSlider=false } } }
-    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval:1.0, repeats:false) { _ in withAnimation(.easeInOut(duration:0.3)) { showBrightnessSlider=false } } }
-    func formatTime(_ s: Double) -> String { let m=Int(s)/60; let sec=Int(s)%60; return String(format:"%d:%02d",m,sec) }
+    func toggleOrientation() {
+        guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        let current = ws.interfaceOrientation
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations: current.isLandscape ? .portrait : .landscapeRight))
+    }
+    
+    func loadStream() { isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil; Task { do { let imdbId: String; if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" } else { imdbId = try await fetchMovieIMDbId() }; guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }; let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber); let item = AVPlayerItem(url: url); await MainActor.run { player.replaceCurrentItem(with: item); sourceStatus[selectedSource] = true; isLoading = false } } catch { await MainActor.run { errorMessage = error.localizedDescription; sourceStatus[selectedSource] = false; isLoading = false } } } }
+    func fetchMovieIMDbId() async throws -> String { let (d, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; guard let id = try JSONDecoder().decode(E.self, from: d).imdb_id else { throw StreamError.noStreamAvailable }; return id }
+    func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds } } }
+    func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
+    func toggleControls() { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
+    func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
+    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false } } }
+    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false } } }
+    func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
-struct AVPlayerControllerRepresented: UIViewControllerRepresentable {
+struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
+    @Binding var pipController: AVPictureInPictureController?
+    
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
         vc.player = player
         vc.showsPlaybackControls = false
         vc.videoGravity = .resizeAspect
         vc.allowsPictureInPicturePlayback = true
+        vc.canStartPictureInPictureAutomaticallyFromInline = true
         return vc
     }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
+    
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
+        DispatchQueue.main.async {
+            if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
+                pipController = AVPictureInPictureController(playerLayer: layer)
+            }
+        }
+    }
 }
 
-struct TinySlider: View { let value: CGFloat; let icon: String; var body: some View { VStack(spacing:4) { Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5)); ZStack(alignment:.bottom) { Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60); Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y: -value * 52) } } } }
+struct TinySlider: View { let value: CGFloat; let icon: String; var body: some View { VStack(spacing: 4) { Image(systemName: icon).font(.system(size: 9)).foregroundColor(.white.opacity(0.5)); ZStack(alignment: .bottom) { Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04), lineWidth: 0.5)).frame(width: 6, height: 60); Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1)).frame(width: 16, height: 16).shadow(color: .white.opacity(0.15), radius: 4).offset(y: -value * 52) } } } }
