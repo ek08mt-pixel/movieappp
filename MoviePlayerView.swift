@@ -82,8 +82,8 @@ struct MoviePlayerView: View {
     
     @Environment(\.dismiss) var dismiss
     @State private var player = AVPlayer()
-    error @State private var isLoading = true
-    @State private varMessage: String?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
     @State private var selectedSource: MovieSource = .ntl
     @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false
@@ -299,7 +299,9 @@ struct MoviePlayerView: View {
     }
     
     func loadStream() {
-        isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
+        isLoading = true
+        errorMessage = nil
+        sourceStatus[selectedSource] = nil
         Task {
             do {
                 let imdbId: String
@@ -308,8 +310,18 @@ struct MoviePlayerView: View {
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
                 let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
                 let item = AVPlayerItem(url: url)
-                await MainActor.run { player.replaceCurrentItem(with: item); sourceStatus[selectedSource] = true; isLoading = false }
-            } catch { await MainActor.run { errorMessage = error.localizedDescription; sourceStatus[selectedSource] = false; isLoading = false } }
+                await MainActor.run {
+                    player.replaceCurrentItem(with: item)
+                    sourceStatus[selectedSource] = true
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    sourceStatus[selectedSource] = false
+                    isLoading = false
+                }
+            }
         }
     }
     
@@ -327,13 +339,43 @@ struct MoviePlayerView: View {
         }
     }
     
-    func seek(_ sec: Double) { let t = max(0, min(currentTime + sec, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
-    func toggleControls() { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
-    func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
-    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false } } }
-    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false } } }
+    func seek(_ sec: Double) {
+        let newTime = max(0, min(currentTime + sec, duration))
+        player.seek(to: CMTime(seconds: newTime, preferredTimescale: 600))
+        currentTime = newTime
+    }
     
-    func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
+    func toggleControls() {
+        withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
+        if showControls { resetControlsTimer() }
+    }
+    
+    func resetControlsTimer() {
+        controlsTimer?.invalidate()
+        controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
+        }
+    }
+    
+    func resetVolumeTimer() {
+        volumeTimer?.invalidate()
+        volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false }
+        }
+    }
+    
+    func resetBrightnessTimer() {
+        brightnessTimer?.invalidate()
+        brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false }
+        }
+    }
+    
+    func formatTime(_ s: Double) -> String {
+        let m = Int(s) / 60
+        let sec = Int(s) % 60
+        return String(format: "%d:%02d", m, sec)
+    }
 }
 
 // MARK: - Tiny Slider
