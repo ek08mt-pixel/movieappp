@@ -8,7 +8,7 @@ struct ActorDetailView: View {
     @State private var showFullBio = false
     @Environment(\.dismiss) var dismiss
     
-    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+    private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -83,9 +83,23 @@ struct ActorDetailView: View {
                         
                         // Phim tiêu biểu
                         if !movies.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Phim tiêu biểu").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
-                                LazyVGrid(columns: columns, spacing: 14) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Text("Phim tiêu biểu")
+                                        .font(.headline).fontWeight(.bold).foregroundColor(.white)
+                                    Spacer()
+                                    if movies.count > 9 {
+                                        NavigationLink(destination: ActorMoviesView(actorName: actor.name, movies: movies)) {
+                                            HStack(spacing: 4) {
+                                                Text("Xem tất cả").font(.caption).foregroundColor(.gray)
+                                                Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                                
+                                LazyVGrid(columns: columns, spacing: 15) {
                                     ForEach(movies.prefix(9)) { movie in
                                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                                             VStack(spacing: 6) {
@@ -109,17 +123,6 @@ struct ActorDetailView: View {
                                     }
                                 }
                                 .padding(.horizontal)
-                                
-                                if movies.count > 9 {
-                                    NavigationLink(destination: ActorMoviesView(actorName: actor.name, movies: movies)) {
-                                        Text("Xem tất cả phim")
-                                            .font(.caption).fontWeight(.medium).foregroundColor(.white)
-                                            .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                            .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
-                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                                    }
-                                    .padding(.horizontal)
-                                }
                             }
                         }
                         
@@ -160,13 +163,12 @@ struct ActorDetailView: View {
     }
 }
 
-// View xem tất cả phim của diễn viên
 struct ActorMoviesView: View {
     let actorName: String
     let movies: [Movie]
     @Environment(\.dismiss) var dismiss
     
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -174,7 +176,7 @@ struct ActorMoviesView: View {
                 .ignoresSafeArea()
             
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 15) {
                     ForEach(movies) { movie in
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack(spacing: 6) {
