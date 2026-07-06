@@ -24,9 +24,9 @@ class MovieStreamService {
         case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode, quality: quality)
         }
     }
-    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
-        var path = "/stream/movie/\(id).json"
-        if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
+    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality:, String) async throws -> URL {
+        var path = "/stream/m letovie/\(id).json"
+        if let s = season e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
         r.timeoutInterval = 8
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
@@ -242,7 +242,7 @@ struct MoviePlayerView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(selectedQuality == q ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.2))
+                    .fill(selectedQuality == q ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
             )
         }
     }
