@@ -5,8 +5,8 @@ class ImageCache {
     private var cache = NSCache<NSString, UIImage>()
     
     init() {
-        cache.countLimit = 300
-        cache.totalCostLimit = 100 * 1024 * 1024
+        cache.countLimit = 500
+        cache.totalCostLimit = 200 * 1024 * 1024
     }
     
     func get(for url: URL) -> UIImage? {
@@ -39,10 +39,11 @@ struct CachedAsyncImage: View {
                             await MainActor.run { image = cached }
                         } else {
                             do {
-                                let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15)
+                                let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 10)
                                 let (data, _) = try await URLSession.shared.data(for: request)
                                 if let img = UIImage(data: data) {
-                                    let resized = img.resized(to: CGSize(width: 400, height: 600))
+                                    let size = min(img.size.width, 500)
+                                    let resized = img.resized(to: CGSize(width: size, height: size * 1.5))
                                     ImageCache.shared.set(resized, for: url)
                                     await MainActor.run { image = resized }
                                 }
