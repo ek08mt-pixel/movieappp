@@ -36,36 +36,16 @@ struct MovieDetailView: View {
                         CachedAsyncImage(url: movie.backdropURL)
                             .aspectRatio(16/9, contentMode: .fill)
                             .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
-                            .overlay(
-                                LinearGradient(
-                                    colors: [.clear, .clear, Color.black.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
+                            .overlay(LinearGradient(colors: [.clear, .clear, Color.black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
                         Button { dismiss() } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(14)
-                                .background(
-                                    Circle()
-                                        .fill(.ultraThinMaterial.opacity(0.3))
-                                        .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
-                                )
-                        }
-                        .padding(.top, 54)
-                        .padding(.leading, 20)
+                            Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
+                        }.padding(.top, 54).padding(.leading, 20)
                     }
                     
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(alignment: .top, spacing: 14) {
-                            CachedAsyncImage(url: movie.posterURL)
-                                .aspectRatio(2/3, contentMode: .fill)
-                                .frame(width: 100, height: 150)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(color: .black.opacity(0.6), radius: 8)
-                                .offset(y: -45)
+                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.6), radius: 8).offset(y: -45)
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
@@ -76,26 +56,19 @@ struct MovieDetailView: View {
                         
                         HStack(spacing: 10) {
                             Button { showPlayer = true } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
-                            Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) } } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                            Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) }; appState.save() } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                         }
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
                         
                         if !vm.collectionMovies.isEmpty {
-    VStack(alignment: .leading, spacing: 10) {
-        Text("Cùng series")
-            .font(.title3).fontWeight(.bold).foregroundColor(.white)
-            .padding(.top, 8)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Cùng series").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.top, 8)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in
                                             NavigationLink(destination: MovieDetailView(movie: part)) {
-                                                VStack(spacing: 6) {
-                                                    CachedAsyncImage(url: part.posterURL)
-                                                        .aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100)
-                                                    Text(part.yearText).font(.system(size: 9)).foregroundColor(.gray)
-                                                }
+                                                VStack(spacing: 6) { CachedAsyncImage(url: part.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)); Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100); Text(part.yearText).font(.system(size: 9)).foregroundColor(.gray) }
                                             }
                                         }
                                     }
@@ -109,8 +82,7 @@ struct MovieDetailView: View {
                                 ForEach(vm.seasons) { season in
                                     VStack(spacing: 0) {
                                         Button {
-                                            withAnimation {
-                                                expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber
+                                            withAnimation { expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber
                                                 if expandedSeason == season.seasonNumber { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } }
                                             }
                                         } label: {
@@ -155,7 +127,10 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
-        .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.backdropURL ?? movie.posterURL) }
+        .fullScreenCover(isPresented: $showPlayer) {
+            MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.backdropURL ?? movie.posterURL)
+                .environmentObject(appState)
+        }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
