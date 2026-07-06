@@ -32,14 +32,11 @@ class MovieStreamService {
     static let shared = MovieStreamService()
     
     func getBestStreamURL(imdbId: String, season: Int?, episode: Int?, movieTitle: String = "") async throws -> URL {
-        // Nếu là TV show có season/episode, thử NguonC trước
         if let s = season, let e = episode {
             if let url = try? await fetchNguonC(title: movieTitle, season: s, episode: e) {
                 return url
             }
         }
-        
-        // Fallback nguồn cũ
         try await withThrowingTaskGroup(of: URL?.self) { group in
             group.addTask { try? await self.fetchNTL(imdbId, season: season, episode: episode) }
             group.addTask { try? await self.fetchMediaFusion(imdbId, season: season, episode: episode) }
@@ -49,7 +46,7 @@ class MovieStreamService {
         }
     }
     
-    private func fetchNguonC(title: String, season: Int, episode: Int) async throws -> URL {
+    func fetchNguonC(title: String, season: Int, episode: Int) async throws -> URL {
         let searchResults = try await APIService.shared.searchNguonC(keyword: title)
         guard let film = searchResults.first, let slug = film.slug else { throw StreamError.noStreamAvailable }
         let detail = try await APIService.shared.getNguonCFilm(slug: slug)
@@ -188,13 +185,9 @@ struct MoviePlayerView: View {
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.nguonc] = true; isLoading = false }
                     saveHistory(); return
                 }
-                
                 let imdbId: String
                 if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
-                else {
-                    if let cached = IMDBCache.shared.get(movieId) { imdbId = cached }
-                    else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } }
-                }
+                else { if let cached = IMDBCache.shared.get(movieId) { imdbId = cached } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
                 let url = try await MovieStreamService.shared.getBestStreamURL(imdbId: imdbId, season: s, episode: e, movieTitle: movieTitle)
                 let item = AVPlayerItem(url: url)
@@ -214,21 +207,6 @@ struct MoviePlayerView: View {
     func resetBrightnessTimer(){brightnessTimer?.invalidate();brightnessTimer=Timer.scheduledTimer(withTimeInterval:1.0,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showBrightnessSlider=false}}}
     func toggleOrientation(){guard let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene else{return};ws.requestGeometryUpdate(.iOS(interfaceOrientations:ws.interfaceOrientation.isLandscape ? .portrait:.landscapeRight))}
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
-}
-
-extension MovieStreamService {
-    func fetchNguonC(title: String, season: Int, episode: Int) async throws -> URL {
-        let searchResults = try await APIService.shared.searchNguonC(keyword: title)
-        guard let film = searchResults.first, let slug = film.slug else { throw StreamError.noStreamAvailable }
-        let detail = try await APIService.shared.getNguonCFilm(slug: slug)
-        guard let episodes = detail?.episodes else { throw StreamError.noStreamAvailable }
-        if let target = episodes.first(where: { $0.season == season && $0.episode == episode }),
-           let link = target.link, !link.isEmpty {
-            guard let url = URL(string: link) else { throw StreamError.invalidURL }
-            return url
-        }
-        throw StreamError.wrongEpisode
-    }
 }
 
 struct CustomPlayerVC: UIViewControllerRepresentable {
