@@ -4,30 +4,32 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
     @State private var homeID = UUID()
+    @State private var exploreID = UUID()
+    @State private var libraryID = UUID()
     
     init() { UITabBar.appearance().isHidden = true }
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                NavigationStack { HomeView().id(homeID) }.tag(0)
-                NavigationStack { ExploreView() }.tag(1)
-                NavigationStack { LibraryView() }.tag(2)
+            ZStack {
+                HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
+                ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
+                LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .ignoresSafeArea()
             
             HStack(spacing: 12) {
                 HStack(spacing: 44) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                         if selectedTab == 0 { homeID = UUID() }
-                        else { withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 0 } }
+                        else { selectedTab = 0 }
                     }
                     LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) {
-                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 1 }
+                        if selectedTab == 1 { exploreID = UUID() }
+                        else { selectedTab = 1 }
                     }
                     LiquidTabIcon(icon: "square.grid.2x2.fill", isSelected: selectedTab == 2) {
-                        withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) { selectedTab = 2 }
+                        if selectedTab == 2 { libraryID = UUID() }
+                        else { selectedTab = 2 }
                     }
                 }
                 .padding(.vertical, 14).padding(.horizontal, 32)
