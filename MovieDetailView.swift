@@ -95,7 +95,7 @@ struct MovieDetailView: View {
                         
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("🎬 Mùa & Tập").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white)
                                 ForEach(vm.seasons) { season in
                                     VStack(spacing: 0) {
                                         Button {
