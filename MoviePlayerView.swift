@@ -68,7 +68,10 @@ class MovieStreamService {
 
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
-    var mediaType: String?; var seasonNumber: Int?; var episodeNumber: Int?; var posterURL: URL?
+    var mediaType: String?
+    @State var seasonNumber: Int?
+    @State var episodeNumber: Int?
+    var posterURL: URL?
     @Environment(\.dismiss) var dismiss
     
     @State private var player = AVPlayer()
@@ -143,10 +146,7 @@ struct MoviePlayerView: View {
                 }.padding(.horizontal, 8).padding(.top, 50); Spacer() }
             }
             
-            // YouTube overlay
             if showOverlay { youtubeOverlay }
-            
-            // Popups
             if showSourceMenu { popupBackground { showSourceMenu = false }; sourcePopup }
             if showSettings { popupBackground { showSettings = false }; settingsPopup }
         }
