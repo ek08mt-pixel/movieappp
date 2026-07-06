@@ -5,7 +5,10 @@ struct ActorDetailView: View {
     @State private var actorDetail: Actor?
     @State private var movies: [Movie] = []
     @State private var isLoading = true
+    @State private var showFullBio = false
     @Environment(\.dismiss) var dismiss
+    
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -19,12 +22,20 @@ struct ActorDetailView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Avatar + Name
                         VStack(spacing: 12) {
-                            CachedAsyncImage(url: actor.profileURL)
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 130, height: 130)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 2))
-                                .shadow(color: .black.opacity(0.5), radius: 10)
+                            if let url = actor.profileURL {
+                                CachedAsyncImage(url: url)
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 130, height: 130)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 2))
+                                    .shadow(color: .black.opacity(0.5), radius: 10)
+                            } else {
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                    .frame(width: 130, height: 130)
+                                    .overlay(Image(systemName: "person.fill").foregroundColor(.gray).font(.system(size: 50)))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 2))
+                            }
                             
                             Text(actor.name)
                                 .font(.title2).fontWeight(.bold).foregroundColor(.white)
@@ -39,15 +50,6 @@ struct ActorDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 90)
                         
-                        // Tiểu sử
-                        if let bio = actorDetail?.biography, !bio.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Tiểu sử").font(.headline).fontWeight(.bold).foregroundColor(.white)
-                                Text(bio).font(.caption).foregroundColor(.gray).lineLimit(8)
-                            }
-                            .padding(.horizontal)
-                        }
-                        
                         // Thông tin
                         if let detail = actorDetail {
                             VStack(alignment: .leading, spacing: 8) {
@@ -60,26 +62,63 @@ struct ActorDetailView: View {
                                 }
                             }
                             .padding(.horizontal)
+                            
+                            // Tiểu sử
+                            if let bio = detail.biography, !bio.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Tiểu sử").font(.headline).fontWeight(.bold).foregroundColor(.white)
+                                    Text(bio)
+                                        .font(.caption).foregroundColor(.gray)
+                                        .lineLimit(showFullBio ? nil : 3)
+                                    if bio.count > 150 {
+                                        Button(showFullBio ? "Ẩn bớt" : "Xem thêm") {
+                                            withAnimation { showFullBio.toggle() }
+                                        }
+                                        .font(.caption).foregroundColor(.white.opacity(0.7))
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
                         }
                         
                         // Phim tiêu biểu
                         if !movies.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Phim tiêu biểu").font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(movies.prefix(20)) { movie in
-                                            NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                                VStack(spacing: 6) {
-                                                    CachedAsyncImage(url: movie.posterURL)
+                                LazyVGrid(columns: columns, spacing: 14) {
+                                    ForEach(movies.prefix(9)) { movie in
+                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                            VStack(spacing: 6) {
+                                                if let url = movie.posterURL {
+                                                    CachedAsyncImage(url: url)
                                                         .aspectRatio(2/3, contentMode: .fill)
-                                                        .frame(width: 110, height: 165)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    Text(movie.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 110)
+                                                        .frame(maxWidth: .infinity)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(.ultraThinMaterial)
+                                                        .aspectRatio(2/3, contentMode: .fit)
+                                                        .frame(maxWidth: .infinity)
+                                                        .overlay(Image(systemName: "film").foregroundColor(.gray).font(.system(size: 24)))
                                                 }
+                                                Text(movie.title)
+                                                    .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                             }
                                         }
-                                    }.padding(.horizontal)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                
+                                if movies.count > 9 {
+                                    NavigationLink(destination: ActorMoviesView(actorName: actor.name, movies: movies)) {
+                                        Text("Xem tất cả phim")
+                                            .font(.caption).fontWeight(.medium).foregroundColor(.white)
+                                            .frame(maxWidth: .infinity).padding(.vertical, 12)
+                                            .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
+                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                    }
+                                    .padding(.horizontal)
                                 }
                             }
                         }
@@ -118,5 +157,68 @@ struct ActorDetailView: View {
             Spacer()
             Text(value).font(.caption).foregroundColor(.white)
         }
+    }
+}
+
+// View xem tất cả phim của diễn viên
+struct ActorMoviesView: View {
+    let actorName: String
+    let movies: [Movie]
+    @Environment(\.dismiss) var dismiss
+    
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(movies) { movie in
+                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                            VStack(spacing: 6) {
+                                if let url = movie.posterURL {
+                                    CachedAsyncImage(url: url)
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(maxWidth: .infinity)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(.ultraThinMaterial)
+                                        .aspectRatio(2/3, contentMode: .fit)
+                                        .frame(maxWidth: .infinity)
+                                }
+                                Text(movie.title)
+                                    .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                HStack(spacing: 2) {
+                                    Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                    Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 90)
+                .padding(.bottom, 100)
+            }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(14)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    )
+            }
+            .padding(.top, 54)
+            .padding(.leading, 20)
+        }
+        .navigationBarHidden(true)
     }
 }
