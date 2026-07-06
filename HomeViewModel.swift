@@ -29,9 +29,12 @@ class HomeViewModel: ObservableObject {
         trending24h = (try? await trendingTask) ?? []
         genres = (try? await genresTask) ?? []
         movieOfDay = trending24h.randomElement()
+        
+        // Load TV Shows từ API trực tiếp
+        trendingTV = await loadTrendingTV()
+        
         isLoading = false
         
-        async let trendingTVTask = fetchTrendingTV()
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
@@ -41,7 +44,6 @@ class HomeViewModel: ObservableObject {
         async let usukTask = APIService.shared.usukMovies()
         async let animeTask = APIService.shared.animeMovies()
         
-        trendingTV = (try? await trendingTVTask) ?? []
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
         topRated = (try? await topRatedTask) ?? []
@@ -52,13 +54,25 @@ class HomeViewModel: ObservableObject {
         anime = (try? await animeTask) ?? []
     }
     
-    private func fetchTrendingTV() async throws -> [Movie] {
+    private func loadTrendingTV() async -> [Movie] {
         let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
         guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try JSONDecoder().decode(MovieResponse.self, from: data)
-        return response.results.map { movie in
-            Movie(id: movie.id, title: movie.title, overview: movie.overview, posterPath: movie.posterPath, backdropPath: movie.backdropPath, voteAverage: movie.voteAverage, releaseDate: movie.releaseDate, genreIds: movie.genreIds, originalTitle: movie.originalTitle, popularity: movie.popularity, voteCount: movie.voteCount, adult: movie.adult, originalLanguage: movie.originalLanguage, mediaType: "tv")
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(MovieResponse.self, from: data)
+            return response.results.map { movie in
+                Movie(
+                    id: movie.id, title: movie.title, overview: movie.overview,
+                    posterPath: movie.posterPath, backdropPath: movie.backdropPath,
+                    voteAverage: movie.voteAverage, releaseDate: movie.releaseDate,
+                    genreIds: movie.genreIds, originalTitle: movie.originalTitle,
+                    popularity: movie.popularity, voteCount: movie.voteCount,
+                    adult: movie.adult, originalLanguage: movie.originalLanguage,
+                    mediaType: "tv"
+                )
+            }
+        } catch {
+            return []
         }
     }
 }
