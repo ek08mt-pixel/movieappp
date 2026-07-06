@@ -4,79 +4,96 @@ struct SplashView: View {
     @State private var isActive = false
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
+    @State private var glowOpacity: Double = 0.3
     @State private var rotation: Double = 0
     
     var body: some View {
         if isActive {
             MainTabView()
-                .transition(.opacity.animation(.easeInOut(duration: 0.6)))
+                .transition(.opacity.animation(.easeInOut(duration: 0.8)))
         } else {
             ZStack {
-                // Background liquid glass xám đen
+                Color.black.ignoresSafeArea()
+                
                 ZStack {
-                    Color(hex: "#0D0D0D")
+                    Circle()
+                        .fill(LinearGradient(colors: [Color(hex: "#2A2A2A").opacity(0.6), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 300, height: 300).blur(radius: 60).offset(x: -80, y: -200).rotationEffect(.degrees(rotation))
                     
                     Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#2A2A2A"), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 280, height: 280).blur(radius: 70).offset(x: -60, y: -180).rotationEffect(.degrees(rotation))
+                        .fill(LinearGradient(colors: [Color(hex: "#1F1F1F").opacity(0.5), .clear], startPoint: .bottomTrailing, endPoint: .topLeading))
+                        .frame(width: 250, height: 250).blur(radius: 50).offset(x: 100, y: 100).rotationEffect(.degrees(-rotation))
                     
                     Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#1F1F1F"), .clear], startPoint: .bottomTrailing, endPoint: .topLeading))
-                        .frame(width: 250, height: 250).blur(radius: 60).offset(x: 90, y: 140).rotationEffect(.degrees(-rotation))
+                        .fill(LinearGradient(colors: [Color(hex: "#252525").opacity(0.4), .clear], startPoint: .top, endPoint: .bottom))
+                        .frame(width: 280, height: 280).blur(radius: 55).offset(x: -50, y: 150).rotationEffect(.degrees(rotation * 0.7))
                     
-                    Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#252525"), .clear], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 260, height: 260).blur(radius: 65).offset(x: 30, y: -30).rotationEffect(.degrees(rotation * 0.5))
+                    Color.black.opacity(0.5)
                 }
                 .ignoresSafeArea()
                 
-                // Nội dung trung tâm
-                VStack(spacing: 24) {
-                    // Logo trong khung kính
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 34)
-                            .fill(.ultraThinMaterial.opacity(0.3))
-                            .frame(width: 150, height: 150)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 34)
-                                    .stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
-                            )
-                            .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
-                        
-                        Image(systemName: "play.rectangle.fill")
-                            .font(.system(size: 64, weight: .bold))
-                            .foregroundColor(.white)
-                            .shadow(color: .white.opacity(0.5), radius: 12)
-                    }
-                    .scaleEffect(scale)
-                    .opacity(opacity)
-                    
-                    Text("EMCC")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .tracking(14)
-                        .scaleEffect(scale)
-                        .opacity(opacity)
-                        .shadow(color: .white.opacity(0.3), radius: 10)
+                ForEach(0..<12) { i in
+                    Circle()
+                        .fill(.white.opacity(0.12))
+                        .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
+                        .blur(radius: 1)
+                        .offset(x: CGFloat.random(in: -150...150), y: CGFloat.random(in: -300...300))
+                        .opacity(glowOpacity)
                 }
                 
-                // Footer
-                Text("© 2026 Emmew, Inc. All Rights Reserved.")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.25))
-                    .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height - 50)
-                    .opacity(opacity)
+                VStack(spacing: 0) {
+                    Spacer()
+                    
+                    VStack(spacing: 22) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 32)
+                                .fill(.ultraThinMaterial.opacity(0.4))
+                                .frame(width: 160, height: 160)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 32)
+                                        .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                )
+                                .shadow(color: .white.opacity(0.1), radius: 20, y: 10)
+                            
+                            Image(systemName: "play.rectangle.fill")
+                                .font(.system(size: 70, weight: .bold))
+                                .foregroundColor(.white)
+                                .shadow(color: .white.opacity(0.5), radius: 10)
+                        }
+                        .scaleEffect(scale)
+                        .opacity(opacity)
+                        
+                        Text("EMCC")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .tracking(10)
+                            .scaleEffect(scale)
+                            .opacity(opacity)
+                            .shadow(color: .white.opacity(0.3), radius: 10)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("© 2026 Emmew, Inc. All Rights Reserved.")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.25))
+                        .padding(.bottom, 40)
+                        .opacity(opacity)
+                }
             }
             .onAppear {
-                withAnimation(.easeOut(duration: 1.5)) {
+                withAnimation(.easeOut(duration: 1.8)) {
                     scale = 1.0
                     opacity = 1.0
                 }
-                withAnimation(.linear(duration: 15).repeatForever(autoreverses: false)) {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    glowOpacity = 0.6
+                }
+                withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
                     rotation = 360
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation(.easeInOut(duration: 0.6)) {
+                    withAnimation(.easeInOut(duration: 0.8)) {
                         isActive = true
                     }
                 }
