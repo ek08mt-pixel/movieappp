@@ -33,6 +33,10 @@ class HomeViewModel: ObservableObject {
         
         trending24h = (try? await trendingTask) ?? []
         trendingTV = (try? await trendingTVTask) ?? []
+        if trendingTV.isEmpty {
+            let all = (try? await APIService.shared.trendingAll()) ?? []
+            trendingTV = all.filter { $0.mediaType == "tv" }
+        }
         nowPlaying = (try? await nowPlayingTask) ?? []
         upcoming = (try? await upcomingTask) ?? []
         topRated = (try? await topRatedTask) ?? []
