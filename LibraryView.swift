@@ -14,6 +14,7 @@ struct LibraryView: View {
                         ForEach(appState.favorites) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .overlay(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.12)).opacity(movie.posterURL == nil ? 1 : 0))
                             }
                         }
                     }.padding(.horizontal, 16).padding(.top, 90).padding(.bottom, 100)
