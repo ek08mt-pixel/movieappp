@@ -22,11 +22,7 @@ class SearchViewModel: ObservableObject {
         task = Task {
             try? await Task.sleep(nanoseconds: 200_000_000)
             if !Task.isCancelled {
-                async let movies = APIService.shared.search(query: q)
-                async let tvShows = APIService.shared.searchTV(query: q)
-                let m = (try? await movies) ?? []
-                let t = (try? await tvShows) ?? []
-                results = (m + t).sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
+                do { results = try await APIService.shared.search(query: q) } catch { results = [] }
             }
         }
     }
