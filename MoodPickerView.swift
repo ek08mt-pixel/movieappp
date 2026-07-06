@@ -16,30 +16,30 @@ struct MoodPickerView: View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             
-            VStack(spacing: 20) {
-                Text("Bạn đang có tâm trạng gì?").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.top, 90)
-                
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)], spacing: 15) {
-                    ForEach(moods, id: \.1) { emoji, name, genreId in
-                        Button {
-                            selectedMood = name
-                            loadMovies(genreId: genreId)
-                        } label: {
-                            VStack(spacing: 10) {
-                                Text(emoji).font(.system(size: 40))
-                                Text(name).font(.caption).foregroundColor(.white)
+            ScrollView {
+                VStack(spacing: 16) {
+                    Text("Bạn đang có tâm trạng gì?").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.top, 90)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        ForEach(moods, id: \.1) { emoji, name, genreId in
+                            Button {
+                                selectedMood = name
+                                loadMovies(genreId: genreId)
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text(emoji).font(.system(size: 28))
+                                    Text(name).font(.caption2).foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                             }
-                            .frame(maxWidth: .infinity).padding(.vertical, 20)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                         }
-                    }
-                }.padding(.horizontal, 16)
-                
-                if selectedMood != nil {
-                    if isLoading { ProgressView().tint(.white).padding(.top, 20) }
-                    else if !movies.isEmpty {
-                        ScrollView {
+                    }.padding(.horizontal, 16)
+                    
+                    if selectedMood != nil {
+                        if isLoading { ProgressView().tint(.white).padding(.top, 20) }
+                        else if !movies.isEmpty {
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)], spacing: 15) {
                                 ForEach(movies) { movie in
                                     NavigationLink(destination: MovieDetailView(movie: movie)) {
