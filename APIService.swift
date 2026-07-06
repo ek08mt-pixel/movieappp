@@ -115,13 +115,24 @@ class APIService {
         return response.genres
     }
     
-    func search(query: String, page: Int = 1) async throws -> [Movie] {
+    func searchMovies(query: String, page: Int = 1) async throws -> [Movie] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "\(baseURL)/search/multi?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
+        let urlString = "\(baseURL)/search/movie?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }.map { $0.withPlaceholder() }
+        return response.results.map { $0.withPlaceholder() }
+    }
+    
+    func searchTVShows(query: String, page: Int = 1) async throws -> [Movie] {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        let urlString = "\(baseURL)/search/tv?api_key=\(apiKey)&language=\(language)&query=\(encoded)&page=\(page)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.map { movie in
+            Movie(id: movie.id, title: movie.title, overview: movie.overview, posterPath: movie.posterPath, backdropPath: movie.backdropPath, voteAverage: movie.voteAverage, releaseDate: movie.releaseDate, genreIds: movie.genreIds, originalTitle: movie.originalTitle, popularity: movie.popularity, voteCount: movie.voteCount, adult: movie.adult, originalLanguage: movie.originalLanguage, mediaType: "tv")
+        }
     }
     
     func moviesByGenre(genreId: Int, page: Int = 1) async throws -> [Movie] {
