@@ -10,6 +10,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var selectedSeason: TVSeasonDetail?
     @Published var collectionMovies: [Movie] = []
     @Published var isLoading = false
+    @Published var cachedStreamURL: URL?
     
     func load(movieId: Int, mediaType: String?) async {
         isLoading = true
@@ -34,6 +35,28 @@ class MovieDetailViewModel: ObservableObject {
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
+        
+        Task { await prefetchStream(movieId: movieId, mediaType: type) }
+    }
+    
+    private func prefetchStream(movieId: Int, mediaType: String) async {
+        do {
+            let imdbId: String
+            if let cached = IMDBCache.shared.get(movieId) {
+                imdbId = cached
+            } else if mediaType == "tv" {
+                imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
+                if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) }
+            } else {
+                let (d, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+                struct E: Codable { let imdb_id: String? }
+                let id = try JSONDecoder().decode(E.self, from: d).imdb_id ?? ""
+                imdbId = id
+                if !id.isEmpty { IMDBCache.shared.set(movieId, value: id) }
+            }
+            guard !imdbId.isEmpty else { return }
+            cachedStreamURL = try await MovieStreamService.shared.getBestStreamURL(imdbId: imdbId, season: nil, episode: nil)
+        } catch {}
     }
     
     private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
@@ -41,14 +64,10 @@ class MovieDetailViewModel: ObservableObject {
         guard let url = URL(string: urlString) else { return [] }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            struct TVDetailResponse: Codable {
-                let seasons: [TVSeason]?
-            }
+            struct TVDetailResponse: Codable { let seasons: [TVSeason]? }
             let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
             return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
-        } catch {
-            return []
-        }
+        } catch { return [] }
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
