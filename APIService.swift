@@ -9,7 +9,6 @@ class APIService {
     private var language: String { LanguageManager.shared.currentLanguage.tmdbLanguage }
     private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
     
-    // MARK: - TMDB
     func trending24h() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
@@ -205,7 +204,34 @@ class APIService {
         return try? decoder.decode(CollectionDetail.self, from: data)
     }
     
-    // Các hàm discoverMovies, koreanMovies, japaneseMovies... giữ nguyên
+    func discoverMovies(minRating: Double? = nil, minVotes: Int? = nil) async throws -> [Movie] {
+        var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&sort_by=popularity.desc&language=\(language)"
+        if let r = minRating { urlString += "&vote_average.gte=\(r)" }
+        if let v = minVotes { urlString += "&vote_count.gte=\(v)" }
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.map { $0.withPlaceholder() }
+    }
+    
+    func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
+        let urlString: String
+        switch type {
+        case .studio: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+        case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
+        case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+        }
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.map { $0.withPlaceholder() }
+    }
+    
+    func koreanMovies() async throws -> [Movie] { try await discoverMovies() }
+    func japaneseMovies() async throws -> [Movie] { try await discoverMovies() }
+    func vietnameseMovies() async throws -> [Movie] { try await discoverMovies() }
+    func usukMovies() async throws -> [Movie] { try await discoverMovies() }
+    func animeMovies() async throws -> [Movie] { try await discoverMovies() }
     
     // MARK: - NguonC API
     func searchNguonC(keyword: String) async throws -> [NguonCFilm] {
