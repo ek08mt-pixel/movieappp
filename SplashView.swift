@@ -15,9 +15,7 @@ struct SplashView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                // Liquid glass background
                 ZStack {
-                    // Lớp màu chuyển động
                     Circle()
                         .fill(LinearGradient(colors: [.blue.opacity(0.4), .purple.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 300, height: 300)
@@ -39,32 +37,26 @@ struct SplashView: View {
                         .offset(x: -50, y: 150)
                         .rotationEffect(.degrees(rotation * 0.7))
                     
-                    // Glass overlay
                     Color.black.opacity(0.55)
                 }
                 .ignoresSafeArea()
                 
-                // Floating particles
-                ZStack {
-                    ForEach(0..<12) { i in
-                        Circle()
-                            .fill(.white.opacity(0.15))
-                            .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
-                            .blur(radius: 1)
-                            .offset(
-                                x: CGFloat.random(in: -150...150),
-                                y: CGFloat.random(in: -300...300)
-                            )
-                            .opacity(glowOpacity)
-                    }
+                ForEach(0..<12) { i in
+                    Circle()
+                        .fill(.white.opacity(0.15))
+                        .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
+                        .blur(radius: 1)
+                        .offset(
+                            x: CGFloat.random(in: -150...150),
+                            y: CGFloat.random(in: -300...300)
+                        )
+                        .opacity(glowOpacity)
                 }
                 
-                // Content
                 VStack(spacing: 0) {
                     Spacer()
                     
                     VStack(spacing: 22) {
-                        // Logo in glass card
                         ZStack {
                             RoundedRectangle(cornerRadius: 32)
                                 .fill(.ultraThinMaterial.opacity(0.4))
@@ -79,7 +71,7 @@ struct SplashView: View {
                                 .shadow(color: .white.opacity(0.1), radius: 20, y: 10)
                             
                             CatLogoView(glowOpacity: glowOpacity)
-                                .frame(width: 100, height: 85)
+                                .frame(width: 110, height: 95)
                         }
                         .scaleEffect(scale)
                         .opacity(opacity)
@@ -95,7 +87,6 @@ struct SplashView: View {
                     
                     Spacer()
                     
-                    // Glass footer
                     Text("© 2026 Emmew, Inc. All Rights Reserved.")
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundColor(.white.opacity(0.25))
@@ -130,17 +121,17 @@ struct CatLogoView: View {
     var body: some View {
         ZStack {
             CatPath()
-                .stroke(Color.white.opacity(glowOpacity * 1.2), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-                .blur(radius: 8)
+                .stroke(Color.white.opacity(glowOpacity * 1.2), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                .blur(radius: 10)
             
             CatPath()
-                .stroke(Color.white.opacity(glowOpacity), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                .blur(radius: 3)
+                .stroke(Color.white.opacity(glowOpacity), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .blur(radius: 4)
             
             CatPath()
                 .stroke(
                     LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.6)], startPoint: .top, endPoint: .bottom),
-                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                 )
         }
     }
@@ -152,44 +143,32 @@ struct CatPath: Shape {
         let w = rect.width
         let h = rect.height
         let centerX = w / 2
+        let centerY = h * 0.5
         
-        path.move(to: CGPoint(x: centerX - 7, y: h * 0.22))
-        path.addLine(to: CGPoint(x: centerX - 24, y: h * 0.0))
-        path.addLine(to: CGPoint(x: centerX - 3, y: h * 0.30))
+        // Đầu mèo tròn mập
+        path.addEllipse(in: CGRect(x: centerX - 35, y: centerY - 30, width: 70, height: 60))
         
-        path.addCurve(to: CGPoint(x: centerX + 3, y: h * 0.30),
-                      control1: CGPoint(x: centerX - 3, y: h * 0.08),
-                      control2: CGPoint(x: centerX + 3, y: h * 0.08))
+        // Tai trái
+        path.move(to: CGPoint(x: centerX - 28, y: centerY - 20))
+        path.addLine(to: CGPoint(x: centerX - 22, y: centerY - 42))
+        path.addLine(to: CGPoint(x: centerX - 10, y: centerY - 22))
         
-        path.addLine(to: CGPoint(x: centerX + 24, y: h * 0.0))
-        path.addLine(to: CGPoint(x: centerX + 7, y: h * 0.22))
+        // Tai phải
+        path.move(to: CGPoint(x: centerX + 28, y: centerY - 20))
+        path.addLine(to: CGPoint(x: centerX + 22, y: centerY - 42))
+        path.addLine(to: CGPoint(x: centerX + 10, y: centerY - 22))
         
-        path.addCurve(to: CGPoint(x: centerX + 20, y: h * 0.62),
-                      control1: CGPoint(x: centerX + 16, y: h * 0.32),
-                      control2: CGPoint(x: centerX + 23, y: h * 0.47))
+        // Râu trái
+        path.move(to: CGPoint(x: centerX - 30, y: centerY + 2))
+        path.addLine(to: CGPoint(x: centerX - 55, y: centerY - 4))
+        path.move(to: CGPoint(x: centerX - 30, y: centerY + 10))
+        path.addLine(to: CGPoint(x: centerX - 55, y: centerY + 10))
         
-        path.addCurve(to: CGPoint(x: centerX, y: h * 0.72),
-                      control1: CGPoint(x: centerX + 16, y: h * 0.75),
-                      control2: CGPoint(x: centerX + 9, y: h * 0.72))
-        
-        path.addCurve(to: CGPoint(x: centerX - 20, y: h * 0.62),
-                      control1: CGPoint(x: centerX - 9, y: h * 0.72),
-                      control2: CGPoint(x: centerX - 16, y: h * 0.75))
-        
-        path.addCurve(to: CGPoint(x: centerX - 7, y: h * 0.22),
-                      control1: CGPoint(x: centerX - 23, y: h * 0.47),
-                      control2: CGPoint(x: centerX - 16, y: h * 0.32))
-        
-        path.closeSubpath()
-        
-        path.move(to: CGPoint(x: centerX - 16, y: h * 0.50))
-        path.addLine(to: CGPoint(x: centerX - 36, y: h * 0.43))
-        path.move(to: CGPoint(x: centerX - 16, y: h * 0.56))
-        path.addLine(to: CGPoint(x: centerX - 36, y: h * 0.56))
-        path.move(to: CGPoint(x: centerX + 16, y: h * 0.50))
-        path.addLine(to: CGPoint(x: centerX + 36, y: h * 0.43))
-        path.move(to: CGPoint(x: centerX + 16, y: h * 0.56))
-        path.addLine(to: CGPoint(x: centerX + 36, y: h * 0.56))
+        // Râu phải
+        path.move(to: CGPoint(x: centerX + 30, y: centerY + 2))
+        path.addLine(to: CGPoint(x: centerX + 55, y: centerY - 4))
+        path.move(to: CGPoint(x: centerX + 30, y: centerY + 10))
+        path.addLine(to: CGPoint(x: centerX + 55, y: centerY + 10))
         
         return path
     }
