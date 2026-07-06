@@ -73,19 +73,43 @@ class MovieStreamService {
         struct EP: Codable { let id: Int; let link: String?; let season: Int?; let episode: Int? }
         guard let detail = try? JSONDecoder().decode(DR.self, from: dd),
               let episodes = detail.episodes else { throw StreamError.noStreamAvailable }
-        if let target = episodes.first(where: { $0.season == season && $0.episode == episode }),
-           let link = target.link, !link.isEmpty,
-           let url = URL(string: link) { return url }
+        
+        let matched = episodes.filter { $0.season == season && $0.episode == episode }
+        for ep in matched {
+            guard let link = ep.link, !link.isEmpty else { continue }
+            if link.contains("embed") || link.contains(".php") {
+                if let embedURL = URL(string: link),
+                   let realURL = try? await extractVideoFromEmbed(embedURL: embedURL) {
+                    return realURL
+                }
+            } else if let url = URL(string: link) {
+                return url
+            }
+        }
         throw StreamError.wrongEpisode
     }
     
+    private func extractVideoFromEmbed(embedURL: URL) async throws -> URL {
+        let (data, _) = try await URLSession.shared.data(from: embedURL)
+        guard let html = String(data: data, encoding: .utf8) else { throw StreamError.noStreamAvailable }
+        
+        if let m3u8Range = html.range(of: "https?://[^\"'\\s]+\\.m3u8[^\"'\\s]*", options: .regularExpression),
+           let url = URL(string: String(html[m3u8Range])) {
+            return url
+        }
+        
+        if let mp4Range = html.range(of: "https?://[^\"'\\s]+\\.mp4[^\"'\\s]*", options: .regularExpression),
+           let url = URL(string: String(html[mp4Range])) {
+            return url
+        }
+        
+        throw StreamError.noStreamAvailable
+    }
+    
     private func findNguonCSlug(title: String) async throws -> String {
-        let keywords = [
-            title,
-            title.lowercased(),
-            title.replacingOccurrences(of: " ", with: "-").lowercased(),
-            title.folding(options: .diacriticInsensitive, locale: .current)
-        ]
+        let keywords = [title, title.lowercased(),
+                        title.replacingOccurrences(of: " ", with: "-").lowercased(),
+                        title.folding(options: .diacriticInsensitive, locale: .current)]
         for kw in keywords {
             let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
             guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { continue }
