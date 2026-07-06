@@ -100,6 +100,7 @@ struct MoviePlayerView: View {
     @State private var selectedSeasonDetail: TVSeasonDetail?
     @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?
+    @State private var collectionMovies: [Movie] = []
     
     var body: some View {
         ZStack {
@@ -135,7 +136,12 @@ struct MoviePlayerView: View {
                     }.background(LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom))
                 }
                 VStack { HStack {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
+                    Button {
+                        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { dismiss() }
+                    } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
                     Spacer()
                     Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
                     Spacer()
@@ -183,7 +189,6 @@ struct MoviePlayerView: View {
                 Capsule().fill(.white.opacity(0.5)).frame(width: 40, height: 5).padding(.top, 10)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        // Phim đang xem
                         if let movie = currentMovie {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
@@ -195,6 +200,9 @@ struct MoviePlayerView: View {
                                         if !seasons.isEmpty {
                                             Text("\(seasons.count) mùa • \(seasons.reduce(0) { $0 + $1.episodeCount }) tập").font(.caption).foregroundColor(.gray)
                                         }
+                                        if !collectionMovies.isEmpty {
+                                            Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)
+                                        }
                                     }
                                     Spacer()
                                 }
@@ -202,6 +210,28 @@ struct MoviePlayerView: View {
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                                 
+                                // Collection movies (các phần phim)
+                                if !collectionMovies.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 10) {
+                                            ForEach(collectionMovies.filter { $0.id != movieId }) { part in
+                                                Button {
+                                                    closeOverlay()
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                        // Mở phim mới
+                                                    }
+                                                } label: {
+                                                    VStack(spacing: 4) {
+                                                        CachedAsyncImage(url: part.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 8))
+                                                        Text(part.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2).frame(width: 80)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Seasons
                                 if !seasons.isEmpty {
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 8) {
@@ -242,7 +272,6 @@ struct MoviePlayerView: View {
                             }
                         }
                         
-                        // Phim tương tự
                         if !similarMovies.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white)
@@ -285,12 +314,7 @@ struct MoviePlayerView: View {
     var settingsPopup: some View {
         VStack(spacing: 8) {
             Text("cài đặt").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundColor(.white.opacity(0.8))
-            ScrollView { VStack(spacing: 6) {
-                settingRow(title: "Chất lượng", value: "Tự động (theo nguồn)")
-                settingRow(title: "Phụ đề", value: "Không có sẵn")
-                settingRow(title: "Tốc độ", value: "1.0x")
-                settingRow(title: "Âm thanh", value: "Stereo")
-            }}.frame(maxHeight: 150)
+            ScrollView { VStack(spacing: 6) { settingRow(title: "Chất lượng", value: "Tự động (theo nguồn)"); settingRow(title: "Phụ đề", value: "Không có sẵn"); settingRow(title: "Tốc độ", value: "1.0x"); settingRow(title: "Âm thanh", value: "Stereo") }}.frame(maxHeight: 150)
             Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.3))
         }.padding(14).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.2), lineWidth: 0.8)).shadow(color: .black.opacity(0.2), radius: 10, y: 5).frame(width: 200)
     }
@@ -304,7 +328,12 @@ struct MoviePlayerView: View {
             if mediaType == "tv" {
                 seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []
             }
-            // Tạo currentMovie từ dữ liệu
+            // Load collection
+            if let detail = try? await APIService.shared.movieDetail(movieId: movieId),
+               let collectionId = detail.belongsToCollection?.id,
+               let colDetail = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
+                collectionMovies = colDetail.parts
+            }
             currentMovie = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
         }
     }
