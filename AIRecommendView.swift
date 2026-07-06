@@ -19,8 +19,12 @@ struct AIRecommendView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(moods, id: \.self) { m in
-                                    Button { selectedMood = m; Task { await loadForMood(m) } } label: {
-                                        Text(m).font(.caption).fontWeight(.medium).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8)
+                                    Button {
+                                        selectedMood = m
+                                        Task { await loadForMood(m) }
+                                    } label: {
+                                        Text(m).font(.caption).fontWeight(.medium).foregroundColor(.white)
+                                            .padding(.horizontal, 16).padding(.vertical, 8)
                                             .background(Capsule().stroke(selectedMood == m ? Color.white.opacity(0.5) : Color.clear, lineWidth: 1))
                                     }
                                 }
@@ -32,7 +36,13 @@ struct AIRecommendView: View {
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 16) {
                                 ForEach(recommendations.prefix(12)) { movie in
                                     NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                        VStack(spacing: 4) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 10)); Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2) }
+                                        VStack(spacing: 4) {
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(height: 160)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            Text(movie.title).font(.system(size: 9)).foregroundColor(.white).lineLimit(2)
+                                        }
                                     }
                                 }
                             }
@@ -41,17 +51,26 @@ struct AIRecommendView: View {
                     }.padding(.horizontal)
                 }
             }
-        }.task { await loadForMood("🎬 Tất cả") }
+        }
+        .task { await loadForMood("🎬 Tất cả") }
     }
     
     func loadForMood(_ mood: String) async {
-        isLoading = true; selectedMood = mood
+        isLoading = true
+        selectedMood = mood
         do {
             if mood == "🎬 Tất cả" {
-                if let last = appState.watchHistory.last { recommendations = try await APIService.shared.similar(movieId: last.id) }
-                else { recommendations = try await APIService.shared.popular() }
-            } else if let genreId = genreMap[mood] { recommendations = try await APIService.shared.moviesByGenre(genreId: genreId)
-        } catch { recommendations = [] }
+                if let last = appState.watchHistory.last {
+                    recommendations = try await APIService.shared.similar(movieId: last.id)
+                } else {
+                    recommendations = try await APIService.shared.popular()
+                }
+            } else if let genreId = genreMap[mood] {
+                recommendations = try await APIService.shared.moviesByGenre(genreId: genreId)
+            }
+        } catch {
+            recommendations = []
+        }
         isLoading = false
     }
 }
