@@ -2,6 +2,26 @@ import SwiftUI
 import AVKit
 import MediaPlayer
 
+class IMDBCache {
+    static let shared = IMDBCache()
+    private var cache: [Int: String] = [:]
+    
+    init() {
+        if let data = UserDefaults.standard.data(forKey: "imdbCache"),
+           let dict = try? JSONDecoder().decode([Int: String].self, from: data) {
+            cache = dict
+        }
+    }
+    
+    func get(_ id: Int) -> String? { cache[id] }
+    func set(_ id: Int, value: String) {
+        cache[id] = value
+        if let data = try? JSONEncoder().encode(cache) {
+            UserDefaults.standard.set(data, forKey: "imdbCache")
+        }
+    }
+}
+
 enum MovieSource: String, CaseIterable {
     case ntl = "NTL"
     case mediafusion = "MediaFusion"
@@ -11,64 +31,70 @@ enum MovieSource: String, CaseIterable {
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, invalidURL
     var errorDescription: String? {
-        switch self { case .noStreamAvailable: return "Không tìm thấy link"; case .invalidURL: return "URL lỗi" }
+        switch self {
+        case .noStreamAvailable: return "Không tìm thấy link"
+        case .invalidURL: return "URL lỗi"
+        }
     }
 }
 
 class MovieStreamService {
     static let shared = MovieStreamService()
-    func getStreamURL(for source: MovieSource, imdbId: String, season: Int? = nil, episode: Int? = nil, quality: String = "Auto") async throws -> URL {
-        switch source {
-        case .ntl: return try await fetchNTL(imdbId, season: season, episode: episode, quality: quality)
-        case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode, quality: quality)
-        case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode, quality: quality)
-        }
+    
+    func getBestStreamURL(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
+        async let ntlTask = try? fetchNTL(imdbId, season: season, episode: episode)
+        async let mfTask = try? fetchMediaFusion(imdbId, season: season, episode: episode)
+        async let ysTask = try? fetchStremio(imdbId: imdbId, season: season, episode: episode)
+        
+        let results = await [ntlTask, mfTask, ysTask].compactMap { $0 }
+        if let first = results.first { return first }
+        throw StreamError.noStreamAvailable
     }
-    private func fetchNTL(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
+    
+    private func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         var path = "/stream/movie/\(id).json"
         if let s = season, let e = episode { path = "/stream/series/\(id):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://tnluannguyen-ntl-stream.hf.space\(path)")!)
-        r.timeoutInterval = 15
+        r.timeoutInterval = 30
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let quality: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String? }
         let res = try? JSONDecoder().decode(R.self, from: d)
         let streams = res?.streams?.filter { $0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true) } ?? []
-        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
-        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
-    private func fetchMediaFusion(_ id: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
+    
+    private func fetchMediaFusion(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         let cleanId = id.replacingOccurrences(of: "tt", with: "")
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "https://mediafusion.elfhosted.com\(path)")!)
-        r.timeoutInterval = 15
+        r.timeoutInterval = 30
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue("https://mediafusion.elfhosted.com/", forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String?; let quality: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         let res = try? JSONDecoder().decode(R.self, from: d)
         let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
-        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
-        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
-    private func fetchStremio(imdbId: String, season: Int?, episode: Int?, quality: String) async throws -> URL {
+    
+    private func fetchStremio(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
         let base = "https://yastream.tamthai.de"
         let cleanId = imdbId.replacingOccurrences(of: "tt", with: "")
         var path = "/stream/movie/\(cleanId).json"
         if let s = season, let e = episode { path = "/stream/series/\(cleanId):\(s):\(e).json" }
         var r = URLRequest(url: URL(string: "\(base)\(path)")!)
-        r.timeoutInterval = 15
+        r.timeoutInterval = 30
         r.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
         r.setValue(base, forHTTPHeaderField: "Referer")
         let (d, _) = try await URLSession.shared.data(for: r)
-        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String?; let quality: String? }
+        struct R: Codable { let streams: [S]? }; struct S: Codable { let url: String?; let type: String?; let infoHash: String? }
         let res = try? JSONDecoder().decode(R.self, from: d)
         let streams = res?.streams?.filter { ($0.type == "url" || $0.type == "http") && $0.infoHash == nil } ?? []
-        let match = streams.first(where: { $0.quality?.contains(quality.replacingOccurrences(of: "p", with: "")) ?? false })
-        guard let u = (match ?? streams.first)?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
+        guard let u = streams.first?.url, let vu = URL(string: u) else { throw StreamError.noStreamAvailable }
         return vu
     }
 }
@@ -76,6 +102,7 @@ class MovieStreamService {
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
+    var cachedStreamURL: URL?
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     
@@ -124,10 +151,41 @@ struct MoviePlayerView: View {
             Color.clear.frame(width: 60).position(x: UIScreen.main.bounds.width-30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showVolumeSlider{showVolumeSlider=true}; volume=min(max(volume+Float(-v.translation.height/120),0),1); player.volume=volume; resetVolumeTimer()}.onEnded{_ in resetVolumeTimer()})
             Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showBrightnessSlider{showBrightnessSlider=true}; brightness=min(max(brightness+(-v.translation.height/120),0.01),1); UIScreen.main.brightness=brightness; resetBrightnessTimer()}.onEnded{_ in resetBrightnessTimer()})
             
-            if isLoading { VStack(spacing:12){ProgressView().tint(.white).scaleEffect(1.3); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.6))} }
-            if let err=errorMessage, !isLoading { VStack(spacing:14){Image(systemName:"wifi.slash").font(.system(size:36)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray); HStack(spacing:8){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; Button("Thử lại"){loadStream()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))} }
+            if isLoading {
+                VStack(spacing: 16) {
+                    ProgressView().tint(.white).scaleEffect(1.5)
+                    Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7))
+                    Button { dismiss() } label: {
+                        Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6))
+                            .padding(.horizontal, 16).padding(.vertical, 8)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                    }
+                }
+            }
             
-            if showControls && errorMessage == nil && !showOverlay {
+            if let err = errorMessage, !isLoading {
+                VStack(spacing: 16) {
+                    Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray)
+                    Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+                    HStack(spacing: 10) {
+                        ForEach(MovieSource.allCases, id: \.self) { s in
+                            Button { selectedSource = s; loadStream() } label: {
+                                Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray)
+                                    .padding(.horizontal, 10).padding(.vertical, 6)
+                                    .background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear)))
+                            }
+                        }
+                    }
+                    HStack(spacing: 16) {
+                        Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white)
+                            .padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial))
+                        Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6))
+                            .padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial))
+                    }
+                }
+            }
+            
+            if showControls && errorMessage == nil && !isLoading && !showOverlay {
                 HStack(spacing:64){Button{seek(-10)}label:{Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}; Button{player.rate==0 ? player.play():player.pause()}label:{Image(systemName:player.rate==0 ? "play.fill":"pause.fill").font(.system(size:28,weight:.bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15),lineWidth:0.5))}; Button{seek(10)}label:{Image(systemName:"goforward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}}
                 VStack{Spacer(); VStack(spacing:6){Slider(value:$currentTime,in:0...max(duration,1)){e in isSeeking=e; if !e{player.seek(to:CMTime(seconds:currentTime,preferredTimescale:600))}}.accentColor(.white).padding(.horizontal); HStack{Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7));Spacer();Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))}.padding(.horizontal); HStack{Spacer();Button{toggleOrientation()}label:{Image(systemName:"rotate.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}}.padding(.horizontal).padding(.bottom,20)}.background(LinearGradient(colors:[.clear,.black.opacity(0.5)],startPoint:.top,endPoint:.bottom))}
                 VStack{HStack{Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Spacer();Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1);Spacer();HStack(spacing:8){Button{pipController?.startPictureInPicture()}label:{Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSettings=true}label:{Image(systemName:"gearshape.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSourceMenu=true}label:{Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}}}.padding(.horizontal,8).padding(.top,50);Spacer()}
@@ -178,9 +236,7 @@ struct MoviePlayerView: View {
         VStack(spacing: 12) {
             Text("Cài đặt").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(.white)
             Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(qualities, id: \.self) { q in qualityButton(q) }
-            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) { ForEach(qualities, id: \.self) { q in qualityButton(q) } }
             Divider().background(Color.white.opacity(0.1))
             Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
             Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
@@ -195,9 +251,7 @@ struct MoviePlayerView: View {
     }
     
     func qualityButton(_ q: String) -> some View {
-        Button {
-            selectedQuality = q; loadStream(); showSettings = false
-        } label: {
+        Button { selectedQuality = q; loadStream(); showSettings = false } label: {
             Text(q).font(.system(size: 12, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
                 .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
                 .frame(maxWidth: .infinity).padding(.vertical, 8)
@@ -210,19 +264,46 @@ struct MoviePlayerView: View {
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
     
     func loadStream() {
+        // Dùng cached URL nếu có
+        if let cached = cachedStreamURL, seasonNumber == nil {
+            let item = AVPlayerItem(url: cached)
+            player.replaceCurrentItem(with: item)
+            player.play()
+            isLoading = false
+            sourceStatus[selectedSource] = true
+            saveHistory()
+            return
+        }
+        
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task {
             do {
                 let imdbId: String
-                if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
-                else { imdbId = try await fetchMovieIMDbId() }
+                if let cached = IMDBCache.shared.get(movieId) {
+                    imdbId = cached
+                } else if mediaType == "tv" {
+                    imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
+                    if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) }
+                } else {
+                    imdbId = try await fetchMovieIMDbId()
+                    if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) }
+                }
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
-                let url = try await MovieStreamService.shared.getStreamURL(for: selectedSource, imdbId: imdbId, season: seasonNumber, episode: episodeNumber, quality: selectedQuality)
+                
+                let url = try await MovieStreamService.shared.getBestStreamURL(imdbId: imdbId, season: seasonNumber, episode: episodeNumber)
                 let item = AVPlayerItem(url: url)
                 await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
-                let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
-                await MainActor.run { if !appState.watchHistory.contains(where: { $0.id == movieId }) { appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() } }
-            } catch { await MainActor.run { errorMessage = error.localizedDescription; sourceStatus[selectedSource] = false; isLoading = false } }
+                saveHistory()
+            } catch { await MainActor.run { errorMessage = error.localizedDescription; isLoading = false } }
+        }
+    }
+    
+    func saveHistory() {
+        let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
+        if !appState.watchHistory.contains(where: { $0.id == movieId }) {
+            appState.watchHistory.insert(m, at: 0)
+            if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }
+            appState.save()
         }
     }
     
@@ -238,32 +319,19 @@ struct MoviePlayerView: View {
 }
 
 struct CustomPlayerVC: UIViewControllerRepresentable {
-    let player: AVPlayer
-    @Binding var pipController: AVPictureInPictureController?
-
+    let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let vc = AVPlayerViewController()
-        vc.player = player
-        vc.showsPlaybackControls = false
-        vc.videoGravity = .resizeAspect
-        vc.allowsPictureInPicturePlayback = true
-        vc.canStartPictureInPictureAutomaticallyFromInline = true
-        return vc
+        let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false
+        vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true
+        vc.canStartPictureInPictureAutomaticallyFromInline = true; return vc
     }
-
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
-        DispatchQueue.main.async {
-            if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
-                pipController = AVPictureInPictureController(playerLayer: layer)
-            }
-        }
+        DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } }
     }
 }
 
 struct TinySlider: View {
-    let value: CGFloat
-    let icon: String
-
+    let value: CGFloat; let icon: String
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
