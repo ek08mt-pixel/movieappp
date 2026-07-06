@@ -60,6 +60,8 @@ struct ActorDetailView: View {
                                 if let place = detail.placeOfBirth {
                                     infoRow(icon: "mappin.and.ellipse", title: "Nơi sinh", value: place)
                                 }
+                                infoRow(icon: "star.fill", title: "Độ phổ biến", value: String(format: "%.1f", actor.popularity ?? 0))
+                                infoRow(icon: "theatermasks.fill", title: "Nổi tiếng", value: detail.knownForDepartment ?? "Diễn viên")
                             }
                             .padding(.horizontal)
                             
@@ -69,8 +71,8 @@ struct ActorDetailView: View {
                                     Text("Tiểu sử").font(.headline).fontWeight(.bold).foregroundColor(.white)
                                     Text(bio)
                                         .font(.caption).foregroundColor(.gray)
-                                        .lineLimit(showFullBio ? nil : 3)
-                                    if bio.count > 150 {
+                                        .lineLimit(showFullBio ? nil : 4)
+                                    if bio.count > 200 {
                                         Button(showFullBio ? "Ẩn bớt" : "Xem thêm") {
                                             withAnimation { showFullBio.toggle() }
                                         }
