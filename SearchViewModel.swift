@@ -20,7 +20,7 @@ class SearchViewModel: ObservableObject {
         let q = query.trimmingCharacters(in: .whitespaces)
         if q.isEmpty { results = []; return }
         task = Task {
-            try? await Task.sleep(nanoseconds: 200_000_000)
+            try? await Task.sleep(nanoseconds: 100_000_000)
             if !Task.isCancelled {
                 async let movies = APIService.shared.searchMovies(query: q)
                 async let tvShows = APIService.shared.searchTVShows(query: q)
