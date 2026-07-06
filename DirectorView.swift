@@ -40,7 +40,7 @@ struct DirectorView: View {
             }
         }
         .task {
-            do { movies = try await APIService.shared.search(query: directorName) } catch { movies = [] }
+            do { movies = try await APIService.shared.searchMovies(query: directorName) } catch { movies = [] }
             isLoading = false
         }
     }
