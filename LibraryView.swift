@@ -58,15 +58,21 @@ struct LibraryView: View {
                             ) {
                                 ForEach(currentMovies) { movie in
                                     NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                        CachedAsyncImage(url: movie.posterURL)
-                                            .aspectRatio(2/3, contentMode: .fill)
-                                            .frame(maxWidth: .infinity)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(Color(white: 0.12))
-                                                    .opacity(movie.posterURL == nil ? 1 : 0)
-                                            )
+                                        VStack(spacing: 6) {
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(maxWidth: .infinity)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(Color(white: 0.12))
+                                                        .opacity(movie.posterURL == nil ? 1 : 0)
+                                                )
+                                            Text(movie.title)
+                                                .font(.system(size: 9, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .lineLimit(2)
+                                        }
                                     }
                                 }
                             }
