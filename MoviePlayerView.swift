@@ -37,7 +37,7 @@ class MovieStreamService {
                 return url
             }
         }
-        try await withThrowingTaskGroup(of: URL?.self) { group in
+        return try await withThrowingTaskGroup(of: URL?.self) { group in
             group.addTask { try? await self.fetchNTL(imdbId, season: season, episode: episode) }
             group.addTask { try? await self.fetchMediaFusion(imdbId, season: season, episode: episode) }
             group.addTask { try? await self.fetchStremio(imdbId: imdbId, season: season, episode: episode) }
