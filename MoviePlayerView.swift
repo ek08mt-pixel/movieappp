@@ -176,50 +176,40 @@ struct MoviePlayerView: View {
     
     var settingsPopup: some View {
         VStack(spacing: 12) {
-            Text("Cài đặt").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(.white)
+            Text("Cài đặt")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
             
-            VStack(spacing: 10) {
-                Text("Chất lượng").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
-                VStack(spacing: 8) {
-                    ForEach(qualities, id: \.self) { q in
-                        Button {
-                            selectedQuality = q
-                            loadStream()
-                            showSettings = false
-                        } label: {
-                            HStack {
-                                Text(q).font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
-                                    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
-                                Spacer()
-                                if selectedQuality == q {
-                                    Image(systemName: "checkmark").font(.caption).foregroundColor(.white)
-                                }
-                            }
-                            .padding(.horizontal, 12).padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(selectedQuality == q ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.2))
-                            )
-                        }
-                    }
-                }
+            Text("Chất lượng")
+                .font(.system(size: 11, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+            
+            ForEach(qualities, id: \.self) { q in
+                qualityButton(q)
             }
             
             Divider().background(Color.white.opacity(0.1))
             
-            VStack(spacing: 6) {
-                Text("Phụ đề").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
-                Text("Không có sẵn").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
-            }
+            Text("Phụ đề")
+                .font(.system(size: 11, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+            Text("Không có sẵn")
+                .font(.system(size: 12, design: .rounded))
+                .foregroundColor(.white.opacity(0.5))
             
             Divider().background(Color.white.opacity(0.1))
             
-            VStack(spacing: 6) {
-                Text("Tốc độ").font(.system(size: 11, design: .rounded)).foregroundColor(.white.opacity(0.6))
-                Text("1.0x").font(.system(size: 12, design: .rounded)).foregroundColor(.white.opacity(0.5))
-            }
+            Text("Tốc độ")
+                .font(.system(size: 11, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+            Text("1.0x")
+                .font(.system(size: 12, design: .rounded))
+                .foregroundColor(.white.opacity(0.5))
             
-            Text("© 2026 emmew").font(.system(size: 7, design: .rounded)).foregroundColor(.white.opacity(0.2)).padding(.top, 4)
+            Text("© 2026 emmew")
+                .font(.system(size: 7, design: .rounded))
+                .foregroundColor(.white.opacity(0.2))
+                .padding(.top, 4)
         }
         .padding(18)
         .frame(width: 200)
@@ -231,7 +221,32 @@ struct MoviePlayerView: View {
         .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
     }
     
-    @ViewBuilder func settingRow(title:String,value:String)->some View { HStack{Text(title).font(.system(size:12,design:.rounded)).foregroundColor(.white.opacity(0.7));Spacer();Text(value).font(.system(size:12,design:.rounded)).foregroundColor(.white)};Divider().background(Color.white.opacity(0.1)) }
+    func qualityButton(_ q: String) -> some View {
+        Button {
+            selectedQuality = q
+            loadStream()
+            showSettings = false
+        } label: {
+            HStack {
+                Text(q)
+                    .font(.system(size: 13, weight: selectedQuality == q ? .bold : .regular, design: .rounded))
+                    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.6))
+                Spacer()
+                if selectedQuality == q {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selectedQuality == q ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.2))
+            )
+        }
+    }
+    
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
