@@ -12,21 +12,35 @@ class AppState: ObservableObject {
     init() { load() }
     
     func register(email: String, password: String) {
+        // Lưu tài khoản mới vào danh sách
+        var accounts = getAllAccounts()
+        accounts[email] = password
+        if let data = try? JSONEncoder().encode(accounts) {
+            UserDefaults.standard.set(data, forKey: "allAccounts")
+        }
+        // Tự động đăng nhập
         self.email = email
         self.isLoggedIn = true
-        UserDefaults.standard.set(email, forKey: "registeredEmail")
-        UserDefaults.standard.set(password, forKey: "registeredPassword")
+        self.favorites = []
+        self.watchHistory = []
         save()
     }
     
     func login(email: String, password: String) {
-        let savedEmail = UserDefaults.standard.string(forKey: "registeredEmail") ?? ""
-        let savedPassword = UserDefaults.standard.string(forKey: "registeredPassword") ?? ""
-        if email == savedEmail && password == savedPassword {
+        let accounts = getAllAccounts()
+        if let savedPassword = accounts[email], savedPassword == password {
             self.email = email
             self.isLoggedIn = true
-            load()
+            load() // Load dữ liệu của tài khoản này
         }
+    }
+    
+    private func getAllAccounts() -> [String: String] {
+        guard let data = UserDefaults.standard.data(forKey: "allAccounts"),
+              let accounts = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return accounts
     }
     
     func logout() {
@@ -41,24 +55,26 @@ class AppState: ObservableObject {
     }
     
     func save() {
-        UserDefaults.standard.set(isLoggedIn, forKey: "isLoggedIn")
-        UserDefaults.standard.set(email, forKey: "email")
-        UserDefaults.standard.set(nickname, forKey: "nickname")
-        UserDefaults.standard.set(selectedAvatar, forKey: "avatar")
-        UserDefaults.standard.set(avatarImageData, forKey: "avatarImage")
-        if let fav = try? JSONEncoder().encode(favorites) { UserDefaults.standard.set(fav, forKey: "favorites") }
-        if let hist = try? JSONEncoder().encode(watchHistory) { UserDefaults.standard.set(hist, forKey: "history") }
+        let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
+        UserDefaults.standard.set(isLoggedIn, forKey: "\(prefix)_isLoggedIn")
+        UserDefaults.standard.set(email, forKey: "\(prefix)_email")
+        UserDefaults.standard.set(nickname, forKey: "\(prefix)_nickname")
+        UserDefaults.standard.set(selectedAvatar, forKey: "\(prefix)_avatar")
+        UserDefaults.standard.set(avatarImageData, forKey: "\(prefix)_avatarImage")
+        if let fav = try? JSONEncoder().encode(favorites) { UserDefaults.standard.set(fav, forKey: "\(prefix)_favorites") }
+        if let hist = try? JSONEncoder().encode(watchHistory) { UserDefaults.standard.set(hist, forKey: "\(prefix)_history") }
     }
     
     func load() {
-        isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")
-        email = UserDefaults.standard.string(forKey: "email") ?? ""
-        nickname = UserDefaults.standard.string(forKey: "nickname") ?? ""
-        selectedAvatar = UserDefaults.standard.string(forKey: "avatar") ?? "person.circle.fill"
-        avatarImageData = UserDefaults.standard.data(forKey: "avatarImage")
-        if let fav = UserDefaults.standard.data(forKey: "favorites"),
+        let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
+        isLoggedIn = UserDefaults.standard.bool(forKey: "\(prefix)_isLoggedIn")
+        email = UserDefaults.standard.string(forKey: "\(prefix)_email") ?? ""
+        nickname = UserDefaults.standard.string(forKey: "\(prefix)_nickname") ?? ""
+        selectedAvatar = UserDefaults.standard.string(forKey: "\(prefix)_avatar") ?? "person.circle.fill"
+        avatarImageData = UserDefaults.standard.data(forKey: "\(prefix)_avatarImage")
+        if let fav = UserDefaults.standard.data(forKey: "\(prefix)_favorites"),
            let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
-        if let hist = UserDefaults.standard.data(forKey: "history"),
+        if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"),
            let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
     }
 }
