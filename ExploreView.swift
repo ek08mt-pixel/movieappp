@@ -29,15 +29,9 @@ struct ExploreView: View {
                             .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
                             .padding(.top, 8).padding(.horizontal, 16)
                         
-                        // 4 nút Random, Mood, Timeline, Guess
                         HStack(spacing: 10) {
-                            Button {
-                                Task {
-                                    let m = try? await APIService.shared.popular()
-                                    if let movie = m?.filter({ !($0.adult ?? false) }).randomElement() { randomMovie = movie; showRandom = true }
-                                }
-                            } label: {
-                                VStack(spacing: 6) { Text("🎲").font(.system(size: 26)); Text("Random").font(.system(size: 10)).foregroundColor(.white) }
+                            NavigationLink(destination: OSTView()) {
+                                VStack(spacing: 6) { Text("🎵").font(.system(size: 26)); Text("OST").font(.system(size: 10)).foregroundColor(.white) }
                                     .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                             NavigationLink(destination: MoodPickerView()) {
@@ -54,7 +48,6 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal, 16)
                         
-                        // 10 ô danh mục - fix zoom to, kích thước cố định
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
