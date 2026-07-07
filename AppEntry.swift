@@ -81,6 +81,7 @@ class AppState: ObservableObject {
 struct AppEntry: App {
     @StateObject var appState = AppState()
     @StateObject var diceManager = DiceManager.shared
+    @StateObject var shakeDetector = ShakeDetector()
     
     var body: some Scene {
         WindowGroup {
