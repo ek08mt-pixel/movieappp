@@ -27,7 +27,7 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá")
                             .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
-                            .padding(.top, 60).padding(.horizontal, 16)
+                            .padding(.top, 8).padding(.horizontal, 16)
                         
                         HStack(spacing: 10) {
                             Button {
@@ -53,27 +53,24 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal, 16)
                         
-                        // 10 ô danh mục - aspectRatio cố định 16:9
+                        // 10 ô danh mục - aspectRatio 16:9 cố định, không bị kéo giãn
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
                                     ZStack(alignment: .bottomLeading) {
+                                        // Fallback placeholder luôn có sẵn bên dưới ảnh
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .aspectRatio(16/9, contentMode: .fit)
+                                        
                                         if let posterPath = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
                                             CachedAsyncImage(url: url)
                                                 .aspectRatio(16/9, contentMode: .fill)
-                                                .frame(height: 100)
                                                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                                        } else {
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .fill(LinearGradient(colors: [Color(white: 0.25), Color(white: 0.12)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                .frame(height: 100)
-                                                .overlay(
-                                                    Text(title)
-                                                        .font(.caption).fontWeight(.bold).foregroundColor(.white.opacity(0.7))
-                                                )
                                         }
+                                        
                                         // Overlay gradient + text
-                                        LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom)
+                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
                                             .clipShape(RoundedRectangle(cornerRadius: 14))
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
@@ -152,11 +149,17 @@ struct CategoryFullView: View {
                         ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 VStack(spacing: 6) {
+                                    // Poster với placeholder chống màn hình đen
                                     CachedAsyncImage(url: movie.posterURL)
                                         .aspectRatio(2/3, contentMode: .fill)
                                         .frame(maxWidth: .infinity)
                                         .clipShape(RoundedRectangle(cornerRadius: 8))
                                         .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.1)], startPoint: .top, endPoint: .bottom))
+                                                .aspectRatio(2/3, contentMode: .fit)
+                                        )
                                     Text(movie.title)
                                         .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                     HStack(spacing: 2) {
