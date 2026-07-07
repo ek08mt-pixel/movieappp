@@ -11,7 +11,6 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Liquid glass background
                 LinearGradient(
                     colors: [Color(white: 0.08), Color(white: 0.04), .black],
                     startPoint: .top,
@@ -22,23 +21,23 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero - size 440
+                        // Banner Hero
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
-                                        // Background blur loang xuống, mask để không bị cắt cứng
+                                        // Background blur loang
                                         if let bgURL = movie.backdropURL {
                                             CachedAsyncImage(url: bgURL)
                                                 .aspectRatio(contentMode: .fill)
-                                                .frame(height: 500)
+                                                .frame(height: 480)
                                                 .frame(maxWidth: .infinity)
                                                 .clipped()
-                                                .blur(radius: 40)
-                                                .overlay(Color.black.opacity(0.2))
+                                                .blur(radius: 50)
+                                                .overlay(Color.black.opacity(0.25))
                                                 .mask(
                                                     LinearGradient(
-                                                        colors: [.black, .black, .black, .clear],
+                                                        colors: [.black, .black, .clear],
                                                         startPoint: .top,
                                                         endPoint: .bottom
                                                     )
@@ -46,32 +45,39 @@ struct HomeView: View {
                                         } else {
                                             Rectangle()
                                                 .fill(.ultraThinMaterial.opacity(0.15))
-                                                .frame(height: 440)
+                                                .frame(height: 480)
                                         }
                                         
-                                        VStack(spacing: 4) {
+                                        VStack(spacing: 0) {
+                                            Spacer()
+                                            
+                                            // Poster - to hơn, viền liquid glass
                                             if let posterURL = movie.posterURL {
                                                 CachedAsyncImage(url: posterURL)
                                                     .aspectRatio(2/3, contentMode: .fit)
-                                                    .frame(height: 280)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                    .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                                                    .frame(height: 320)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                                                    .shadow(color: .white.opacity(0.1), radius: 10, y: -5)
                                                     .overlay(
-                                                        LinearGradient(
-                                                            colors: [.clear, .black.opacity(0.3)],
-                                                            startPoint: .center,
-                                                            endPoint: .bottom
-                                                        )
-                                                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                        RoundedRectangle(cornerRadius: 24)
+                                                            .stroke(.white.opacity(0.15), lineWidth: 1.5)
+                                                    )
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 24)
+                                                            .fill(.ultraThinMaterial.opacity(0.05))
                                                     )
                                             }
                                             
+                                            Spacer().frame(height: 14)
+                                            
                                             Text(movie.title)
-                                                .font(.system(size: 22, weight: .bold, design: .serif))
+                                                .font(.system(size: 24, weight: .bold, design: .serif))
                                                 .foregroundColor(.white)
                                                 .multilineTextAlignment(.center)
-                                                .shadow(color: .black.opacity(0.8), radius: 6)
+                                                .shadow(color: .black.opacity(0.9), radius: 8)
                                                 .padding(.horizontal, 24)
+                                            
+                                            Spacer().frame(height: 6)
                                             
                                             if let genres = movie.genreIds {
                                                 let names = genres.prefix(3).compactMap { id in
@@ -84,25 +90,26 @@ struct HomeView: View {
                                                 }
                                             }
                                             
-                                            // Dots sát thể loại
-                                            HStack(spacing: 6) {
+                                            Spacer().frame(height: 10)
+                                            
+                                            // Dots - có animation mượt
+                                            HStack(spacing: 8) {
                                                 ForEach(0..<min(vm.trending24h.count, 5), id: \.self) { i in
-                                                    Circle()
+                                                    Capsule()
                                                         .fill(i == currentIndex ? Color.white : Color.white.opacity(0.35))
-                                                        .frame(width: 6, height: 6)
-                                                        .scaleEffect(i == currentIndex ? 1.3 : 1)
-                                                        .animation(.spring(response: 0.4), value: currentIndex)
+                                                        .frame(width: i == currentIndex ? 20 : 7, height: 7)
+                                                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentIndex)
                                                 }
                                             }
-                                            .padding(.top, 6)
+                                            
+                                            Spacer().frame(height: 8)
                                         }
-                                        .padding(.bottom, 16)
                                     }
                                 }.tag(i)
                             }
                         }
                         .tabViewStyle(.page(indexDisplayMode: .never))
-                        .frame(height: 440)
+                        .frame(height: 480)
                         .onAppear { startAutoScroll() }
                         .onDisappear { stopAutoScroll() }
                         .overlay(alignment: .topTrailing) {
@@ -115,10 +122,9 @@ struct HomeView: View {
                                 }
                             }.padding(.top, 50).padding(.trailing, 16)
                         }
-                        // Gradient loang xuống xóa cảm giác bị cắt
                         .overlay(alignment: .bottom) {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom)
-                                .frame(height: 30).allowsHitTesting(false)
+                                .frame(height: 40).allowsHitTesting(false)
                         }
                         
                         // Genres
@@ -137,7 +143,7 @@ struct HomeView: View {
                             }.padding(.vertical, 10)
                         }
                         
-                        // Movie of the Day - hình chữ nhật 16:9, có thể loại
+                        // Movie of the Day - fix kéo dài
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
@@ -145,6 +151,7 @@ struct HomeView: View {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
                                             CachedAsyncImage(url: url)
+                                                .resizable()
                                                 .aspectRatio(16/9, contentMode: .fill)
                                                 .frame(height: 180)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -179,7 +186,6 @@ struct HomeView: View {
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                         
-                        // 2 ô Hot & Phổ Biến dưới Đang chiếu rạp
                         HStack(spacing: 12) {
                             BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
                             BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
