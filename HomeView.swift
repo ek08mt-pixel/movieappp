@@ -14,7 +14,7 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero - Tên phim ở giữa, to, có chấm chấm chuyển trang
+                        // Banner Hero
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
@@ -30,13 +30,11 @@ struct HomeView: View {
                                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
                                                 .frame(height: 260)
                                         }
-                                        // Liquid glass overlay
                                         RoundedRectangle(cornerRadius: 0)
                                             .fill(.ultraThinMaterial.opacity(0.15))
                                             .overlay(
                                                 LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
                                             )
-                                        // Tên phim ở giữa
                                         VStack(spacing: 8) {
                                             Spacer()
                                             Text(movie.title)
@@ -45,14 +43,6 @@ struct HomeView: View {
                                                 .multilineTextAlignment(.center)
                                                 .shadow(color: .black.opacity(0.8), radius: 10)
                                                 .padding(.horizontal, 20)
-                                            // Thể loại
-                                            if let genres = movie.genreIds, !genres.isEmpty {
-                                                Text(genres.prefix(3).compactMap { id in
-                                                    vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
-                                                }.joined(separator: " • "))
-                                                .font(.caption)
-                                                .foregroundColor(.white.opacity(0.7))
-                                            }
                                             Spacer().frame(height: 30)
                                         }
                                     }
@@ -113,11 +103,9 @@ struct HomeView: View {
                             }.padding(.top, 16)
                         }
                         
-                        // Continue Watching
                         if !appState.watchHistory.isEmpty { SectionGrid(title: "Tiếp tục khám phá", movies: appState.watchHistory) }
                         if let last = appState.watchHistory.last { SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
                         
-                        // Sections
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
@@ -128,10 +116,10 @@ struct HomeView: View {
                         SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
                         SectionGrid(title: "Anime", movies: vm.anime)
                         
-                        // 2 hàng cuối - mỗi hàng 2 ô lớn, vuốt riêng
+                        // 2 ô cuối
                         HStack(spacing: 12) {
-                            BigCard(title: "Phim Hot", icon: "flame.fill", movies: vm.popular.shuffled())
-                            BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: vm.trending24h.shuffled())
+                            BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
+                            BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
@@ -156,7 +144,6 @@ struct HomeView: View {
     }
 }
 
-// Section Grid - Vuốt riêng từng hàng
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
@@ -190,7 +177,6 @@ struct SectionGrid: View {
     }
 }
 
-// Big Card - 2 ô dưới cùng
 struct BigCard: View {
     let title: String; let icon: String; let movies: [Movie]
     var body: some View {
