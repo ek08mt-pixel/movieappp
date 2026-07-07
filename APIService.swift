@@ -4,7 +4,6 @@ class APIService {
     static let shared = APIService()
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     private let baseURL = "https://api.themoviedb.org/3"
-    private let nguonCBase = "https://phim.nguonc.com/api"
     
     private var language: String { LanguageManager.shared.currentLanguage.tmdbLanguage }
     private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
@@ -113,19 +112,54 @@ class APIService {
     }
     
     func moviesByGenre(genreId: Int, page: Int = 1) async throws -> [Movie] {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(genreId)&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.map { $0.withPlaceholder() }
     }
     
-    func discoverMoviesByYear(_ year: Int) async throws -> [Movie] {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)"
+    // Danh mục theo quốc gia - gọi API riêng
+    func koreanMovies() async throws -> [Movie] {
+        try await discoverMovies(lang: "ko", sortBy: "popularity.desc")
+    }
+    func japaneseMovies() async throws -> [Movie] {
+        try await discoverMovies(lang: "ja", sortBy: "popularity.desc")
+    }
+    func vietnameseMovies() async throws -> [Movie] {
+        try await discoverMovies(lang: "vi", sortBy: "popularity.desc")
+    }
+    func usukMovies() async throws -> [Movie] {
+        try await discoverMovies(lang: "en", sortBy: "popularity.desc")
+    }
+    func animeMovies() async throws -> [Movie] {
+        try await fetchMultiplePages { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
+    }
+    
+    func discoverMovies(minRating: Double? = nil, minVotes: Int? = nil) async throws -> [Movie] {
+        var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&sort_by=popularity.desc&language=\(language)"
+        if let r = minRating { urlString += "&vote_average.gte=\(r)" }
+        if let v = minVotes { urlString += "&vote_count.gte=\(v)" }
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.map { $0.withPlaceholder() }
+    }
+    
+    private func discoverMovies(lang: String, sortBy: String) async throws -> [Movie] {
+        try await fetchMultiplePages { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
     }
     
     func movieDetail(movieId: Int) async throws -> MovieDetail? {
@@ -212,10 +246,8 @@ class APIService {
         return try? decoder.decode(CollectionDetail.self, from: data)
     }
     
-    func discoverMovies(minRating: Double? = nil, minVotes: Int? = nil) async throws -> [Movie] {
-        var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&sort_by=popularity.desc&language=\(language)"
-        if let r = minRating { urlString += "&vote_average.gte=\(r)" }
-        if let v = minVotes { urlString += "&vote_count.gte=\(v)" }
+    func discoverMoviesByYear(_ year: Int) async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
@@ -233,29 +265,6 @@ class APIService {
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.map { $0.withPlaceholder() }
-    }
-    
-    func koreanMovies() async throws -> [Movie] { try await discoverMovies() }
-    func japaneseMovies() async throws -> [Movie] { try await discoverMovies() }
-    func vietnameseMovies() async throws -> [Movie] { try await discoverMovies() }
-    func usukMovies() async throws -> [Movie] { try await discoverMovies() }
-    func animeMovies() async throws -> [Movie] { try await discoverMovies() }
-    
-    // MARK: - NguonC API
-    func searchNguonC(keyword: String) async throws -> [NguonCFilm] {
-        let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? keyword
-        let urlString = "\(nguonCBase)/films/search?keyword=\(encoded)"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(NguonCSearchResponse.self, from: data)
-        return response.data ?? []
-    }
-    
-    func getNguonCFilm(slug: String) async throws -> NguonCFilmDetail? {
-        let urlString = "\(nguonCBase)/film/\(slug)"
-        guard let url = URL(string: urlString) else { return nil }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try? decoder.decode(NguonCFilmDetail.self, from: data)
     }
     
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
