@@ -262,7 +262,7 @@ struct MoviePlayerView: View {
                         print("[DEBUG] NguonC: episode is nil, throwing wrongEpisode")
                         throw StreamError.wrongEpisode
                     }
-                    print("[DEBUG] NguonC: fetching embed for title=\(movieTitle), episode=\(ep), movieId=\(movieId), mediaType=\(mediaType ?? "nil")")
+                    print("[DEBUG] NguonC: fetching embed...")
                     let (embedURL, movieName) = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
                     print("[DEBUG] NguonC: got embedURL=\(embedURL.absoluteString)")
                     await MainActor.run {
@@ -276,36 +276,21 @@ struct MoviePlayerView: View {
                     return
                 }
                 
-                let imdbId: String
-                if mediaType == "tv" {
-                    print("[DEBUG] Fetching external IDs for TV id=\(movieId)")
-                    imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
-                } else {
-                    if let c = IMDBCache.shared.get(movieId) {
-                        imdbId = c
-                        print("[DEBUG] IMDB cache hit for movieId=\(movieId): \(imdbId)")
-                    } else {
-                        print("[DEBUG] Fetching IMDB ID for movieId=\(movieId)")
-                        imdbId = try await fetchMovieIMDbId()
-                        if !imdbId.isEmpty {
-                            IMDBCache.shared.set(movieId, value: imdbId)
-                            print("[DEBUG] IMDB ID cached: \(imdbId)")
-                        }
-                    }
-                }
+                // QUAN TRỌNG: Thử lấy IMDB ID từ movie API trước, nếu fail thì thử TV API
+                let imdbId = try await fetchIMDBIdSmart(season: s, episode: e)
                 print("[DEBUG] Final imdbId=\(imdbId), source=\(selectedSource.rawValue)")
                 guard !imdbId.isEmpty else {
                     print("[DEBUG] imdbId is empty, throwing noStreamAvailable")
                     throw StreamError.noStreamAvailable
                 }
-                print("[DEBUG] Calling getStreamURL - source=\(selectedSource.rawValue), imdbId=\(imdbId), season=\(s ?? -1), episode=\(e ?? -1)")
+                print("[DEBUG] Calling getStreamURL...")
                 let url = try await MovieStreamService.shared.getStreamURL(source: selectedSource, imdbId: imdbId, season: s, episode: e)
                 print("[DEBUG] Got stream URL: \(url.absoluteString)")
                 let item = AVPlayerItem(url: url)
                 await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
                 saveHistory()
             } catch {
-                print("[DEBUG] ERROR for source \(selectedSource.rawValue): \(error.localizedDescription)")
+                print("[DEBUG] ERROR: \(error.localizedDescription)")
                 await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
             }
         }
@@ -319,7 +304,7 @@ struct MoviePlayerView: View {
         
         Task {
             let orderedSources: [MovieSource] = [.ntl, .mediafusion, .yastream, .nguonc]
-            var lastError = ""
+            var imdbIdCache: String? = nil
             
             for source in orderedSources {
                 await MainActor.run { selectedSource = source }
@@ -330,10 +315,8 @@ struct MoviePlayerView: View {
                         guard let ep = e else {
                             print("[DEBUG FALLBACK] NguonC: episode is nil, skip")
                             await MainActor.run { sourceStatus[source] = false }
-                            lastError = "Thiếu số tập"
                             continue
                         }
-                        print("[DEBUG FALLBACK] NguonC: fetching embed for title=\(movieTitle), episode=\(ep)")
                         let (embedURL, movieName) = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
                         print("[DEBUG FALLBACK] NguonC SUCCESS: \(embedURL.absoluteString)")
                         await MainActor.run {
@@ -347,29 +330,15 @@ struct MoviePlayerView: View {
                         return
                     }
                     
-                    let imdbId: String
-                    if mediaType == "tv" {
-                        print("[DEBUG FALLBACK] Fetching external IDs for TV id=\(movieId)")
-                        imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
-                    } else {
-                        if let c = IMDBCache.shared.get(movieId) {
-                            imdbId = c
-                            print("[DEBUG FALLBACK] IMDB cache hit: \(imdbId)")
-                        } else {
-                            print("[DEBUG FALLBACK] Fetching IMDB ID for movieId=\(movieId)")
-                            imdbId = try await fetchMovieIMDbId()
-                            if !imdbId.isEmpty {
-                                IMDBCache.shared.set(movieId, value: imdbId)
-                                print("[DEBUG FALLBACK] IMDB ID cached: \(imdbId)")
-                            }
-                        }
+                    // Lấy IMDB ID 1 lần, cache cho các nguồn sau
+                    if imdbIdCache == nil {
+                        imdbIdCache = try await fetchIMDBIdSmart(season: s, episode: e)
                     }
                     
-                    print("[DEBUG FALLBACK] imdbId=\(imdbId)")
-                    guard !imdbId.isEmpty else {
+                    print("[DEBUG FALLBACK] imdbId=\(imdbIdCache ?? "nil")")
+                    guard let imdbId = imdbIdCache, !imdbId.isEmpty else {
                         print("[DEBUG FALLBACK] imdbId empty, skip source \(source.rawValue)")
                         await MainActor.run { sourceStatus[source] = false }
-                        lastError = "Không tìm thấy IMDB ID"
                         continue
                     }
                     
@@ -388,16 +357,51 @@ struct MoviePlayerView: View {
                 } catch {
                     print("[DEBUG FALLBACK] \(source.rawValue) FAILED: \(error.localizedDescription)")
                     await MainActor.run { sourceStatus[source] = false }
-                    lastError = error.localizedDescription
                 }
             }
             
-            print("[DEBUG FALLBACK] ALL SOURCES FAILED - lastError: \(lastError)")
+            print("[DEBUG FALLBACK] ALL SOURCES FAILED")
             await MainActor.run {
                 errorMessage = "Không tìm thấy link"
                 isLoading = false
             }
         }
+    }
+    
+    // Hàm mới: Thử lấy IMDB ID từ movie API, nếu fail thì thử TV API, nếu có season thì ưu tiên TV
+    func fetchIMDBIdSmart(season: Int?, episode: Int?) async throws -> String {
+        // Nếu có season hoặc episode, khả năng cao là TV show
+        let isLikelyTV = (season != nil || episode != nil || mediaType == "tv")
+        
+        if isLikelyTV {
+            print("[DEBUG IMDB] Likely TV show, trying TV external IDs first")
+            if let tvImdbId = try? await APIService.shared.fetchExternalIDs(tvId: movieId), !tvImdbId.isEmpty {
+                return tvImdbId
+            }
+            print("[DEBUG IMDB] TV external IDs failed, trying movie")
+        }
+        
+        // Thử movie API
+        if let cached = IMDBCache.shared.get(movieId) {
+            print("[DEBUG IMDB] Cache hit: \(cached)")
+            return cached
+        }
+        
+        print("[DEBUG IMDB] Fetching movie external IDs for id=\(movieId)")
+        if let movieImdbId = try? await fetchMovieIMDbId(), !movieImdbId.isEmpty {
+            IMDBCache.shared.set(movieId, value: movieImdbId)
+            return movieImdbId
+        }
+        
+        // Nếu movie fail và chưa thử TV
+        if !isLikelyTV {
+            print("[DEBUG IMDB] Movie failed, trying TV external IDs")
+            if let tvImdbId = try? await APIService.shared.fetchExternalIDs(tvId: movieId), !tvImdbId.isEmpty {
+                return tvImdbId
+            }
+        }
+        
+        throw StreamError.noStreamAvailable
     }
     
     func saveHistory() { let m=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType); if !appState.watchHistory.contains(where:{$0.id==movieId}){appState.watchHistory.insert(m,at:0); if appState.watchHistory.count>50{appState.watchHistory.removeLast()}; appState.save()} }
