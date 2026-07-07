@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 // MARK: - MainTabView
 struct MainTabView: View {
@@ -19,10 +20,10 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
             }
             
-            // Dynamic Island
+            // Dynamic Island Mini Player
             if ostManager.isPlaying {
                 VStack {
-                    DynamicIslandView()
+                    MiniPlayerView()
                         .padding(.top, 8)
                     Spacer()
                 }
@@ -64,74 +65,124 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Dynamic Island View (iPhone 17-18 Pro Max style)
-struct DynamicIslandView: View {
+// MARK: - Mini Player (Dynamic Island style)
+struct MiniPlayerView: View {
     @StateObject private var ostManager = OSTManager.shared
     @State private var isExpanded = false
+    @State private var showYouTube = false
     
     var body: some View {
-        Button {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                isExpanded.toggle()
-            }
-        } label: {
-            HStack(spacing: 12) {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    showYouTube.toggle()
+                }
+            } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                    // Poster nhỏ xíu
+                    if let posterPath = ostManager.currentPoster, let url = URL(string: "https://image.tmdb.org/t/p/w200\(posterPath)") {
+                        CachedAsyncImage(url: url)
+                            .aspectRatio(2/3, contentMode: .fill)
+                            .frame(width: 32, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.ultraThinMaterial.opacity(0.5))
+                            .frame(width: 32, height: 48)
+                            .overlay(Image(systemName: "music.note").font(.system(size: 12)).foregroundColor(.white.opacity(0.6)))
+                    }
                     
-                    if isExpanded {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ostManager.currentTrack)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                            Text(ostManager.currentMovie)
-                                .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.6))
-                                .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(ostManager.currentTrack)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        Text(ostManager.currentMovie)
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    // Play/Pause
+                    Button {
+                        ostManager.togglePlayback?()
+                    } label: {
+                        Image(systemName: ostManager.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                    }
+                    
+                    // Close
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            ostManager.stopPlayback?()
                         }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.white.opacity(0.6))
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
                     }
                 }
-                
-                Spacer()
-                
-                Button {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        ostManager.isPlaying = false
-                        ostManager.currentTrack = ""
-                        ostManager.currentMovie = ""
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.white.opacity(0.6))
-                        .frame(width: 20, height: 20)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(width: showYouTube ? UIScreen.main.bounds.width - 32 : 280, height: showYouTube ? 200 : 60)
+                .background(
+                    RoundedRectangle(cornerRadius: showYouTube ? 20 : 30)
+                        .fill(.black.opacity(0.95))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: showYouTube ? 20 : 30)
+                                .fill(.ultraThinMaterial.opacity(0.2))
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: showYouTube ? 20 : 30)
+                        .stroke(LinearGradient(colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
+                )
+                .shadow(color: .black.opacity(0.5), radius: 10, y: 5)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(width: isExpanded ? 320 : 140, height: 44)
-            .background(
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(.black.opacity(0.9))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(.ultraThinMaterial.opacity(0.3))
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
-            )
-            .shadow(color: .black.opacity(0.5), radius: 10, y: 5)
+            .buttonStyle(.plain)
+            
+            // YouTube WebView khi expand
+            if showYouTube, let youtubeID = ostManager.currentYoutubeID {
+                YouTubeMiniWebView(youtubeID: youtubeID)
+                    .frame(width: UIScreen.main.bounds.width - 48, height: 130)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.top, 6)
+            }
         }
-        .buttonStyle(.plain)
     }
+}
+
+// MARK: - YouTube Mini WebView
+struct YouTubeMiniWebView: UIViewRepresentable {
+    let youtubeID: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        let wv = WKWebView(frame: .zero, configuration: config)
+        wv.backgroundColor = .black
+        wv.isOpaque = false
+        wv.scrollView.isScrollEnabled = false
+        let html = """
+        <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;background:black;}</style></head>
+        <body><div id="player"></div>
+        <script src="https://www.youtube.com/iframe_api"></script>
+        <script>var player;function onYouTubeIframeAPIReady(){player=new YT.Player('player',{videoId:'\(youtubeID)',width:'100%',height:'100%',playerVars:{autoplay:1,controls:0,modestbranding:1,playsinline:1},events:{onReady:function(e){e.target.playVideo()}}})}</script>
+        </body></html>
+        """
+        wv.loadHTMLString(html, baseURL: URL(string: "https://www.youtube.com"))
+        return wv
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
 // MARK: - Liquid Tab Icon
