@@ -2,6 +2,16 @@ import SwiftUI
 import AVKit
 import MediaPlayer
 
+enum StreamError: Error, LocalizedError {
+    case noStreamAvailable, wrongEpisode
+    var errorDescription: String? {
+        switch self {
+        case .noStreamAvailable: return "Không tìm thấy link"
+        case .wrongEpisode: return "Không tìm thấy tập này"
+        }
+    }
+}
+
 enum MovieSource: String, CaseIterable { case vsmov="VSMOV", nguonc="NguonC" }
 
 // VSMOV Service
