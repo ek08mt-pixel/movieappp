@@ -70,8 +70,12 @@ class MovieStreamService {
         var allSlugs = try await findAllNguonCSlugs(title: searchTitle)
         if allSlugs.isEmpty { allSlugs = try await findAllNguonCSlugs(title: title) }
         
-        // Lọc: chỉ lấy phim có original_name chứa tên gốc
-        let filtered = allSlugs.filter { $0.originalName.lowercased().contains(title.lowercased()) || $0.name.lowercased().contains(searchTitle.lowercased()) }
+        // Lọc chính xác: original_name phải bắt đầu bằng tên gốc
+        let lowerTitle = title.lowercased()
+        let filtered = allSlugs.filter { item in
+            let orig = item.originalName.lowercased()
+            return orig.hasPrefix(lowerTitle) || orig.contains("\(lowerTitle) (season")
+        }
         let finalSlugs = filtered.isEmpty ? allSlugs : filtered
         
         for item in finalSlugs {
