@@ -40,7 +40,7 @@ class MovieStreamService {
                             guard let itemName = item.name, !itemName.isEmpty,
                                   let embed = item.embed, !embed.isEmpty,
                                   let embedURL = URL(string: embed) else { continue }
-                            if itemName == "FULL" || Int(itemName) == episode {
+                            if itemName.lowercased() == "full" || Int(itemName) == episode {
                                 return (embedURL, response.movie?.name ?? title)
                             }
                         }
