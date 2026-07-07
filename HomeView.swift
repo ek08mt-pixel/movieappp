@@ -26,7 +26,6 @@ struct HomeView: View {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
-                                        // Background blur loang
                                         if let bgURL = movie.backdropURL {
                                             CachedAsyncImage(url: bgURL)
                                                 .aspectRatio(contentMode: .fill)
@@ -51,7 +50,6 @@ struct HomeView: View {
                                         VStack(spacing: 0) {
                                             Spacer()
                                             
-                                            // Poster - to hơn, viền liquid glass
                                             if let posterURL = movie.posterURL {
                                                 CachedAsyncImage(url: posterURL)
                                                     .aspectRatio(2/3, contentMode: .fit)
@@ -92,7 +90,6 @@ struct HomeView: View {
                                             
                                             Spacer().frame(height: 10)
                                             
-                                            // Dots - có animation mượt
                                             HStack(spacing: 8) {
                                                 ForEach(0..<min(vm.trending24h.count, 5), id: \.self) { i in
                                                     Capsule()
@@ -143,7 +140,7 @@ struct HomeView: View {
                             }.padding(.vertical, 10)
                         }
                         
-                        // Movie of the Day - fix kéo dài
+                        // Movie of the Day
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
@@ -151,7 +148,6 @@ struct HomeView: View {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
                                             CachedAsyncImage(url: url)
-                                                .resizable()
                                                 .aspectRatio(16/9, contentMode: .fill)
                                                 .frame(height: 180)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
