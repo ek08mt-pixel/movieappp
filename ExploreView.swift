@@ -29,6 +29,7 @@ struct ExploreView: View {
                             .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
                             .padding(.top, 8).padding(.horizontal, 16)
                         
+                        // 4 nút Random, Mood, Timeline, Guess
                         HStack(spacing: 10) {
                             Button {
                                 Task {
@@ -53,27 +54,27 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal, 16)
                         
-                        // 10 ô danh mục - aspectRatio 16:9 cố định, không bị kéo giãn
+                        // 10 ô danh mục - fix zoom to, kích thước cố định
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
                                     ZStack(alignment: .bottomLeading) {
-                                        // Fallback placeholder luôn có sẵn bên dưới ảnh
                                         RoundedRectangle(cornerRadius: 14)
                                             .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                            .aspectRatio(16/9, contentMode: .fit)
+                                            .frame(height: 100)
                                         
                                         if let posterPath = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
                                             CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 100)
                                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                                         }
                                         
-                                        // Overlay gradient + text
                                         LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
                                             .clipShape(RoundedRectangle(cornerRadius: 14))
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }
+                                    .frame(height: 100)
                                 }
                             }
                         }.padding(.horizontal, 16)
@@ -149,7 +150,6 @@ struct CategoryFullView: View {
                         ForEach(movies) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 VStack(spacing: 6) {
-                                    // Poster với placeholder chống màn hình đen
                                     CachedAsyncImage(url: movie.posterURL)
                                         .aspectRatio(2/3, contentMode: .fill)
                                         .frame(maxWidth: .infinity)
