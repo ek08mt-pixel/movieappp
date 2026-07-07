@@ -13,7 +13,7 @@ struct HomeView: View {
     @State private var yearSearch = ""
     @State private var countrySearch = ""
     
-    let allYears: [Int] = Array(2026...1980)
+    let allYears: [Int] = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2005, 2000]
     let allCountries: [(String, String)] = [
         ("Âu Mỹ", "usuk"), ("Hàn Quốc", "korean"), ("Nhật Bản", "japanese"),
         ("Việt Nam", "vietnamese"), ("Trung Quốc", "china"), ("Ấn Độ", "india"),
@@ -74,45 +74,30 @@ struct HomeView: View {
                                         
                                         VStack(spacing: 0) {
                                             Spacer()
-                                            
                                             if let posterURL = movie.posterURL {
                                                 CachedAsyncImage(url: posterURL)
                                                     .aspectRatio(2/3, contentMode: .fit)
                                                     .frame(height: 320)
                                                     .clipShape(RoundedRectangle(cornerRadius: 24))
                                                     .shadow(color: .white.opacity(0.1), radius: 10, y: -5)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 24)
-                                                            .stroke(.white.opacity(0.15), lineWidth: 1.5)
-                                                    )
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 24)
-                                                            .fill(.ultraThinMaterial.opacity(0.05))
-                                                    )
+                                                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 1.5))
+                                                    .overlay(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.05)))
                                             }
-                                            
                                             Spacer().frame(height: 14)
-                                            
                                             Text(movie.title)
                                                 .font(.system(size: 24, weight: .bold, design: .serif))
-                                                .foregroundColor(.white)
-                                                .multilineTextAlignment(.center)
-                                                .shadow(color: .black.opacity(0.9), radius: 8)
-                                                .padding(.horizontal, 24)
-                                            
+                                                .foregroundColor(.white).multilineTextAlignment(.center)
+                                                .shadow(color: .black.opacity(0.9), radius: 8).padding(.horizontal, 24)
                                             Spacer().frame(height: 6)
-                                            
                                             if let genres = movie.genreIds {
                                                 let names = genres.prefix(3).compactMap { id in
                                                     vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
                                                 }
                                                 if !names.isEmpty {
                                                     Text(names.joined(separator: " • "))
-                                                        .font(.system(size: 12, weight: .medium))
-                                                        .foregroundColor(.white.opacity(0.8))
+                                                        .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.8))
                                                 }
                                             }
-                                            
                                             Spacer().frame(height: 14)
                                             Spacer().frame(height: 20)
                                         }
@@ -132,9 +117,7 @@ struct HomeView: View {
                                 }
                             } label: {
                                 Image(systemName: "line.3.horizontal")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(10)
+                                    .font(.system(size: 18, weight: .bold)).foregroundColor(.white).padding(10)
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                                     .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                             }
@@ -159,38 +142,21 @@ struct HomeView: View {
                                 ForEach(0..<5, id: \.self) { i in
                                     let active = i == (currentIndex % 5)
                                     ZStack {
-                                        Circle()
-                                            .fill(.white.opacity(active ? 0.05 : 0.02))
-                                            .frame(width: 10, height: 10)
-                                        Circle()
-                                            .stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5)
-                                            .frame(width: 10, height: 10)
+                                        Circle().fill(.white.opacity(active ? 0.05 : 0.02)).frame(width: 10, height: 10)
+                                        Circle().stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5).frame(width: 10, height: 10)
                                         if active {
-                                            Circle()
-                                                .fill(.white.opacity(0.6))
-                                                .frame(width: 3, height: 3)
-                                                .offset(x: -2, y: -2)
-                                                .blur(radius: 0.5)
-                                        }
-                                        if active {
-                                            Circle()
-                                                .stroke(
-                                                    LinearGradient(
-                                                        colors: [.clear, .white.opacity(0.4), .purple.opacity(0.15), .cyan.opacity(0.15), .clear],
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    ),
-                                                    lineWidth: 0.8
-                                                )
-                                                .frame(width: 10, height: 10)
+                                            Circle().fill(.white.opacity(0.6)).frame(width: 3, height: 3).offset(x: -2, y: -2).blur(radius: 0.5)
+                                            Circle().stroke(
+                                                LinearGradient(colors: [.clear, .white.opacity(0.4), .purple.opacity(0.15), .cyan.opacity(0.15), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                                lineWidth: 0.8
+                                            ).frame(width: 10, height: 10)
                                         }
                                     }
                                     .shadow(color: .white.opacity(active ? 0.3 : 0), radius: 4)
                                     .scaleEffect(active ? 1.2 : 1)
                                     .animation(.interpolatingSpring(stiffness: 200, damping: 12), value: currentIndex)
                                 }
-                            }
-                            .padding(.bottom, 16)
+                            }.padding(.bottom, 16)
                         }
                         
                         // Genres
@@ -201,8 +167,7 @@ struct HomeView: View {
                                         NavigationLink(destination: GenreMovieView(genre: g)) {
                                             Text(g.name.replacingOccurrences(of: "Phim ", with: ""))
                                                 .font(.caption).fontWeight(.medium).foregroundColor(.white.opacity(0.7))
-                                                .padding(.horizontal, 14).padding(.vertical, 7)
-                                                .background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
+                                                .padding(.horizontal, 14).padding(.vertical, 7).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
                                         }
                                     }
                                 }.padding(.horizontal, 20)
@@ -216,27 +181,16 @@ struct HomeView: View {
                                 NavigationLink(destination: MovieDetailView(movie: mod)) {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
-                                            CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
-                                                .frame(height: 180)
-                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                            CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 16))
                                         } else {
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .fill(.ultraThinMaterial.opacity(0.25))
-                                                .frame(height: 180)
+                                            RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)).frame(height: 180)
                                         }
-                                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 16))
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(mod.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
                                             if let genres = mod.genreIds {
-                                                let names = genres.prefix(3).compactMap { id in
-                                                    vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
-                                                }
-                                                if !names.isEmpty {
-                                                    Text(names.joined(separator: " • "))
-                                                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
-                                                }
+                                                let names = genres.prefix(3).compactMap { id in vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "") }
+                                                if !names.isEmpty { Text(names.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.white.opacity(0.7)) }
                                             }
                                         }.padding()
                                     }.padding(.horizontal, 20)
@@ -246,233 +200,125 @@ struct HomeView: View {
                         
                         if !appState.watchHistory.isEmpty { SectionGrid(title: "Tiếp tục khám phá", movies: appState.watchHistory) }
                         if let last = appState.watchHistory.last { SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
-                        
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
-                        
                         HStack(spacing: 12) {
                             BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
                             BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
-                        
+                        }.padding(.horizontal, 20).padding(.top, 24)
                         SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
                         SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
                         SectionGrid(title: "Hàn Quốc", movies: vm.korean)
                         SectionGrid(title: "Nhật Bản", movies: vm.japanese)
                         SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
                         SectionGrid(title: "Anime", movies: vm.anime)
-                        
                         Spacer().frame(height: 120)
                     }
                 }
                 
-                // Overlay khi menu mở
+                // Side menu overlay
                 if showMenu {
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture { closeMenu() }
+                    Color.black.opacity(0.4).ignoresSafeArea().onTapGesture { closeMenu() }
                 }
                 
                 // Side Menu
                 HStack {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            Text("Khám phá")
-                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
-                                .padding(.top, 60)
+                        VStack(alignment: .leading, spacing: 20) {
+                            Text("Khám phá").font(.title2).fontWeight(.bold).foregroundColor(.white).padding(.top, 60)
                             
-                            // Thể loại
                             HStack {
-                                Text("Thể loại")
-                                    .font(.headline).foregroundColor(.white.opacity(0.6))
+                                Text("Thể loại").font(.headline).foregroundColor(.white.opacity(0.6))
                                 Spacer()
                                 Button {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        showGenrePopup = true
-                                    }
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showGenrePopup = true }
                                 } label: {
-                                    Text("Xem thêm")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .padding(.horizontal, 10).padding(.vertical, 4)
-                                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
+                                    Text("Xem thêm").font(.system(size: 11)).foregroundColor(.white.opacity(0.6))
+                                        .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
                                 }
                             }
                             if !vm.genres.isEmpty {
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                    ForEach(vm.genres.prefix(8)) { genre in
-                                        genreButton(genre)
-                                    }
+                                    ForEach(vm.genres.prefix(8)) { genre in genreButton(genre) }
                                 }
                             }
-                            
                             Divider().background(Color.white.opacity(0.15))
                             
-                            // Năm
-                            Text("Năm phát hành")
-                                .font(.headline).foregroundColor(.white.opacity(0.6))
-                            HStack(spacing: 8) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.white.opacity(0.4))
-                                TextField("Tìm năm...", text: $yearSearch)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white)
-                                    .keyboardType(.numberPad)
-                            }
-                            .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
+                            Text("Năm phát hành").font(.headline).foregroundColor(.white.opacity(0.6))
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 6) {
-                                    ForEach(filteredYears.prefix(30), id: \.self) { year in
-                                        Button {
-                                            closeMenu()
-                                        } label: {
-                                            Text("\(year)")
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.white)
+                                    ForEach(allYears, id: \.self) { year in
+                                        Button { closeMenu() } label: {
+                                            Text("\(year)").font(.system(size: 12)).foregroundColor(.white)
                                                 .padding(.horizontal, 10).padding(.vertical, 6)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(.ultraThinMaterial.opacity(0.4))
-                                                )
+                                                .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.4)))
                                         }
                                     }
                                 }
-                            }
-                            .frame(height: 36)
+                            }.frame(height: 36)
                             
                             Divider().background(Color.white.opacity(0.15))
                             
-                            // Quốc gia
-                            Text("Quốc gia")
-                                .font(.headline).foregroundColor(.white.opacity(0.6))
-                            HStack(spacing: 8) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.white.opacity(0.4))
-                                TextField("Tìm quốc gia...", text: $countrySearch)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white)
-                            }
-                            .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
+                            Text("Quốc gia").font(.headline).foregroundColor(.white.opacity(0.6))
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                ForEach(filteredCountries.prefix(12), id: \.0) { name, _ in
-                                    Button {
-                                        closeMenu()
-                                    } label: {
-                                        Text(name)
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 12).padding(.vertical, 8)
-                                            .frame(maxWidth: .infinity)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .fill(.ultraThinMaterial.opacity(0.4))
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                                            )
+                                ForEach(allCountries, id: \.0) { name, _ in
+                                    Button { closeMenu() } label: {
+                                        Text(name).font(.system(size: 12)).foregroundColor(.white)
+                                            .padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity)
+                                            .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4)))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
                                     }
                                 }
                             }
-                            
                             Spacer().frame(height: 100)
-                        }
-                        .padding(.horizontal, 20)
+                        }.padding(.horizontal, 20)
                     }
-                    .frame(width: 300)
-                    .background(
-                        Rectangle()
-                            .fill(.ultraThinMaterial.opacity(0.95))
-                            .ignoresSafeArea()
-                    )
-                    .overlay(
-                        Rectangle()
-                            .stroke(.white.opacity(0.08), lineWidth: 0.5)
-                            .ignoresSafeArea()
-                    )
+                    .frame(width: 280)
+                    .background(Rectangle().fill(.ultraThinMaterial.opacity(0.95)).ignoresSafeArea())
                     .offset(x: menuOffset)
-                    
                     Spacer()
-                }
-                .ignoresSafeArea()
+                }.ignoresSafeArea()
                 
                 // Genre Popup
                 if showGenrePopup {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                showGenrePopup = false
-                            }
-                        }
-                    
+                    Color.black.opacity(0.5).ignoresSafeArea().onTapGesture {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showGenrePopup = false }
+                    }
                     VStack(spacing: 0) {
                         Spacer()
                         VStack(spacing: 20) {
                             HStack {
                                 Button {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        showGenrePopup = false
-                                    }
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showGenrePopup = false }
                                 } label: {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .padding(8)
+                                    Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).foregroundColor(.white).padding(8)
                                         .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                                 }
                                 Spacer()
-                                Text("Tất cả thể loại")
-                                    .font(.headline).foregroundColor(.white)
-                                Spacer()
+                                Text("Tất cả thể loại").font(.headline).foregroundColor(.white)
                                 Spacer().frame(width: 36)
                             }
-                            
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                ForEach(vm.genres) { genre in
-                                    genreButton(genre)
-                                }
+                                ForEach(vm.genres) { genre in genreButton(genre) }
                             }
-                        }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(.ultraThinMaterial.opacity(0.98))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(.white.opacity(0.15), lineWidth: 0.5)
-                        )
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 30)
+                        }.padding(20)
+                        .background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.98)))
+                        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                        .padding(.horizontal, 12).padding(.bottom, 30)
                     }
-                    .transition(.move(edge: .bottom))
                 }
             }
             .ignoresSafeArea(edges: .top)
             .gesture(
-                DragGesture()
-                    .onChanged { v in
-                        if v.translation.width > 50 && !showMenu {
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                showMenu = true
-                                menuOffset = 0
-                            }
-                        }
-                        if v.translation.width < -50 && showMenu {
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                showMenu = false
-                                menuOffset = -300
-                            }
-                        }
+                DragGesture().onChanged { v in
+                    if v.translation.width > 50 && !showMenu {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = true; menuOffset = 0 }
                     }
+                    if v.translation.width < -50 && showMenu {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = false; menuOffset = -280 }
+                    }
+                }
             )
         }
         .task { await vm.loadAll() }
@@ -491,46 +337,28 @@ struct HomeView: View {
     func genreButton(_ genre: Genre) -> some View {
         NavigationLink(destination: GenreMovieView(genre: genre)) {
             Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
-                .font(.system(size: 12))
-                .foregroundColor(.white)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(.ultraThinMaterial.opacity(0.4))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                )
+                .font(.system(size: 12)).foregroundColor(.white)
+                .padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity)
+                .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4)))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
         }
         .simultaneousGesture(TapGesture().onEnded {
             closeMenu()
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                showGenrePopup = false
-            }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showGenrePopup = false }
         })
     }
     
     func closeMenu() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-            showMenu = false
-            menuOffset = -300
-        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = false; menuOffset = -280 }
     }
     
     func startAutoScroll() {
         timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
-            withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) {
-                currentIndex = (currentIndex + 1) % 10
-            }
+            withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { currentIndex = (currentIndex + 1) % 10 }
         }
     }
     
-    func stopAutoScroll() {
-        timer?.invalidate()
-        timer = nil
-    }
+    func stopAutoScroll() { timer?.invalidate(); timer = nil }
 }
 
 struct SectionGrid: View {
@@ -550,11 +378,8 @@ struct SectionGrid: View {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(2/3, contentMode: .fill)
-                                        .frame(width: 115, height: 172)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: 115, height: 172).clipShape(RoundedRectangle(cornerRadius: 12)).shadow(color: .black.opacity(0.3), radius: 3)
                                     Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115, alignment: .leading)
                                 }
                             }
@@ -577,10 +402,8 @@ struct BigCard: View {
                         ForEach(movies.prefix(5)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 HStack(spacing: 10) {
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(2/3, contentMode: .fill)
-                                        .frame(width: 50, height: 75)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: 50, height: 75).clipShape(RoundedRectangle(cornerRadius: 8))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                         Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray)
@@ -590,11 +413,9 @@ struct BigCard: View {
                             }
                         }
                     }
-                }
-                .frame(maxHeight: 200)
+                }.frame(maxHeight: 200)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity)
+            .padding(12).frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)))
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
