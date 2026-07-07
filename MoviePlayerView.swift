@@ -47,7 +47,9 @@ class VSMOVService {
     
     func fetchStreamURL(slug: String, episode: Int) async throws -> URL {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { throw URLError(.badURL) }
-        let (data, _) = try await URLSession.shared.data(from: url)
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: req)
         struct Response: Codable {
             let episodes: [Server]?
             struct Server: Codable {
@@ -61,10 +63,16 @@ class VSMOVService {
                 guard let items = server.server_data else { continue }
                 for item in items {
                     guard let itemName = item.name, !itemName.isEmpty,
-                          let embed = item.link_embed, !embed.isEmpty,
-                          let embedURL = URL(string: embed) else { continue }
+                          let embed = item.link_embed, !embed.isEmpty else { continue }
                     if itemName.lowercased() == "full" || Int(itemName) == episode {
-                        return embedURL
+                        var embedReq = URLRequest(url: URL(string: embed)!)
+                        embedReq.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+                        embedReq.setValue("https://vsmov.com/", forHTTPHeaderField: "Referer")
+                        let (_, response) = try await URLSession.shared.data(for: embedReq)
+                        if let finalURL = response.url {
+                            return finalURL
+                        }
+                        if let vu = URL(string: embed) { return vu }
                     }
                 }
             }
