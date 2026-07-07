@@ -21,7 +21,7 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero - 10 posters, infinite scroll
+                        // Banner Hero
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
@@ -89,7 +89,7 @@ struct HomeView: View {
                                             }
                                             
                                             Spacer().frame(height: 14)
-                                            Spacer().frame(height: 30) // chỗ cho dots bên ngoài
+                                            Spacer().frame(height: 20)
                                         }
                                     }
                                 }.tag(i)
@@ -113,28 +113,51 @@ struct HomeView: View {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 40).allowsHitTesting(false)
                         }
-                        // Dots đặt ngoài TabView, chỉ thay đổi khi currentIndex thay đổi
+                        // Dots bong bóng xà phòng
                         .overlay(alignment: .bottom) {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 12) {
                                 ForEach(0..<5, id: \.self) { i in
-                                    Circle()
-                                        .fill(.clear)
-                                        .frame(width: 12, height: 12)
-                                        .background(
+                                    let active = i == (currentIndex % 5)
+                                    ZStack {
+                                        // Bong bóng nền trong suốt
+                                        Circle()
+                                            .fill(.white.opacity(active ? 0.05 : 0.02))
+                                            .frame(width: 10, height: 10)
+                                        
+                                        // Viền mỏng mờ
+                                        Circle()
+                                            .stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5)
+                                            .frame(width: 10, height: 10)
+                                        
+                                        // Điểm nhấn specular highlight
+                                        if active {
                                             Circle()
-                                                .fill(.ultraThinMaterial.opacity(i == (currentIndex % 5) ? 0.5 : 0.2))
-                                                .blur(radius: 3)
-                                        )
-                                        .overlay(
+                                                .fill(.white.opacity(0.6))
+                                                .frame(width: 3, height: 3)
+                                                .offset(x: -2, y: -2)
+                                                .blur(radius: 0.5)
+                                        }
+                                        
+                                        // Khúc xạ ánh sáng (iridescence)
+                                        if active {
                                             Circle()
-                                                .stroke(.white.opacity(i == (currentIndex % 5) ? 0.7 : 0.25), lineWidth: 1)
-                                        )
-                                        .shadow(color: .white.opacity(i == (currentIndex % 5) ? 0.5 : 0), radius: 6)
-                                        .scaleEffect(i == (currentIndex % 5) ? 1.3 : 1)
-                                        .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: currentIndex)
+                                                .stroke(
+                                                    LinearGradient(
+                                                        colors: [.clear, .white.opacity(0.4), .purple.opacity(0.15), .cyan.opacity(0.15), .clear],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ),
+                                                    lineWidth: 0.8
+                                                )
+                                                .frame(width: 10, height: 10)
+                                        }
+                                    }
+                                    .shadow(color: .white.opacity(active ? 0.3 : 0), radius: 4)
+                                    .scaleEffect(active ? 1.2 : 1)
+                                    .animation(.interpolatingSpring(stiffness: 200, damping: 12), value: currentIndex)
                                 }
                             }
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 28)
                         }
                         
                         // Genres
