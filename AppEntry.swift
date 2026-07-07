@@ -12,13 +12,11 @@ class AppState: ObservableObject {
     init() { load() }
     
     func register(email: String, password: String) {
-        // Lưu tài khoản mới vào danh sách
         var accounts = getAllAccounts()
         accounts[email] = password
         if let data = try? JSONEncoder().encode(accounts) {
             UserDefaults.standard.set(data, forKey: "allAccounts")
         }
-        // Tự động đăng nhập
         self.email = email
         self.isLoggedIn = true
         self.favorites = []
@@ -31,7 +29,7 @@ class AppState: ObservableObject {
         if let savedPassword = accounts[email], savedPassword == password {
             self.email = email
             self.isLoggedIn = true
-            load() // Load dữ liệu của tài khoản này
+            load()
         }
     }
     
@@ -82,9 +80,20 @@ class AppState: ObservableObject {
 @main
 struct AppEntry: App {
     @StateObject var appState = AppState()
+    @StateObject var diceManager = DiceManager.shared
+    
     var body: some Scene {
         WindowGroup {
-            SplashView().environmentObject(appState)
+            ZStack {
+                SplashView().environmentObject(appState)
+                
+                if diceManager.showDice {
+                    DiceOverlayView()
+                        .environmentObject(appState)
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.3), value: diceManager.showDice)
+                }
+            }
         }
     }
 }
