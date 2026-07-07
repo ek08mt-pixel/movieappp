@@ -7,6 +7,8 @@ struct HomeView: View {
     @State private var randomMovie: Movie?
     @State private var showRandom = false
     @State private var timer: Timer?
+    @State private var showMenu = false
+    @State private var menuOffset: CGFloat = -280
     
     var body: some View {
         NavigationStack {
@@ -99,6 +101,23 @@ struct HomeView: View {
                         .frame(height: 480)
                         .onAppear { startAutoScroll() }
                         .onDisappear { stopAutoScroll() }
+                        .overlay(alignment: .topLeading) {
+                            // Nút menu hamburger
+                            Button {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                    showMenu.toggle()
+                                    menuOffset = showMenu ? 0 : -280
+                                }
+                            } label: {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                    .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
+                            }
+                            .padding(.top, 50).padding(.leading, 16)
+                        }
                         .overlay(alignment: .topTrailing) {
                             HStack(spacing: 12) {
                                 Button { if !vm.trending24h.isEmpty { randomMovie = vm.trending24h.randomElement(); showRandom = true } } label: {
@@ -113,7 +132,6 @@ struct HomeView: View {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 40).allowsHitTesting(false)
                         }
-                        // Dots bong bóng xà phòng
                         .overlay(alignment: .bottom) {
                             HStack(spacing: 12) {
                                 ForEach(0..<5, id: \.self) { i in
@@ -122,11 +140,9 @@ struct HomeView: View {
                                         Circle()
                                             .fill(.white.opacity(active ? 0.05 : 0.02))
                                             .frame(width: 10, height: 10)
-                                        
                                         Circle()
                                             .stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5)
                                             .frame(width: 10, height: 10)
-                                        
                                         if active {
                                             Circle()
                                                 .fill(.white.opacity(0.6))
@@ -134,7 +150,6 @@ struct HomeView: View {
                                                 .offset(x: -2, y: -2)
                                                 .blur(radius: 0.5)
                                         }
-                                        
                                         if active {
                                             Circle()
                                                 .stroke(
@@ -231,8 +246,165 @@ struct HomeView: View {
                         Spacer().frame(height: 120)
                     }
                 }
+                
+                // Side Menu
+                if showMenu {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                showMenu = false
+                                menuOffset = -280
+                            }
+                        }
+                }
+                
+                HStack {
+                    // Menu content
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("Khám phá")
+                                .font(.title2).fontWeight(.bold).foregroundColor(.white)
+                                .padding(.top, 60)
+                            
+                            // Thể loại
+                            Text("Thể loại")
+                                .font(.headline).foregroundColor(.white.opacity(0.6))
+                            if !vm.genres.isEmpty {
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                    ForEach(vm.genres) { genre in
+                                        NavigationLink(destination: GenreMovieView(genre: genre)) {
+                                            Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                                .frame(maxWidth: .infinity)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .fill(.ultraThinMaterial.opacity(0.4))
+                                                )
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                                )
+                                        }
+                                        .simultaneousGesture(TapGesture().onEnded {
+                                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                                showMenu = false
+                                                menuOffset = -280
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.15))
+                            
+                            // Năm
+                            Text("Năm phát hành")
+                                .font(.headline).foregroundColor(.white.opacity(0.6))
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                ForEach([2026, 2025, 2024, 2023, 2022, 2020, 2015, 2010, 2000], id: \.self) { year in
+                                    NavigationLink(destination: MovieListView(title: "Năm \(year)", movies: [], fixedQuery: "Năm \(year)")) {
+                                        Text("\(year)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8).padding(.vertical, 6)
+                                            .frame(maxWidth: .infinity)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(.ultraThinMaterial.opacity(0.4))
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                            )
+                                    }
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                            showMenu = false
+                                            menuOffset = -280
+                                        }
+                                    })
+                                }
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.15))
+                            
+                            // Quốc gia
+                            Text("Quốc gia")
+                                .font(.headline).foregroundColor(.white.opacity(0.6))
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                let countries = [
+                                    ("Âu Mỹ", "usuk"), ("Hàn Quốc", "korean"),
+                                    ("Nhật Bản", "japanese"), ("Việt Nam", "vietnamese"),
+                                    ("Trung Quốc", "china"), ("Ấn Độ", "india")
+                                ]
+                                ForEach(countries, id: \.0) { name, _ in
+                                    NavigationLink(destination: MovieListView(title: name, movies: [], fixedQuery: name)) {
+                                        Text(name)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12).padding(.vertical, 8)
+                                            .frame(maxWidth: .infinity)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(.ultraThinMaterial.opacity(0.4))
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                            )
+                                    }
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                            showMenu = false
+                                            menuOffset = -280
+                                        }
+                                    })
+                                }
+                            }
+                            
+                            Spacer().frame(height: 100)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .frame(width: 280)
+                    .background(
+                        RoundedRectangle(cornerRadius: 0)
+                            .fill(.ultraThinMaterial.opacity(0.95))
+                            .overlay(.ultraThinMaterial.opacity(0.3))
+                            .ignoresSafeArea()
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(.white.opacity(0.08), lineWidth: 0.5)
+                            .ignoresSafeArea()
+                    )
+                    .offset(x: menuOffset)
+                    
+                    Spacer()
+                }
+                .ignoresSafeArea()
             }
             .ignoresSafeArea(edges: .top)
+            .gesture(
+                DragGesture()
+                    .onChanged { v in
+                        if v.translation.width > 50 && !showMenu {
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                showMenu = true
+                                menuOffset = 0
+                            }
+                        }
+                        if v.translation.width < -50 && showMenu {
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                showMenu = false
+                                menuOffset = -280
+                            }
+                        }
+                    }
+            )
         }
         .task { await vm.loadAll() }
         .sheet(isPresented: $showRandom) {
