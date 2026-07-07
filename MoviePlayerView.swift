@@ -32,54 +32,82 @@ class MovieStreamService {
     
     func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         var path = "/stream/movie/\(id).json"; if let s=season, let e=episode { path="/stream/series/\(id):\(s):\(e).json" }
-        var r=URLRequest(url:URL(string:"https://tnluannguyen-ntl-stream.hf.space\(path)")!)
+        let urlString = "https://tnluannguyen-ntl-stream.hf.space\(path)"
+        print("[DEBUG NTL] Requesting: \(urlString)")
+        var r=URLRequest(url:URL(string: urlString)!)
         r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent")
         let (d,_)=try await URLSession.shared.data(for:r)
+        if let respStr = String(data: d, encoding: .utf8) { print("[DEBUG NTL] Response: \(respStr.prefix(500))") }
         struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?}
-        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{$0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true)})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{$0.url != nil && !($0.url?.hasPrefix("magnet:") ?? true)})?.url, let vu=URL(string:u) else {
+            print("[DEBUG NTL] Failed to parse stream URL")
+            throw StreamError.noStreamAvailable
+        }
+        print("[DEBUG NTL] Success: \(u)")
         return vu
     }
     
     func fetchMediaFusion(_ id: String, season: Int?, episode: Int?) async throws -> URL {
         let cleanId=id.replacingOccurrences(of:"tt",with:"")
         var path="/stream/movie/\(cleanId).json"; if let s=season, let e=episode { path="/stream/series/\(cleanId):\(s):\(e).json" }
-        var r=URLRequest(url:URL(string:"https://mediafusion.elfhosted.com\(path)")!)
+        let urlString = "https://mediafusion.elfhosted.com\(path)"
+        print("[DEBUG MediaFusion] Requesting: \(urlString)")
+        var r=URLRequest(url:URL(string: urlString)!)
         r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent"); r.setValue("https://mediafusion.elfhosted.com/",forHTTPHeaderField:"Referer")
         let (d,_)=try await URLSession.shared.data(for:r)
+        if let respStr = String(data: d, encoding: .utf8) { print("[DEBUG MediaFusion] Response: \(respStr.prefix(500))") }
         struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?; let type:String?; let infoHash:String?}
-        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else {
+            print("[DEBUG MediaFusion] Failed to parse stream URL")
+            throw StreamError.noStreamAvailable
+        }
+        print("[DEBUG MediaFusion] Success: \(u)")
         return vu
     }
     
     func fetchStremio(imdbId: String, season: Int?, episode: Int?) async throws -> URL {
         let base="https://yastream.tamthai.de"; let cleanId=imdbId.replacingOccurrences(of:"tt",with:"")
         var path="/stream/movie/\(cleanId).json"; if let s=season, let e=episode { path="/stream/series/\(cleanId):\(s):\(e).json" }
-        var r=URLRequest(url:URL(string:"\(base)\(path)")!)
+        let urlString = "\(base)\(path)"
+        print("[DEBUG YasStream] Requesting: \(urlString)")
+        var r=URLRequest(url:URL(string: urlString)!)
         r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent"); r.setValue(base,forHTTPHeaderField:"Referer")
         let (d,_)=try await URLSession.shared.data(for:r)
+        if let respStr = String(data: d, encoding: .utf8) { print("[DEBUG YasStream] Response: \(respStr.prefix(500))") }
         struct R:Codable{let streams:[S]?}; struct S:Codable{let url:String?; let type:String?; let infoHash:String?}
-        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else { throw StreamError.noStreamAvailable }
+        guard let u=(try? JSONDecoder().decode(R.self,from:d))?.streams?.first(where:{($0.type=="url"||$0.type=="http") && $0.infoHash==nil})?.url, let vu=URL(string:u) else {
+            print("[DEBUG YasStream] Failed to parse stream URL")
+            throw StreamError.noStreamAvailable
+        }
+        print("[DEBUG YasStream] Success: \(u)")
         return vu
     }
     
     func fetchNguonCEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> (URL, String) {
         var searchTitle = title
+        print("[DEBUG NguonC] Original title: \(title), episode: \(episode), movieId: \(movieId), mediaType: \(mediaType ?? "nil")")
         if let viName = try? await getVietnameseTitle(movieId: movieId, mediaType: mediaType) {
             searchTitle = viName
+            print("[DEBUG NguonC] Vietnamese title found: \(viName)")
         }
         var allSlugs = try await findAllNguonCSlugs(title: searchTitle)
-        if allSlugs.isEmpty { allSlugs = try await findAllNguonCSlugs(title: title) }
+        print("[DEBUG NguonC] Found \(allSlugs.count) slugs for title: \(searchTitle)")
+        if allSlugs.isEmpty {
+            allSlugs = try await findAllNguonCSlugs(title: title)
+            print("[DEBUG NguonC] Retry with original title, found \(allSlugs.count) slugs")
+        }
         
-        // Lọc chính xác: original_name phải bắt đầu bằng tên gốc
         let lowerTitle = title.lowercased()
         let filtered = allSlugs.filter { item in
             let orig = item.originalName.lowercased()
             return orig.hasPrefix(lowerTitle) || orig.contains("\(lowerTitle) (season")
         }
         let finalSlugs = filtered.isEmpty ? allSlugs : filtered
+        print("[DEBUG NguonC] After filter: \(finalSlugs.count) slugs")
         
         for item in finalSlugs {
             guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(item.slug)") else { continue }
+            print("[DEBUG NguonC] Trying slug: \(item.slug)")
             var req = URLRequest(url: dtUrl)
             req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
             do {
@@ -96,13 +124,18 @@ class MovieStreamService {
                             if let name = item.name, Int(name) == episode,
                                let embed = item.embed, !embed.isEmpty,
                                let embedURL = URL(string: embed) {
+                                print("[DEBUG NguonC] SUCCESS: embedURL=\(embed)")
                                 return (embedURL, response.movie?.name ?? title)
                             }
                         }
                     }
+                    print("[DEBUG NguonC] Episode \(episode) not found in servers")
                 }
-            } catch {}
+            } catch {
+                print("[DEBUG NguonC] Error fetching slug \(item.slug): \(error.localizedDescription)")
+            }
         }
+        print("[DEBUG NguonC] All slugs exhausted, throwing wrongEpisode")
         throw StreamError.wrongEpisode
     }
     
@@ -169,7 +202,7 @@ struct MoviePlayerView: View {
             Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showBrightnessSlider{showBrightnessSlider=true}; brightness=min(max(brightness+(-v.translation.height/120),0.01),1); UIScreen.main.brightness=brightness; resetBrightnessTimer()}.onEnded{_ in resetBrightnessTimer()})
             
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
-            if let err=errorMessage, !isLoading { VStack(spacing:16){Image(systemName:"wifi.slash").font(.system(size:40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing:10){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; HStack(spacing:16){Button("Thử lại"){loadStream()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại"){dismiss()}.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
+            if let err=errorMessage, !isLoading { VStack(spacing:16){Image(systemName:"wifi.slash").font(.system(size:40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing:10){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; HStack(spacing:16){Button("Thử lại"){loadStreamWithFallback()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại"){dismiss()}.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
             
             if showControls && errorMessage == nil && !isLoading && !showOverlay {
                 HStack(spacing:64){Button{seek(-10)}label:{Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}; Button{player.rate==0 ? player.play():player.pause()}label:{Image(systemName:player.rate==0 ? "play.fill":"pause.fill").font(.system(size:28,weight:.bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15),lineWidth:0.5))}; Button{seek(10)}label:{Image(systemName:"goforward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}}
@@ -183,7 +216,7 @@ struct MoviePlayerView: View {
         }
         .statusBarHidden()
         .gesture(DragGesture(minimumDistance:20).onChanged{v in if !showOverlay && v.translation.height < -40 && v.startLocation.y > UIScreen.main.bounds.height-250 { showOverlay=true; overlayOffset=300 }; if showOverlay && v.translation.height > 40 { overlayOffset=max(0,v.translation.height) }}.onEnded{v in if showOverlay && v.translation.height > 100 { closeOverlay() } else if showOverlay { withAnimation(.spring(response:0.3,dampingFraction:0.8)){overlayOffset=0} }})
-        .task { loadStream() }
+        .task { loadStreamWithFallback() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         .fullScreenCover(isPresented: $showNguonCWebView) {
             if let url = nguonCEmbedURL {
@@ -201,7 +234,7 @@ struct MoviePlayerView: View {
                 ScrollView{ VStack(alignment:.leading,spacing:16){
                     if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); HStack(spacing:10){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:10)); VStack(alignment:.leading,spacing:4){Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2); Text("⭐ \(movie.ratingText)").font(.caption).foregroundColor(.yellow); if !seasons.isEmpty{Text("\(seasons.count) mùa • \(seasons.reduce(0){$0+$1.episodeCount}) tập").font(.caption).foregroundColor(.gray)}; if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}};Spacer()}.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3))).overlay(RoundedRectangle(cornerRadius:12).stroke(Color.white.opacity(0.1),lineWidth:0.5))
                         if !collectionMovies.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(collectionMovies.filter{$0.id != movieId}){part in Button{openMovie(part)}label:{VStack(spacing:4){CachedAsyncImage(url:part.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:8)); Text(part.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:70)}}}}} }
-                        if !seasons.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:6){ForEach(seasons){season in Button{selectedSeasonNumber=season.seasonNumber; Task{selectedSeasonDetail=try? await APIService.shared.fetchSeasonDetail(tvId:movieId,seasonNumber:season.seasonNumber)}}label:{Text(season.name).font(.caption).fontWeight(selectedSeasonNumber==season.seasonNumber ? .bold:.regular).foregroundColor(selectedSeasonNumber==season.seasonNumber ? .white:.gray).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(selectedSeasonNumber==season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)):AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))}}}}; if let detail=selectedSeasonDetail { LazyVGrid(columns:[GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6)],spacing:6){ForEach(detail.episodes){ep in Button{loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay()}label:{VStack(spacing:3){ZStack{RoundedRectangle(cornerRadius:6).fill(.ultraThinMaterial.opacity(0.3)).frame(height:50);Image(systemName:"play.circle.fill").foregroundColor(.white.opacity(0.7)).font(.system(size:18))};Text("Tập \(ep.episodeNumber)").font(.system(size:8)).foregroundColor(.white).lineLimit(1)}}}} } } } }
+                        if !seasons.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:6){ForEach(seasons){season in Button{selectedSeasonNumber=season.seasonNumber; Task{selectedSeasonDetail=try? await APIService.shared.fetchSeasonDetail(tvId:movieId,seasonNumber:season.seasonNumber)}}label:{Text(season.name).font(.caption).fontWeight(selectedSeasonNumber==season.seasonNumber ? .bold:.regular).foregroundColor(selectedSeasonNumber==season.seasonNumber ? .white:.gray).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(selectedSeasonNumber==season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)):AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))}}}}; if let detail=selectedSeasonDetail { LazyVGrid(columns:[GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6)],spacing:6){ForEach(detail.episodes){ep in Button{loadStreamWithFallback(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay()}label:{VStack(spacing:3){ZStack{RoundedRectangle(cornerRadius:6).fill(.ultraThinMaterial.opacity(0.3)).frame(height:50);Image(systemName:"play.circle.fill").foregroundColor(.white.opacity(0.7)).font(.system(size:18))};Text("Tập \(ep.episodeNumber)").font(.system(size:8)).foregroundColor(.white).lineLimit(1)}}}} } } } }
                     if !similarMovies.isEmpty { VStack(alignment:.leading,spacing:8){Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(similarMovies.prefix(15)){movie in Button{openMovie(movie)}label:{VStack(spacing:4){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:90,height:135).clipShape(RoundedRectangle(cornerRadius:10));Text(movie.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:90)}}}}}} }
                 }.padding()}.clipped()
             }
@@ -213,36 +246,157 @@ struct MoviePlayerView: View {
     
     var sourcePopup: some View { VStack(spacing:8){Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8)); ForEach(MovieSource.allCases,id:\.self){src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:6){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:5,height:5);Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white);if selectedSource==src{Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white)}}.padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))}}; Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.3))}.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:170) }
     var settingsPopup: some View { VStack(spacing:12){Text("Cài đặt").font(.system(size:13,weight:.bold,design:.rounded)).foregroundColor(.white); Text("Chất lượng").font(.system(size:11,design:.rounded)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["Auto","1080p","720p","480p","360p"],id:\.self){q in qualityButton(q)}}; Divider().background(Color.white.opacity(0.1)); Text("Phụ đề").font(.system(size:11,design:.rounded)).foregroundColor(.white.opacity(0.6)); Text("Không có sẵn").font(.system(size:12,design:.rounded)).foregroundColor(.white.opacity(0.5)); Divider().background(Color.white.opacity(0.1)); Text("Tốc độ").font(.system(size:11,design:.rounded)).foregroundColor(.white.opacity(0.6)); Text("1.0x").font(.system(size:12,design:.rounded)).foregroundColor(.white.opacity(0.5)); Text("© 2026 emmew").font(.system(size:7,design:.rounded)).foregroundColor(.white.opacity(0.2)).padding(.top,4) }.padding(18).frame(width:220).background(RoundedRectangle(cornerRadius:22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:22).stroke(Color.white.opacity(0.25),lineWidth:1))).shadow(color:.black.opacity(0.4),radius:20,y:10) }
-    func qualityButton(_ q: String) -> some View { Button{loadStream();showSettings=false}label:{Text(q).font(.system(size:12,weight:.regular,design:.rounded)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))} }
+    func qualityButton(_ q: String) -> some View { Button{loadStreamWithFallback();showSettings=false}label:{Text(q).font(.system(size:12,weight:.regular,design:.rounded)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))} }
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
     
     func loadStream(season: Int? = nil, episode: Int? = nil) {
         let s = season ?? seasonNumber; let e = episode ?? episodeNumber
+        print("[DEBUG] loadStream - movieId: \(movieId), title: \(movieTitle), season: \(s ?? -1), episode: \(e ?? -1), source: \(selectedSource.rawValue)")
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task {
             do {
                 if selectedSource == .nguonc {
-                    guard let ep = e else { throw StreamError.wrongEpisode }
+                    guard let ep = e else {
+                        print("[DEBUG] NguonC: episode is nil, throwing wrongEpisode")
+                        throw StreamError.wrongEpisode
+                    }
+                    print("[DEBUG] NguonC: fetching embed for title=\(movieTitle), episode=\(ep), movieId=\(movieId), mediaType=\(mediaType ?? "nil")")
                     let (embedURL, movieName) = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                    print("[DEBUG] NguonC: got embedURL=\(embedURL.absoluteString)")
                     await MainActor.run {
                         nguonCEmbedURL = embedURL
                         nguonCEpisodeName = "\(movieName) - Tập \(ep)"
                         isLoading = false
+                        sourceStatus[.nguonc] = true
                         showNguonCWebView = true
                     }
+                    saveHistory()
                     return
                 }
+                
                 let imdbId: String
-                if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
-                else { if let c = IMDBCache.shared.get(movieId) { imdbId = c } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
-                guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
+                if mediaType == "tv" {
+                    print("[DEBUG] Fetching external IDs for TV id=\(movieId)")
+                    imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
+                } else {
+                    if let c = IMDBCache.shared.get(movieId) {
+                        imdbId = c
+                        print("[DEBUG] IMDB cache hit for movieId=\(movieId): \(imdbId)")
+                    } else {
+                        print("[DEBUG] Fetching IMDB ID for movieId=\(movieId)")
+                        imdbId = try await fetchMovieIMDbId()
+                        if !imdbId.isEmpty {
+                            IMDBCache.shared.set(movieId, value: imdbId)
+                            print("[DEBUG] IMDB ID cached: \(imdbId)")
+                        }
+                    }
+                }
+                print("[DEBUG] Final imdbId=\(imdbId), source=\(selectedSource.rawValue)")
+                guard !imdbId.isEmpty else {
+                    print("[DEBUG] imdbId is empty, throwing noStreamAvailable")
+                    throw StreamError.noStreamAvailable
+                }
+                print("[DEBUG] Calling getStreamURL - source=\(selectedSource.rawValue), imdbId=\(imdbId), season=\(s ?? -1), episode=\(e ?? -1)")
                 let url = try await MovieStreamService.shared.getStreamURL(source: selectedSource, imdbId: imdbId, season: s, episode: e)
+                print("[DEBUG] Got stream URL: \(url.absoluteString)")
                 let item = AVPlayerItem(url: url)
                 await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
                 saveHistory()
-            } catch { await MainActor.run { errorMessage = error.localizedDescription; isLoading = false } }
+            } catch {
+                print("[DEBUG] ERROR for source \(selectedSource.rawValue): \(error.localizedDescription)")
+                await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
+            }
+        }
+    }
+    
+    func loadStreamWithFallback(season: Int? = nil, episode: Int? = nil) {
+        let s = season ?? seasonNumber; let e = episode ?? episodeNumber
+        print("[DEBUG FALLBACK] Starting - movieId: \(movieId), title: \(movieTitle), season: \(s ?? -1), episode: \(e ?? -1)")
+        isLoading = true; errorMessage = nil
+        for src in MovieSource.allCases { sourceStatus[src] = nil }
+        
+        Task {
+            let orderedSources: [MovieSource] = [.ntl, .mediafusion, .yastream, .nguonc]
+            var lastError = ""
+            
+            for source in orderedSources {
+                await MainActor.run { selectedSource = source }
+                print("[DEBUG FALLBACK] Trying source: \(source.rawValue)")
+                
+                do {
+                    if source == .nguonc {
+                        guard let ep = e else {
+                            print("[DEBUG FALLBACK] NguonC: episode is nil, skip")
+                            await MainActor.run { sourceStatus[source] = false }
+                            lastError = "Thiếu số tập"
+                            continue
+                        }
+                        print("[DEBUG FALLBACK] NguonC: fetching embed for title=\(movieTitle), episode=\(ep)")
+                        let (embedURL, movieName) = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                        print("[DEBUG FALLBACK] NguonC SUCCESS: \(embedURL.absoluteString)")
+                        await MainActor.run {
+                            sourceStatus[source] = true
+                            nguonCEmbedURL = embedURL
+                            nguonCEpisodeName = "\(movieName) - Tập \(ep)"
+                            isLoading = false
+                            showNguonCWebView = true
+                        }
+                        saveHistory()
+                        return
+                    }
+                    
+                    let imdbId: String
+                    if mediaType == "tv" {
+                        print("[DEBUG FALLBACK] Fetching external IDs for TV id=\(movieId)")
+                        imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? ""
+                    } else {
+                        if let c = IMDBCache.shared.get(movieId) {
+                            imdbId = c
+                            print("[DEBUG FALLBACK] IMDB cache hit: \(imdbId)")
+                        } else {
+                            print("[DEBUG FALLBACK] Fetching IMDB ID for movieId=\(movieId)")
+                            imdbId = try await fetchMovieIMDbId()
+                            if !imdbId.isEmpty {
+                                IMDBCache.shared.set(movieId, value: imdbId)
+                                print("[DEBUG FALLBACK] IMDB ID cached: \(imdbId)")
+                            }
+                        }
+                    }
+                    
+                    print("[DEBUG FALLBACK] imdbId=\(imdbId)")
+                    guard !imdbId.isEmpty else {
+                        print("[DEBUG FALLBACK] imdbId empty, skip source \(source.rawValue)")
+                        await MainActor.run { sourceStatus[source] = false }
+                        lastError = "Không tìm thấy IMDB ID"
+                        continue
+                    }
+                    
+                    let url = try await MovieStreamService.shared.getStreamURL(source: source, imdbId: imdbId, season: s, episode: e)
+                    print("[DEBUG FALLBACK] \(source.rawValue) SUCCESS: \(url.absoluteString)")
+                    let item = AVPlayerItem(url: url)
+                    await MainActor.run {
+                        player.replaceCurrentItem(with: item)
+                        player.play()
+                        sourceStatus[source] = true
+                        isLoading = false
+                    }
+                    saveHistory()
+                    return
+                    
+                } catch {
+                    print("[DEBUG FALLBACK] \(source.rawValue) FAILED: \(error.localizedDescription)")
+                    await MainActor.run { sourceStatus[source] = false }
+                    lastError = error.localizedDescription
+                }
+            }
+            
+            print("[DEBUG FALLBACK] ALL SOURCES FAILED - lastError: \(lastError)")
+            await MainActor.run {
+                errorMessage = "Không tìm thấy link"
+                isLoading = false
+            }
         }
     }
     
