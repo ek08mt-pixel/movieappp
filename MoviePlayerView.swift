@@ -20,17 +20,23 @@ class VSMOVService {
     private let baseURL = "https://vsmov.com/api"
     
     func searchSlug(title: String) async throws -> String {
-        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        guard let url = URL(string: "\(baseURL)/tim-kiem?keyword=\(encoded)&limit=3") else { throw URLError(.badURL) }
+        let noDiacritic = title.folding(options: .diacriticInsensitive, locale: .current)
+        let encoded = noDiacritic.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? noDiacritic
+        guard let url = URL(string: "\(baseURL)/tim-kiem?keyword=\(encoded)&limit=5") else { throw URLError(.badURL) }
         let (data, _) = try await URLSession.shared.data(from: url)
         struct Response: Codable { let items: [Item]? }
         struct Item: Codable { let slug: String?; let origin_name: String?; let name: String? }
         if let items = try? JSONDecoder().decode(Response.self, from: data).items, !items.isEmpty {
             let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+            let noDiacriticLower = lowerTitle.folding(options: .diacriticInsensitive, locale: .current)
             for item in items {
                 let orig = (item.origin_name ?? "").lowercased().trimmingCharacters(in: .whitespaces)
                 let name = (item.name ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-                if orig == lowerTitle || name == lowerTitle || orig.contains(lowerTitle) || name.contains(lowerTitle) {
+                let noDiacriticOrig = orig.folding(options: .diacriticInsensitive, locale: .current)
+                let noDiacriticName = name.folding(options: .diacriticInsensitive, locale: .current)
+                if orig == lowerTitle || name == lowerTitle ||
+                   noDiacriticOrig == noDiacriticLower || noDiacriticName == noDiacriticLower ||
+                   noDiacriticOrig.contains(noDiacriticLower) || noDiacriticName.contains(noDiacriticLower) {
                     return item.slug ?? ""
                 }
             }
@@ -77,7 +83,16 @@ class NguonCService {
         var allSlugs = try await findAllSlugs(title: searchTitle)
         if allSlugs.isEmpty { allSlugs = try await findAllSlugs(title: title) }
         
-        for item in allSlugs {
+        let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+        let exactMatch = allSlugs.filter { $0.originalName.lowercased().trimmingCharacters(in: .whitespaces) == lowerTitle }
+        let filtered = exactMatch.isEmpty ? allSlugs.filter { item in
+            let orig = item.originalName.lowercased().trimmingCharacters(in: .whitespaces)
+            let name = item.name.lowercased().trimmingCharacters(in: .whitespaces)
+            return orig.contains(lowerTitle) || name.contains(lowerTitle)
+        } : exactMatch
+        let finalSlugs = filtered.isEmpty ? allSlugs : filtered
+        
+        for item in finalSlugs {
             guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(item.slug)") else { continue }
             var req = URLRequest(url: dtUrl)
             req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
