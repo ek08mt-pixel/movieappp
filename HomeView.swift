@@ -14,33 +14,53 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
+                        // Banner Hero - Tên phim ở giữa, to, có chấm chấm chuyển trang
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                    ZStack(alignment: .bottomLeading) {
-                                        GeometryReader { geo in
-                                            if let url = movie.backdropURL {
-                                                CachedAsyncImage(url: url)
-                                                    .aspectRatio(16/9, contentMode: .fill)
-                                                    .frame(width: geo.size.width, height: geo.size.height)
-                                                    .clipped()
-                                            } else {
-                                                Rectangle()
-                                                    .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
-                                                    .frame(width: geo.size.width, height: geo.size.height)
-                                            }
+                                    ZStack(alignment: .center) {
+                                        if let url = movie.backdropURL {
+                                            CachedAsyncImage(url: url)
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 260)
+                                                .frame(maxWidth: .infinity)
+                                                .clipped()
+                                        } else {
+                                            Rectangle()
+                                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
+                                                .frame(height: 260)
                                         }
-                                        LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(movie.title).font(.system(size: 28, weight: .heavy)).foregroundColor(.white).lineLimit(2).frame(maxWidth: 280, alignment: .leading).shadow(color: .black, radius: 6)
-                                            HStack { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption); Text(movie.ratingText).foregroundColor(.white).font(.caption).bold() }
-                                        }.padding()
+                                        // Liquid glass overlay
+                                        RoundedRectangle(cornerRadius: 0)
+                                            .fill(.ultraThinMaterial.opacity(0.15))
+                                            .overlay(
+                                                LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                                            )
+                                        // Tên phim ở giữa
+                                        VStack(spacing: 8) {
+                                            Spacer()
+                                            Text(movie.title)
+                                                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                                                .foregroundColor(.white)
+                                                .multilineTextAlignment(.center)
+                                                .shadow(color: .black.opacity(0.8), radius: 10)
+                                                .padding(.horizontal, 20)
+                                            // Thể loại
+                                            if let genres = movie.genreIds, !genres.isEmpty {
+                                                Text(genres.prefix(3).compactMap { id in
+                                                    vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
+                                                }.joined(separator: " • "))
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.7))
+                                            }
+                                            Spacer().frame(height: 30)
+                                        }
                                     }
                                 }.tag(i)
                             }
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        .frame(height: 420)
+                        .tabViewStyle(.page(indexDisplayMode: .always))
+                        .frame(height: 260)
                         .overlay(alignment: .topTrailing) {
                             HStack(spacing: 12) {
                                 Button { if !vm.trending24h.isEmpty { randomMovie = vm.trending24h.randomElement(); showRandom = true } } label: {
@@ -52,6 +72,7 @@ struct HomeView: View {
                             }.padding(.top, 50).padding(.trailing, 16)
                         }
                         
+                        // Genres
                         if !vm.genres.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
@@ -66,6 +87,7 @@ struct HomeView: View {
                             }.padding(.vertical, 12)
                         }
                         
+                        // Movie of the Day
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
@@ -74,12 +96,12 @@ struct HomeView: View {
                                         if let url = mod.backdropURL {
                                             CachedAsyncImage(url: url)
                                                 .aspectRatio(16/9, contentMode: .fill)
-                                                .frame(height: 200)
+                                                .frame(height: 180)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                                         } else {
                                             RoundedRectangle(cornerRadius: 16)
                                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
-                                                .frame(height: 200)
+                                                .frame(height: 180)
                                         }
                                         LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 16))
                                         VStack(alignment: .leading, spacing: 4) {
@@ -88,21 +110,32 @@ struct HomeView: View {
                                         }.padding()
                                     }.padding(.horizontal, 20)
                                 }
-                            }.padding(.top, 24)
+                            }.padding(.top, 16)
                         }
                         
+                        // Continue Watching
                         if !appState.watchHistory.isEmpty { SectionGrid(title: "Tiếp tục khám phá", movies: appState.watchHistory) }
                         if let last = appState.watchHistory.last { SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h.shuffled()) }
+                        
+                        // Sections
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
-                        SectionGrid(title: "Sắp chiếu", movies: vm.upcoming)
                         SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
                         SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
                         SectionGrid(title: "Hàn Quốc", movies: vm.korean)
                         SectionGrid(title: "Nhật Bản", movies: vm.japanese)
                         SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
                         SectionGrid(title: "Anime", movies: vm.anime)
+                        
+                        // 2 hàng cuối - mỗi hàng 2 ô lớn, vuốt riêng
+                        HStack(spacing: 12) {
+                            BigCard(title: "Phim Hot", icon: "flame.fill", movies: vm.popular.shuffled())
+                            BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: vm.trending24h.shuffled())
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
+                        
                         Spacer().frame(height: 120)
                     }
                 }
@@ -123,12 +156,19 @@ struct HomeView: View {
     }
 }
 
+// Section Grid - Vuốt riêng từng hàng
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white); Spacer(); NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) } }.padding(.horizontal, 20)
+                HStack {
+                    Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                    Spacer()
+                    NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) {
+                        Text("Xem tất cả").font(.caption).foregroundColor(.gray)
+                    }
+                }.padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
@@ -140,13 +180,48 @@ struct SectionGrid: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
                                         .shadow(color: .black.opacity(0.3), radius: 3)
                                     Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115, alignment: .leading)
-                                    HStack(spacing: 3) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray) }
-                                }.frame(width: 115)
+                                }
                             }
                         }
                     }.padding(.horizontal, 20)
                 }
             }.padding(.top, 24)
+        }
+    }
+}
+
+// Big Card - 2 ô dưới cùng
+struct BigCard: View {
+    let title: String; let icon: String; let movies: [Movie]
+    var body: some View {
+        if movies.isEmpty { EmptyView() } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(title, systemImage: icon).font(.headline).foregroundColor(.white)
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 8) {
+                        ForEach(movies.prefix(5)) { movie in
+                            NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                HStack(spacing: 10) {
+                                    CachedAsyncImage(url: movie.posterURL)
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: 50, height: 75)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                        Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.3)))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
     }
 }
