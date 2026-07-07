@@ -107,6 +107,17 @@ class MovieStreamService {
         }
         
         let lowerTitle = title.lowercased()
+        
+        // Ưu tiên kết quả có "phần 1" hoặc "season 1"
+        if let firstSeason = films.first(where: { film in
+            let name = film.name?.lowercased() ?? ""
+            return (name.contains(lowerTitle) || lowerTitle.contains(name)) &&
+                   (name.contains("phần 1") || name.contains("season 1") || name.contains("phần1"))
+        }), let slug = firstSeason.slug {
+            return slug
+        }
+        
+        // Tìm kết quả khớp tên nhất
         if let match = films.first(where: { film in
             let name = film.name?.lowercased() ?? ""
             return name.contains(lowerTitle) || lowerTitle.contains(name)
@@ -114,6 +125,7 @@ class MovieStreamService {
             return slug
         }
         
+        // Fallback
         if let slug = films.first?.slug { return slug }
         throw StreamError.noStreamAvailable
     }
