@@ -1,11 +1,21 @@
 import SwiftUI
 
+// MARK: - OST Manager (lưu trạng thái phát nhạc toàn cục)
+class OSTManager: ObservableObject {
+    static let shared = OSTManager()
+    @Published var isPlaying = false
+    @Published var currentTrack: String = ""
+    @Published var currentMovie: String = ""
+}
+
+// MARK: - MainTabView
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
     @State private var homeID = UUID()
     @State private var exploreID = UUID()
     @State private var libraryID = UUID()
+    @StateObject private var ostManager = OSTManager.shared
     
     init() { UITabBar.appearance().isHidden = true }
     
@@ -17,6 +27,18 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
             }
             
+            // Dynamic Island
+            if ostManager.isPlaying {
+                VStack {
+                    DynamicIslandView()
+                        .padding(.top, 8)
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: ostManager.isPlaying)
+            }
+            
+            // Tab Bar
             HStack(spacing: 12) {
                 HStack(spacing: 44) {
                     LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
@@ -50,6 +72,79 @@ struct MainTabView: View {
     }
 }
 
+// MARK: - Dynamic Island View (iPhone 17-18 Pro Max style)
+struct DynamicIslandView: View {
+    @StateObject private var ostManager = OSTManager.shared
+    @State private var isExpanded = false
+    
+    var body: some View {
+        Button {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 12) {
+                // Left: Icon + Track info
+                HStack(spacing: 10) {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                    
+                    if isExpanded {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ostManager.currentTrack)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            Text(ostManager.currentMovie)
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Right: Close button (siêu nhỏ)
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        ostManager.isPlaying = false
+                        ostManager.currentTrack = ""
+                        ostManager.currentMovie = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.6))
+                        .frame(width: 20, height: 20)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(width: isExpanded ? 320 : 140, height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(.black.opacity(0.9))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(LinearGradient(colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
+            )
+            .shadow(color: .black.opacity(0.5), radius: 10, y: 5)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Liquid Tab Icon
 struct LiquidTabIcon: View {
     let icon: String; let isSelected: Bool; let action: () -> Void
     @State private var isPressed = false
