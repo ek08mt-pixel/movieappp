@@ -12,10 +12,36 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case nguonc="NguonC", ntl="NTL" }
+enum MovieSource: String, CaseIterable { case ntl="NTL", nguonc="NguonC" }
 
 class MovieStreamService {
     static let shared = MovieStreamService()
+    
+    func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
+        var path = "/stream/movie/\(id).json"
+        if let s=season, let e=episode { path="/stream/series/\(id):\(s):\(e).json" }
+        var r=URLRequest(url:URL(string:"https://tnluannguyen-ntl-stream.hf.space\(path)")!)
+        r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent")
+        let (d,_)=try await URLSession.shared.data(for:r)
+        struct R:Codable{let streams:[S]?}
+        struct S:Codable{let url:String?; let infoHash:String?; let fileIdx:Int?}
+        if let streams = (try? JSONDecoder().decode(R.self,from:d))?.streams, !streams.isEmpty {
+            // Ưu tiên url trực tiếp
+            for stream in streams {
+                if let urlStr = stream.url, !urlStr.isEmpty, !urlStr.hasPrefix("magnet:"), let vu = URL(string: urlStr) {
+                    return vu
+                }
+            }
+            // Convert infoHash sang HLS qua webtor.io
+            for stream in streams {
+                if let hash = stream.infoHash, !hash.isEmpty {
+                    let hlsURL = "https://webtor.io/api/v1/torrent/\(hash)/hls/master.m3u8"
+                    if let vu = URL(string: hlsURL) { return vu }
+                }
+            }
+        }
+        throw StreamError.noStreamAvailable
+    }
     
     func fetchNguonCEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> (URL, String) {
         var searchTitle = title
@@ -83,13 +109,21 @@ class MovieStreamService {
     }
 }
 
+class IMDBCache {
+    static let shared = IMDBCache()
+    private var cache: [Int: String] = [:]
+    init() { if let d = UserDefaults.standard.data(forKey: "imdbCache_v3"), let c = try? JSONDecoder().decode([Int:String].self, from: d) { cache = c } }
+    func get(_ id: Int) -> String? { cache[id] }
+    func set(_ id: Int, value: String) { cache[id] = value; if let d = try? JSONEncoder().encode(cache) { UserDefaults.standard.set(d, forKey: "imdbCache_v3") } }
+}
+
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .ntl; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
@@ -183,14 +217,23 @@ struct MoviePlayerView: View {
                     }
                     return
                 }
-                // NTL fallback
-                throw StreamError.noStreamAvailable
+                // NTL - lấy IMDB ID
+                let imdbId: String
+                if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
+                else { if let c = IMDBCache.shared.get(movieId) { imdbId = c } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
+                guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
+                let url = try await MovieStreamService.shared.fetchNTL(imdbId, season: s, episode: e)
+                let item = AVPlayerItem(url: url)
+                await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.ntl] = true; isLoading = false }
+                saveHistory()
             } catch {
                 await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
             }
         }
     }
     
+    func saveHistory() { let m=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType); if !appState.watchHistory.contains(where:{$0.id==movieId}){appState.watchHistory.insert(m,at:0); if appState.watchHistory.count>50{appState.watchHistory.removeLast()}; appState.save()} }
+    func fetchMovieIMDbId() async throws -> String { let (d,_)=try await URLSession.shared.data(from:URL(string:"https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E:Codable{let imdb_id:String?}; guard let id=try JSONDecoder().decode(E.self,from:d).imdb_id else{throw StreamError.noStreamAvailable}; return id }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
