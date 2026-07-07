@@ -1,13 +1,5 @@
 import SwiftUI
 
-// MARK: - OST Manager (lưu trạng thái phát nhạc toàn cục)
-class OSTManager: ObservableObject {
-    static let shared = OSTManager()
-    @Published var isPlaying = false
-    @Published var currentTrack: String = ""
-    @Published var currentMovie: String = ""
-}
-
 // MARK: - MainTabView
 struct MainTabView: View {
     @State private var selectedTab = 0
@@ -84,7 +76,6 @@ struct DynamicIslandView: View {
             }
         } label: {
             HStack(spacing: 12) {
-                // Left: Icon + Track info
                 HStack(spacing: 10) {
                     Image(systemName: "music.note")
                         .font(.system(size: 16))
@@ -108,7 +99,6 @@ struct DynamicIslandView: View {
                 
                 Spacer()
                 
-                // Right: Close button (siêu nhỏ)
                 Button {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         ostManager.isPlaying = false
