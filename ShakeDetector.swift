@@ -1,14 +1,30 @@
 import SwiftUI
-import UIKit
+import CoreMotion
 
-extension UIWindow {
-    open override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-        if motion == .motionShake {
-            NotificationCenter.default.post(name: .shakeDetected, object: nil)
+class ShakeDetector: ObservableObject {
+    private let motionManager = CMMotionManager()
+    private let queue = OperationQueue()
+    
+    init() {
+        startMonitoring()
+    }
+    
+    func startMonitoring() {
+        guard motionManager.isAccelerometerAvailable else { return }
+        motionManager.accelerometerUpdateInterval = 0.1
+        motionManager.startAccelerometerUpdates(to: queue) { [weak self] data, error in
+            guard let self = self, let acceleration = data?.acceleration else { return }
+            let magnitude = sqrt(acceleration.x * acceleration.x + acceleration.y * acceleration.y + acceleration.z * acceleration.z)
+            
+            if magnitude > 2.8 {
+                DispatchQueue.main.async {
+                    DiceManager.shared.showDice = true
+                }
+            }
         }
     }
-}
-
-extension Notification.Name {
-    static let shakeDetected = Notification.Name("shakeDetected")
+    
+    func stopMonitoring() {
+        motionManager.stopAccelerometerUpdates()
+    }
 }
