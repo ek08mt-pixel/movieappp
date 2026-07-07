@@ -88,33 +88,8 @@ struct HomeView: View {
                                                 }
                                             }
                                             
-                                            Spacer().frame(height: 10)
-                                            
-                                            // Dots liquid glass
-                                            HStack(spacing: 8) {
-                                                ForEach(0..<5, id: \.self) { i in
-                                                    let isActive = (i == (currentIndex % 5))
-                                                    Circle()
-                                                        .fill(isActive ? Color.white : Color.white.opacity(0.25))
-                                                        .frame(width: 7, height: 7)
-                                                        .background(
-                                                            Circle()
-                                                                .fill(.ultraThinMaterial.opacity(isActive ? 0.7 : 0.25))
-                                                                .blur(radius: 3)
-                                                                .frame(width: 14, height: 14)
-                                                        )
-                                                        .overlay(
-                                                            Circle()
-                                                                .stroke(.white.opacity(isActive ? 0.6 : 0.15), lineWidth: 0.5)
-                                                        )
-                                                        .shadow(color: .white.opacity(isActive ? 0.4 : 0), radius: 5)
-                                                        .scaleEffect(isActive ? 1.3 : 1)
-                                                        .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: currentIndex)
-                                                }
-                                            }
-                                            .padding(.vertical, 4)
-                                            
-                                            Spacer().frame(height: 8)
+                                            Spacer().frame(height: 14)
+                                            Spacer().frame(height: 30) // chỗ cho dots bên ngoài
                                         }
                                     }
                                 }.tag(i)
@@ -137,6 +112,29 @@ struct HomeView: View {
                         .overlay(alignment: .bottom) {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 40).allowsHitTesting(false)
+                        }
+                        // Dots đặt ngoài TabView, chỉ thay đổi khi currentIndex thay đổi
+                        .overlay(alignment: .bottom) {
+                            HStack(spacing: 10) {
+                                ForEach(0..<5, id: \.self) { i in
+                                    Circle()
+                                        .fill(.clear)
+                                        .frame(width: 12, height: 12)
+                                        .background(
+                                            Circle()
+                                                .fill(.ultraThinMaterial.opacity(i == (currentIndex % 5) ? 0.5 : 0.2))
+                                                .blur(radius: 3)
+                                        )
+                                        .overlay(
+                                            Circle()
+                                                .stroke(.white.opacity(i == (currentIndex % 5) ? 0.7 : 0.25), lineWidth: 1)
+                                        )
+                                        .shadow(color: .white.opacity(i == (currentIndex % 5) ? 0.5 : 0), radius: 6)
+                                        .scaleEffect(i == (currentIndex % 5) ? 1.3 : 1)
+                                        .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: currentIndex)
+                                }
+                            }
+                            .padding(.bottom, 24)
                         }
                         
                         // Genres
@@ -310,4 +308,4 @@ struct BigCard: View {
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
     }
-} 
+}
