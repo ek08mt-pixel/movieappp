@@ -8,7 +8,30 @@ struct HomeView: View {
     @State private var showRandom = false
     @State private var timer: Timer?
     @State private var showMenu = false
-    @State private var menuOffset: CGFloat = -280
+    @State private var menuOffset: CGFloat = -300
+    @State private var showGenrePopup = false
+    @State private var yearSearch = ""
+    @State private var countrySearch = ""
+    
+    let allYears: [Int] = Array(2026...1980)
+    let allCountries: [(String, String)] = [
+        ("Âu Mỹ", "usuk"), ("Hàn Quốc", "korean"), ("Nhật Bản", "japanese"),
+        ("Việt Nam", "vietnamese"), ("Trung Quốc", "china"), ("Ấn Độ", "india"),
+        ("Thái Lan", "thailand"), ("Pháp", "france"), ("Anh", "uk"),
+        ("Úc", "australia"), ("Mexico", "mexico"), ("Tây Ban Nha", "spain"),
+        ("Brazil", "brazil"), ("Nga", "russia"), ("Đức", "germany"),
+        ("Ý", "italy"), ("Canada", "canada"), ("Thụy Điển", "sweden")
+    ]
+    
+    var filteredYears: [Int] {
+        if yearSearch.isEmpty { return allYears }
+        return allYears.filter { String($0).contains(yearSearch) }
+    }
+    
+    var filteredCountries: [(String, String)] {
+        if countrySearch.isEmpty { return allCountries }
+        return allCountries.filter { $0.0.lowercased().contains(countrySearch.lowercased()) }
+    }
     
     var body: some View {
         NavigationStack {
@@ -102,11 +125,10 @@ struct HomeView: View {
                         .onAppear { startAutoScroll() }
                         .onDisappear { stopAutoScroll() }
                         .overlay(alignment: .topLeading) {
-                            // Nút menu hamburger
                             Button {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                                     showMenu.toggle()
-                                    menuOffset = showMenu ? 0 : -280
+                                    menuOffset = showMenu ? 0 : -300
                                 }
                             } label: {
                                 Image(systemName: "line.3.horizontal")
@@ -247,20 +269,15 @@ struct HomeView: View {
                     }
                 }
                 
-                // Side Menu
+                // Overlay khi menu mở
                 if showMenu {
                     Color.black.opacity(0.4)
                         .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                showMenu = false
-                                menuOffset = -280
-                            }
-                        }
+                        .onTapGesture { closeMenu() }
                 }
                 
+                // Side Menu
                 HStack {
-                    // Menu content
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
                             Text("Khám phá")
@@ -268,32 +285,26 @@ struct HomeView: View {
                                 .padding(.top, 60)
                             
                             // Thể loại
-                            Text("Thể loại")
-                                .font(.headline).foregroundColor(.white.opacity(0.6))
+                            HStack {
+                                Text("Thể loại")
+                                    .font(.headline).foregroundColor(.white.opacity(0.6))
+                                Spacer()
+                                Button {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        showGenrePopup = true
+                                    }
+                                } label: {
+                                    Text("Xem thêm")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .padding(.horizontal, 10).padding(.vertical, 4)
+                                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
+                                }
+                            }
                             if !vm.genres.isEmpty {
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                    ForEach(vm.genres) { genre in
-                                        NavigationLink(destination: GenreMovieView(genre: genre)) {
-                                            Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 12).padding(.vertical, 8)
-                                                .frame(maxWidth: .infinity)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 10)
-                                                        .fill(.ultraThinMaterial.opacity(0.4))
-                                                )
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 10)
-                                                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                                                )
-                                        }
-                                        .simultaneousGesture(TapGesture().onEnded {
-                                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                                showMenu = false
-                                                menuOffset = -280
-                                            }
-                                        })
+                                    ForEach(vm.genres.prefix(8)) { genre in
+                                        genreButton(genre)
                                     }
                                 }
                             }
@@ -303,45 +314,57 @@ struct HomeView: View {
                             // Năm
                             Text("Năm phát hành")
                                 .font(.headline).foregroundColor(.white.opacity(0.6))
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                ForEach([2026, 2025, 2024, 2023, 2022, 2020, 2015, 2010, 2000], id: \.self) { year in
-                                    NavigationLink(destination: MovieListView(title: "Năm \(year)", movies: [], fixedQuery: "Năm \(year)")) {
-                                        Text("\(year)")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 8).padding(.vertical, 6)
-                                            .frame(maxWidth: .infinity)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(.ultraThinMaterial.opacity(0.4))
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                                            )
-                                    }
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                            showMenu = false
-                                            menuOffset = -280
+                            HStack(spacing: 8) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.white.opacity(0.4))
+                                TextField("Tìm năm...", text: $yearSearch)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white)
+                                    .keyboardType(.numberPad)
+                            }
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 6) {
+                                    ForEach(filteredYears.prefix(30), id: \.self) { year in
+                                        Button {
+                                            closeMenu()
+                                        } label: {
+                                            Text("\(year)")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 10).padding(.vertical, 6)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(.ultraThinMaterial.opacity(0.4))
+                                                )
                                         }
-                                    })
+                                    }
                                 }
                             }
+                            .frame(height: 36)
                             
                             Divider().background(Color.white.opacity(0.15))
                             
                             // Quốc gia
                             Text("Quốc gia")
                                 .font(.headline).foregroundColor(.white.opacity(0.6))
+                            HStack(spacing: 8) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.white.opacity(0.4))
+                                TextField("Tìm quốc gia...", text: $countrySearch)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                let countries = [
-                                    ("Âu Mỹ", "usuk"), ("Hàn Quốc", "korean"),
-                                    ("Nhật Bản", "japanese"), ("Việt Nam", "vietnamese"),
-                                    ("Trung Quốc", "china"), ("Ấn Độ", "india")
-                                ]
-                                ForEach(countries, id: \.0) { name, _ in
-                                    NavigationLink(destination: MovieListView(title: name, movies: [], fixedQuery: name)) {
+                                ForEach(filteredCountries.prefix(12), id: \.0) { name, _ in
+                                    Button {
+                                        closeMenu()
+                                    } label: {
                                         Text(name)
                                             .font(.system(size: 12))
                                             .foregroundColor(.white)
@@ -356,12 +379,6 @@ struct HomeView: View {
                                                     .stroke(.white.opacity(0.1), lineWidth: 0.5)
                                             )
                                     }
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                            showMenu = false
-                                            menuOffset = -280
-                                        }
-                                    })
                                 }
                             }
                             
@@ -369,15 +386,14 @@ struct HomeView: View {
                         }
                         .padding(.horizontal, 20)
                     }
-                    .frame(width: 280)
+                    .frame(width: 300)
                     .background(
-                        RoundedRectangle(cornerRadius: 0)
+                        Rectangle()
                             .fill(.ultraThinMaterial.opacity(0.95))
-                            .overlay(.ultraThinMaterial.opacity(0.3))
                             .ignoresSafeArea()
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 0)
+                        Rectangle()
                             .stroke(.white.opacity(0.08), lineWidth: 0.5)
                             .ignoresSafeArea()
                     )
@@ -386,6 +402,59 @@ struct HomeView: View {
                     Spacer()
                 }
                 .ignoresSafeArea()
+                
+                // Genre Popup
+                if showGenrePopup {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                showGenrePopup = false
+                            }
+                        }
+                    
+                    VStack(spacing: 0) {
+                        Spacer()
+                        VStack(spacing: 20) {
+                            HStack {
+                                Button {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        showGenrePopup = false
+                                    }
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                }
+                                Spacer()
+                                Text("Tất cả thể loại")
+                                    .font(.headline).foregroundColor(.white)
+                                Spacer()
+                                Spacer().frame(width: 36)
+                            }
+                            
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                ForEach(vm.genres) { genre in
+                                    genreButton(genre)
+                                }
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(.ultraThinMaterial.opacity(0.98))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(.white.opacity(0.15), lineWidth: 0.5)
+                        )
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 30)
+                    }
+                    .transition(.move(edge: .bottom))
+                }
             }
             .ignoresSafeArea(edges: .top)
             .gesture(
@@ -400,7 +469,7 @@ struct HomeView: View {
                         if v.translation.width < -50 && showMenu {
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                                 showMenu = false
-                                menuOffset = -280
+                                menuOffset = -300
                             }
                         }
                     }
@@ -416,6 +485,37 @@ struct HomeView: View {
                         }
                     }
             }
+        }
+    }
+    
+    func genreButton(_ genre: Genre) -> some View {
+        NavigationLink(destination: GenreMovieView(genre: genre)) {
+            Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial.opacity(0.4))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                )
+        }
+        .simultaneousGesture(TapGesture().onEnded {
+            closeMenu()
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                showGenrePopup = false
+            }
+        })
+    }
+    
+    func closeMenu() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            showMenu = false
+            menuOffset = -300
         }
     }
     
