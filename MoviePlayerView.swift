@@ -156,7 +156,7 @@ struct MoviePlayerView: View {
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .vsmov; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
