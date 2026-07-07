@@ -70,6 +70,15 @@ class MovieStreamService {
         var slugs = try await findAllNguonCSlugs(title: searchTitle)
         if slugs.isEmpty { slugs = try await findAllNguonCSlugs(title: title) }
         
+        // Sắp xếp: ưu tiên season 1 (không phải 10-19)
+        slugs.sort { a, b in
+            let aIs1 = a.contains("phan-1") && !a.contains("phan-10") && !a.contains("phan-11") && !a.contains("phan-12") && !a.contains("phan-13") && !a.contains("phan-14") && !a.contains("phan-15") && !a.contains("phan-16") && !a.contains("phan-17") && !a.contains("phan-18") && !a.contains("phan-19")
+            let bIs1 = b.contains("phan-1") && !b.contains("phan-10") && !b.contains("phan-11") && !b.contains("phan-12") && !b.contains("phan-13") && !b.contains("phan-14") && !b.contains("phan-15") && !b.contains("phan-16") && !b.contains("phan-17") && !b.contains("phan-18") && !b.contains("phan-19")
+            if aIs1 && !bIs1 { return true }
+            if bIs1 && !aIs1 { return false }
+            return a < b
+        }
+        
         for slug in slugs {
             guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { continue }
             var req = URLRequest(url: dtUrl)
@@ -109,22 +118,16 @@ class MovieStreamService {
     }
     
     private func findAllNguonCSlugs(title: String) async throws -> [String] {
-        let keywords = [title, title.lowercased(),
-                        title.replacingOccurrences(of: " ", with: "-").lowercased(),
-                        title.folding(options: .diacriticInsensitive, locale: .current),
-                        title.folding(options: .diacriticInsensitive, locale: .current).lowercased()]
-        for kw in keywords {
-            let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
-            guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { continue }
-            var req = URLRequest(url: url)
-            req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-            let (data, _) = try await URLSession.shared.data(for: req)
-            struct SearchResponse: Codable { let items: [Item]? }
-            struct Item: Codable { let slug: String? }
-            if let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
-               let items = response.items, !items.isEmpty {
-                return items.compactMap { $0.slug }
-            }
+        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { return [] }
+        var req = URLRequest(url: url)
+        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        struct SearchResponse: Codable { let items: [Item]? }
+        struct Item: Codable { let slug: String? }
+        if let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
+           let items = response.items, !items.isEmpty {
+            return items.compactMap { $0.slug }
         }
         return []
     }
