@@ -90,12 +90,24 @@ struct HomeView: View {
                                             
                                             Spacer().frame(height: 10)
                                             
-                                            HStack(spacing: 8) {
+                                            // Dots với hiệu ứng liquid glass bong bóng
+                                            HStack(spacing: 10) {
                                                 ForEach(0..<min(vm.trending24h.count, 5), id: \.self) { i in
                                                     Capsule()
-                                                        .fill(i == currentIndex ? Color.white : Color.white.opacity(0.35))
-                                                        .frame(width: i == currentIndex ? 20 : 7, height: 7)
-                                                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentIndex)
+                                                        .fill(i == currentIndex ? Color.white : Color.white.opacity(0.3))
+                                                        .frame(width: i == currentIndex ? 24 : 8, height: 8)
+                                                        .background(
+                                                            Capsule()
+                                                                .fill(.ultraThinMaterial.opacity(i == currentIndex ? 0.6 : 0.2))
+                                                                .blur(radius: 2)
+                                                        )
+                                                        .overlay(
+                                                            Capsule()
+                                                                .stroke(.white.opacity(i == currentIndex ? 0.5 : 0.1), lineWidth: 0.5)
+                                                        )
+                                                        .shadow(color: .white.opacity(i == currentIndex ? 0.3 : 0), radius: 4)
+                                                        .scaleEffect(i == currentIndex ? 1.2 : 1)
+                                                        .animation(.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0.3), value: currentIndex)
                                                 }
                                             }
                                             
@@ -217,7 +229,7 @@ struct HomeView: View {
     
     func startAutoScroll() {
         timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.75, blendDuration: 0.4)) {
                 currentIndex = (currentIndex + 1) % min(vm.trending24h.count, 5)
             }
         }
