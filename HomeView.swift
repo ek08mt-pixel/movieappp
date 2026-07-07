@@ -21,9 +21,9 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero
+                        // Banner Hero - 10 posters, infinite scroll
                         TabView(selection: $currentIndex) {
-                            ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
+                            ForEach(Array(vm.trending24h.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
                                         if let bgURL = movie.backdropURL {
@@ -90,26 +90,29 @@ struct HomeView: View {
                                             
                                             Spacer().frame(height: 10)
                                             
-                                            // Dots với hiệu ứng liquid glass bong bóng
-                                            HStack(spacing: 10) {
-                                                ForEach(0..<min(vm.trending24h.count, 5), id: \.self) { i in
-                                                    Capsule()
-                                                        .fill(i == currentIndex ? Color.white : Color.white.opacity(0.3))
-                                                        .frame(width: i == currentIndex ? 24 : 8, height: 8)
+                                            // Dots liquid glass
+                                            HStack(spacing: 8) {
+                                                ForEach(0..<5, id: \.self) { i in
+                                                    let isActive = (i == (currentIndex % 5))
+                                                    Circle()
+                                                        .fill(isActive ? Color.white : Color.white.opacity(0.25))
+                                                        .frame(width: 7, height: 7)
                                                         .background(
-                                                            Capsule()
-                                                                .fill(.ultraThinMaterial.opacity(i == currentIndex ? 0.6 : 0.2))
-                                                                .blur(radius: 2)
+                                                            Circle()
+                                                                .fill(.ultraThinMaterial.opacity(isActive ? 0.7 : 0.25))
+                                                                .blur(radius: 3)
+                                                                .frame(width: 14, height: 14)
                                                         )
                                                         .overlay(
-                                                            Capsule()
-                                                                .stroke(.white.opacity(i == currentIndex ? 0.5 : 0.1), lineWidth: 0.5)
+                                                            Circle()
+                                                                .stroke(.white.opacity(isActive ? 0.6 : 0.15), lineWidth: 0.5)
                                                         )
-                                                        .shadow(color: .white.opacity(i == currentIndex ? 0.3 : 0), radius: 4)
-                                                        .scaleEffect(i == currentIndex ? 1.2 : 1)
-                                                        .animation(.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0.3), value: currentIndex)
+                                                        .shadow(color: .white.opacity(isActive ? 0.4 : 0), radius: 5)
+                                                        .scaleEffect(isActive ? 1.3 : 1)
+                                                        .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: currentIndex)
                                                 }
                                             }
+                                            .padding(.vertical, 4)
                                             
                                             Spacer().frame(height: 8)
                                         }
@@ -229,8 +232,8 @@ struct HomeView: View {
     
     func startAutoScroll() {
         timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.75, blendDuration: 0.4)) {
-                currentIndex = (currentIndex + 1) % min(vm.trending24h.count, 5)
+            withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) {
+                currentIndex = (currentIndex + 1) % 10
             }
         }
     }
