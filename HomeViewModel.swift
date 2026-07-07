@@ -31,6 +31,7 @@ class HomeViewModel: ObservableObject {
         
         isLoading = false
         
+        // Load từng danh mục riêng biệt
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
