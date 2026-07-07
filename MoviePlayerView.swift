@@ -63,16 +63,10 @@ class VSMOVService {
                 guard let items = server.server_data else { continue }
                 for item in items {
                     guard let itemName = item.name, !itemName.isEmpty,
-                          let embed = item.link_embed, !embed.isEmpty else { continue }
+                          let embed = item.link_embed, !embed.isEmpty,
+                          let vu = URL(string: embed) else { continue }
                     if itemName.lowercased() == "full" || Int(itemName) == episode {
-                        var embedReq = URLRequest(url: URL(string: embed)!)
-                        embedReq.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-                        embedReq.setValue("https://vsmov.com/", forHTTPHeaderField: "Referer")
-                        let (_, response) = try await URLSession.shared.data(for: embedReq)
-                        if let finalURL = response.url {
-                            return finalURL
-                        }
-                        if let vu = URL(string: embed) { return vu }
+                        return vu
                     }
                 }
             }
@@ -162,7 +156,7 @@ struct MoviePlayerView: View {
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .vsmov; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
@@ -225,7 +219,11 @@ struct MoviePlayerView: View {
                 if selectedSource == .vsmov {
                     let slug = try await VSMOVService.shared.searchSlug(title: movieTitle)
                     let streamURL = try await VSMOVService.shared.fetchStreamURL(slug: slug, episode: ep)
-                    let item = AVPlayerItem(url: streamURL)
+                    let asset = AVURLAsset(url: streamURL, options: ["AVURLAssetHTTPHeaderFieldsKey": [
+                        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+                        "Referer": "https://vsmov.com/"
+                    ]])
+                    let item = AVPlayerItem(asset: asset)
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.vsmov] = true; isLoading = false }
                     saveHistory()
                 } else {
