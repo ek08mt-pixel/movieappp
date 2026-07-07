@@ -17,6 +17,13 @@ struct MovieDetailView: View {
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
+    // Xác định mediaType để truyền vào player
+    var playerMediaType: String? {
+        if let mt = movie.mediaType { return mt }
+        if playSeason != nil || playEpisode != nil { return "tv" }
+        return nil
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -55,7 +62,11 @@ struct MovieDetailView: View {
                         }
                         
                         HStack(spacing: 10) {
-                            Button { showPlayer = true } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                            Button {
+                                playSeason = nil
+                                playEpisode = nil
+                                showPlayer = true
+                            } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button {
                                 if appState.favorites.contains(where: { $0.id == movie.id }) {
                                     appState.favorites.removeAll { $0.id == movie.id }
@@ -178,8 +189,15 @@ struct MovieDetailView: View {
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
         .fullScreenCover(isPresented: $showPlayer) {
-            MoviePlayerView(movieId: movie.id, movieTitle: movie.title, mediaType: movie.mediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.backdropURL ?? movie.posterURL)
-                .environmentObject(appState)
+            MoviePlayerView(
+                movieId: movie.id,
+                movieTitle: movie.title,
+                mediaType: playerMediaType,
+                seasonNumber: playSeason,
+                episodeNumber: playEpisode,
+                posterURL: movie.posterURL
+            )
+            .environmentObject(appState)
         }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) {
