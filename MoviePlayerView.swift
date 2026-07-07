@@ -1,6 +1,16 @@
 import SwiftUI
 import AVKit
 
+enum StreamError: Error, LocalizedError {
+    case noStreamAvailable, wrongEpisode
+    var errorDescription: String? {
+        switch self {
+        case .noStreamAvailable: return "Không tìm thấy link"
+        case .wrongEpisode: return "Không tìm thấy tập này"
+        }
+    }
+}
+
 class MovieStreamService {
     static let shared = MovieStreamService()
     
@@ -30,7 +40,6 @@ class MovieStreamService {
                             guard let itemName = item.name, !itemName.isEmpty,
                                   let embed = item.embed, !embed.isEmpty,
                                   let embedURL = URL(string: embed) else { continue }
-                            // Chấp nhận FULL hoặc số tập khớp
                             if itemName == "FULL" || Int(itemName) == episode {
                                 return (embedURL, response.movie?.name ?? title)
                             }
@@ -39,7 +48,7 @@ class MovieStreamService {
                 }
             } catch {}
         }
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy tập này"])
+        throw StreamError.wrongEpisode
     }
     
     private func getVietnameseTitle(movieId: Int, mediaType: String?) async throws -> String? {
