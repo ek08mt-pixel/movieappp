@@ -21,14 +21,12 @@ enum StreamError: Error, LocalizedError {
 class MovieStreamService {
     static let shared = MovieStreamService()
     
-    func getStreamURL(source: MovieSource, imdbId: String, season: Int?, episode: Int?, movieTitle: String) async throws -> URL {
+    func getStreamURL(source: MovieSource, imdbId: String, season: Int?, episode: Int?) async throws -> URL {
         switch source {
         case .ntl: return try await fetchNTL(imdbId, season: season, episode: episode)
         case .mediafusion: return try await fetchMediaFusion(imdbId, season: season, episode: episode)
         case .yastream: return try await fetchStremio(imdbId: imdbId, season: season, episode: episode)
-        case .nguonc:
-            guard let ep = episode else { throw StreamError.wrongEpisode }
-            return try await fetchNguonC(title: movieTitle, episode: ep)
+        case .nguonc: throw StreamError.noStreamAvailable
         }
     }
     
@@ -67,45 +65,27 @@ class MovieStreamService {
         return vu
     }
     
-    func fetchNguonC(title: String, episode: Int) async throws -> URL {
+    func fetchNguonCEmbed(title: String, episode: Int) async throws -> URL {
         let slug = try await findNguonCSlug(title: title)
         guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { throw StreamError.noStreamAvailable }
         var req = URLRequest(url: dtUrl)
         req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         let (dd, _) = try await URLSession.shared.data(for: req)
         
-        // Parse cấu trúc thực tế
-        struct NguonCResponse: Codable {
-            let movie: NguonCMovie?
-        }
-        struct NguonCMovie: Codable {
-            let episodes: [NguonCServer]?
-        }
-        struct NguonCServer: Codable {
-            let server_name: String?
-            let items: [NguonCItem]?
-        }
-        struct NguonCItem: Codable {
-            let name: String?
-            let slug: String?
-            let embed: String?
-        }
+        struct NguonCResponse: Codable { let movie: NguonCMovie? }
+        struct NguonCMovie: Codable { let episodes: [NguonCServer]? }
+        struct NguonCServer: Codable { let server_name: String?; let items: [NguonCItem]? }
+        struct NguonCItem: Codable { let name: String?; let slug: String?; let embed: String? }
         
         let response = try JSONDecoder().decode(NguonCResponse.self, from: dd)
         let servers = response.movie?.episodes ?? []
-        
         for server in servers {
             guard let items = server.items else { continue }
             for item in items {
                 if let name = item.name, Int(name) == episode,
                    let embed = item.embed, !embed.isEmpty,
                    let embedURL = URL(string: embed) {
-                    // Dùng EmbedExtractor để bóc tách m3u8
-                    do {
-                        return try await EmbedExtractor().extractM3U8(from: embedURL)
-                    } catch {
-                        throw StreamError.noStreamAvailable
-                    }
+                    return embedURL
                 }
             }
         }
@@ -143,6 +123,9 @@ struct MoviePlayerView: View {
     @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
     @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
+    @State private var showNguonCWebView = false
+    @State private var nguonCEmbedURL: URL?
+    @State private var nguonCEpisodeName = ""
     
     var body: some View {
         ZStack {
@@ -174,6 +157,11 @@ struct MoviePlayerView: View {
         .gesture(DragGesture(minimumDistance:20).onChanged{v in if !showOverlay && v.translation.height < -40 && v.startLocation.y > UIScreen.main.bounds.height-250 { showOverlay=true; overlayOffset=300 }; if showOverlay && v.translation.height > 40 { overlayOffset=max(0,v.translation.height) }}.onEnded{v in if showOverlay && v.translation.height > 100 { closeOverlay() } else if showOverlay { withAnimation(.spring(response:0.3,dampingFraction:0.8)){overlayOffset=0} }})
         .task { loadStream() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
+        .fullScreenCover(isPresented: $showNguonCWebView) {
+            if let url = nguonCEmbedURL {
+                NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName)
+            }
+        }
     }
     
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
@@ -209,16 +197,20 @@ struct MoviePlayerView: View {
             do {
                 if selectedSource == .nguonc {
                     guard let ep = e else { throw StreamError.wrongEpisode }
-                    let url = try await MovieStreamService.shared.fetchNguonC(title: movieTitle, episode: ep)
-                    let item = AVPlayerItem(url: url)
-                    await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.nguonc] = true; isLoading = false }
-                    saveHistory(); return
+                    let embedURL = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep)
+                    await MainActor.run {
+                        nguonCEmbedURL = embedURL
+                        nguonCEpisodeName = "Tập \(ep)"
+                        isLoading = false
+                        showNguonCWebView = true
+                    }
+                    return
                 }
                 let imdbId: String
                 if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
                 else { if let c = IMDBCache.shared.get(movieId) { imdbId = c } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
                 guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
-                let url = try await MovieStreamService.shared.getStreamURL(source: selectedSource, imdbId: imdbId, season: s, episode: e, movieTitle: movieTitle)
+                let url = try await MovieStreamService.shared.getStreamURL(source: selectedSource, imdbId: imdbId, season: s, episode: e)
                 let item = AVPlayerItem(url: url)
                 await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[selectedSource] = true; isLoading = false }
                 saveHistory()
