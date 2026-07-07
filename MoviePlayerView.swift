@@ -12,38 +12,12 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case ntl="NTL", nguonc="NguonC" }
+enum MovieSource: String, CaseIterable { case nguonc="NguonC", ntl="NTL" }
 
 class MovieStreamService {
     static let shared = MovieStreamService()
     
-    func fetchNTL(_ id: String, season: Int?, episode: Int?) async throws -> URL {
-        var path = "/stream/movie/\(id).json"
-        if let s=season, let e=episode { path="/stream/series/\(id):\(s):\(e).json" }
-        var r=URLRequest(url:URL(string:"https://tnluannguyen-ntl-stream.hf.space\(path)")!)
-        r.timeoutInterval=15; r.setValue("Mozilla/5.0",forHTTPHeaderField:"User-Agent")
-        let (d,_)=try await URLSession.shared.data(for:r)
-        struct R:Codable{let streams:[S]?}
-        struct S:Codable{let url:String?; let infoHash:String?; let fileIdx:Int?}
-        if let streams = (try? JSONDecoder().decode(R.self,from:d))?.streams, !streams.isEmpty {
-            // Ưu tiên url trực tiếp
-            for stream in streams {
-                if let urlStr = stream.url, !urlStr.isEmpty, !urlStr.hasPrefix("magnet:"), let vu = URL(string: urlStr) {
-                    return vu
-                }
-            }
-            // Convert infoHash sang HLS qua webtor.io
-            for stream in streams {
-                if let hash = stream.infoHash, !hash.isEmpty {
-                    let hlsURL = "https://webtor.io/api/v1/torrent/\(hash)/hls/master.m3u8"
-                    if let vu = URL(string: hlsURL) { return vu }
-                }
-            }
-        }
-        throw StreamError.noStreamAvailable
-    }
-    
-    func fetchNguonCEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> (URL, String) {
+    func fetchNguonCEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
         var searchTitle = title
         if let viName = try? await getVietnameseTitle(movieId: movieId, mediaType: mediaType) {
             searchTitle = viName
@@ -70,7 +44,7 @@ class MovieStreamService {
                                   let embed = item.embed, !embed.isEmpty,
                                   let embedURL = URL(string: embed) else { continue }
                             if itemName.lowercased() == "full" || Int(itemName) == episode {
-                                return (embedURL, response.movie?.name ?? title)
+                                return embedURL
                             }
                         }
                     }
@@ -109,21 +83,13 @@ class MovieStreamService {
     }
 }
 
-class IMDBCache {
-    static let shared = IMDBCache()
-    private var cache: [Int: String] = [:]
-    init() { if let d = UserDefaults.standard.data(forKey: "imdbCache_v3"), let c = try? JSONDecoder().decode([Int:String].self, from: d) { cache = c } }
-    func get(_ id: Int) -> String? { cache[id] }
-    func set(_ id: Int, value: String) { cache[id] = value; if let d = try? JSONEncoder().encode(cache) { UserDefaults.standard.set(d, forKey: "imdbCache_v3") } }
-}
-
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .ntl; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
@@ -133,9 +99,6 @@ struct MoviePlayerView: View {
     @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
     @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
-    @State private var showNguonCWebView = false
-    @State private var nguonCEmbedURL: URL?
-    @State private var nguonCEpisodeName = ""
     
     var body: some View {
         ZStack {
@@ -167,11 +130,6 @@ struct MoviePlayerView: View {
         .gesture(DragGesture(minimumDistance:20).onChanged{v in if !showOverlay && v.translation.height < -40 && v.startLocation.y > UIScreen.main.bounds.height-250 { showOverlay=true; overlayOffset=300 }; if showOverlay && v.translation.height > 40 { overlayOffset=max(0,v.translation.height) }}.onEnded{v in if showOverlay && v.translation.height > 100 { closeOverlay() } else if showOverlay { withAnimation(.spring(response:0.3,dampingFraction:0.8)){overlayOffset=0} }})
         .task { loadStream() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
-        .fullScreenCover(isPresented: $showNguonCWebView) {
-            if let url = nguonCEmbedURL {
-                NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName)
-            }
-        }
     }
     
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
@@ -181,7 +139,7 @@ struct MoviePlayerView: View {
         ZStack(alignment:.bottom){ Color.black.opacity(0.4).ignoresSafeArea().onTapGesture{closeOverlay()}
             VStack(spacing:0){ Capsule().fill(.white.opacity(0.5)).frame(width:40,height:5).padding(.top,10)
                 ScrollView{ VStack(alignment:.leading,spacing:16){
-                    if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); HStack(spacing:10){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:10)); VStack(alignment:.leading,spacing:4){Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2); Text("⭐ \(movie.ratingText)").font(.caption).foregroundColor(.yellow); if !seasons.isEmpty{Text("\(seasons.count) mùa • \(seasons.reduce(0){$0+$1.episodeCount}) tập").font(.caption).foregroundColor(.gray)}; if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}};Spacer()}.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3))).overlay(RoundedRectangle(cornerRadius:12).stroke(Color.white.opacity(0.1),lineWidth:0.5))
+                    if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); HStack(spacing:10){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:10)); VStack(alignment:.leading,spacing:4){Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2); if !seasons.isEmpty{Text("\(seasons.count) mùa • \(seasons.reduce(0){$0+$1.episodeCount}) tập").font(.caption).foregroundColor(.gray)}; if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}};Spacer()}.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3))).overlay(RoundedRectangle(cornerRadius:12).stroke(Color.white.opacity(0.1),lineWidth:0.5))
                         if !collectionMovies.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(collectionMovies.filter{$0.id != movieId}){part in Button{openMovie(part)}label:{VStack(spacing:4){CachedAsyncImage(url:part.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:8)); Text(part.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:70)}}}}} }
                         if !seasons.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:6){ForEach(seasons){season in Button{selectedSeasonNumber=season.seasonNumber; Task{selectedSeasonDetail=try? await APIService.shared.fetchSeasonDetail(tvId:movieId,seasonNumber:season.seasonNumber)}}label:{Text(season.name).font(.caption).fontWeight(selectedSeasonNumber==season.seasonNumber ? .bold:.regular).foregroundColor(selectedSeasonNumber==season.seasonNumber ? .white:.gray).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(selectedSeasonNumber==season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)):AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))}}}}; if let detail=selectedSeasonDetail { LazyVGrid(columns:[GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6),GridItem(.flexible(),spacing:6)],spacing:6){ForEach(detail.episodes){ep in Button{loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay()}label:{VStack(spacing:3){ZStack{RoundedRectangle(cornerRadius:6).fill(.ultraThinMaterial.opacity(0.3)).frame(height:50);Image(systemName:"play.circle.fill").foregroundColor(.white.opacity(0.7)).font(.system(size:18))};Text("Tập \(ep.episodeNumber)").font(.system(size:8)).foregroundColor(.white).lineLimit(1)}}}} } } } }
                     if !similarMovies.isEmpty { VStack(alignment:.leading,spacing:8){Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(similarMovies.prefix(15)){movie in Button{openMovie(movie)}label:{VStack(spacing:4){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:90,height:135).clipShape(RoundedRectangle(cornerRadius:10));Text(movie.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:90)}}}}}} }
@@ -194,7 +152,7 @@ struct MoviePlayerView: View {
     }
     
     var sourcePopup: some View { VStack(spacing:8){Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8)); ForEach(MovieSource.allCases,id:\.self){src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:6){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:5,height:5);Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white);if selectedSource==src{Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white)}}.padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))}}}.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius:18).stroke(Color.white.opacity(0.2),lineWidth:0.8)).shadow(color:.black.opacity(0.2),radius:10,y:5).frame(width:170) }
-    var settingsPopup: some View { VStack(spacing:12){Text("Cài đặt").font(.system(size:13,weight:.bold,design:.rounded)).foregroundColor(.white); Text("Chất lượng").font(.system(size:11,design:.rounded)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["Auto","1080p","720p","480p","360p"],id:\.self){q in qualityButton(q)}}}.padding(18).frame(width:220).background(RoundedRectangle(cornerRadius:22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:22).stroke(Color.white.opacity(0.25),lineWidth:1))).shadow(color:.black.opacity(0.4),radius:20,y:10) }
+    var settingsPopup: some View { VStack(spacing:12){Text("Cài đặt").font(.system(size:13,weight:.bold,design:.rounded)).foregroundColor(.white); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["Auto","1080p","720p","480p","360p"],id:\.self){q in qualityButton(q)}}}.padding(18).frame(width:220).background(RoundedRectangle(cornerRadius:22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:22).stroke(Color.white.opacity(0.25),lineWidth:1))).shadow(color:.black.opacity(0.4),radius:20,y:10) }
     func qualityButton(_ q: String) -> some View { Button{loadStream();showSettings=false}label:{Text(q).font(.system(size:12,weight:.regular,design:.rounded)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))} }
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     
@@ -207,25 +165,22 @@ struct MoviePlayerView: View {
             do {
                 if selectedSource == .nguonc {
                     guard let ep = e else { throw StreamError.wrongEpisode }
-                    let (embedURL, movieName) = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                    // Lấy embed URL từ NguonC
+                    let embedURL = try await MovieStreamService.shared.fetchNguonCEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                    // Dùng EmbedExtractor để trích xuất m3u8/mp4
+                    let streamURL = try await EmbedExtractor().extractM3U8(from: embedURL)
+                    let item = AVPlayerItem(url: streamURL)
                     await MainActor.run {
-                        nguonCEmbedURL = embedURL
-                        nguonCEpisodeName = "\(movieName) - Tập \(ep)"
-                        isLoading = false
+                        player.replaceCurrentItem(with: item)
+                        player.play()
                         sourceStatus[.nguonc] = true
-                        showNguonCWebView = true
+                        isLoading = false
                     }
+                    saveHistory()
                     return
                 }
-                // NTL - lấy IMDB ID
-                let imdbId: String
-                if mediaType == "tv" { imdbId = try await APIService.shared.fetchExternalIDs(tvId: movieId) ?? "" }
-                else { if let c = IMDBCache.shared.get(movieId) { imdbId = c } else { imdbId = try await fetchMovieIMDbId(); if !imdbId.isEmpty { IMDBCache.shared.set(movieId, value: imdbId) } } }
-                guard !imdbId.isEmpty else { throw StreamError.noStreamAvailable }
-                let url = try await MovieStreamService.shared.fetchNTL(imdbId, season: s, episode: e)
-                let item = AVPlayerItem(url: url)
-                await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.ntl] = true; isLoading = false }
-                saveHistory()
+                // NTL
+                throw StreamError.noStreamAvailable
             } catch {
                 await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
             }
@@ -233,7 +188,6 @@ struct MoviePlayerView: View {
     }
     
     func saveHistory() { let m=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType); if !appState.watchHistory.contains(where:{$0.id==movieId}){appState.watchHistory.insert(m,at:0); if appState.watchHistory.count>50{appState.watchHistory.removeLast()}; appState.save()} }
-    func fetchMovieIMDbId() async throws -> String { let (d,_)=try await URLSession.shared.data(from:URL(string:"https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E:Codable{let imdb_id:String?}; guard let id=try JSONDecoder().decode(E.self,from:d).imdb_id else{throw StreamError.noStreamAvailable}; return id }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
