@@ -1,4 +1,4 @@
- import SwiftUI
+import SwiftUI
 import WebKit
 
 struct NguonCPlayerView: View {
@@ -69,39 +69,22 @@ struct NguonCWebView: UIViewRepresentable {
         pref.allowsContentJavaScript = true
         config.defaultWebpagePreferences = pref
         
-        let adBlockScript = """
-        window.open = function() { return null; };
-        var observer = new MutationObserver(function() {
-            var video = document.querySelector('video');
-            if (video) {
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.position = 'fixed';
-                video.style.top = '0';
-                video.style.left = '0';
-                video.style.zIndex = '9999';
-                video.style.objectFit = 'contain';
-                video.controls = true;
-                video.setAttribute('playsinline', 'true');
-                video.setAttribute('webkit-playsinline', 'true');
-                video.play();
-                document.body.style.backgroundColor = '#000';
-                var elements = document.body.children;
-                for (var i = 0; i < elements.length; i++) {
-                    if (elements[i].tagName !== 'VIDEO') {
-                        elements[i].style.display = 'none';
-                    }
+        // JS nhẹ: chỉ tự động play, không ẩn gì cả
+        let script = WKUserScript(
+            source: """
+            setTimeout(function() {
+                var video = document.querySelector('video');
+                if (video) {
+                    video.setAttribute('playsinline', 'true');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.controls = true;
+                    video.play();
                 }
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        setInterval(function() {
-            var popups = document.querySelectorAll('[class*="popup"], [class*="ad"], [class*="ads"], [id*="popup"], [id*="ad"], [id*="ads"], iframe[src*="ad"]');
-            for (var i = 0; i < popups.length; i++) { popups[i].remove(); }
-        }, 1000);
-        """
-        
-        let script = WKUserScript(source: adBlockScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+            }, 1500);
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: false
+        )
         config.userContentController.addUserScript(script)
         
         let wv = WKWebView(frame: .zero, configuration: config)
@@ -126,12 +109,7 @@ struct NguonCWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("""
                 var video = document.querySelector('video');
-                if (video) {
-                    video.style.width = '100%'; video.style.height = '100%';
-                    video.style.position = 'fixed'; video.style.top = '0'; video.style.left = '0';
-                    video.style.zIndex = '9999'; video.style.objectFit = 'contain';
-                    video.controls = true; video.play();
-                }
+                if (video) { video.play(); }
             """)
         }
     }
