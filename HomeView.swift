@@ -15,58 +15,90 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero - Apple TV style
+                        // Banner Hero
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                    ZStack(alignment: .bottom) {
-                                        if let url = movie.posterURL {
-                                            CachedAsyncImage(url: url)
-                                                .aspectRatio(2/3, contentMode: .fit)
-                                                .frame(height: 420)
-                                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                                    ZStack {
+                                        // Background blur loang 2 bên
+                                        if let bgURL = movie.backdropURL {
+                                            CachedAsyncImage(url: bgURL)
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 520)
+                                                .frame(maxWidth: .infinity)
+                                                .clipped()
+                                                .blur(radius: 30)
+                                                .overlay(Color.black.opacity(0.3))
                                         } else {
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
-                                                .frame(height: 420)
+                                            Rectangle()
+                                                .fill(LinearGradient(colors: [Color(white: 0.15), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
+                                                .frame(height: 520)
                                         }
-                                        // Gradient + tên phim dưới poster
+                                        
+                                        // Poster ở giữa
                                         VStack(spacing: 0) {
-                                            Spacer()
-                                            LinearGradient(colors: [.clear, .black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
-                                                .frame(height: 160)
-                                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                .overlay(alignment: .bottom) {
-                                                    VStack(spacing: 8) {
-                                                        Text(movie.title)
-                                                            .font(.system(size: 28, weight: .bold, design: .serif))
-                                                            .foregroundColor(.white)
-                                                            .multilineTextAlignment(.center)
-                                                            .shadow(color: .black, radius: 8)
-                                                            .padding(.horizontal, 16)
-                                                        if let genres = movie.genreIds {
-                                                            let names = genres.prefix(3).compactMap { id in
-                                                                vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
-                                                            }
-                                                            if !names.isEmpty {
-                                                                Text(names.joined(separator: " • "))
-                                                                    .font(.caption).fontWeight(.medium)
-                                                                    .foregroundColor(.white.opacity(0.7))
-                                                            }
-                                                        }
+                                            if let posterURL = movie.posterURL {
+                                                CachedAsyncImage(url: posterURL)
+                                                    .aspectRatio(2/3, contentMode: .fit)
+                                                    .frame(height: 340)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                    .shadow(color: .black.opacity(0.6), radius: 20, y: 10)
+                                                    .overlay(
+                                                        // Gradient loang dần xuống dưới
+                                                        LinearGradient(
+                                                            colors: [.clear, .clear, Color.black.opacity(0.7)],
+                                                            startPoint: .center,
+                                                            endPoint: .bottom
+                                                        )
+                                                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                    )
+                                            }
+                                            
+                                            // Tên phim + thể loại (chỉ hiện nếu poster không có text)
+                                            VStack(spacing: 6) {
+                                                Text(movie.title)
+                                                    .font(.system(size: 22, weight: .bold, design: .serif))
+                                                    .foregroundColor(.white)
+                                                    .multilineTextAlignment(.center)
+                                                    .shadow(color: .black.opacity(0.8), radius: 6)
+                                                    .padding(.horizontal, 24)
+                                                
+                                                if let genres = movie.genreIds {
+                                                    let names = genres.prefix(3).compactMap { id in
+                                                        vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
                                                     }
-                                                    .padding(.bottom, 20)
+                                                    if !names.isEmpty {
+                                                        Text(names.joined(separator: " • "))
+                                                            .font(.system(size: 13, weight: .medium))
+                                                            .foregroundColor(.white.opacity(0.8))
+                                                            .padding(.top, 2)
+                                                    }
                                                 }
+                                            }
+                                            .padding(.top, 12)
+                                            .padding(.bottom, 24)
                                         }
                                     }
                                 }.tag(i)
                             }
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .always))
-                        .frame(height: 440)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .frame(height: 520)
                         .onAppear { startAutoScroll() }
                         .onDisappear { stopAutoScroll() }
+                        .overlay(alignment: .bottom) {
+                            // Custom dots
+                            HStack(spacing: 6) {
+                                ForEach(0..<min(vm.trending24h.count, 5), id: \.self) { i in
+                                    Circle()
+                                        .fill(i == currentIndex ? Color.white : Color.white.opacity(0.4))
+                                        .frame(width: 6, height: 6)
+                                        .scaleEffect(i == currentIndex ? 1.3 : 1)
+                                        .animation(.spring(response: 0.4), value: currentIndex)
+                                }
+                            }
+                            .padding(.bottom, 6)
+                        }
                         .overlay(alignment: .topTrailing) {
                             HStack(spacing: 12) {
                                 Button { if !vm.trending24h.isEmpty { randomMovie = vm.trending24h.randomElement(); showRandom = true } } label: {
@@ -93,7 +125,7 @@ struct HomeView: View {
                             }.padding(.vertical, 12)
                         }
                         
-                        // Movie of the Day
+                        // Movie of the Day - poster đúng tỷ lệ 16:9
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
@@ -101,18 +133,26 @@ struct HomeView: View {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
                                             CachedAsyncImage(url: url)
-                                                .aspectRatio(16/9, contentMode: .fill)
-                                                .frame(height: 180)
+                                                .aspectRatio(16/9, contentMode: .fit)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                                         } else {
                                             RoundedRectangle(cornerRadius: 16)
                                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
-                                                .frame(height: 180)
+                                                .aspectRatio(16/9, contentMode: .fit)
                                         }
-                                        LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 16))
+                                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                                            .clipShape(RoundedRectangle(cornerRadius: 16))
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(mod.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                            Text(mod.overview).font(.caption).foregroundColor(.gray).lineLimit(2)
+                                            if let genres = mod.genreIds {
+                                                let names = genres.prefix(3).compactMap { id in
+                                                    vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
+                                                }
+                                                if !names.isEmpty {
+                                                    Text(names.joined(separator: " • "))
+                                                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
+                                                }
+                                            }
                                         }.padding()
                                     }.padding(.horizontal, 20)
                                 }
@@ -126,7 +166,7 @@ struct HomeView: View {
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                         
-                        // 2 ô Hot & Phổ Biến - đặt dưới Đang chiếu rạp
+                        // 2 ô Hot & Phổ Biến
                         HStack(spacing: 12) {
                             BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
                             BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
