@@ -6,6 +6,7 @@ struct HomeView: View {
     @State private var currentIndex = 0
     @State private var randomMovie: Movie?
     @State private var showRandom = false
+    @State private var timer: Timer?
     
     var body: some View {
         NavigationStack {
@@ -14,43 +15,58 @@ struct HomeView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Banner Hero
+                        // Banner Hero - Apple TV style
                         TabView(selection: $currentIndex) {
                             ForEach(Array(vm.trending24h.prefix(5).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                    ZStack(alignment: .center) {
-                                        if let url = movie.backdropURL {
+                                    ZStack(alignment: .bottom) {
+                                        if let url = movie.posterURL {
                                             CachedAsyncImage(url: url)
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(height: 260)
-                                                .frame(maxWidth: .infinity)
-                                                .clipped()
+                                                .aspectRatio(2/3, contentMode: .fit)
+                                                .frame(height: 420)
+                                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                                         } else {
-                                            Rectangle()
+                                            RoundedRectangle(cornerRadius: 20)
                                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
-                                                .frame(height: 260)
+                                                .frame(height: 420)
                                         }
-                                        RoundedRectangle(cornerRadius: 0)
-                                            .fill(.ultraThinMaterial.opacity(0.15))
-                                            .overlay(
-                                                LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-                                            )
-                                        VStack(spacing: 8) {
+                                        // Gradient + tên phim dưới poster
+                                        VStack(spacing: 0) {
                                             Spacer()
-                                            Text(movie.title)
-                                                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                                                .foregroundColor(.white)
-                                                .multilineTextAlignment(.center)
-                                                .shadow(color: .black.opacity(0.8), radius: 10)
-                                                .padding(.horizontal, 20)
-                                            Spacer().frame(height: 30)
+                                            LinearGradient(colors: [.clear, .black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
+                                                .frame(height: 160)
+                                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                .overlay(alignment: .bottom) {
+                                                    VStack(spacing: 8) {
+                                                        Text(movie.title)
+                                                            .font(.system(size: 28, weight: .bold, design: .serif))
+                                                            .foregroundColor(.white)
+                                                            .multilineTextAlignment(.center)
+                                                            .shadow(color: .black, radius: 8)
+                                                            .padding(.horizontal, 16)
+                                                        if let genres = movie.genreIds {
+                                                            let names = genres.prefix(3).compactMap { id in
+                                                                vm.genres.first(where: { $0.id == id })?.name.replacingOccurrences(of: "Phim ", with: "")
+                                                            }
+                                                            if !names.isEmpty {
+                                                                Text(names.joined(separator: " • "))
+                                                                    .font(.caption).fontWeight(.medium)
+                                                                    .foregroundColor(.white.opacity(0.7))
+                                                            }
+                                                        }
+                                                    }
+                                                    .padding(.bottom, 20)
+                                                }
                                         }
                                     }
                                 }.tag(i)
                             }
                         }
                         .tabViewStyle(.page(indexDisplayMode: .always))
-                        .frame(height: 260)
+                        .frame(height: 440)
+                        .onAppear { startAutoScroll() }
+                        .onDisappear { stopAutoScroll() }
                         .overlay(alignment: .topTrailing) {
                             HStack(spacing: 12) {
                                 Button { if !vm.trending24h.isEmpty { randomMovie = vm.trending24h.randomElement(); showRandom = true } } label: {
@@ -109,20 +125,21 @@ struct HomeView: View {
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
-                        SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
-                        SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
-                        SectionGrid(title: "Hàn Quốc", movies: vm.korean)
-                        SectionGrid(title: "Nhật Bản", movies: vm.japanese)
-                        SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
-                        SectionGrid(title: "Anime", movies: vm.anime)
                         
-                        // 2 ô cuối
+                        // 2 ô Hot & Phổ Biến - đặt dưới Đang chiếu rạp
                         HStack(spacing: 12) {
                             BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
                             BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
+                        
+                        SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
+                        SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
+                        SectionGrid(title: "Hàn Quốc", movies: vm.korean)
+                        SectionGrid(title: "Nhật Bản", movies: vm.japanese)
+                        SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
+                        SectionGrid(title: "Anime", movies: vm.anime)
                         
                         Spacer().frame(height: 120)
                     }
@@ -141,6 +158,19 @@ struct HomeView: View {
                     }
             }
         }
+    }
+    
+    func startAutoScroll() {
+        timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                currentIndex = (currentIndex + 1) % min(vm.trending24h.count, 5)
+            }
+        }
+    }
+    
+    func stopAutoScroll() {
+        timer?.invalidate()
+        timer = nil
     }
 }
 
