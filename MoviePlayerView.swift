@@ -67,7 +67,9 @@ class MovieStreamService {
     
     func fetchNguonCEmbed(title: String, episode: Int) async throws -> (URL, String) {
         let slugs = try await findAllNguonCSlugs(title: title)
-        for slug in slugs {
+        var debugInfo = "Từ khóa: \(title)\nTìm thấy \(slugs.count) kết quả\n"
+        
+        for (i, slug) in slugs.enumerated() {
             guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { continue }
             var req = URLRequest(url: dtUrl)
             req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
@@ -77,33 +79,45 @@ class MovieStreamService {
                 struct NguonCMovie: Codable { let name: String?; let episodes: [NguonCServer]? }
                 struct NguonCServer: Codable { let server_name: String?; let items: [NguonCItem]? }
                 struct NguonCItem: Codable { let name: String?; let embed: String? }
-                if let response = try? JSONDecoder().decode(NguonCResponse.self, from: dd),
-                   let servers = response.movie?.episodes {
-                    for server in servers {
-                        guard let items = server.items else { continue }
-                        for item in items {
-                            if let name = item.name, Int(name) == episode,
-                               let embed = item.embed, !embed.isEmpty,
-                               let embedURL = URL(string: embed) {
-                                return (embedURL, response.movie?.name ?? title)
+                if let response = try? JSONDecoder().decode(NguonCResponse.self, from: dd) {
+                    let movieName = response.movie?.name ?? "Không tên"
+                    let episodeCount = response.movie?.episodes?.first?.items?.count ?? 0
+                    debugInfo += "[\(i+1)] \(movieName) - \(episodeCount) tập\n"
+                    if let servers = response.movie?.episodes {
+                        for server in servers {
+                            guard let items = server.items else { continue }
+                            for item in items {
+                                if let name = item.name, Int(name) == episode,
+                                   let embed = item.embed, !embed.isEmpty,
+                                   let embedURL = URL(string: embed) {
+                                    return (embedURL, movieName)
+                                }
                             }
                         }
                     }
                 }
-            } catch {}
+            } catch { debugInfo += "[\(i+1)] Lỗi: \(error.localizedDescription)\n" }
         }
-        throw StreamError.wrongEpisode
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: debugInfo])
     }
     
     private func findAllNguonCSlugs(title: String) async throws -> [String] {
-        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { return [] }
-        var req = URLRequest(url: url)
-        req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await URLSession.shared.data(for: req)
-        struct SR: Codable { let data: [SF]? }
-        struct SF: Codable { let slug: String? }
-        return (try? JSONDecoder().decode(SR.self, from: data).data?.compactMap { $0.slug }) ?? []
+        let keywords = [title, title.lowercased(),
+                        title.replacingOccurrences(of: " ", with: "-").lowercased(),
+                        title.folding(options: .diacriticInsensitive, locale: .current)]
+        for kw in keywords {
+            let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
+            guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { continue }
+            var req = URLRequest(url: url)
+            req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+            let (data, _) = try await URLSession.shared.data(for: req)
+            struct SR: Codable { let data: [SF]? }
+            struct SF: Codable { let slug: String? }
+            if let films = try? JSONDecoder().decode(SR.self, from: data).data, !films.isEmpty {
+                return films.compactMap { $0.slug }
+            }
+        }
+        return []
     }
 }
 
