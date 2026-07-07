@@ -98,12 +98,24 @@ class MovieStreamService {
         var req = URLRequest(url: url)
         req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         let (data, _) = try await URLSession.shared.data(for: req)
+        
         struct SR: Codable { let data: [SF]? }
         struct SF: Codable { let slug: String?; let name: String? }
-        guard let films = try? JSONDecoder().decode(SR.self, from: data).data,
-              let film = films.first(where: { $0.name?.lowercased().contains(title.lowercased()) ?? false }) ?? films.first,
-              let slug = film.slug else { throw StreamError.noStreamAvailable }
-        return slug
+        
+        guard let films = try? JSONDecoder().decode(SR.self, from: data).data, !films.isEmpty else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        let lowerTitle = title.lowercased()
+        if let match = films.first(where: { film in
+            let name = film.name?.lowercased() ?? ""
+            return name.contains(lowerTitle) || lowerTitle.contains(name)
+        }), let slug = match.slug {
+            return slug
+        }
+        
+        if let slug = films.first?.slug { return slug }
+        throw StreamError.noStreamAvailable
     }
 }
 
