@@ -2,11 +2,11 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var appState: AppState
-    @State private var selectedTab: LibraryTab = .saved
+    @State private var selectedTab: LibraryTab = .watched
     
     enum LibraryTab: String, CaseIterable {
-        case saved = "Đã lưu"
         case watched = "Từng xem"
+        case saved = "Đã lưu"
     }
     
     var currentMovies: [Movie] {
@@ -25,8 +25,8 @@ struct LibraryView: View {
                 
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
-                        tabButton(.saved)
                         tabButton(.watched)
+                        tabButton(.saved)
                     }
                     .padding(4)
                     .background(
@@ -35,7 +35,7 @@ struct LibraryView: View {
                             .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                     )
                     .padding(.horizontal, 30)
-                    .padding(.top, 70)
+                    .padding(.top, 8)
                     
                     if currentMovies.isEmpty {
                         VStack(spacing: 12) {
@@ -50,11 +50,11 @@ struct LibraryView: View {
                         ScrollView {
                             LazyVGrid(
                                 columns: [
-                                    GridItem(.flexible(), spacing: 15),
-                                    GridItem(.flexible(), spacing: 15),
-                                    GridItem(.flexible(), spacing: 15)
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10)
                                 ],
-                                spacing: 15
+                                spacing: 10
                             ) {
                                 ForEach(currentMovies) { movie in
                                     NavigationLink(destination: MovieDetailView(movie: movie)) {
@@ -77,7 +77,7 @@ struct LibraryView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, 20)
+                            .padding(.top, 12)
                             .padding(.bottom, 100)
                         }
                     }
