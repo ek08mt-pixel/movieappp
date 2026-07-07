@@ -119,17 +119,14 @@ struct HomeView: View {
                                 ForEach(0..<5, id: \.self) { i in
                                     let active = i == (currentIndex % 5)
                                     ZStack {
-                                        // Bong bóng nền trong suốt
                                         Circle()
                                             .fill(.white.opacity(active ? 0.05 : 0.02))
                                             .frame(width: 10, height: 10)
                                         
-                                        // Viền mỏng mờ
                                         Circle()
                                             .stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5)
                                             .frame(width: 10, height: 10)
                                         
-                                        // Điểm nhấn specular highlight
                                         if active {
                                             Circle()
                                                 .fill(.white.opacity(0.6))
@@ -138,7 +135,6 @@ struct HomeView: View {
                                                 .blur(radius: 0.5)
                                         }
                                         
-                                        // Khúc xạ ánh sáng (iridescence)
                                         if active {
                                             Circle()
                                                 .stroke(
@@ -157,7 +153,7 @@ struct HomeView: View {
                                     .animation(.interpolatingSpring(stiffness: 200, damping: 12), value: currentIndex)
                                 }
                             }
-                            .padding(.bottom, 28)
+                            .padding(.bottom, 16)
                         }
                         
                         // Genres
