@@ -379,7 +379,6 @@ final class PhimAPIService {
             completion(.success(url)); return
         }
         
-        // Thử gọi API bằng TMDB ID trước
         let type = (mediaType == "tv") ? "tv" : "movie"
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(type)/\(tmdbID)") else {
             completion(.failure(StreamServiceError.invalidURL)); return
@@ -402,22 +401,27 @@ final class PhimAPIService {
                         completion(.success(streamURL)); return
                     }
                     
-                    // Có movie nhưng không extract được stream -> fallback search
-                    self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+                    self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
                     
                 } else {
-                    // TMDB API không thành công -> fallback search
-                    self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+                    self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
                 }
             } catch {
-                self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
             }
         }.resume()
     }
     
-    private func fallbackSearch(title: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+    private func fallbackSearch(
+        title: String,
+        tmdbID: Int,
+        mediaType: String?,
+        season: Int?,
+        episode: Int?,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=5") else {
+              let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=10") else {
             completion(.failure(StreamServiceError.invalidURL)); return
         }
         
@@ -430,12 +434,15 @@ final class PhimAPIService {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                    json["status"] as? String == "success",
                    let dataObj = json["data"] as? [String: Any],
-                   let items = dataObj["items"] as? [[String: Any]],
-                   let firstItem = items.first,
-                   let slug = firstItem["slug"] as? String {
+                   let items = dataObj["items"] as? [[String: Any]] {
                     
-                    // Gọi API detail bằng slug
-                    self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+                    let bestMatch = self.findBestMatch(items: items, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
+                    
+                    if let match = bestMatch, let slug = match["slug"] as? String {
+                        self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+                    } else {
+                        completion(.failure(StreamServiceError.noMatchFound(id: title)))
+                    }
                 } else {
                     completion(.failure(StreamServiceError.noMatchFound(id: title)))
                 }
@@ -443,6 +450,60 @@ final class PhimAPIService {
                 completion(.failure(error))
             }
         }.resume()
+    }
+    
+    private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
+        let isSeries = (mediaType == "tv") || (season != nil)
+        let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+        let targetSeason = season ?? 1
+        
+        // Ưu tiên 1: match chính xác tmdb.id
+        if let exactTMDB = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+        }) {
+            return exactTMDB
+        }
+        
+        // Ưu tiên 2: match origin_name chính xác + season nếu là series
+        for item in items {
+            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+            let itemType = item["type"] as? String ?? "single"
+            let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+            
+            if originName == normalizedTitle {
+                if isSeries && itemType == "series" {
+                    if itemSeason == targetSeason {
+                        return item
+                    }
+                } else if !isSeries && itemType == "single" {
+                    return item
+                }
+            }
+        }
+        
+        // Ưu tiên 3: match origin_name contains title + season
+        for item in items {
+            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+            let itemType = item["type"] as? String ?? "single"
+            let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+            
+            if originName.contains(normalizedTitle) {
+                if isSeries && itemType == "series" {
+                    if itemSeason == targetSeason {
+                        return item
+                    }
+                } else if !isSeries && itemType == "single" {
+                    return item
+                }
+            }
+        }
+        
+        // Ưu tiên 4: lấy item đầu tiên cùng loại
+        if isSeries {
+            return items.first(where: { ($0["type"] as? String) == "series" })
+        } else {
+            return items.first(where: { ($0["type"] as? String) == "single" })
+        }
     }
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
@@ -476,7 +537,6 @@ final class PhimAPIService {
     
     private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
         if phimType == "series" || phimType == "tv" {
-            // Phim bộ: tìm episode
             let s = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
@@ -496,7 +556,6 @@ final class PhimAPIService {
                 }
             }
         } else {
-            // Phim lẻ (single): lấy link đầu tiên
             if let episodes = json["episodes"] as? [[String: Any]],
                let firstServer = episodes.first,
                let serverData = firstServer["server_data"] as? [[String: Any]],
@@ -506,7 +565,6 @@ final class PhimAPIService {
                 return streamURL
             }
             
-            // Thử parse movie trực tiếp
             if let movie = json["movie"] as? [String: Any] {
                 if let linkM3u8 = movie["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) {
                     return streamURL
