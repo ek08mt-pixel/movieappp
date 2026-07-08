@@ -75,6 +75,33 @@ enum StreamServiceError: LocalizedError {
     }
 }
 
+// MARK: - Helpers
+private func isSeriesType(_ type: String) -> Bool {
+    return type == "series" || type == "tv" || type == "hoathinh"
+}
+
+private func isSingleType(_ type: String) -> Bool {
+    return type == "single" || type == "movie"
+}
+
+private func extractSeasonFromOriginName(_ originName: String) -> Int? {
+    let patterns = [
+        "Season (\\d+)",
+        "season (\\d+)",
+        "Phần (\\d+)",
+        "phần (\\d+)"
+    ]
+    for pattern in patterns {
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []),
+           let match = regex.firstMatch(in: originName, options: [], range: NSRange(location: 0, length: originName.utf16.count)) {
+            if let range = Range(match.range(at: 1), in: originName) {
+                return Int(originName[range])
+            }
+        }
+    }
+    return nil
+}
+
 // MARK: - NguonC Service
 final class NguonCService {
     static let shared = NguonCService()
@@ -464,18 +491,18 @@ final class PhimAPIService {
             return exactTMDB
         }
         
-        // Ưu tiên 2: match origin_name chính xác + season nếu là series
+        // Ưu tiên 2: match origin_name chính xác + season
         for item in items {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             let itemType = item["type"] as? String ?? "single"
             let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+            let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
             
             if originName == normalizedTitle {
-                if isSeries && itemType == "series" {
-                    if itemSeason == targetSeason {
-                        return item
-                    }
-                } else if !isSeries && itemType == "single" {
+                if isSeries && isSeriesType(itemType) {
+                    let s = itemSeason ?? extractedSeason
+                    if s == targetSeason { return item }
+                } else if !isSeries && isSingleType(itemType) {
                     return item
                 }
             }
@@ -486,13 +513,13 @@ final class PhimAPIService {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             let itemType = item["type"] as? String ?? "single"
             let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+            let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
             
             if originName.contains(normalizedTitle) {
-                if isSeries && itemType == "series" {
-                    if itemSeason == targetSeason {
-                        return item
-                    }
-                } else if !isSeries && itemType == "single" {
+                if isSeries && isSeriesType(itemType) {
+                    let s = itemSeason ?? extractedSeason
+                    if s == targetSeason { return item }
+                } else if !isSeries && isSingleType(itemType) {
                     return item
                 }
             }
@@ -500,9 +527,9 @@ final class PhimAPIService {
         
         // Ưu tiên 4: lấy item đầu tiên cùng loại
         if isSeries {
-            return items.first(where: { ($0["type"] as? String) == "series" })
+            return items.first(where: { isSeriesType($0["type"] as? String ?? "") })
         } else {
-            return items.first(where: { ($0["type"] as? String) == "single" })
+            return items.first(where: { isSingleType($0["type"] as? String ?? "") })
         }
     }
     
@@ -517,10 +544,15 @@ final class PhimAPIService {
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             
             do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let movie = json["movie"] as? [String: Any] {
-                    
-                    let phimType = movie["type"] as? String ?? "single"
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let phimType: String
+                    if let item = json["item"] as? [String: Any] {
+                        phimType = item["type"] as? String ?? "single"
+                    } else if let movie = json["movie"] as? [String: Any] {
+                        phimType = movie["type"] as? String ?? "single"
+                    } else {
+                        completion(.failure(StreamServiceError.noData)); return
+                    }
                     
                     if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
                         completion(.success(streamURL)); return
@@ -536,8 +568,7 @@ final class PhimAPIService {
     }
     
     private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
-        if phimType == "series" || phimType == "tv" {
-            let s = season ?? 1
+        if isSeriesType(phimType) {
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
                 for server in episodes {
@@ -565,7 +596,8 @@ final class PhimAPIService {
                 return streamURL
             }
             
-            if let movie = json["movie"] as? [String: Any] {
+            let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
+            if let movie = movie {
                 if let linkM3u8 = movie["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) {
                     return streamURL
                 }
