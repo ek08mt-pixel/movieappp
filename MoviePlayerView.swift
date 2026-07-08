@@ -9,24 +9,85 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case stravo="Stravo", vsmov="VSMOV", nguonc="NguonC" }
+enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
-class StravoService {
-    static let shared = StravoService()
-    func fetchStreamURL(imdbID: String, season: Int?, episode: Int?) async throws -> URL {
-        let path: String
-        if let s = season, let e = episode { path = "/auto/stream/series/\(imdbID):\(s):\(e).json" }
-        else { path = "/auto/stream/movie/\(imdbID).json" }
-        guard let url = URL(string: "https://stravo-clfk.onrender.com\(path)") else { throw URLError(.badURL) }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        struct R: Codable { let streams: [S]?; struct S: Codable { let url: String? } }
-        if let streams = try? JSONDecoder().decode(R.self, from: data).streams {
-            for s in streams { if let u = s.url, let vu = URL(string: u) { return vu } }
+// MARK: - NguonC Service (AVPlayer trực tiếp)
+class NguonCService {
+    static let shared = NguonCService()
+    
+    struct StreamSource: Codable { let file: String; let type: String?; let label: String? }
+    struct VideoSource: Codable { let sources: [StreamSource]? }
+    struct APIResponse: Codable { let videoSource: [VideoSource]? }
+    
+    func fetchStreamURL(embedHash: String) async throws -> URL {
+        let url = URL(string: "https://embed3.streamc.xyz/api/get-source")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        req.setValue("https://embed3.streamc.xyz", forHTTPHeaderField: "Referer")
+        req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+        req.httpBody = "hash=\(embedHash)&r=&type=embed".data(using: .utf8)
+        let (data, _) = try await URLSession.shared.data(for: req)
+        if let decoded = try? JSONDecoder().decode(APIResponse.self, from: data),
+           let sources = decoded.videoSource?.first?.sources {
+            if let m3u8 = sources.first(where: { $0.type?.contains("mpegURL") == true || $0.file.hasSuffix(".m3u8") }) {
+                if let vu = URL(string: m3u8.file) { return vu }
+            }
+            if let mp4 = sources.first(where: { $0.file.hasSuffix(".mp4") }), let vu = URL(string: mp4.file) { return vu }
+            if let first = sources.first, let vu = URL(string: first.file) { return vu }
         }
-        throw StreamError.noStreamAvailable
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không lấy được stream"])
+    }
+    
+    func fetchStreamURL(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
+        var searchTitle = title
+        if let vi = try? await getVnTitle(movieId: movieId, mediaType: mediaType) { searchTitle = vi }
+        var slugs = try? await findSlugs(title: searchTitle)
+        if slugs?.isEmpty ?? true { slugs = try? await findSlugs(title: title) }
+        let lower = title.lowercased().trimmingCharacters(in: .whitespaces)
+        let filtered = slugs?.filter { $0.originalName.lowercased() == lower } ?? []
+        for item in (filtered.isEmpty ? (slugs ?? []) : filtered) {
+            guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(item.slug)") else { continue }
+            var req = URLRequest(url: dtUrl); req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+            if let (dd, _) = try? await URLSession.shared.data(for: req) {
+                struct R: Codable { let movie: M? }; struct M: Codable { let name: String?; let episodes: [S]? }
+                struct S: Codable { let server_name: String?; let items: [I]? }; struct I: Codable { let name: String?; let embed: String? }
+                if let resp = try? JSONDecoder().decode(R.self, from: dd), let servers = resp.movie?.episodes {
+                    for server in servers { guard let items = server.items else { continue }
+                        for i in items { guard let n = i.name, !n.isEmpty, let e = i.embed, !e.isEmpty else { continue }
+                            if n.lowercased() == "full" || Int(n) == episode {
+                                if let hash = URLComponents(url: URL(string: e)!, resolvingAgainstBaseURL: false)?
+                                    .queryItems?.first(where: { $0.name == "hash" })?.value {
+                                    return try await fetchStreamURL(embedHash: hash)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy tập này"])
+    }
+    
+    private func getVnTitle(movieId: Int, mediaType: String?) async throws -> String? {
+        let type = (mediaType == "tv") ? "tv" : "movie"
+        guard let url = URL(string: "https://api.themoviedb.org/3/\(type)/\(movieId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi") else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct R: Codable { let name: String?; let title: String? }
+        return (try? JSONDecoder().decode(R.self, from: data)).flatMap { $0.name ?? $0.title }
+    }
+    private func findSlugs(title: String) async throws -> [(slug: String, name: String, originalName: String)] {
+        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { return [] }
+        var req = URLRequest(url: url); req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: req)
+        struct R: Codable { let items: [I]? }; struct I: Codable { let slug: String?; let name: String?; let original_name: String? }
+        if let items = try? JSONDecoder().decode(R.self, from: data).items { return items.compactMap { i in guard let s = i.slug else { return nil }; return (s, i.name ?? "", i.original_name ?? "") } }
+        return []
     }
 }
 
+// MARK: - VSMOV Service
 class VSMOVService {
     static let shared = VSMOVService()
     private let baseURL = "https://vsmov.com/api"
@@ -60,54 +121,30 @@ class VSMOVService {
     }
 }
 
-class NguonCService {
-    static let shared = NguonCService()
-    func fetchEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> (URL, String) {
-        var searchTitle = title
-        if let vi = try? await getVnTitle(movieId: movieId, mediaType: mediaType) { searchTitle = vi }
-        var slugs = try? await findSlugs(title: searchTitle)
-        if slugs?.isEmpty ?? true { slugs = try? await findSlugs(title: title) }
-        let lower = title.lowercased().trimmingCharacters(in: .whitespaces)
-        let filtered = slugs?.filter { $0.originalName.lowercased() == lower } ?? []
-        for item in (filtered.isEmpty ? (slugs ?? []) : filtered) {
-            guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(item.slug)") else { continue }
-            var req = URLRequest(url: dtUrl); req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-            if let (dd, _) = try? await URLSession.shared.data(for: req) {
-                struct R: Codable { let movie: M? }; struct M: Codable { let name: String?; let episodes: [S]? }
-                struct S: Codable { let server_name: String?; let items: [I]? }; struct I: Codable { let name: String?; let embed: String? }
-                if let resp = try? JSONDecoder().decode(R.self, from: dd), let servers = resp.movie?.episodes {
-                    for server in servers { guard let items = server.items else { continue }
-                        for i in items { guard let n = i.name, !n.isEmpty, let e = i.embed, !e.isEmpty, let eu = URL(string: e) else { continue }
-                            if n.lowercased() == "full" || Int(n) == episode { return (eu, resp.movie?.name ?? title) } } }
-                }
-            }
-        }
-        throw StreamError.wrongEpisode
-    }
-    private func getVnTitle(movieId: Int, mediaType: String?) async throws -> String? {
-        let type = (mediaType == "tv") ? "tv" : "movie"
-        guard let url = URL(string: "https://api.themoviedb.org/3/\(type)/\(movieId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi") else { return nil }
+// MARK: - Stravo Service
+class StravoService {
+    static let shared = StravoService()
+    func fetchStreamURL(imdbID: String, season: Int?, episode: Int?) async throws -> URL {
+        let path: String
+        if let s = season, let e = episode { path = "/auto/stream/series/\(imdbID):\(s):\(e).json" }
+        else { path = "/auto/stream/movie/\(imdbID).json" }
+        guard let url = URL(string: "https://stravo-clfk.onrender.com\(path)") else { throw URLError(.badURL) }
         let (data, _) = try await URLSession.shared.data(from: url)
-        struct R: Codable { let name: String?; let title: String? }
-        return (try? JSONDecoder().decode(R.self, from: data)).flatMap { $0.name ?? $0.title }
-    }
-    private func findSlugs(title: String) async throws -> [(slug: String, name: String, originalName: String)] {
-        let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        guard let url = URL(string: "https://phim.nguonc.com/api/films/search?keyword=\(encoded)") else { return [] }
-        var req = URLRequest(url: url); req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await URLSession.shared.data(for: req)
-        struct R: Codable { let items: [I]? }; struct I: Codable { let slug: String?; let name: String?; let original_name: String? }
-        if let items = try? JSONDecoder().decode(R.self, from: data).items { return items.compactMap { i in guard let s = i.slug else { return nil }; return (s, i.name ?? "", i.original_name ?? "") } }
-        return []
+        struct R: Codable { let streams: [S]?; struct S: Codable { let url: String? } }
+        if let streams = try? JSONDecoder().decode(R.self, from: data).streams {
+            for s in streams { if let u = s.url, let vu = URL(string: u) { return vu } }
+        }
+        throw StreamError.noStreamAvailable
     }
 }
 
+// MARK: - MoviePlayerView
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .stravo; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
@@ -117,7 +154,6 @@ struct MoviePlayerView: View {
     @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
     @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
-    @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     
     var body: some View {
         ZStack {
@@ -145,7 +181,6 @@ struct MoviePlayerView: View {
         .gesture(DragGesture(minimumDistance:20).onChanged{v in if !showOverlay && v.translation.height < -40 && v.startLocation.y > UIScreen.main.bounds.height-250 { showOverlay=true; overlayOffset=300 }; if showOverlay && v.translation.height > 40 { overlayOffset=max(0,v.translation.height) }}.onEnded{v in if showOverlay && v.translation.height > 100 { closeOverlay() } else if showOverlay { withAnimation(.spring(response:0.3,dampingFraction:0.8)){overlayOffset=0} }})
         .task { loadStream() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
-        .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
     }
     
     var youtubeOverlay: some View {
@@ -168,11 +203,12 @@ struct MoviePlayerView: View {
     }
     
     var settingsPopup: some View {
-        VStack(spacing:12){Text("Cài đặt").font(.system(size:13,weight:.bold,design:.rounded)).foregroundColor(.white); Text("Chất lượng").font(.system(size:11)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["4K","1080p","720p","480p","360p"],id:\.self){q in Button{/* đổi quality */showSettings=false}label:{Text(q).font(.system(size:12)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))}}}; Divider().background(Color.white.opacity(0.1)); Text("Tốc độ").font(.system(size:11)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["0.5x","1.0x","1.5x","2.0x"],id:\.self){s in Button{player.rate = Float(s.replacingOccurrences(of:"x",with:"")) ?? 1.0; showSettings=false}label:{Text(s).font(.system(size:12)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))}}} }.padding(18).frame(width:220).background(RoundedRectangle(cornerRadius:22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:22).stroke(Color.white.opacity(0.25),lineWidth:1))).shadow(color:.black.opacity(0.4),radius:20,y:10)
+        VStack(spacing:12){Text("Cài đặt").font(.system(size:13,weight:.bold,design:.rounded)).foregroundColor(.white); Text("Chất lượng").font(.system(size:11)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["4K","1080p","720p","480p","360p"],id:\.self){q in Button{showSettings=false}label:{Text(q).font(.system(size:12)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))}}}; Divider().background(Color.white.opacity(0.1)); Text("Tốc độ").font(.system(size:11)).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["0.5x","1.0x","1.5x","2.0x"],id:\.self){s in Button{player.rate = Float(s.replacingOccurrences(of:"x",with:"")) ?? 1.0; showSettings=false}label:{Text(s).font(.system(size:12)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))}}} }.padding(18).frame(width:220).background(RoundedRectangle(cornerRadius:22).fill(.ultraThinMaterial.opacity(0.7)).overlay(RoundedRectangle(cornerRadius:22).stroke(Color.white.opacity(0.25),lineWidth:1))).shadow(color:.black.opacity(0.4),radius:20,y:10)
     }
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     func closeOverlay() { withAnimation(.spring(response:0.25,dampingFraction:0.8)){overlayOffset=UIScreen.main.bounds.height}; DispatchQueue.main.asyncAfter(deadline:.now()+0.25){showOverlay=false} }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
+    
     func loadOverlayData() { Task { 
         similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []
         if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}
@@ -184,18 +220,18 @@ struct MoviePlayerView: View {
         let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task { do { switch selectedSource {
+        case .nguonc:
+            let streamURL = try await NguonCService.shared.fetchStreamURL(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+            await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: streamURL)); player.play(); sourceStatus[.nguonc] = true; isLoading = false }; saveHistory()
+        case .vsmov:
+            let slug = try await VSMOVService.shared.searchSlug(title: movieTitle)
+            let streamURL = try await VSMOVService.shared.fetchStreamURL(slug: slug, episode: ep)
+            await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: streamURL)); player.play(); sourceStatus[.vsmov] = true; isLoading = false }; saveHistory()
         case .stravo:
             let imdbID = try await fetchIMDB()
             let streamURL = try await StravoService.shared.fetchStreamURL(imdbID: imdbID, season: s, episode: ep)
             let asset = AVURLAsset(url: streamURL, options: ["AVURLAssetHTTPHeaderFieldsKey": ["Referer": "https://lok-lok.cc/", "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"]])
             await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(asset: asset)); player.play(); sourceStatus[.stravo] = true; isLoading = false }; saveHistory()
-        case .vsmov:
-            let slug = try await VSMOVService.shared.searchSlug(title: movieTitle)
-            let streamURL = try await VSMOVService.shared.fetchStreamURL(slug: slug, episode: ep)
-            await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: streamURL)); player.play(); sourceStatus[.vsmov] = true; isLoading = false }; saveHistory()
-        case .nguonc:
-            let (embedURL, movieName) = try await NguonCService.shared.fetchEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
-            await MainActor.run { nguonCEmbedURL = embedURL; nguonCEpisodeName = "\(movieName) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }
         } } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } } }
     }
     
