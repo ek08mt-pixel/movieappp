@@ -12,7 +12,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case vsmov="VSMOV", nguonc="NguonC" }
+enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV" }
 
 class VSMOVService {
     static let shared = VSMOVService()
@@ -41,7 +41,6 @@ class VSMOVService {
             }
             return items.first?.slug ?? ""
         }
-        // Fallback: dùng title làm slug
         let fallbackSlug = title.lowercased().trimmingCharacters(in: .whitespaces)
             .folding(options: .diacriticInsensitive, locale: .current)
             .replacingOccurrences(of: " ", with: "-")
@@ -81,7 +80,7 @@ class VSMOVService {
 class NguonCService {
     static let shared = NguonCService()
     
-    func fetchEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> (URL, String) {
+    func fetchStreamURL(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
         var searchTitle = title
         if let viName = try? await getVietnameseTitle(movieId: movieId, mediaType: mediaType) { searchTitle = viName }
         var allSlugs = try await findAllSlugs(title: searchTitle)
@@ -111,10 +110,10 @@ class NguonCService {
                         guard let items = server.items else { continue }
                         for item in items {
                             guard let itemName = item.name, !itemName.isEmpty,
-                                  let embed = item.embed, !embed.isEmpty,
-                                  let embedURL = URL(string: embed) else { continue }
+                                  let embed = item.embed, !embed.isEmpty else { continue }
                             if itemName.lowercased() == "full" || Int(itemName) == episode {
-                                return (embedURL, response.movie?.name ?? title)
+                                let m3u8String = embed + "&format=m3u8"
+                                if let vu = URL(string: m3u8String) { return vu }
                             }
                         }
                     }
@@ -158,13 +157,12 @@ struct MoviePlayerView: View {
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .vsmov; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .nguonc; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
     @State private var brightness: CGFloat = UIScreen.main.brightness; @State private var showVolumeSlider = false; @State private var showBrightnessSlider = false
     @State private var volumeTimer: Timer?; @State private var brightnessTimer: Timer?; @State private var pipController: AVPictureInPictureController?
-    @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     
     var body: some View {
         ZStack {
@@ -192,9 +190,6 @@ struct MoviePlayerView: View {
         }
         .statusBarHidden()
         .task { loadStream() }
-        .fullScreenCover(isPresented: $showNguonCWebView) {
-            if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) }
-        }
     }
     
     var sourcePopup: some View {
@@ -225,8 +220,10 @@ struct MoviePlayerView: View {
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.vsmov] = true; isLoading = false }
                     saveHistory()
                 } else {
-                    let (embedURL, movieName) = try await NguonCService.shared.fetchEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
-                    await MainActor.run { nguonCEmbedURL = embedURL; nguonCEpisodeName = "\(movieName) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }
+                    let streamURL = try await NguonCService.shared.fetchStreamURL(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                    let item = AVPlayerItem(url: streamURL)
+                    await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.nguonc] = true; isLoading = false }
+                    saveHistory()
                 }
             } catch {
                 await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
