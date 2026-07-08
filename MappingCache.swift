@@ -1,6 +1,3 @@
-// ============================================================
-// MARK: - MappingCache.swift
-// ============================================================
 import Foundation
 
 final class MappingCache {
@@ -13,7 +10,6 @@ final class MappingCache {
     
     private init() {}
     
-    // MARK: NguonC
     func getNguonCSlug(imdbID: String) -> String? {
         dict(for: nguonCKey)[imdbID]
     }
@@ -21,7 +17,6 @@ final class MappingCache {
         var d = dict(for: nguonCKey); d[imdbID] = slug; save(d, for: nguonCKey)
     }
     
-    // MARK: VSMOV
     func getVSMOVSlug(imdbID: String) -> String? {
         dict(for: vsmovKey)[imdbID]
     }
@@ -29,7 +24,6 @@ final class MappingCache {
         var d = dict(for: vsmovKey); d[imdbID] = slug; save(d, for: vsmovKey)
     }
     
-    // MARK: Stravo
     func getStravoURL(imdbID: String, season: Int, episode: Int) -> String? {
         dict(for: stravoKey)["\(imdbID)_S\(season)E\(episode)"]
     }
@@ -39,7 +33,6 @@ final class MappingCache {
         save(d, for: stravoKey)
     }
     
-    // MARK: Helpers
     private func dict(for key: String) -> [String: String] {
         defaults.dictionary(forKey: key) as? [String: String] ?? [:]
     }
@@ -53,11 +46,7 @@ final class MappingCache {
     }
 }
 
-// ============================================================
-// MARK: - NguonCService.swift
-// ============================================================
-import Foundation
-
+// MARK: - NguonC Service
 final class NguonCService {
     static let shared = NguonCService()
     private let cache = MappingCache.shared
@@ -83,7 +72,7 @@ final class NguonCService {
                     self.cache.setNguonCSlug(imdbID: imdbID, slug: matched.slug)
                     self.fetchMovieDetail(slug: matched.slug, imdbID: imdbID, season: season, episode: episode, completion: completion)
                 } else {
-                    completion(.failure(NguonCError.noMatchFound(imdbID: imdbID)))
+                    completion(.failure(NguonCServiceError.noMatchFound(imdbID: imdbID)))
                 }
             case .failure(let error):
                 completion(.failure(error))
@@ -94,14 +83,14 @@ final class NguonCService {
     private func searchFilms(keyword: String, completion: @escaping (Result<[NguonCSearchResult], Error>) -> Void) {
         guard let query = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseSearchURL)?keyword=\(query)") else {
-            completion(.failure(NguonCError.invalidURL)); return
+            completion(.failure(NguonCServiceError.invalidURL)); return
         }
         URLSession.shared.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(NguonCError.noData)); return }
+            guard let data = data else { completion(.failure(NguonCServiceError.noData)); return }
             do {
                 let decoded = try JSONDecoder().decode(NguonCSearchResponse.self, from: data)
-                completion(.success(decoded.items ?? []))
+                completion(.success(decoded.data ?? decoded.items ?? []))
             } catch {
                 completion(.failure(error))
             }
@@ -112,16 +101,16 @@ final class NguonCService {
         slug: String, imdbID: String, season: Int?, episode: Int?,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        guard let url = URL(string: "https://phim.nguonc.com/api/films/\(slug)") else {
-            completion(.failure(NguonCError.invalidURL)); return
+        guard let url = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else {
+            completion(.failure(NguonCServiceError.invalidURL)); return
         }
         URLSession.shared.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(NguonCError.noData)); return }
+            guard let data = data else { completion(.failure(NguonCServiceError.noData)); return }
             do {
                 let detail = try JSONDecoder().decode(NguonCFilmDetail.self, from: data)
                 guard detail.imdbID == imdbID else {
-                    completion(.failure(NguonCError.imdbIDMismatch(expected: imdbID, got: detail.imdbID ?? "nil")))
+                    completion(.failure(NguonCServiceError.imdbIDMismatch(expected: imdbID, got: detail.imdbID ?? "nil")))
                     return
                 }
                 if let s = season, let e = episode {
@@ -130,13 +119,13 @@ final class NguonCService {
                        let streamURL = URL(string: ep.url) {
                         completion(.success(streamURL))
                     } else {
-                        completion(.failure(NguonCError.episodeNotFound(ep: target)))
+                        completion(.failure(NguonCServiceError.episodeNotFound(ep: target)))
                     }
                 } else {
                     if let streamURL = URL(string: detail.streamURL ?? detail.url ?? "") {
                         completion(.success(streamURL))
                     } else {
-                        completion(.failure(NguonCError.noStreamURL))
+                        completion(.failure(NguonCServiceError.noStreamURL))
                     }
                 }
             } catch {
@@ -146,8 +135,7 @@ final class NguonCService {
     }
 }
 
-// MARK: NguonC Models & Error
-enum NguonCError: LocalizedError {
+enum NguonCServiceError: LocalizedError {
     case invalidURL, noData
     case noMatchFound(imdbID: String)
     case imdbIDMismatch(expected: String, got: String)
@@ -165,39 +153,7 @@ enum NguonCError: LocalizedError {
     }
 }
 
-struct NguonCSearchResponse: Codable {
-    let items: [NguonCSearchResult]?
-}
-
-struct NguonCSearchResult: Codable {
-    let slug: String
-    let name: String
-    let imdbID: String?
-    enum CodingKeys: String, CodingKey {
-        case slug, name, imdbID = "imdb_id"
-    }
-}
-
-struct NguonCFilmDetail: Codable {
-    let imdbID: String?
-    let streamURL: String?
-    let url: String?
-    let episodes: [NguonCEpisode]?
-    enum CodingKeys: String, CodingKey {
-        case imdbID = "imdb_id", streamURL = "stream_url", url, episodes
-    }
-}
-
-struct NguonCEpisode: Codable {
-    let name: String
-    let url: String
-}
-
-// ============================================================
-// MARK: - StravoService.swift
-// ============================================================
-import Foundation
-
+// MARK: - Stravo Service
 final class StravoService {
     static let shared = StravoService()
     private let cache = MappingCache.shared
@@ -220,12 +176,12 @@ final class StravoService {
             urlString = "https://stravo.com/auto/stream/movie/\(imdbID).json"
         }
         guard let url = URL(string: urlString) else {
-            completion(.failure(NguonCError.invalidURL)); return
+            completion(.failure(NguonCServiceError.invalidURL)); return
         }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(NguonCError.noData)); return }
+            guard let data = data else { completion(.failure(NguonCServiceError.noData)); return }
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let streamURLString = json["url"] as? String ?? json["stream_url"] as? String,
@@ -235,7 +191,7 @@ final class StravoService {
                     }
                     completion(.success(streamURL))
                 } else {
-                    completion(.failure(NguonCError.noStreamURL))
+                    completion(.failure(NguonCServiceError.noStreamURL))
                 }
             } catch {
                 completion(.failure(error))
@@ -244,11 +200,7 @@ final class StravoService {
     }
 }
 
-// ============================================================
-// MARK: - VSMOVService.swift
-// ============================================================
-import Foundation
-
+// MARK: - VSMOV Service
 final class VSMOVService {
     static let shared = VSMOVService()
     private let cache = MappingCache.shared
@@ -268,19 +220,24 @@ final class VSMOVService {
         }
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseSearchURL)?keyword=\(query)") else {
-            completion(.failure(NguonCError.invalidURL)); return
+            completion(.failure(NguonCServiceError.invalidURL)); return
         }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(NguonCError.noData)); return }
+            guard let data = data else { completion(.failure(NguonCServiceError.noData)); return }
             do {
-                let decoded = try JSONDecoder().decode(VSMOVSearchResponse.self, from: data)
-                if let matched = decoded.items?.first(where: { $0.imdbID == imdbID }) {
-                    self.cache.setVSMOVSlug(imdbID: imdbID, slug: matched.slug)
-                    self.fetchVSMOVDetail(slug: matched.slug, imdbID: imdbID, season: season, episode: episode, completion: completion)
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let items = json["items"] as? [[String: Any]] {
+                    if let matched = items.first(where: { $0["imdb_id"] as? String == imdbID }),
+                       let slug = matched["slug"] as? String {
+                        self.cache.setVSMOVSlug(imdbID: imdbID, slug: slug)
+                        self.fetchVSMOVDetail(slug: slug, imdbID: imdbID, season: season, episode: episode, completion: completion)
+                    } else {
+                        completion(.failure(NguonCServiceError.noMatchFound(imdbID: imdbID)))
+                    }
                 } else {
-                    completion(.failure(NguonCError.noMatchFound(imdbID: imdbID)))
+                    completion(.failure(NguonCServiceError.noMatchFound(imdbID: imdbID)))
                 }
             } catch {
                 completion(.failure(error))
@@ -292,19 +249,42 @@ final class VSMOVService {
         slug: String, imdbID: String, season: Int?, episode: Int?,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        guard let url = URL(string: "https://vsmov.com/api/film/\(slug)") else {
-            completion(.failure(NguonCError.invalidURL)); return
+        guard let url = URL(string: "https://vsmov.com/api/phim/\(slug)") else {
+            completion(.failure(NguonCServiceError.invalidURL)); return
         }
         URLSession.shared.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(NguonCError.noData)); return }
+            guard let data = data else { completion(.failure(NguonCServiceError.noData)); return }
             do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let streamURLString = json["url"] as? String ?? json["m3u8"] as? String,
-                   let streamURL = URL(string: streamURLString) {
-                    completion(.success(streamURL))
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let s = season, let e = episode {
+                        if let episodes = json["episodes"] as? [[String: Any]] {
+                            for server in episodes {
+                                if let serverData = server["server_data"] as? [[String: Any]] {
+                                    for ep in serverData {
+                                        if let name = ep["name"] as? String,
+                                           let link = ep["link_embed"] as? String,
+                                           (name.lowercased() == "full" || Int(name) == e) {
+                                            let m3u8 = link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
+                                            if let streamURL = URL(string: m3u8) {
+                                                completion(.success(streamURL)); return
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        completion(.failure(NguonCServiceError.episodeNotFound(ep: "\(s)-\(e)")))
+                    } else {
+                        if let streamURLString = json["url"] as? String ?? json["m3u8"] as? String,
+                           let streamURL = URL(string: streamURLString) {
+                            completion(.success(streamURL))
+                        } else {
+                            completion(.failure(NguonCServiceError.noStreamURL))
+                        }
+                    }
                 } else {
-                    completion(.failure(NguonCError.noStreamURL))
+                    completion(.failure(NguonCServiceError.noStreamURL))
                 }
             } catch {
                 completion(.failure(error))
@@ -312,92 +292,3 @@ final class VSMOVService {
         }.resume()
     }
 }
-
-struct VSMOVSearchResponse: Codable {
-    let items: [VSMOVSearchResult]?
-}
-
-struct VSMOVSearchResult: Codable {
-    let slug: String
-    let name: String
-    let imdbID: String?
-    enum CodingKeys: String, CodingKey {
-        case slug, name, imdbID = "imdb_id"
-    }
-}
-
-// ============================================================
-// MARK: - Unified Stream Resolver (dùng trong MoviePlayerView)
-// ============================================================
-import Foundation
-
-final class StreamResolver {
-    static let shared = StreamResolver()
-    private init() {}
-    
-    func resolve(
-        imdbID: String,
-        title: String,
-        season: Int? = nil,
-        episode: Int? = nil,
-        completion: @escaping (Result<URL, Error>) -> Void
-    ) {
-        // Ưu tiên 1: NguonC
-        NguonCService.shared.fetchStream(imdbID: imdbID, title: title, season: season, episode: episode) { result in
-            switch result {
-            case .success(let url):
-                completion(.success(url))
-            case .failure:
-                // Fallback 2: Stravo
-                StravoService.shared.fetchStream(imdbID: imdbID, season: season, episode: episode) { result in
-                    switch result {
-                    case .success(let url):
-                        completion(.success(url))
-                    case .failure:
-                        // Fallback 3: VSMOV
-                        VSMOVService.shared.fetchStream(imdbID: imdbID, title: title, season: season, episode: episode, completion: completion)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ============================================================
-// MARK: - Usage in MoviePlayerView.swift
-// ============================================================
-/*
- Trong MoviePlayerView, khi cần load stream:
-
- func loadStream() {
-     guard let movie = viewModel.movie else { return }
-     
-     // Lấy IMDB ID từ TMDB
-     APIService.shared.fetchExternalIDs(movieID: movie.id, mediaType: movie.mediaType) { [weak self] result in
-         switch result {
-         case .success(let externalIDs):
-             guard let imdbID = externalIDs.imdbID else {
-                 self?.showError("Không tìm thấy IMDB ID")
-                 return
-             }
-             StreamResolver.shared.resolve(
-                 imdbID: imdbID,
-                 title: movie.title,
-                 season: self?.viewModel.selectedSeason,
-                 episode: self?.viewModel.selectedEpisode
-             ) { result in
-                 DispatchQueue.main.async {
-                     switch result {
-                     case .success(let url):
-                         self?.player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                     case .failure(let error):
-                         self?.showError(error.localizedDescription)
-                     }
-                 }
-             }
-         case .failure(let error):
-             self?.showError(error.localizedDescription)
-         }
-     }
- }
- */
