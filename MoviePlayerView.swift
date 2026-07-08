@@ -193,7 +193,17 @@ struct MoviePlayerView: View {
 
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
-    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc=AVPlayerViewController();vc.player=player;vc.showsPlaybackControls=false;vc.videoGravity=.resizeAspect;vc.allowsPictureInPicturePlayback=true;vc.canStartPictureInPictureAutomaticallyFromInline=true;try?AVAudioSession.sharedInstance().setCategory(.playback,mode:.moviePlayback,options:.allowAirPlay);try?AVAudioSession.sharedInstance().setActive(true);return vc }
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+    let vc = AVPlayerViewController()
+    vc.player = player
+    vc.showsPlaybackControls = false
+    vc.videoGravity = .resizeAspect
+    vc.allowsPictureInPicturePlayback = true
+    vc.canStartPictureInPictureAutomaticallyFromInline = true
+    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
+    try? AVAudioSession.sharedInstance().setActive(true)
+    return vc
+}
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController==nil,let layer=ui.view.layer.sublayers?.first as? AVPlayerLayer{pipController=AVPictureInPictureController(playerLayer:layer)} } }
 }
 
