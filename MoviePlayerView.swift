@@ -100,6 +100,8 @@ class NguonCService {
         if let items = try? JSONDecoder().decode(R.self, from: data).items { return items.compactMap { i in guard let s = i.slug else { return nil }; return (s, i.name ?? "", i.original_name ?? "") } }
         return []
     }
+}
+
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
