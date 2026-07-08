@@ -12,122 +12,74 @@ enum StreamError: Error, LocalizedError {
 
 enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
-// MARK: - JW Player Stream Extractor
+// MARK: - NguonC Stream Extractor
 class NguonCStreamExtractor: NSObject, WKNavigationDelegate {
-    private var webView: WKWebView!
+    private var webView: WKWebView?
     private var completion: ((String?) -> Void)?
-    private var timer: Timer?
+    private var pollingCount = 0
+    private let maxPolling = 20
     
     func getStream(hash: String, completion: @escaping (String?) -> Void) {
         self.completion = completion
-        let config = WKWebViewConfiguration()
-        config.mediaTypesRequiringUserActionForPlayback = []
-        webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
-        webView.navigationDelegate = self
-        webView.load(URLRequest(url: URL(string: "https://embed3.streamc.xyz/embed.php?hash=\(hash)")!))
-        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
-            self?.extractViaJS()
-        }
-    }
-    
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            self?.extractViaJS()
-        }
-    }
-    
-    private func extractViaJS() {
-        timer?.invalidate()
-        let js = """
-        (function() {
-            try {
-                if (typeof jwplayer !== 'undefined') {
-                    var player = jwplayer();
-                    var playlist = player.getPlaylist();
-                    if (playlist && playlist.length > 0) {
-                        var sources = playlist[0].sources || playlist[0].file;
-                        return JSON.stringify(sources);
-                    }
-                }
-                return null;
-            } catch(e) { return null; }
-        })();
-        """
-        webView.evaluateJavaScript(js) { [weak self] result, _ in
+        self.pollingCount = 0
+        DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if let jsonString = result as? String, let jsonData = jsonString.data(using: .utf8) {
-                struct JWSource: Codable { let file: String }
-                if let sources = try? JSONDecoder().decode([JWSource].self, from: jsonData) {
-                    self.finish(with: sources.first?.file)
-                    return
-                }
-                if let file = try? JSONDecoder().decode(String.self, from: jsonData) {
-                    self.finish(with: file)
-                    return
-                }
+            let config = WKWebViewConfiguration()
+            config.allowsInlineMediaPlayback = true
+            config.mediaTypesRequiringUserActionForPlayback = []
+            self.webView = WKWebView(frame: .zero, configuration: config)
+            self.webView?.navigationDelegate = self
+            self.webView?.isHidden = true
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootView = windowScene.windows.first?.rootViewController?.view {
+                rootView.addSubview(self.webView!)
             }
-            self.extractViaConfigJS()
+            self.webView?.load(URLRequest(url: URL(string: "https://embed3.streamc.xyz/embed.php?hash=\(hash)")!))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in self?.pollForJWPlayer() }
         }
     }
     
-    private func extractViaConfigJS() {
-        let js = """
-        (function() {
-            try {
-                if (typeof jwplayer !== 'undefined') {
-                    var config = jwplayer().getConfig();
-                    return JSON.stringify(config);
-                }
-                return null;
-            } catch(e) { return null; }
-        })();
-        """
-        webView.evaluateJavaScript(js) { [weak self] result, _ in
+    private func pollForJWPlayer() {
+        pollingCount += 1
+        guard let webView = webView, pollingCount <= maxPolling else { finish(with: nil); return }
+        webView.evaluateJavaScript("typeof jwplayer !== 'undefined' && jwplayer().getPlaylist") { [weak self] result, error in
             guard let self = self else { return }
-            if let configJSON = result as? String, let configData = configJSON.data(using: .utf8),
-               let config = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] {
-                if let sources = config["sources"] as? [[String: Any]],
-                   let file = sources.first?["file"] as? String {
-                    self.finish(with: file)
-                    return
-                }
-                if let playlist = config["playlist"] as? [[String: Any]],
-                   let firstItem = playlist.first {
-                    if let sources = firstItem["sources"] as? [[String: Any]],
-                       let file = sources.first?["file"] as? String {
-                        self.finish(with: file)
-                        return
-                    }
-                    if let file = firstItem["file"] as? String {
-                        self.finish(with: file)
-                        return
-                    }
-                }
+            if error != nil || result == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.pollForJWPlayer() }
+                return
             }
-            self.finish(with: nil)
+            self.extractStream()
+        }
+    }
+    
+    private func extractStream() {
+        let js = "(function(){try{var p=jwplayer().getPlaylist();if(p&&p.length>0){var s=p[0].sources;if(s&&s.length>0)return JSON.stringify(s);var f=p[0].file;if(f)return JSON.stringify([{file:f}]);}return null;}catch(e){return'ERROR:'+e.message;}})();"
+        webView?.evaluateJavaScript(js) { [weak self] result, error in
+            guard let self = self else { return }
+            guard error == nil, let jsonString = result as? String, !jsonString.hasPrefix("ERROR:"),
+                  let jsonData = jsonString.data(using: .utf8) else { self.finish(with: nil); return }
+            struct S: Codable { let file: String }
+            let sources = try? JSONDecoder().decode([S].self, from: jsonData)
+            if let m3u8 = sources?.first(where: { $0.file.hasSuffix(".m3u8") }) { self.finish(with: m3u8.file) }
+            else if let mp4 = sources?.first(where: { $0.file.hasSuffix(".mp4") }) { self.finish(with: mp4.file) }
+            else { self.finish(with: sources?.first?.file) }
         }
     }
     
     private func finish(with url: String?) {
-        DispatchQueue.main.async {
-            self.completion?(url)
-            self.webView = nil
-        }
+        DispatchQueue.main.async { self.webView?.removeFromSuperview(); self.webView = nil; self.completion?(url) }
     }
 }
 
 // MARK: - NguonC Service
 class NguonCService {
     static let shared = NguonCService()
-    
     func fetchStreamURL(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
         var searchTitle = title
         if let vi = try? await getVnTitle(movieId: movieId, mediaType: mediaType) { searchTitle = vi }
         var slugs = try? await findSlugs(title: searchTitle)
         if slugs?.isEmpty ?? true { slugs = try? await findSlugs(title: title) }
-        let lower = title.lowercased().trimmingCharacters(in: .whitespaces)
-        let filtered = slugs?.filter { $0.originalName.lowercased() == lower } ?? []
-        for item in (filtered.isEmpty ? (slugs ?? []) : filtered) {
+        for item in (slugs ?? []) {
             guard let dtUrl = URL(string: "https://phim.nguonc.com/api/film/\(item.slug)") else { continue }
             var req = URLRequest(url: dtUrl); req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
             if let (dd, _) = try? await URLSession.shared.data(for: req) {
@@ -137,16 +89,11 @@ class NguonCService {
                     for server in servers { guard let items = server.items else { continue }
                         for i in items { guard let n = i.name, !n.isEmpty, let e = i.embed, !e.isEmpty else { continue }
                             if n.lowercased() == "full" || Int(n) == episode {
-                                if let hash = URLComponents(url: URL(string: e)!, resolvingAgainstBaseURL: false)?
-                                    .queryItems?.first(where: { $0.name == "hash" })?.value {
+                                if let hash = URLComponents(url: URL(string: e)!, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "hash" })?.value {
                                     return try await withCheckedThrowingContinuation { cont in
-                                        let extractor = NguonCStreamExtractor()
-                                        extractor.getStream(hash: hash) { url in
-                                            if let u = url, let vu = URL(string: u) {
-                                                cont.resume(returning: vu)
-                                            } else {
-                                                cont.resume(throwing: StreamError.noStreamAvailable)
-                                            }
+                                        NguonCStreamExtractor().getStream(hash: hash) { url in
+                                            if let u = url, let vu = URL(string: u) { cont.resume(returning: vu) }
+                                            else { cont.resume(throwing: StreamError.noStreamAvailable) }
                                         }
                                     }
                                 }
@@ -158,7 +105,6 @@ class NguonCService {
         }
         throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy tập này"])
     }
-    
     private func getVnTitle(movieId: Int, mediaType: String?) async throws -> String? {
         let type = (mediaType == "tv") ? "tv" : "movie"
         guard let url = URL(string: "https://api.themoviedb.org/3/\(type)/\(movieId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi") else { return nil }
