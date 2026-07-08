@@ -41,7 +41,11 @@ class VSMOVService {
             }
             return items.first?.slug ?? ""
         }
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy phim"])
+        // Fallback: dùng title làm slug
+        let fallbackSlug = title.lowercased().trimmingCharacters(in: .whitespaces)
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .replacingOccurrences(of: " ", with: "-")
+        return fallbackSlug
     }
     
     func fetchStreamURL(slug: String, episode: Int) async throws -> URL {
