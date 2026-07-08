@@ -10,7 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
+enum MovieSource: String, CaseIterable { case phimapi="PhimAPI", nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
 // MARK: - MoviePlayerView
 struct MoviePlayerView: View {
@@ -18,7 +18,7 @@ struct MoviePlayerView: View {
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .vsmov; @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var selectedSource: MovieSource = .phimapi; @State private var sourceStatus: [MovieSource: Bool] = [:]
     @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
     @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
     @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
@@ -103,6 +103,20 @@ struct MoviePlayerView: View {
                 let imdbID = try await fetchIMDB()
                 
                 switch selectedSource {
+                case .phimapi:
+                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, mediaType: mediaType, season: s, episode: ep) { result in
+                            continuation.resume(with: result)
+                        }
+                    }
+                    await MainActor.run {
+                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                        player.play()
+                        sourceStatus[.phimapi] = true
+                        isLoading = false
+                    }
+                    saveHistory()
+                    
                 case .nguonc:
                     let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
                         NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { result in
