@@ -187,8 +187,7 @@ final class NguonCService {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let items = json["items"] as? [[String: Any]] {
                     let films = items.compactMap { item -> NguonCFilm? in
-                        guard let id = item["id"] as? String,
-                              let name = item["name"] as? String,
+                        guard let name = item["name"] as? String,
                               let slug = item["slug"] as? String else { return nil }
                         return NguonCFilm(id: 0, name: name, slug: slug, posterUrl: nil, type: nil)
                     }
@@ -366,12 +365,12 @@ final class PhimAPIService {
     func fetchStream(
         imdbID: String,
         tmdbID: Int,
+        title: String,
         mediaType: String?,
         season: Int? = nil,
         episode: Int? = nil,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        let type = (mediaType == "tv") ? "tv" : "movie"
         let s = season ?? 1
         let ep = episode ?? 1
         
@@ -380,7 +379,45 @@ final class PhimAPIService {
             completion(.success(url)); return
         }
         
-        guard let url = URL(string: "\(baseURL)/tmdb/\(type)/\(tmdbID)") else {
+        // Thử gọi API bằng TMDB ID trước
+        let type = (mediaType == "tv") ? "tv" : "movie"
+        guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(type)/\(tmdbID)") else {
+            completion(.failure(StreamServiceError.invalidURL)); return
+        }
+        
+        URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   json["status"] as? Bool == true,
+                   let movie = json["movie"] as? [String: Any] {
+                    
+                    let phimType = movie["type"] as? String ?? "single"
+                    
+                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
+                        self.cache.setPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep, url: streamURL.absoluteString)
+                        completion(.success(streamURL)); return
+                    }
+                    
+                    // Có movie nhưng không extract được stream -> fallback search
+                    self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+                    
+                } else {
+                    // TMDB API không thành công -> fallback search
+                    self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+                }
+            } catch {
+                self.fallbackSearch(title: title, season: season, episode: episode, completion: completion)
+            }
+        }.resume()
+    }
+    
+    private func fallbackSearch(title: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+        guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=5") else {
             completion(.failure(StreamServiceError.invalidURL)); return
         }
         
@@ -391,32 +428,94 @@ final class PhimAPIService {
             
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   json["status"] as? Bool == true,
-                   let episodes = json["episodes"] as? [[String: Any]] {
+                   json["status"] as? String == "success",
+                   let dataObj = json["data"] as? [String: Any],
+                   let items = dataObj["items"] as? [[String: Any]],
+                   let firstItem = items.first,
+                   let slug = firstItem["slug"] as? String {
                     
-                    for server in episodes {
-                        if let serverData = server["server_data"] as? [[String: Any]] {
-                            for epItem in serverData {
-                                if let name = epItem["name"] as? String,
-                                   let linkM3u8 = epItem["link_m3u8"] as? String,
-                                   let streamURL = URL(string: linkM3u8) {
-                                    // Match episode by name: "Tập 01", "Tập 02", etc.
-                                    let targetName = String(format: "Tập %02d", ep)
-                                    if name == targetName {
-                                        self.cache.setPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep, url: linkM3u8)
-                                        completion(.success(streamURL)); return
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(ep)")))
+                    // Gọi API detail bằng slug
+                    self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
                 } else {
-                    completion(.failure(StreamServiceError.noMatchFound(id: "TMDB \(tmdbID)")))
+                    completion(.failure(StreamServiceError.noMatchFound(id: title)))
                 }
             } catch {
                 completion(.failure(error))
             }
         }.resume()
+    }
+    
+    private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else {
+            completion(.failure(StreamServiceError.invalidURL)); return
+        }
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let movie = json["movie"] as? [String: Any] {
+                    
+                    let phimType = movie["type"] as? String ?? "single"
+                    
+                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
+                        completion(.success(streamURL)); return
+                    }
+                    completion(.failure(StreamServiceError.noStreamURL))
+                } else {
+                    completion(.failure(StreamServiceError.noData))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
+        if phimType == "series" || phimType == "tv" {
+            // Phim bộ: tìm episode
+            let s = season ?? 1
+            let ep = episode ?? 1
+            if let episodes = json["episodes"] as? [[String: Any]] {
+                for server in episodes {
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8) {
+                                let targetName = String(format: "Tập %02d", ep)
+                                if name == targetName {
+                                    return streamURL
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Phim lẻ (single): lấy link đầu tiên
+            if let episodes = json["episodes"] as? [[String: Any]],
+               let firstServer = episodes.first,
+               let serverData = firstServer["server_data"] as? [[String: Any]],
+               let firstEp = serverData.first,
+               let linkM3u8 = firstEp["link_m3u8"] as? String,
+               let streamURL = URL(string: linkM3u8) {
+                return streamURL
+            }
+            
+            // Thử parse movie trực tiếp
+            if let movie = json["movie"] as? [String: Any] {
+                if let linkM3u8 = movie["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) {
+                    return streamURL
+                }
+                if let urlStr = movie["url"] as? String, let streamURL = URL(string: urlStr) {
+                    return streamURL
+                }
+            }
+        }
+        return nil
     }
 }
