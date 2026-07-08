@@ -80,7 +80,7 @@ class VSMOVService {
 class NguonCService {
     static let shared = NguonCService()
     
-    func fetchStreamURL(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
+    func fetchEmbed(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
         var searchTitle = title
         if let viName = try? await getVietnameseTitle(movieId: movieId, mediaType: mediaType) { searchTitle = viName }
         var allSlugs = try await findAllSlugs(title: searchTitle)
@@ -110,10 +110,11 @@ class NguonCService {
                         guard let items = server.items else { continue }
                         for item in items {
                             guard let itemName = item.name, !itemName.isEmpty,
-                                  let embed = item.embed, !embed.isEmpty else { continue }
+                                  let embed = item.embed, !embed.isEmpty,
+                                  let embedURL = URL(string: embed) else { continue }
                             if itemName.lowercased() == "full" || Int(itemName) == episode {
-                                let m3u8String = embed + "&format=m3u8"
-                                if let vu = URL(string: m3u8String) { return vu }
+                                // Dùng EmbedExtractor để lấy m3u8 thật
+                                return try await EmbedExtractor().extractM3U8(from: embedURL)
                             }
                         }
                     }
@@ -220,7 +221,7 @@ struct MoviePlayerView: View {
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.vsmov] = true; isLoading = false }
                     saveHistory()
                 } else {
-                    let streamURL = try await NguonCService.shared.fetchStreamURL(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
+                    let streamURL = try await NguonCService.shared.fetchEmbed(title: movieTitle, episode: ep, movieId: movieId, mediaType: mediaType)
                     let item = AVPlayerItem(url: streamURL)
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.nguonc] = true; isLoading = false }
                     saveHistory()
