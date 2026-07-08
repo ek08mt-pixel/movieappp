@@ -491,20 +491,26 @@ final class PhimAPIService {
             return exactTMDB
         }
         
-        // Ưu tiên 2: match origin_name chính xác + season
-        for item in items {
-            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-            let itemType = item["type"] as? String ?? "single"
-            let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
-            let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
+        // Ưu tiên 2: với series, tìm item có season khớp targetSeason
+        if isSeries {
+            let seasonMatched = items.filter { item in
+                guard isSeriesType(item["type"] as? String ?? "") else { return false }
+                let originName = item["origin_name"] as? String ?? ""
+                let extractedSeason = extractSeasonFromOriginName(originName)
+                let tmdbSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+                let s = tmdbSeason ?? extractedSeason
+                return s == targetSeason
+            }
             
-            if originName == normalizedTitle {
-                if isSeries && isSeriesType(itemType) {
-                    let s = itemSeason ?? extractedSeason
-                    if s == targetSeason { return item }
-                } else if !isSeries && isSingleType(itemType) {
-                    return item
+            if !seasonMatched.isEmpty {
+                // Ưu tiên item không có tmdb.id (item gốc, không phải spin-off)
+                if let original = seasonMatched.first(where: {
+                    let id = ($0["tmdb"] as? [String: Any])?["id"]
+                    return id == nil || id is NSNull
+                }) {
+                    return original
                 }
+                return seasonMatched.first
             }
         }
         
