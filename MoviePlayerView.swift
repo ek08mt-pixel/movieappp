@@ -12,52 +12,107 @@ enum StreamError: Error, LocalizedError {
 
 enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
-// MARK: - Stream Interceptor (bắt m3u8/mp4 từ WebView)
-class StreamInterceptor: NSObject, WKNavigationDelegate {
-    var onStreamFound: ((String) -> Void)?
-    private var webView: WKWebView?
+// MARK: - JW Player Stream Extractor
+class NguonCStreamExtractor: NSObject, WKNavigationDelegate {
+    private var webView: WKWebView!
+    private var completion: ((String?) -> Void)?
     private var timer: Timer?
     
-    func loadEmbed(hash: String) {
+    func getStream(hash: String, completion: @escaping (String?) -> Void) {
+        self.completion = completion
         let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
-        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
-        wv.isHidden = true
-        wv.navigationDelegate = self
-        self.webView = wv
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.view.addSubview(wv)
+        webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
+        webView.navigationDelegate = self
+        webView.load(URLRequest(url: URL(string: "https://embed3.streamc.xyz/embed.php?hash=\(hash)")!))
+        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+            self?.extractViaJS()
         }
-        wv.load(URLRequest(url: URL(string: "https://embed3.streamc.xyz/embed.php?hash=\(hash)")!))
-        
-        // Timeout fallback: thử JS query
-        timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: false) { [weak self] _ in
-            self?.webView?.evaluateJavaScript("document.querySelector('video')?.src ?? ''") { result, _ in
-                if let url = result as? String, !url.isEmpty {
-                    self?.onStreamFound?(url)
-                    self?.cleanup()
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.extractViaJS()
+        }
+    }
+    
+    private func extractViaJS() {
+        timer?.invalidate()
+        let js = """
+        (function() {
+            try {
+                if (typeof jwplayer !== 'undefined') {
+                    var player = jwplayer();
+                    var playlist = player.getPlaylist();
+                    if (playlist && playlist.length > 0) {
+                        var sources = playlist[0].sources || playlist[0].file;
+                        return JSON.stringify(sources);
+                    }
+                }
+                return null;
+            } catch(e) { return null; }
+        })();
+        """
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
+            guard let self = self else { return }
+            if let jsonString = result as? String, let jsonData = jsonString.data(using: .utf8) {
+                struct JWSource: Codable { let file: String }
+                if let sources = try? JSONDecoder().decode([JWSource].self, from: jsonData) {
+                    self.finish(with: sources.first?.file)
+                    return
+                }
+                if let file = try? JSONDecoder().decode(String.self, from: jsonData) {
+                    self.finish(with: file)
+                    return
                 }
             }
+            self.extractViaConfigJS()
         }
     }
     
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if let url = navigationAction.request.url?.absoluteString {
-            if url.hasSuffix(".m3u8") || url.hasSuffix(".mp4") {
-                onStreamFound?(url)
-                cleanup()
-                decisionHandler(.cancel)
-                return
+    private func extractViaConfigJS() {
+        let js = """
+        (function() {
+            try {
+                if (typeof jwplayer !== 'undefined') {
+                    var config = jwplayer().getConfig();
+                    return JSON.stringify(config);
+                }
+                return null;
+            } catch(e) { return null; }
+        })();
+        """
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
+            guard let self = self else { return }
+            if let configJSON = result as? String, let configData = configJSON.data(using: .utf8),
+               let config = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] {
+                if let sources = config["sources"] as? [[String: Any]],
+                   let file = sources.first?["file"] as? String {
+                    self.finish(with: file)
+                    return
+                }
+                if let playlist = config["playlist"] as? [[String: Any]],
+                   let firstItem = playlist.first {
+                    if let sources = firstItem["sources"] as? [[String: Any]],
+                       let file = sources.first?["file"] as? String {
+                        self.finish(with: file)
+                        return
+                    }
+                    if let file = firstItem["file"] as? String {
+                        self.finish(with: file)
+                        return
+                    }
+                }
             }
+            self.finish(with: nil)
         }
-        decisionHandler(.allow)
     }
     
-    private func cleanup() {
-        timer?.invalidate(); timer = nil
-        webView?.stopLoading(); webView?.removeFromSuperview(); webView = nil
+    private func finish(with url: String?) {
+        DispatchQueue.main.async {
+            self.completion?(url)
+            self.webView = nil
+        }
     }
 }
 
@@ -85,12 +140,14 @@ class NguonCService {
                                 if let hash = URLComponents(url: URL(string: e)!, resolvingAgainstBaseURL: false)?
                                     .queryItems?.first(where: { $0.name == "hash" })?.value {
                                     return try await withCheckedThrowingContinuation { cont in
-                                        let interceptor = StreamInterceptor()
-                                        interceptor.onStreamFound = { url in
-                                            if let vu = URL(string: url) { cont.resume(returning: vu) }
-                                            else { cont.resume(throwing: StreamError.noStreamAvailable) }
+                                        let extractor = NguonCStreamExtractor()
+                                        extractor.getStream(hash: hash) { url in
+                                            if let u = url, let vu = URL(string: u) {
+                                                cont.resume(returning: vu)
+                                            } else {
+                                                cont.resume(throwing: StreamError.noStreamAvailable)
+                                            }
                                         }
-                                        DispatchQueue.main.async { interceptor.loadEmbed(hash: hash) }
                                     }
                                 }
                             }
