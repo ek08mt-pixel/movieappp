@@ -14,7 +14,6 @@ enum StreamError: Error, LocalizedError {
 
 enum MovieSource: String, CaseIterable { case vsmov="VSMOV", nguonc="NguonC" }
 
-// VSMOV Service
 class VSMOVService {
     static let shared = VSMOVService()
     private let baseURL = "https://vsmov.com/api"
@@ -63,10 +62,10 @@ class VSMOVService {
                 guard let items = server.server_data else { continue }
                 for item in items {
                     guard let itemName = item.name, !itemName.isEmpty,
-                          let embed = item.link_embed, !embed.isEmpty,
-                          let vu = URL(string: embed) else { continue }
+                          let embed = item.link_embed, !embed.isEmpty else { continue }
                     if itemName.lowercased() == "full" || Int(itemName) == episode {
-                        return vu
+                        let m3u8URL = embed.hasSuffix("/") ? "\(embed)master-b2.m3u8" : "\(embed)/master-b2.m3u8"
+                        if let vu = URL(string: m3u8URL) { return vu }
                     }
                 }
             }
@@ -75,7 +74,6 @@ class VSMOVService {
     }
 }
 
-// NguonC Service (fallback)
 class NguonCService {
     static let shared = NguonCService()
     
@@ -219,11 +217,7 @@ struct MoviePlayerView: View {
                 if selectedSource == .vsmov {
                     let slug = try await VSMOVService.shared.searchSlug(title: movieTitle)
                     let streamURL = try await VSMOVService.shared.fetchStreamURL(slug: slug, episode: ep)
-                    let asset = AVURLAsset(url: streamURL, options: ["AVURLAssetHTTPHeaderFieldsKey": [
-                        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-                        "Referer": "https://vsmov.com/"
-                    ]])
-                    let item = AVPlayerItem(asset: asset)
+                    let item = AVPlayerItem(url: streamURL)
                     await MainActor.run { player.replaceCurrentItem(with: item); player.play(); sourceStatus[.vsmov] = true; isLoading = false }
                     saveHistory()
                 } else {
