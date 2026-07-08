@@ -1,6 +1,7 @@
 import SwiftUI
 import AVKit
 import MediaPlayer
+import WebKit
 
 enum StreamError: Error, LocalizedError {
     case noStreamAvailable, wrongEpisode
@@ -11,33 +12,58 @@ enum StreamError: Error, LocalizedError {
 
 enum MovieSource: String, CaseIterable { case nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
-// MARK: - NguonC Service (AVPlayer trực tiếp)
+// MARK: - Stream Interceptor (bắt m3u8/mp4 từ WebView)
+class StreamInterceptor: NSObject, WKNavigationDelegate {
+    var onStreamFound: ((String) -> Void)?
+    private var webView: WKWebView?
+    private var timer: Timer?
+    
+    func loadEmbed(hash: String) {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
+        wv.isHidden = true
+        wv.navigationDelegate = self
+        self.webView = wv
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.view.addSubview(wv)
+        }
+        wv.load(URLRequest(url: URL(string: "https://embed3.streamc.xyz/embed.php?hash=\(hash)")!))
+        
+        // Timeout fallback: thử JS query
+        timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: false) { [weak self] _ in
+            self?.webView?.evaluateJavaScript("document.querySelector('video')?.src ?? ''") { result, _ in
+                if let url = result as? String, !url.isEmpty {
+                    self?.onStreamFound?(url)
+                    self?.cleanup()
+                }
+            }
+        }
+    }
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url?.absoluteString {
+            if url.hasSuffix(".m3u8") || url.hasSuffix(".mp4") {
+                onStreamFound?(url)
+                cleanup()
+                decisionHandler(.cancel)
+                return
+            }
+        }
+        decisionHandler(.allow)
+    }
+    
+    private func cleanup() {
+        timer?.invalidate(); timer = nil
+        webView?.stopLoading(); webView?.removeFromSuperview(); webView = nil
+    }
+}
+
+// MARK: - NguonC Service
 class NguonCService {
     static let shared = NguonCService()
-    
-    struct StreamSource: Codable { let file: String; let type: String?; let label: String? }
-    struct VideoSource: Codable { let sources: [StreamSource]? }
-    struct APIResponse: Codable { let videoSource: [VideoSource]? }
-    
-    func fetchStreamURL(embedHash: String) async throws -> URL {
-        let url = URL(string: "https://embed3.streamc.xyz/api/get-source")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        req.setValue("https://embed3.streamc.xyz", forHTTPHeaderField: "Referer")
-        req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
-        req.httpBody = "hash=\(embedHash)&r=&type=embed".data(using: .utf8)
-        let (data, _) = try await URLSession.shared.data(for: req)
-        if let decoded = try? JSONDecoder().decode(APIResponse.self, from: data),
-           let sources = decoded.videoSource?.first?.sources {
-            if let m3u8 = sources.first(where: { $0.type?.contains("mpegURL") == true || $0.file.hasSuffix(".m3u8") }) {
-                if let vu = URL(string: m3u8.file) { return vu }
-            }
-            if let mp4 = sources.first(where: { $0.file.hasSuffix(".mp4") }), let vu = URL(string: mp4.file) { return vu }
-            if let first = sources.first, let vu = URL(string: first.file) { return vu }
-        }
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không lấy được stream"])
-    }
     
     func fetchStreamURL(title: String, episode: Int, movieId: Int, mediaType: String?) async throws -> URL {
         var searchTitle = title
@@ -58,7 +84,14 @@ class NguonCService {
                             if n.lowercased() == "full" || Int(n) == episode {
                                 if let hash = URLComponents(url: URL(string: e)!, resolvingAgainstBaseURL: false)?
                                     .queryItems?.first(where: { $0.name == "hash" })?.value {
-                                    return try await fetchStreamURL(embedHash: hash)
+                                    return try await withCheckedThrowingContinuation { cont in
+                                        let interceptor = StreamInterceptor()
+                                        interceptor.onStreamFound = { url in
+                                            if let vu = URL(string: url) { cont.resume(returning: vu) }
+                                            else { cont.resume(throwing: StreamError.noStreamAvailable) }
+                                        }
+                                        DispatchQueue.main.async { interceptor.loadEmbed(hash: hash) }
+                                    }
                                 }
                             }
                         }
