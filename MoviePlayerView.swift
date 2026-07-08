@@ -105,7 +105,7 @@ struct MoviePlayerView: View {
                 switch selectedSource {
                 case .phimapi:
                     let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, mediaType: mediaType, season: s, episode: ep) { result in
+                        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { result in
                             continuation.resume(with: result)
                         }
                     }
