@@ -10,20 +10,15 @@ jobs:
       
       - name: Generate App Icon
         run: |
-          # Tải ảnh từ GitHub raw
-          curl -L -o icon.jpeg "https://raw.githubusercontent.com/ek08mt-pixel/movieappp/refs/heads/main/Facetune_08-07-2026-15-08-14.jpeg"
-          
-          # Tạo thư mục Assets.xcassets/AppIcon.appiconset
+          curl -L -o icon.png "https://raw.githubusercontent.com/ek08mt-pixel/movieappp/refs/heads/main/AppIcon.png"
           mkdir -p Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset
           
-          # Dùng sips để resize ảnh thành các kích thước icon
-          sips -z 1024 1024 icon.jpeg --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-1024.png
-          sips -z 180 180 icon.jpeg --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@3x.png
-          sips -z 120 120 icon.jpeg --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@2x.png
-          sips -z 76 76 icon.jpeg --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76.png
-          sips -z 152 152 icon.jpeg --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76@2x.png
+          sips -z 1024 1024 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          sips -z 180 180 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@3x.png
+          sips -z 120 120 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@2x.png
+          sips -z 76 76 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76.png
+          sips -z 152 152 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76@2x.png
           
-          # Tạo Contents.json
           cat > Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/Contents.json << 'EOF'
           {"images":[{"size":"60x60","idiom":"iphone","filename":"icon-60@2x.png","scale":"2x"},{"size":"60x60","idiom":"iphone","filename":"icon-60@3x.png","scale":"3x"},{"size":"76x76","idiom":"ipad","filename":"icon-76.png","scale":"1x"},{"size":"76x76","idiom":"ipad","filename":"icon-76@2x.png","scale":"2x"},{"size":"1024x1024","idiom":"ios-marketing","filename":"icon-1024.png","scale":"1x"}],"info":{"version":1,"author":"xcode"}}
           EOF
@@ -31,7 +26,6 @@ jobs:
       - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          
           SWIFT_FILES=$(find . -name "*.swift" | tr '\n' ' ')
           echo "Files: $SWIFT_FILES"
           
