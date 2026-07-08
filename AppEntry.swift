@@ -80,20 +80,10 @@ class AppState: ObservableObject {
 @main
 struct AppEntry: App {
     @StateObject var appState = AppState()
-    @StateObject var diceManager = DiceManager.shared
     
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                SplashView().environmentObject(appState)
-                
-                if diceManager.showDice {
-                    DiceOverlayView()
-                        .environmentObject(appState)
-                        .transition(.opacity)
-                        .animation(.easeInOut(duration: 0.3), value: diceManager.showDice)
-                }
-            }
+            SplashView().environmentObject(appState)
         }
     }
 }
