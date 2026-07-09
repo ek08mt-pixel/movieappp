@@ -266,7 +266,7 @@ final class PhimAPIService {
     }
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=10") else { completion(.failure(StreamServiceError.invalidURL)); return }
+        guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
