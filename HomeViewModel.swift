@@ -1,5 +1,7 @@
 import Foundation
 
+struct OnThisDayItem { let movie: Movie; let subtitle: String }
+
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var trending24h: [Movie] = []
@@ -14,6 +16,7 @@ class HomeViewModel: ObservableObject {
     @Published var anime: [Movie] = []
     @Published var genres: [Genre] = []
     @Published var movieOfDay: Movie?
+    @Published var onThisDayMovie: OnThisDayItem?
     @Published var isLoading = false
     
     init() {}
@@ -22,24 +25,23 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Load critical first
         async let trendingTask = APIService.shared.trending24h()
         async let genresTask = APIService.shared.genres()
+        async let onThisDayTask = loadOnThisDay()
         
         if let trending = try? await trendingTask {
             trending24h = trending
             movieOfDay = trending.randomElement()
         }
         genres = (try? await genresTask) ?? []
+        onThisDayMovie = await onThisDayTask
         
-        // Load TV in background
         Task { [weak self] in
             guard let self = self else { return }
             let tv = await self.loadTrendingTVPages()
             await MainActor.run { self.trendingTV = tv }
         }
         
-        // Load all categories concurrently
         async let nowPlayingTask = APIService.shared.nowPlaying()
         async let upcomingTask = APIService.shared.upcoming()
         async let topRatedTask = APIService.shared.topRated()
@@ -59,6 +61,53 @@ class HomeViewModel: ObservableObject {
         anime = (try? await animeTask) ?? []
         
         isLoading = false
+    }
+    
+    private func loadOnThisDay() async -> OnThisDayItem? {
+        let today = Date()
+        let fmt = DateFormatter(); fmt.dateFormat = "MM-dd"
+        let md = fmt.string(from: today)
+        let thisYear = Calendar.current.component(.year, from: today)
+        
+        let famousMovies: [(title: String, date: String, year: Int, tmdbId: Int, subtitle: String)] = [
+            ("The Dark Knight", "07-18", 2008, 155, "Ra mắt cách đây \(thisYear-2008) năm"),
+            ("Inception", "07-16", 2010, 27205, "Ra mắt cách đây \(thisYear-2010) năm"),
+            ("Parasite", "05-30", 2019, 496243, "Đoạt Oscar Phim hay nhất 2020"),
+            ("Interstellar", "11-07", 2014, 157336, "Ra mắt cách đây \(thisYear-2014) năm"),
+            ("Joker", "10-04", 2019, 475557, "Ra mắt cách đây \(thisYear-2019) năm"),
+            ("Avengers: Endgame", "04-26", 2019, 299534, "Ra mắt cách đây \(thisYear-2019) năm"),
+            ("Titanic", "12-19", 1997, 597, "Ra mắt cách đây \(thisYear-1997) năm"),
+            ("The Matrix", "03-31", 1999, 603, "Ra mắt cách đây \(thisYear-1999) năm"),
+            ("Pulp Fiction", "10-14", 1994, 680, "Ra mắt cách đây \(thisYear-1994) năm"),
+            ("Fight Club", "10-15", 1999, 550, "Ra mắt cách đây \(thisYear-1999) năm"),
+            ("Forrest Gump", "07-06", 1994, 13, "Ra mắt cách đây \(thisYear-1994) năm"),
+            ("The Shawshank Redemption", "09-23", 1994, 278, "Ra mắt cách đây \(thisYear-1994) năm"),
+            ("Spirited Away", "07-20", 2001, 129, "Ra mắt cách đây \(thisYear-2001) năm"),
+            ("Your Name", "08-26", 2016, 372058, "Ra mắt cách đây \(thisYear-2016) năm"),
+            ("Oldboy", "11-21", 2003, 670, "Ra mắt cách đây \(thisYear-2003) năm"),
+            ("Amélie", "04-25", 2001, 194, "Ra mắt cách đây \(thisYear-2001) năm"),
+            ("The Godfather", "03-24", 1972, 238, "Ra mắt cách đây \(thisYear-1972) năm"),
+            ("Schindler's List", "12-15", 1993, 424, "Ra mắt cách đây \(thisYear-1993) năm"),
+            ("The Lion King", "06-24", 1994, 8587, "Ra mắt cách đây \(thisYear-1994) năm"),
+            ("Back to the Future", "07-03", 1985, 105, "Ra mắt cách đây \(thisYear-1985) năm"),
+            ("Jurassic Park", "06-11", 1993, 329, "Ra mắt cách đây \(thisYear-1993) năm"),
+            ("E.T.", "06-11", 1982, 601, "Ra mắt cách đây \(thisYear-1982) năm"),
+            ("Gladiator", "05-05", 2000, 98, "Ra mắt cách đây \(thisYear-2000) năm"),
+            ("The Silence of the Lambs", "02-14", 1991, 274, "Ra mắt cách đây \(thisYear-1991) năm"),
+            ("Saving Private Ryan", "07-24", 1998, 857, "Ra mắt cách đây \(thisYear-1998) năm"),
+            ("The Prestige", "10-20", 2006, 1124, "Ra mắt cách đây \(thisYear-2006) năm"),
+            ("Django Unchained", "12-25", 2012, 68718, "Ra mắt cách đây \(thisYear-2012) năm"),
+            ("La La Land", "12-09", 2016, 313369, "Ra mắt cách đây \(thisYear-2016) năm"),
+            ("Get Out", "02-24", 2017, 419430, "Ra mắt cách đây \(thisYear-2017) năm"),
+            ("Mad Max: Fury Road", "05-15", 2015, 76341, "Ra mắt cách đây \(thisYear-2015) năm"),
+            ("The Social Network", "10-01", 2010, 37799, "Ra mắt cách đây \(thisYear-2010) năm")
+        ]
+        
+        let matched = famousMovies.filter { $0.date == md }
+        let pick = matched.randomElement() ?? famousMovies.randomElement()!
+        
+        let movie = Movie(id: pick.tmdbId, title: pick.title, overview: "", posterPath: nil, backdropPath: nil, voteAverage: 0, releaseDate: "\(pick.year)", genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: "movie")
+        return OnThisDayItem(movie: movie, subtitle: pick.subtitle)
     }
     
     private func loadTrendingTVPages() async -> [Movie] {
