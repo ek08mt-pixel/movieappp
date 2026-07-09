@@ -52,25 +52,22 @@ struct MoviePlayerView: View {
                 VStack{Spacer(); VStack(spacing:8){Slider(value:$currentTime,in:0...max(duration,1)){e in isSeeking=e; if !e{player.seek(to:CMTime(seconds:currentTime,preferredTimescale:600))}}.accentColor(.white).padding(.horizontal,30); HStack{Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7));Spacer();Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))}.padding(.horizontal,30)
                     HStack(spacing:0){
                         Spacer()
-                        HStack(spacing:32){
-                            Button{prevEpisode()}label:{Image(systemName:"backward.end.fill").font(.system(size:22)).foregroundColor(.white.opacity(0.9))}
-                            Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation":"lock.open.rotation").font(.system(size:22)).foregroundColor(.white.opacity(0.9))}
-                            Button{showSubtitlePopup=true}label:{Image(systemName:"captions.bubble").font(.system(size:22)).foregroundColor(.white.opacity(0.9))}
-                            Button{showAudioPopup=true}label:{Image(systemName:"waveform").font(.system(size:22)).foregroundColor(.white.opacity(0.9))}
-                            Button{nextEpisode()}label:{Image(systemName:"forward.end.fill").font(.system(size:22)).foregroundColor(.white.opacity(0.9))}
+                        HStack(spacing:40){
+                            Button{prevEpisode()}label:{Image(systemName:"backward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
+                            Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation":"lock.open.rotation").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
+                            Button{showSubtitlePopup=true}label:{Image(systemName:"captions.bubble").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
+                            Button{showAudioPopup=true}label:{Image(systemName:"waveform").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
+                            Button{nextEpisode()}label:{Image(systemName:"forward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                         }
                         Spacer()
-                        Button{toggleOrientation()}label:{Image(systemName:"rotate.right").font(.system(size:16)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
-                    }.padding(.horizontal,16).padding(.bottom,24)
+                        Button{toggleOrientation()}label:{Image(systemName:"rotate.right").font(.system(size:18)).foregroundColor(.white.opacity(0.8)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
+                    }.padding(.horizontal,20).padding(.bottom,30)
                 }.background(LinearGradient(colors:[.clear,.black.opacity(0.5)],startPoint:.top,endPoint:.bottom))}
                 VStack{HStack{Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Spacer();Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1);Spacer();HStack(spacing:6){Button{pipController?.startPictureInPicture()}label:{Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSettings=true}label:{Image(systemName:"gearshape.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSourceMenu=true}label:{Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}}}.padding(.horizontal,8).padding(.top,50);Spacer()}
             }
             if showOverlay { youtubeOverlay }
-            // Popups centered
             if showSourceMenu || showSettings || showSubtitlePopup || showAudioPopup {
-                Color.black.opacity(0.3).ignoresSafeArea().onTapGesture {
-                    showSourceMenu = false; showSettings = false; showSubtitlePopup = false; showAudioPopup = false
-                }
+                Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showSubtitlePopup = false; showAudioPopup = false }
                 if showSourceMenu { sourcePopup }
                 if showSettings { settingsPopup }
                 if showSubtitlePopup { subtitlePopup }
@@ -88,24 +85,33 @@ struct MoviePlayerView: View {
         ZStack(alignment:.bottom){ Color.black.opacity(0.4).ignoresSafeArea().onTapGesture{closeOverlay()}
             VStack(spacing:0){ Capsule().fill(.white.opacity(0.5)).frame(width:40,height:5).padding(.top,10)
                 ScrollView{ VStack(alignment:.leading,spacing:16){
-                    if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); HStack(spacing:10){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:10)); VStack(alignment:.leading,spacing:4){Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2); if !seasons.isEmpty{Text("\(seasons.count) mùa").font(.caption).foregroundColor(.gray)}; if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}};Spacer()}.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3)))
-                        if let detail = selectedSeasonDetail {
-                            VStack(alignment:.leading,spacing:6){
-                                Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption).foregroundColor(.white.opacity(0.7))
-                                ScrollView(.horizontal,showsIndicators:false){
-                                    HStack(spacing:6){
-                                        ForEach(detail.episodes){ep in
-                                            Button{ loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() }label:{
-                                                Text("\(ep.episodeNumber)").font(.system(size:11,weight:.medium))
-                                                    .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
-                                                    .frame(width:32,height:32)
-                                                    .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)))
+                    if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                        HStack(spacing:12){
+                            CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:60,height:90).clipShape(RoundedRectangle(cornerRadius:10))
+                            VStack(alignment:.leading,spacing:4){
+                                Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2)
+                                if !seasons.isEmpty{Text("\(seasons.count) mùa").font(.caption).foregroundColor(.gray)}
+                                if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}
+                                // Danh sách tập ngang cạnh poster
+                                if let detail = selectedSeasonDetail {
+                                    Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption2).foregroundColor(.white.opacity(0.6)).padding(.top,2)
+                                    ScrollView(.horizontal,showsIndicators:false){
+                                        HStack(spacing:6){
+                                            ForEach(detail.episodes){ep in
+                                                Button{ loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() }label:{
+                                                    Text("\(ep.episodeNumber)").font(.system(size:10,weight:.medium))
+                                                        .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
+                                                        .frame(width:30,height:30)
+                                                        .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : .ultraThinMaterial.opacity(0.4)))
+                                                        .overlay(Circle().stroke(.white.opacity(0.15),lineWidth:0.5))
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
+                            Spacer()
+                        }.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3)))
                         if !collectionMovies.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(collectionMovies.filter{$0.id != movieId}){part in Button{openMovie(part)}label:{VStack(spacing:4){CachedAsyncImage(url:part.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:8)); Text(part.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:70)}}}}} }
                         if !seasons.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:6){ForEach(seasons){season in Button{selectedSeasonNumber=season.seasonNumber; Task{selectedSeasonDetail=try? await APIService.shared.fetchSeasonDetail(tvId:movieId,seasonNumber:season.seasonNumber)}}label:{Text(season.name).font(.caption).fontWeight(selectedSeasonNumber==season.seasonNumber ? .bold:.regular).foregroundColor(selectedSeasonNumber==season.seasonNumber ? .white:.gray).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(selectedSeasonNumber==season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)):AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))}}}} } } }
                     if !similarMovies.isEmpty { VStack(alignment:.leading,spacing:8){Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(similarMovies.prefix(15)){movie in Button{openMovie(movie)}label:{VStack(spacing:4){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:90,height:135).clipShape(RoundedRectangle(cornerRadius:10));Text(movie.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:90)}}}}}} }
