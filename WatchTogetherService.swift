@@ -1,0 +1,196 @@
+import Foundation
+
+// MARK: - Watch Together Service
+class WatchTogetherService: ObservableObject {
+    static let shared = WatchTogetherService()
+    
+    private let baseURL = "https://emmew-d71a8-default-rtdb.firebaseio.com"
+    private var roomCode: String = ""
+    private var userId: String = ""
+    private var userName: String = ""
+    private var timer: Timer?
+    
+    @Published var isInRoom = false
+    @Published var isHost = false
+    @Published var messages: [ChatMessage] = []
+    @Published var participants: [Participant] = []
+    @Published var remoteState: RemotePlaybackState?
+    
+    struct ChatMessage: Codable, Identifiable {
+        var id: String { "\(timestamp)_\(userId)" }
+        let userId: String
+        let userName: String
+        let text: String
+        let timestamp: Double
+    }
+    
+    struct Participant: Codable {
+        let userId: String
+        let userName: String
+        var isOnline: Bool
+    }
+    
+    struct RemotePlaybackState: Codable {
+        let action: String // "play", "pause", "seek"
+        let time: Double
+        let timestamp: Double
+    }
+    
+    // MARK: - Room Management
+    func createRoom(userName: String, completion: @escaping (String) -> Void) {
+        self.userName = userName
+        self.userId = UUID().uuidString
+        self.isHost = true
+        
+        let code = String(format: "%06d", Int.random(in: 0...999999))
+        self.roomCode = code
+        
+        // Tạo room trên Firebase
+        let roomData: [String: Any] = [
+            "code": code,
+            "hostId": userId,
+            "hostName": userName,
+            "createdAt": Date().timeIntervalSince1970,
+            "participants": [
+                userId: ["userId": userId, "userName": userName, "isOnline": true]
+            ]
+        ]
+        
+        put(path: "rooms/\(code)/info", data: roomData) { _ in
+            self.isInRoom = true
+            self.startListening()
+            completion(code)
+        }
+    }
+    
+    func joinRoom(code: String, userName: String, completion: @escaping (Bool) -> Void) {
+        self.userName = userName
+        self.userId = UUID().uuidString
+        self.roomCode = code
+        self.isHost = false
+        
+        get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
+            guard let self = self, let data = data, data["code"] != nil else {
+                completion(false)
+                return
+            }
+            
+            // Thêm participant
+            let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "isOnline": true]
+            self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { _ in
+                self.isInRoom = true
+                self.startListening()
+                completion(true)
+            }
+        }
+    }
+    
+    func leaveRoom() {
+        timer?.invalidate()
+        delete(path: "rooms/\(roomCode)/info/participants/\(userId)") { _ in }
+        isInRoom = false
+        isHost = false
+        messages = []
+        participants = []
+        roomCode = ""
+    }
+    
+    // MARK: - Playback Sync
+    func sendPlaybackState(action: String, time: Double) {
+        let state: [String: Any] = [
+            "action": action,
+            "time": time,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        put(path: "rooms/\(roomCode)/playback", data: state)
+    }
+    
+    // MARK: - Chat
+    func sendMessage(text: String) {
+        let msg = ChatMessage(userId: userId, userName: userName, text: text, timestamp: Date().timeIntervalSince1970)
+        if let data = try? JSONEncoder().encode(msg),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let msgId = "\(Int(msg.timestamp * 1000))"
+            put(path: "rooms/\(roomCode)/messages/\(msgId)", data: dict)
+        }
+    }
+    
+    // MARK: - Listeners
+    private func startListening() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.fetchUpdates()
+        }
+    }
+    
+    private func fetchUpdates() {
+        // Lấy playback state
+        get(path: "rooms/\(roomCode)/playback") { [weak self] (data: [String: Any]?) in
+            guard let self = self, let data = data,
+                  let action = data["action"] as? String,
+                  let time = data["time"] as? Double else { return }
+            DispatchQueue.main.async {
+                self.remoteState = RemotePlaybackState(action: action, time: time, timestamp: data["timestamp"] as? Double ?? 0)
+            }
+        }
+        
+        // Lấy messages mới nhất
+        get(path: "rooms/\(roomCode)/messages") { [weak self] (data: [String: Any]?) in
+            guard let self = self, let data = data else { return }
+            let sorted = data.compactMap { _, value -> ChatMessage? in
+                guard let dict = value as? [String: Any],
+                      let data = try? JSONSerialization.data(withJSONObject: dict),
+                      let msg = try? JSONDecoder().decode(ChatMessage.self, from: data) else { return nil }
+                return msg
+            }.sorted { $0.timestamp < $1.timestamp }
+            
+            DispatchQueue.main.async {
+                self.messages = Array(sorted.suffix(50))
+            }
+        }
+        
+        // Lấy participants
+        get(path: "rooms/\(roomCode)/info/participants") { [weak self] (data: [String: Any]?) in
+            guard let self = self, let data = data else { return }
+            let parts = data.compactMap { _, value -> Participant? in
+                guard let dict = value as? [String: Any],
+                      let userId = dict["userId"] as? String,
+                      let userName = dict["userName"] as? String else { return nil }
+                return Participant(userId: userId, userName: userName, isOnline: dict["isOnline"] as? Bool ?? true)
+            }
+            DispatchQueue.main.async {
+                self.participants = parts
+            }
+        }
+    }
+    
+    // MARK: - HTTP Helpers
+    private func get<T>(path: String, completion: @escaping (T?) -> Void) {
+        guard let url = URL(string: "\(baseURL)/\(path).json") else { completion(nil); return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? T else { completion(nil); return }
+            completion(json)
+        }.resume()
+    }
+    
+    private func put(path: String, data: Any, completion: ((Bool) -> Void)? = nil) {
+        guard let url = URL(string: "\(baseURL)/\(path).json"),
+              let body = try? JSONSerialization.data(withJSONObject: data) else { completion?(false); return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.httpBody = body
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        URLSession.shared.dataTask(with: req) { _, response, _ in
+            completion?((response as? HTTPURLResponse)?.statusCode == 200)
+        }.resume()
+    }
+    
+    private func delete(path: String, completion: ((Bool) -> Void)? = nil) {
+        guard let url = URL(string: "\(baseURL)/\(path).json") else { completion?(false); return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        URLSession.shared.dataTask(with: req) { _, response, _ in
+            completion?((response as? HTTPURLResponse)?.statusCode == 200)
+        }.resume()
+    }
+}
