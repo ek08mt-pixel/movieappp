@@ -124,6 +124,64 @@ struct HomeView: View {
                             }.padding(.vertical, 10)
                         }
                         
+                        // Continue Watching
+                        if !appState.watchProgressList.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 14) {
+                                        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
+                                            NavigationLink(destination: MoviePlayerView(
+                                                movieId: prog.movieId,
+                                                movieTitle: prog.movieTitle,
+                                                mediaType: prog.mediaType,
+                                                seasonNumber: prog.season,
+                                                episodeNumber: prog.episode,
+                                                posterURL: URL(string: prog.posterPath ?? "")
+                                            ).environmentObject(appState)) {
+                                                VStack(alignment: .leading, spacing: 6) {
+                                                    ZStack(alignment: .bottom) {
+                                                        CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
+                                                            .aspectRatio(2/3, contentMode: .fill)
+                                                            .frame(width: 115, height: 172)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                        
+                                                        GeometryReader { geo in
+                                                            RoundedRectangle(cornerRadius: 2)
+                                                                .fill(.white.opacity(0.3))
+                                                                .frame(height: 3)
+                                                                .overlay(alignment: .leading) {
+                                                                    RoundedRectangle(cornerRadius: 2)
+                                                                        .fill(.blue)
+                                                                        .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
+                                                                }
+                                                        }
+                                                        .frame(height: 3)
+                                                        .padding(.horizontal, 4)
+                                                        .padding(.bottom, 4)
+                                                    }
+                                                    .shadow(color: .black.opacity(0.3), radius: 3)
+                                                    
+                                                    Text(prog.movieTitle)
+                                                        .font(.system(size: 10))
+                                                        .fontWeight(.semibold)
+                                                        .foregroundColor(.white)
+                                                        .lineLimit(2)
+                                                        .frame(width: 115, alignment: .leading)
+                                                    
+                                                    if let ep = prog.episode {
+                                                        Text("S\(prog.season ?? 1) E\(ep)")
+                                                            .font(.system(size: 8))
+                                                            .foregroundColor(.gray)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }.padding(.horizontal, 20)
+                                }
+                            }.padding(.top, 24)
+                        }
+                        
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
