@@ -17,7 +17,6 @@ struct MovieDetailView: View {
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
-    // Xác định mediaType để truyền vào player
     var playerMediaType: String? {
         if let mt = movie.mediaType { return mt }
         if playSeason != nil || playEpisode != nil { return "tv" }
@@ -29,7 +28,7 @@ struct MovieDetailView: View {
             Color.black.ignoresSafeArea()
             
             GeometryReader { geo in
-                CachedAsyncImage(url: movie.backdropURL)
+                CachedAsyncImage(url: movie.backdropURL, size: .backdrop)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: geo.size.width, height: geo.size.height + 100)
                     .blur(radius: 60)
@@ -40,7 +39,7 @@ struct MovieDetailView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ZStack(alignment: .topLeading) {
-                        CachedAsyncImage(url: movie.backdropURL)
+                        CachedAsyncImage(url: movie.backdropURL, size: .backdrop)
                             .aspectRatio(16/9, contentMode: .fill)
                             .frame(width: UIScreen.main.bounds.width, height: 320).clipped()
                             .overlay(LinearGradient(colors: [.clear, .clear, Color.black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
@@ -52,7 +51,7 @@ struct MovieDetailView: View {
                     
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(alignment: .top, spacing: 14) {
-                            CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.6), radius: 8).offset(y: -45)
+                            CachedAsyncImage(url: movie.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.6), radius: 8).offset(y: -45)
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
@@ -93,7 +92,7 @@ struct MovieDetailView: View {
                                         ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in
                                             NavigationLink(destination: MovieDetailView(movie: part)) {
                                                 VStack(spacing: 6) {
-                                                    CachedAsyncImage(url: part.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    CachedAsyncImage(url: part.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10))
                                                     Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100)
                                                     Text(part.yearText).font(.system(size: 9)).foregroundColor(.gray)
                                                 }
@@ -119,7 +118,7 @@ struct MovieDetailView: View {
                                         } label: {
                                             HStack {
                                                 if let url = season.posterURL {
-                                                    CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                    CachedAsyncImage(url: url, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
                                                 } else {
                                                     RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60).overlay(Image(systemName: "tv").foregroundColor(.white.opacity(0.5)))
                                                 }
@@ -143,7 +142,7 @@ struct MovieDetailView: View {
                                                         } label: {
                                                             HStack(spacing: 10) {
                                                                 if let still = ep.stillURL {
-                                                                    CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                                    CachedAsyncImage(url: still, size: .detail).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
                                                                 } else {
                                                                     RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
                                                                 }
@@ -170,16 +169,16 @@ struct MovieDetailView: View {
                         if !vm.images.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.white) }
-                                ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } }
+                                ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } }
                             }
                         }
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } }
+                            ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL, size: .detail).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } }
                         }
                         if !vm.similar.isEmpty {
                             Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } }
+                            ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } }
                         }
                     }.padding(.horizontal, 20)
                     Spacer().frame(height: 100)
@@ -220,7 +219,7 @@ struct MovieImagesView: View {
                 HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding()
                 TabView {
                     ForEach(images, id: \.self) { url in
-                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16)
+                        CachedAsyncImage(url: url, size: .backdrop).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16)
                     }
                 }.tabViewStyle(.page(indexDisplayMode: .always))
             }
