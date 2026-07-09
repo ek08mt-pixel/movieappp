@@ -190,7 +190,7 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showPlayer) {
             MoviePlayerView(
                 movieId: movie.id,
-                movieTitle: movie.title,
+                movieTitle: movie.originalTitle ?? movie.title,
                 mediaType: playerMediaType,
                 seasonNumber: playSeason,
                 episodeNumber: playEpisode,
