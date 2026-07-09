@@ -34,18 +34,18 @@ struct MoviePlayerView: View {
     @State private var isOrientationLocked = true
     @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
     
-    // MARK: - Watch Together State
+    // Watch Together
     @StateObject private var watchService = WatchTogetherService.shared
     @State private var showWatchSetup = false
     @State private var showChat = true
     @State private var watchUserName = ""
+    @State private var watchRoomName = ""
     @State private var watchMessage = ""
     @State private var joinCode = ""
     @State private var joinError = ""
     @State private var toastMessage = ""
     @State private var showToast = false
     @State private var toastTimer: Timer?
-    @State private var chatScrollProxy: ScrollViewProxy?
     
     var body: some View {
         ZStack {
@@ -78,16 +78,11 @@ struct MoviePlayerView: View {
                     }.padding(.horizontal,20).padding(.bottom,30)
                 }.background(LinearGradient(colors:[.clear,.black.opacity(0.5)],startPoint:.top,endPoint:.bottom))}
                 VStack{HStack{Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Spacer();Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1);Spacer();HStack(spacing:6){Button{pipController?.startPictureInPicture()}label:{Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
-                    // Nút Watch Together
                     Button {
-                        if watchService.isInRoom {
-                            showChat.toggle()
-                        } else {
-                            showWatchSetup = true
-                        }
+                        if watchService.isInRoom { showChat.toggle() } else { showWatchSetup = true }
                     } label: {
                         ZStack {
-                            Image(systemName: watchService.isInRoom ? "person.2.fill" : "person.2.badge.plus")
+                            Image(systemName: watchService.isInRoom ? "message.fill" : "person.2.badge.plus")
                                 .font(.system(size: 14))
                                 .foregroundColor(.white.opacity(0.8))
                             if watchService.isInRoom {
@@ -102,12 +97,10 @@ struct MoviePlayerView: View {
             }
             if showOverlay { youtubeOverlay }
             
-            // MARK: - Watch Together Overlay
-            if watchService.isInRoom {
-                watchTogetherOverlay
-            }
+            // Watch Together Overlay
+            if watchService.isInRoom { watchTogetherOverlay }
             
-            // MARK: - Toast
+            // Toast
             if showToast {
                 VStack {
                     Spacer().frame(height: 60)
@@ -136,111 +129,97 @@ struct MoviePlayerView: View {
     
     // MARK: - Watch Together Overlay
     var watchTogetherOverlay: some View {
-        ZStack(alignment: .topTrailing) {
-            if showChat {
-                VStack {
-                    Spacer()
-                    chatOverlay
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showChat)
-            }
+        GeometryReader { geo in
+            let isLandscape = geo.size.width > geo.size.height
             
-            // Avatar người xem
-            HStack(spacing: -8) {
-                ForEach(Array(watchService.participants.prefix(4)), id: \.userId) { p in
-                    avatarCircle(p)
+            ZStack(alignment: .topTrailing) {
+                if showChat {
+                    if isLandscape {
+                        // Ngang: chat bên phải
+                        HStack(spacing: 0) {
+                            Spacer()
+                            chatPanelLandscape
+                                .frame(width: min(250, geo.size.width * 0.32))
+                        }
+                        .transition(.move(edge: .trailing))
+                    } else {
+                        // Dọc: chat dưới
+                        VStack(spacing: 0) {
+                            Spacer()
+                            chatPanelPortrait
+                                .frame(height: geo.size.height * 0.25)
+                        }
+                        .transition(.move(edge: .bottom))
+                    }
                 }
-                if watchService.participants.count > 4 {
-                    Circle()
-                        .fill(.ultraThinMaterial.opacity(0.7))
-                        .frame(width: 30, height: 30)
-                        .overlay(
-                            Text("+\(watchService.participants.count - 4)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                        )
-                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
-                }
+                
+                // Avatar người xem
+                avatarsBar
+                    .padding(.top, 50)
+                    .padding(.trailing, 12)
             }
-            .padding(.top, 50)
-            .padding(.trailing, 12)
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showChat)
         }
     }
     
-    func avatarCircle(_ p: WatchTogetherService.Participant) -> some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: [colorForUser(p.userId), colorForUser(p.userId).opacity(0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 30, height: 30)
-            .overlay(
-                Text(String(p.userName.prefix(1)).uppercased())
-                    .font(.system(size: 12, weight: .bold))
+    var avatarsBar: some View {
+        HStack(spacing: -6) {
+            ForEach(Array(watchService.participants.prefix(4)), id: \.userId) { p in
+                Text(p.avatar)
+                    .font(.system(size: 16))
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                    .overlay(
+                        Circle().fill(p.isOnline ? Color.green : Color.gray)
+                            .frame(width: 7, height: 7)
+                            .offset(x: 9, y: 9)
+                    )
+            }
+            if watchService.participants.count > 4 {
+                Text("+\(watchService.participants.count - 4)")
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.white)
-            )
-            .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
-            .overlay(
-                Circle()
-                    .fill(p.isOnline ? Color.green : Color.gray)
-                    .frame(width: 8, height: 8)
-                    .offset(x: 10, y: 10)
-            )
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+            }
+        }
     }
     
-    func colorForUser(_ id: String) -> Color {
-        let colors: [Color] = [.blue, .purple, .pink, .orange, .teal, .indigo]
-        let hash = abs(id.hashValue)
-        return colors[hash % colors.count]
-    }
-    
-    var chatOverlay: some View {
+    // Chat panel dọc
+    var chatPanelPortrait: some View {
         VStack(spacing: 0) {
-            Capsule()
-                .fill(.white.opacity(0.3))
-                .frame(width: 32, height: 4)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-            
+            // Header nhỏ
             HStack {
-                Text("Phòng #\(watchService.currentRoomCode)")
-                    .font(.system(size: 11, weight: .medium))
+                Text(watchService.currentRoomName.isEmpty ? "Phòng #\(watchService.currentRoomCode)" : watchService.currentRoomName)
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
+                    .lineLimit(1)
                 Spacer()
                 Text("\(watchService.participants.count)/6")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.5))
-                Button {
-                    watchService.leaveRoom()
-                    showChat = false
-                } label: {
-                    Text("Rời")
-                        .font(.system(size: 10))
-                        .foregroundColor(.red.opacity(0.8))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(.white.opacity(0.1)))
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+                Button { watchService.leaveRoom() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.5))
+                        .padding(4)
+                        .background(Circle().fill(.white.opacity(0.1)))
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             
+            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 4) {
-                        ForEach(watchService.messages) { msg in
-                            chatBubble(msg).id(msg.id)
+                    LazyVStack(spacing: 2) {
+                        ForEach(watchService.messages.suffix(25)) { msg in
+                            compactBubble(msg).id(msg.id)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 6)
                 }
-                .frame(height: UIScreen.main.bounds.height * 0.2)
-                .onAppear { chatScrollProxy = proxy }
                 .onChange(of: watchService.messages.count) { _ in
                     if let last = watchService.messages.last {
                         withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
@@ -248,93 +227,125 @@ struct MoviePlayerView: View {
                 }
             }
             
-            HStack(spacing: 8) {
+            // Input
+            HStack(spacing: 4) {
                 TextField("", text: $watchMessage)
-                    .placeholder(when: watchMessage.isEmpty) {
-                        Text("Nhắn tin...")
-                            .foregroundColor(.white.opacity(0.3))
-                            .font(.system(size: 13))
-                    }
-                    .font(.system(size: 13))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(.white.opacity(0.08))
-                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.1), lineWidth: 0.5))
-                    )
-                    .onSubmit { sendChatMessage() }
-                
-                Button {
-                    sendChatMessage()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundColor(watchMessage.isEmpty ? .white.opacity(0.2) : .white)
-                }
-                .disabled(watchMessage.isEmpty)
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, UIScreen.main.bounds.height > 800 ? 30 : 14)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial.opacity(0.85))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(
-                    LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.5
-                )
-        )
-    }
-    
-    func chatBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
-        let isMe = msg.userId == watchService.userId
-        return HStack {
-            if !isMe {
-                avatarMini(msg.userId, name: msg.userName)
-            } else { Spacer() }
-            VStack(alignment: isMe ? .trailing : .leading, spacing: 1) {
-                if !isMe {
-                    Text(msg.userName)
-                        .font(.system(size: 8))
-                        .foregroundColor(colorForUser(msg.userId))
-                }
-                Text(msg.text)
                     .font(.system(size: 12))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(isMe ? Color.white.opacity(0.12) : colorForUser(msg.userId).opacity(0.2))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isMe ? Color.white.opacity(0.08) : colorForUser(msg.userId).opacity(0.1), lineWidth: 0.5)
-                    )
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.white.opacity(0.08)))
+                    .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    .placeholder(when: watchMessage.isEmpty) {
+                        Text("Nhắn...").font(.system(size: 11)).foregroundColor(.white.opacity(0.3)).padding(.leading, 14)
+                    }
+                    .onSubmit { sendMessage() }
+                Button { sendMessage() } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(watchMessage.isEmpty ? .white.opacity(0.2) : .white)
+                }
             }
-            if isMe {
-                avatarMini(msg.userId, name: msg.userName)
-            } else { Spacer() }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
+        }
+        .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.65)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.08), lineWidth: 0.5))
+        .padding(.horizontal, 4)
+        .padding(.bottom, 4)
+    }
+    
+    // Chat panel ngang
+    var chatPanelLandscape: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(watchService.currentRoomName.isEmpty ? "#\(watchService.currentRoomCode)" : watchService.currentRoomName)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.white.opacity(0.7))
+                    .lineLimit(1)
+                Spacer()
+                Text("\(watchService.participants.count)/6")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+                Button { watchService.leaveRoom() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.5))
+                        .padding(4)
+                        .background(Circle().fill(.white.opacity(0.1)))
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            
+            Divider().background(.white.opacity(0.08))
+            
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 3) {
+                        ForEach(watchService.messages.suffix(40)) { msg in
+                            compactBubble(msg).id(msg.id)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                }
+                .onChange(of: watchService.messages.count) { _ in
+                    if let last = watchService.messages.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+            }
+            
+            HStack(spacing: 4) {
+                TextField("", text: $watchMessage)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.white.opacity(0.08)))
+                    .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    .placeholder(when: watchMessage.isEmpty) {
+                        Text("Nhắn...").font(.system(size: 11)).foregroundColor(.white.opacity(0.3)).padding(.leading, 14)
+                    }
+                    .onSubmit { sendMessage() }
+                Button { sendMessage() } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(watchMessage.isEmpty ? .white.opacity(0.2) : .white)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+        }
+        .background(Rectangle().fill(.ultraThinMaterial.opacity(0.7)))
+        .overlay(Rectangle().stroke(.white.opacity(0.06), lineWidth: 0.5))
+    }
+    
+    func compactBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
+        let isMe = msg.userId == watchService.userId
+        return HStack(alignment: .top, spacing: 4) {
+            if isMe { Spacer(minLength: 30) }
+            
+            Text(msg.avatar).font(.system(size: 12))
+                .frame(width: 18, height: 18)
+            
+            VStack(alignment: isMe ? .trailing : .leading, spacing: 0) {
+                Text(msg.userName)
+                    .font(.system(size: 8))
+                    .foregroundColor(.white.opacity(0.5))
+                Text(msg.text)
+                    .font(.system(size: 11))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(isMe ? 0.12 : 0.08)))
+            }
+            
+            if !isMe { Spacer(minLength: 30) }
         }
     }
     
-    func avatarMini(_ userId: String, name: String) -> some View {
-        Circle()
-            .fill(colorForUser(userId).opacity(0.4))
-            .frame(width: 22, height: 22)
-            .overlay(
-                Text(String(name.prefix(1)).uppercased())
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.white)
-            )
-    }
-    
-    func sendChatMessage() {
+    func sendMessage() {
         let trimmed = watchMessage.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         watchService.sendMessage(text: trimmed)
@@ -343,27 +354,26 @@ struct MoviePlayerView: View {
     
     // MARK: - Watch Setup Popup
     var watchSetupPopup: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             HStack {
-                Text("Xem chung")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
+                Text("Xem chung").font(.system(size: 17, weight: .semibold)).foregroundColor(.white)
                 Spacer()
-                Button { showWatchSetup = false } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundColor(.gray)
-                }
+                Button { showWatchSetup = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundColor(.gray) }
             }
             
             TextField("Tên của bạn", text: $watchUserName)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-                .padding(12)
+                .font(.system(size: 14)).foregroundColor(.white).padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
+            
+            TextField("Tên phòng (tùy chọn)", text: $watchRoomName)
+                .font(.system(size: 14)).foregroundColor(.white).padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
             
             Button {
                 guard !watchUserName.isEmpty else { return }
-                watchService.createRoom(userName: watchUserName) { code in
+                watchService.createRoom(roomName: watchRoomName.isEmpty ? "Phòng của \(watchUserName)" : watchRoomName, userName: watchUserName) { code in
                     showWatchSetup = false
                     showChat = true
                     showToastMessage("Đã tạo phòng #\(code)")
@@ -373,10 +383,8 @@ struct MoviePlayerView: View {
                     Image(systemName: "plus.circle.fill")
                     Text("Tạo phòng mới")
                 }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .font(.system(size: 14, weight: .medium)).foregroundColor(.white)
+                .frame(maxWidth: .infinity).padding(.vertical, 12)
                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
             }
             
@@ -386,28 +394,21 @@ struct MoviePlayerView: View {
                 Rectangle().fill(.white.opacity(0.1)).frame(height: 0.5)
             }
             
-            TextField("Mã phòng", text: $joinCode)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-                .padding(12)
+            TextField("Mã phòng 6 số", text: $joinCode)
+                .font(.system(size: 14)).foregroundColor(.white).padding(12)
                 .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 .keyboardType(.numberPad)
             
-            if !joinError.isEmpty {
-                Text(joinError).font(.system(size: 11)).foregroundColor(.red)
-            }
+            if !joinError.isEmpty { Text(joinError).font(.system(size: 11)).foregroundColor(.red) }
             
             Button {
-                guard !watchUserName.isEmpty, joinCode.count == 6 else {
-                    joinError = "Mã phòng 6 chữ số"
-                    return
-                }
-                watchService.joinRoom(code: joinCode, userName: watchUserName) { success in
+                guard !watchUserName.isEmpty, joinCode.count == 6 else { joinError = "Mã phòng 6 chữ số"; return }
+                watchService.joinRoom(code: joinCode, userName: watchUserName) { success, roomName in
                     if success {
                         showWatchSetup = false
                         showChat = true
-                        showToastMessage("Đã vào phòng #\(joinCode)")
+                        showToastMessage("Đã vào \(roomName ?? "")")
                         joinError = ""
                     } else {
                         joinError = "Mã phòng không tồn tại"
@@ -418,10 +419,8 @@ struct MoviePlayerView: View {
                     Image(systemName: "arrow.right.circle.fill")
                     Text("Vào phòng")
                 }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .font(.system(size: 14, weight: .medium)).foregroundColor(.white)
+                .frame(maxWidth: .infinity).padding(.vertical, 12)
                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
             }
         }
@@ -434,10 +433,8 @@ struct MoviePlayerView: View {
     // MARK: - Toast
     var toastView: some View {
         Text(toastMessage)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .font(.system(size: 12, weight: .medium)).foregroundColor(.white)
+            .padding(.horizontal, 16).padding(.vertical, 10)
             .background(Capsule().fill(.ultraThinMaterial.opacity(0.9)))
             .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 0.5))
     }
@@ -451,7 +448,7 @@ struct MoviePlayerView: View {
         }
     }
     
-    // MARK: - Rest of views
+    // MARK: - Rest (giữ nguyên)
     @ViewBuilder
     func episodeRow(detail: TVSeasonDetail) -> some View { VStack(alignment:.leading,spacing:6){ Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) { ForEach(detail.episodes){ep in Button{ loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() }label:{ Text("\(ep.episodeNumber)").font(.system(size:11,weight:.medium)).foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white).frame(height:36).frame(maxWidth:.infinity).background(RoundedRectangle(cornerRadius:10).fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)).overlay(RoundedRectangle(cornerRadius:10).stroke(.white.opacity(0.15),lineWidth:0.5))) } } } } }
     var youtubeOverlay: some View { ZStack(alignment:.bottom){ Color.black.opacity(0.4).ignoresSafeArea().onTapGesture{closeOverlay()}; VStack(spacing:0){ Capsule().fill(.white.opacity(0.5)).frame(width:40,height:5).padding(.top,10); ScrollView{ VStack(alignment:.leading,spacing:16){ if currentMovie != nil { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); movieInfoCard }; if !collectionMovies.isEmpty { collectionRow }; if !seasons.isEmpty { seasonRow } }; if !similarMovies.isEmpty { similarRow } }.padding()}.clipped() }.frame(height:UIScreen.main.bounds.height*0.55).background(RoundedRectangle(cornerRadius:20).fill(.ultraThinMaterial.opacity(0.7))).offset(y:overlayOffset) } }
@@ -487,7 +484,6 @@ struct MoviePlayerView: View {
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
 
-// MARK: - Placeholder Extension
 extension View {
     func placeholder<Content: View>(
         when shouldShow: Bool,
