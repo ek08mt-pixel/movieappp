@@ -3,10 +3,12 @@ import SwiftUI
 class ImageCache {
     static let shared = ImageCache()
     private var cache = NSCache<NSString, UIImage>()
+    private var runningRequests: Set<String> = []
+    private let lock = NSLock()
     
     init() {
-        cache.countLimit = 500
-        cache.totalCostLimit = 200 * 1024 * 1024
+        cache.countLimit = 300
+        cache.totalCostLimit = 80 * 1024 * 1024
     }
     
     func get(for url: URL) -> UIImage? {
@@ -14,14 +16,31 @@ class ImageCache {
     }
     
     func set(_ image: UIImage, for url: URL) {
-        cache.setObject(image, forKey: url.absoluteString as NSString)
+        let key = url.absoluteString as NSString
+        let cost = Int(image.size.width * image.size.height * 4)
+        cache.setObject(image, forKey: key, cost: cost)
+    }
+    
+    func isRunning(_ key: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return runningRequests.contains(key)
+    }
+    
+    func markRunning(_ key: String) {
+        lock.lock(); defer { lock.unlock() }
+        runningRequests.insert(key)
+    }
+    
+    func unmarkRunning(_ key: String) {
+        lock.lock(); defer { lock.unlock() }
+        runningRequests.remove(key)
     }
 }
 
 struct CachedAsyncImage: View {
     let url: URL?
     @State private var image: UIImage?
-    @State private var isLoading = false
+    @State private var task: Task<Void, Never>?
     
     var body: some View {
         Group {
@@ -31,36 +50,56 @@ struct CachedAsyncImage: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 Rectangle()
-                    .fill(LinearGradient(colors: [Color(white: 0.15), Color(white: 0.08)], startPoint: .top, endPoint: .bottom))
+                    .fill(Color(white: 0.12))
                     .task {
-                        guard let url = url, !isLoading else { return }
-                        isLoading = true
+                        guard let url = url else { return }
+                        let key = url.absoluteString
+                        
+                        if ImageCache.shared.isRunning(key) { return }
+                        
                         if let cached = ImageCache.shared.get(for: url) {
                             await MainActor.run { image = cached }
-                        } else {
-                            do {
-                                let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 10)
-                                let (data, _) = try await URLSession.shared.data(for: request)
-                                if let img = UIImage(data: data) {
-                                    let size = min(img.size.width, 500)
-                                    let resized = img.resized(to: CGSize(width: size, height: size * 1.5))
-                                    ImageCache.shared.set(resized, for: url)
-                                    await MainActor.run { image = resized }
-                                }
-                            } catch {}
+                            return
                         }
-                        isLoading = false
+                        
+                        ImageCache.shared.markRunning(key)
+                        
+                        let width = UIScreen.main.bounds.width / 3
+                        let targetSize = CGSize(width: width, height: width * 1.5)
+                        
+                        if let img = await loadAndResize(url: url, targetSize: targetSize) {
+                            await MainActor.run { image = img }
+                        }
+                        
+                        ImageCache.shared.unmarkRunning(key)
+                    }
+                    .onDisappear {
+                        task?.cancel()
                     }
             }
         }
+    }
+    
+    private func loadAndResize(url: URL, targetSize: CGSize) async -> UIImage? {
+        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 8)
+        request.setValue("image/jpeg,image/png,image/webp", forHTTPHeaderField: "Accept")
+        
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let img = UIImage(data: data) else { return nil }
+        
+        let resized = img.resized(to: targetSize)
+        ImageCache.shared.set(resized, for: url)
+        return resized
     }
 }
 
 extension UIImage {
     func resized(to size: CGSize) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let scale = min(size.width / self.size.width, size.height / self.size.height)
+        let newSize = CGSize(width: self.size.width * scale, height: self.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
         return renderer.image { _ in
-            self.draw(in: CGRect(origin: .zero, size: size))
+            self.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 }
