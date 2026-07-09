@@ -11,12 +11,12 @@ class ImageCache {
         cache.totalCostLimit = 80 * 1024 * 1024
     }
     
-    func get(for url: URL) -> UIImage? {
-        return cache.object(forKey: url.absoluteString as NSString)
+    func get(for url: URL, size: String = "thumb") -> UIImage? {
+        return cache.object(forKey: "\(size)_\(url.absoluteString)" as NSString)
     }
     
-    func set(_ image: UIImage, for url: URL) {
-        let key = url.absoluteString as NSString
+    func set(_ image: UIImage, for url: URL, size: String = "thumb") {
+        let key = "\(size)_\(url.absoluteString)" as NSString
         let cost = Int(image.size.width * image.size.height * 4)
         cache.setObject(image, forKey: key, cost: cost)
     }
@@ -39,8 +39,31 @@ class ImageCache {
 
 struct CachedAsyncImage: View {
     let url: URL?
+    var size: ImageSize = .thumb
+    
+    enum ImageSize {
+        case thumb
+        case backdrop
+        case detail
+        
+        var targetSize: CGSize {
+            switch self {
+            case .thumb: return CGSize(width: 150, height: 225)
+            case .backdrop: return CGSize(width: 500, height: 281)
+            case .detail: return CGSize(width: 300, height: 450)
+            }
+        }
+        
+        var key: String {
+            switch self {
+            case .thumb: return "thumb"
+            case .backdrop: return "backdrop"
+            case .detail: return "detail"
+            }
+        }
+    }
+    
     @State private var image: UIImage?
-    @State private var task: Task<Void, Never>?
     
     var body: some View {
         Group {
@@ -53,28 +76,22 @@ struct CachedAsyncImage: View {
                     .fill(Color(white: 0.12))
                     .task {
                         guard let url = url else { return }
-                        let key = url.absoluteString
+                        let key = "\(size.key)_\(url.absoluteString)"
                         
                         if ImageCache.shared.isRunning(key) { return }
                         
-                        if let cached = ImageCache.shared.get(for: url) {
+                        if let cached = ImageCache.shared.get(for: url, size: size.key) {
                             await MainActor.run { image = cached }
                             return
                         }
                         
                         ImageCache.shared.markRunning(key)
                         
-                        let width = UIScreen.main.bounds.width / 3
-                        let targetSize = CGSize(width: width, height: width * 1.5)
-                        
-                        if let img = await loadAndResize(url: url, targetSize: targetSize) {
+                        if let img = await loadAndResize(url: url, targetSize: size.targetSize) {
                             await MainActor.run { image = img }
                         }
                         
                         ImageCache.shared.unmarkRunning(key)
-                    }
-                    .onDisappear {
-                        task?.cancel()
                     }
             }
         }
@@ -88,7 +105,7 @@ struct CachedAsyncImage: View {
               let img = UIImage(data: data) else { return nil }
         
         let resized = img.resized(to: targetSize)
-        ImageCache.shared.set(resized, for: url)
+        ImageCache.shared.set(resized, for: url, size: size.key)
         return resized
     }
 }
