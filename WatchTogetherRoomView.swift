@@ -10,11 +10,9 @@ struct WatchTogetherRoomView: View {
     @State private var joinCode = ""
     @State private var joinError = ""
     @State private var showChat = true
-    @State private var selectedMovie: Movie?
     @State private var player = AVPlayer()
     @State private var currentTime: Double = 0
     @State private var duration: Double = 1
-    @State private var isSeeking = false
     
     var body: some View {
         ZStack {
@@ -26,7 +24,6 @@ struct WatchTogetherRoomView: View {
                     
                     if isLandscape {
                         HStack(spacing: 0) {
-                            // Video
                             CustomPlayerVC(player: player, pipController: .constant(nil))
                                 .frame(width: showChat ? geo.size.width * 0.65 : geo.size.width)
                                 .animation(.spring(response: 0.35), value: showChat)
@@ -39,7 +36,6 @@ struct WatchTogetherRoomView: View {
                         }
                     } else {
                         VStack(spacing: 0) {
-                            // Video
                             CustomPlayerVC(player: player, pipController: .constant(nil))
                                 .frame(height: showChat ? geo.size.height * 0.55 : geo.size.height)
                                 .animation(.spring(response: 0.35), value: showChat)
@@ -53,7 +49,6 @@ struct WatchTogetherRoomView: View {
                     }
                 }
             } else {
-                // Màn hình chưa vào phòng
                 VStack(spacing: 20) {
                     Image(systemName: "person.2.circle.fill")
                         .font(.system(size: 60))
@@ -74,7 +69,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Nút toggle chat + leave
             if watchService.isInRoom {
                 VStack {
                     HStack {
@@ -105,7 +99,7 @@ struct WatchTogetherRoomView: View {
             }
         }
         .sheet(isPresented: $showSetup) {
-            watchSetupSheet
+            setupSheet
         }
         .onDisappear {
             if watchService.isInRoom { watchService.leaveRoom() }
@@ -125,10 +119,8 @@ struct WatchTogetherRoomView: View {
         }
     }
     
-    // Chat panel
     var chatPanel: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text(watchService.currentRoomName)
                     .font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
@@ -142,10 +134,10 @@ struct WatchTogetherRoomView: View {
             
             Divider().background(.white.opacity(0.1))
             
-            // Danh sách người xem
+            let parts = watchService.participants
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(watchService.participants, id: \.userId) { p in
+                    ForEach(parts, id: \.userId) { p in
                         VStack(spacing: 4) {
                             Text(p.avatar).font(.system(size: 24))
                                 .frame(width: 40, height: 40)
@@ -156,10 +148,6 @@ struct WatchTogetherRoomView: View {
                                         .offset(x: 14, y: 14)
                                 )
                             Text(p.userName).font(.system(size: 9)).foregroundColor(.white).lineLimit(1)
-                            if p.userId == watchService.hostUserId {
-                                Text("Host").font(.system(size: 7)).foregroundColor(.yellow).padding(.horizontal, 4)
-                                    .background(Capsule().fill(.yellow.opacity(0.2)))
-                            }
                         }
                     }
                 }
@@ -168,24 +156,23 @@ struct WatchTogetherRoomView: View {
             
             Divider().background(.white.opacity(0.1))
             
-            // Messages
+            let msgs = watchService.messages
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 6) {
-                        ForEach(watchService.messages) { msg in
-                            roomChatBubble(msg).id(msg.id)
+                        ForEach(msgs) { msg in
+                            chatBubble(msg).id(msg.id)
                         }
                     }
                     .padding(8)
                 }
-                .onChange(of: watchService.messages.count) { _ in
-                    if let last = watchService.messages.last {
+                .onChange(of: msgs.count) { _ in
+                    if let last = msgs.last {
                         withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
                 }
             }
             
-            // Input
             HStack(spacing: 6) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .font(.system(size: 13)).foregroundColor(.white)
@@ -204,22 +191,19 @@ struct WatchTogetherRoomView: View {
         .background(.ultraThinMaterial.opacity(0.9))
     }
     
-    func roomChatBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
+    func chatBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
         let isMe = msg.userId == watchService.userId
         return HStack(alignment: .top, spacing: 6) {
             if isMe { Spacer(minLength: 40) }
-            
             Text(msg.avatar).font(.system(size: 14))
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-            
             VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
                 Text(msg.userName).font(.system(size: 9)).foregroundColor(.gray)
                 Text(msg.text).font(.system(size: 12)).foregroundColor(.white)
                     .padding(.horizontal, 10).padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(isMe ? 0.12 : 0.06)))
             }
-            
             if !isMe { Spacer(minLength: 40) }
         }
     }
@@ -231,11 +215,9 @@ struct WatchTogetherRoomView: View {
         watchMessage = ""
     }
     
-    // Setup sheet
-    var watchSetupSheet: some View {
+    var setupSheet: some View {
         VStack(spacing: 16) {
             Capsule().fill(.gray.opacity(0.5)).frame(width: 36, height: 5).padding(.top, 10)
-            
             Text("Xem chung").font(.title3.bold()).foregroundColor(.white)
             
             TextField("Tên của bạn", text: $watchUserName)
