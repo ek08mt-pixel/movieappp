@@ -1,4 +1,32 @@
 import SwiftUI
+import Security
+
+// MARK: - Keychain Helper
+struct KeychainHelper {
+    static func save(key: String, data: Data) {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                     kSecAttrAccount as String: key,
+                                     kSecValueData as String: data]
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+    
+    static func load(key: String) -> Data? {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                     kSecAttrAccount as String: key,
+                                     kSecReturnData as String: true,
+                                     kSecMatchLimit as String: kSecMatchLimitOne]
+        var item: CFTypeRef?
+        SecItemCopyMatching(query as CFDictionary, &item)
+        return item as? Data
+    }
+    
+    static func delete(key: String) {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                     kSecAttrAccount as String: key]
+        SecItemDelete(query as CFDictionary)
+    }
+}
 
 // MARK: - Watch Progress Model
 struct WatchProgress: Codable, Equatable {
@@ -29,30 +57,19 @@ class AppState: ObservableObject {
     @Published var selectedAvatar = "person.circle.fill"
     @Published var avatarImageData: Data?
     
-    private let cloudStore = NSUbiquitousKeyValueStore.default
-    
-    init() {
-        NotificationCenter.default.addObserver(forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: cloudStore, queue: .main) { [weak self] _ in
-            self?.load()
-        }
-        load()
-    }
+    init() { load() }
     
     func register(email: String, password: String) {
         var accounts = getAllAccounts()
         accounts[email] = password
-        if let data = try? JSONEncoder().encode(accounts) {
-            cloudStore.set(data, forKey: "allAccounts")
-            cloudStore.synchronize()
-        }
+        saveAllAccounts(accounts)
         self.email = email
         self.isLoggedIn = true
         self.favorites = []
         self.watchHistory = []
         self.watchProgressList = []
         save()
-        cloudStore.set(email, forKey: "lastLoggedInEmail")
-        cloudStore.synchronize()
+        saveLastEmail(email)
     }
     
     func login(email: String, password: String) {
@@ -61,8 +78,7 @@ class AppState: ObservableObject {
             self.email = email
             self.isLoggedIn = true
             load()
-            cloudStore.set(email, forKey: "lastLoggedInEmail")
-            cloudStore.synchronize()
+            saveLastEmail(email)
         }
     }
     
@@ -73,33 +89,40 @@ class AppState: ObservableObject {
                 self.email = email
                 self.isLoggedIn = true
                 load()
-                cloudStore.set(email, forKey: "lastLoggedInEmail")
-                cloudStore.synchronize()
+                saveLastEmail(email)
             }
         } else {
             var newAccounts = accounts
             newAccounts[email] = password
-            if let data = try? JSONEncoder().encode(newAccounts) {
-                cloudStore.set(data, forKey: "allAccounts")
-                cloudStore.synchronize()
-            }
+            saveAllAccounts(newAccounts)
             self.email = email
             self.isLoggedIn = true
             self.favorites = []
             self.watchHistory = []
             self.watchProgressList = []
             save()
-            cloudStore.set(email, forKey: "lastLoggedInEmail")
-            cloudStore.synchronize()
+            saveLastEmail(email)
+        }
+    }
+    
+    private func saveAllAccounts(_ accounts: [String: String]) {
+        if let data = try? JSONEncoder().encode(accounts) {
+            KeychainHelper.save(key: "allAccounts", data: data)
         }
     }
     
     private func getAllAccounts() -> [String: String] {
-        guard let data = cloudStore.data(forKey: "allAccounts"),
+        guard let data = KeychainHelper.load(key: "allAccounts"),
               let accounts = try? JSONDecoder().decode([String: String].self, from: data) else {
             return [:]
         }
         return accounts
+    }
+    
+    private func saveLastEmail(_ email: String) {
+        if let data = email.data(using: .utf8) {
+            KeychainHelper.save(key: "lastLoggedInEmail", data: data)
+        }
     }
     
     func logout() {
@@ -112,8 +135,6 @@ class AppState: ObservableObject {
         watchHistory = []
         watchProgressList = []
         save()
-        cloudStore.removeObject(forKey: "lastLoggedInEmail")
-        cloudStore.synchronize()
     }
     
     func updateProgress(_ progress: WatchProgress) {
@@ -136,7 +157,8 @@ class AppState: ObservableObject {
     }
     
     func load() {
-        let savedEmail = cloudStore.string(forKey: "lastLoggedInEmail") ?? ""
+        let savedEmailData = KeychainHelper.load(key: "lastLoggedInEmail")
+        let savedEmail = savedEmailData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
         if !savedEmail.isEmpty { self.email = savedEmail }
         
         let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
