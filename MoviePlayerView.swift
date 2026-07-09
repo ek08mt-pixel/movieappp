@@ -10,7 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="PhimAPI", nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
+enum MovieSource: String, CaseIterable { case phimapi="PhimAPI", xem20="Xem20", nguonc="NguonC", vsmov="VSMOV", stravo="Stravo" }
 
 // MARK: - MoviePlayerView
 struct MoviePlayerView: View {
@@ -113,6 +113,20 @@ struct MoviePlayerView: View {
                         player.replaceCurrentItem(with: AVPlayerItem(url: url))
                         player.play()
                         sourceStatus[.phimapi] = true
+                        isLoading = false
+                    }
+                    saveHistory()
+                    
+                case .xem20:
+                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                        Xem20Service.shared.fetchStream(title: movieTitle, season: s, episode: ep) { result in
+                            continuation.resume(with: result)
+                        }
+                    }
+                    await MainActor.run {
+                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                        player.play()
+                        sourceStatus[.xem20] = true
                         isLoading = false
                     }
                     saveHistory()
