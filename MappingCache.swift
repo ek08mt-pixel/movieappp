@@ -502,7 +502,7 @@ final class PhimAPIService {
             return exactTMDB
         }
         
-        // Ưu tiên 2: match origin_name chính xác tuyệt đối (không chứa số phần)
+        // Ưu tiên 2: match origin_name chính xác tuyệt đối
         let exactNameMatches = items.filter { item in
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             return originName == normalizedTitle
@@ -516,12 +516,31 @@ final class PhimAPIService {
             }
         }
         
-        // Ưu tiên 3: với series, tìm item có season khớp targetSeason
+        // Ưu tiên 3: với series, tìm item có season khớp + origin_name chứa title
         if isSeries {
+            let seasonAndTitleMatched = items.filter { item in
+                guard isSeriesType(item["type"] as? String ?? "") else { return false }
+                let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+                let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
+                let tmdbSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
+                let s = tmdbSeason ?? extractedSeason
+                return s == targetSeason && originName.contains(normalizedTitle)
+            }
+            
+            if !seasonAndTitleMatched.isEmpty {
+                if let original = seasonAndTitleMatched.first(where: {
+                    let id = ($0["tmdb"] as? [String: Any])?["id"]
+                    return id == nil || id is NSNull
+                }) {
+                    return original
+                }
+                return seasonAndTitleMatched.first
+            }
+            
+            // Fallback: chỉ khớp season
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                let originName = item["origin_name"] as? String ?? ""
-                let extractedSeason = extractSeasonFromOriginName(originName)
+                let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
                 let tmdbSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
                 let s = tmdbSeason ?? extractedSeason
                 return s == targetSeason
