@@ -6,7 +6,7 @@ class WatchTogetherService: ObservableObject {
     
     private let baseURL = "https://emmew-d71a8-default-rtdb.firebaseio.com"
     private var roomCode: String = ""
-    userId: String = ""
+    var userId: String = ""
     private var userName: String = ""
     private var timer: Timer?
     
