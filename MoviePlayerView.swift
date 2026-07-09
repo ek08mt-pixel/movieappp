@@ -33,7 +33,7 @@ struct MoviePlayerView: View {
     @State private var hasStartedPlaying = false; @State private var didResume = false
     @State private var isOrientationLocked = true
     @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
-    @State private var anyPopupOpen: Bool { showSourceMenu || showSettings || showSubtitlePopup || showAudioPopup }
+     
     
     var body: some View {
         ZStack {
