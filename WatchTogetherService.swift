@@ -1,6 +1,5 @@
 import Foundation
 
-// MARK: - Watch Together Service
 class WatchTogetherService: ObservableObject {
     static let shared = WatchTogetherService()
     
@@ -13,16 +12,28 @@ class WatchTogetherService: ObservableObject {
     @Published var isInRoom = false
     @Published var isHost = false
     @Published var currentRoomCode = ""
+    @Published var currentRoomName = ""
     @Published var messages: [ChatMessage] = []
     @Published var participants: [Participant] = []
     @Published var remoteState: RemotePlaybackState?
     
     var currentUserId: String { userId }
     
+    // Avatar mặc định (mèo chó dễ thương)
+    static let defaultAvatars = ["🐱","🐶","🐰","🐻","🐼","🐨","🐯","🦊","🐸","🐵","🐮","🐷","🐹","🐭","🦄","🐙"]
+    
+    var userAvatar: String {
+        if let p = participants.first(where: { $0.userId == userId }) {
+            return p.avatar
+        }
+        return WatchTogetherService.defaultAvatars[abs(userId.hashValue) % WatchTogetherService.defaultAvatars.count]
+    }
+    
     struct ChatMessage: Codable, Identifiable {
         var id: String { "\(timestamp)_\(userId)" }
         let userId: String
         let userName: String
+        let avatar: String
         let text: String
         let timestamp: Double
     }
@@ -30,6 +41,7 @@ class WatchTogetherService: ObservableObject {
     struct Participant: Codable {
         let userId: String
         let userName: String
+        var avatar: String
         var isOnline: Bool
     }
     
@@ -37,9 +49,11 @@ class WatchTogetherService: ObservableObject {
         let action: String
         let time: Double
         let timestamp: Double
+        let episodeNumber: Int?
+        let seasonNumber: Int?
     }
     
-    func createRoom(userName: String, completion: @escaping (String) -> Void) {
+    func createRoom(roomName: String, userName: String, completion: @escaping (String) -> Void) {
         self.userName = userName
         self.userId = UUID().uuidString
         self.isHost = true
@@ -47,14 +61,18 @@ class WatchTogetherService: ObservableObject {
         let code = String(format: "%06d", Int.random(in: 0...999999))
         self.roomCode = code
         self.currentRoomCode = code
+        self.currentRoomName = roomName
+        
+        let avatar = WatchTogetherService.defaultAvatars[abs(userId.hashValue) % WatchTogetherService.defaultAvatars.count]
         
         let roomData: [String: Any] = [
             "code": code,
+            "roomName": roomName,
             "hostId": userId,
             "hostName": userName,
             "createdAt": Date().timeIntervalSince1970,
             "participants": [
-                userId: ["userId": userId, "userName": userName, "isOnline": true]
+                userId: ["userId": userId, "userName": userName, "avatar": avatar, "isOnline": true]
             ]
         ]
         
@@ -67,7 +85,7 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
-    func joinRoom(code: String, userName: String, completion: @escaping (Bool) -> Void) {
+    func joinRoom(code: String, userName: String, completion: @escaping (Bool, String?) -> Void) {
         self.userName = userName
         self.userId = UUID().uuidString
         self.roomCode = code
@@ -75,17 +93,21 @@ class WatchTogetherService: ObservableObject {
         
         get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
             guard let self = self, let data = data, data["code"] != nil else {
-                DispatchQueue.main.async { completion(false) }
+                DispatchQueue.main.async { completion(false, nil) }
                 return
             }
             
-            let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "isOnline": true]
+            let roomName = data["roomName"] as? String ?? ""
+            let avatar = WatchTogetherService.defaultAvatars[abs(self.userId.hashValue) % WatchTogetherService.defaultAvatars.count]
+            
+            let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "avatar": avatar, "isOnline": true]
             self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { _ in
                 DispatchQueue.main.async {
                     self.currentRoomCode = code
+                    self.currentRoomName = roomName
                     self.isInRoom = true
                     self.startListening()
-                    completion(true)
+                    completion(true, roomName)
                 }
             }
         }
@@ -98,6 +120,7 @@ class WatchTogetherService: ObservableObject {
         isInRoom = false
         isHost = false
         currentRoomCode = ""
+        currentRoomName = ""
         messages = []
         participants = []
         roomCode = ""
@@ -114,7 +137,8 @@ class WatchTogetherService: ObservableObject {
     }
     
     func sendMessage(text: String) {
-        let msg = ChatMessage(userId: userId, userName: userName, text: text, timestamp: Date().timeIntervalSince1970)
+        let avatar = userAvatar
+        let msg = ChatMessage(userId: userId, userName: userName, avatar: avatar, text: text, timestamp: Date().timeIntervalSince1970)
         if let data = try? JSONEncoder().encode(msg),
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             let msgId = "\(Int(msg.timestamp * 1000))"
@@ -137,7 +161,7 @@ class WatchTogetherService: ObservableObject {
                   let action = data["action"] as? String,
                   let time = data["time"] as? Double else { return }
             DispatchQueue.main.async {
-                self.remoteState = RemotePlaybackState(action: action, time: time, timestamp: data["timestamp"] as? Double ?? 0)
+                self.remoteState = RemotePlaybackState(action: action, time: time, timestamp: data["timestamp"] as? Double ?? 0, episodeNumber: data["episodeNumber"] as? Int, seasonNumber: data["seasonNumber"] as? Int)
             }
         }
         
@@ -155,13 +179,20 @@ class WatchTogetherService: ObservableObject {
             }
         }
         
+        get(path: "rooms/\(roomCode)/info") { [weak self] (data: [String: Any]?) in
+            guard let self = self, let data = data else { return }
+            if let roomName = data["roomName"] as? String {
+                DispatchQueue.main.async { self.currentRoomName = roomName }
+            }
+        }
+        
         get(path: "rooms/\(roomCode)/info/participants") { [weak self] (data: [String: Any]?) in
             guard let self = self, let data = data else { return }
             let parts = data.compactMap { _, value -> Participant? in
                 guard let dict = value as? [String: Any],
                       let userId = dict["userId"] as? String,
                       let userName = dict["userName"] as? String else { return nil }
-                return Participant(userId: userId, userName: userName, isOnline: dict["isOnline"] as? Bool ?? true)
+                return Participant(userId: userId, userName: userName, avatar: dict["avatar"] as? String ?? "🐱", isOnline: dict["isOnline"] as? Bool ?? true)
             }
             DispatchQueue.main.async {
                 self.participants = parts
