@@ -287,58 +287,38 @@ final class PhimAPIService {
         let targetSeason = season ?? 1
         
         // Ưu tiên 1: match chính xác tmdb.id + tmdb.season
-        if let exactMatch = items.first(where: {
+        if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
-        }) { return exactMatch }
+        }) { return exact }
         
-        // Ưu tiên 2: match tmdb.id (cùng series)
-        if let sameSeries = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) {
-            return sameSeries
-        }
+        // Ưu tiên 2: match tmdb.id (cùng series) + season từ origin_name
+        if let same = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
+            extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
+        }) { return same }
         
-        // Ưu tiên 3: series khớp season + origin_name chứa title
         if isSeries {
-            let seasonAndTitleMatched = items.filter { item in
+            // Ưu tiên 3: origin_name chứa title + season khớp chính xác
+            let matched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-                let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
-                return s == targetSeason && originName.contains(normalizedTitle)
+                let origin = (item["origin_name"] as? String ?? "").lowercased()
+                let s = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
+                return s == targetSeason && origin.contains(normalizedTitle)
             }
-            if !seasonAndTitleMatched.isEmpty {
-                if let original = seasonAndTitleMatched.first(where: { (($0["tmdb"] as? [String: Any])?["id"]) == nil }) { return original }
-                return seasonAndTitleMatched.first
-            }
-            
-            let seasonMatched = items.filter { item in
-                guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
-                return s == targetSeason
-            }
-            if !seasonMatched.isEmpty {
-                if let original = seasonMatched.first(where: { (($0["tmdb"] as? [String: Any])?["id"]) == nil }) { return original }
-                return seasonMatched.first
+            if !matched.isEmpty {
+                // Ưu tiên item không có tmdb.id (bản gốc)
+                if let orig = matched.first(where: { ($0["tmdb"] as? [String: Any])?["id"] == nil }) { return orig }
+                return matched.first
             }
         }
         
-        // Ưu tiên 4: match origin_name chính xác
-        let exactNameMatches = items.filter { ($0["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces) == normalizedTitle }
-        if !exactNameMatches.isEmpty {
-            if isSeries, let match = exactNameMatches.first(where: { isSeriesType($0["type"] as? String ?? "") }) { return match }
-            if !isSeries, let match = exactNameMatches.first(where: { isSingleType($0["type"] as? String ?? "") }) { return match }
-        }
+        // Ưu tiên 4: origin_name khớp chính xác title
+        if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         
-        // Ưu tiên 5: match origin_name contains title + season
-        for item in items {
-            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-            if originName.contains(normalizedTitle) {
-                if isSeries && isSeriesType(item["type"] as? String ?? ""), (((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")) == targetSeason { return item }
-                else if !isSeries && isSingleType(item["type"] as? String ?? "") { return item }
-            }
-        }
-        
+        // Ưu tiên 5: chọn đại
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
-        else { return items.first(where: { isSingleType($0["type"] as? String ?? "") }) }
+        return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
