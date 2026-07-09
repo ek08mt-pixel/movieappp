@@ -16,44 +16,59 @@ class HomeViewModel: ObservableObject {
     @Published var movieOfDay: Movie?
     @Published var isLoading = false
     
-    init() { Task { await loadAll() } }
+    init() {}
     
     func loadAll() async {
+        guard !isLoading else { return }
         isLoading = true
         
+        // Load critical data first
         async let trendingTask = APIService.shared.trending24h()
         async let genresTask = APIService.shared.genres()
         
-        trending24h = (try? await trendingTask) ?? []
+        if let trending = try? await trendingTask {
+            trending24h = trending
+            movieOfDay = trending.randomElement()
+        }
         genres = (try? await genresTask) ?? []
-        movieOfDay = trending24h.randomElement()
-        trendingTV = await loadTrendingTV()
+        
+        // Load TV in background
+        Task.detached(priority: .background) { [weak self] in
+            let tv = await self?.loadTrendingTVPages() ?? []
+            await MainActor.run { self?.trendingTV = tv }
+        }
         
         isLoading = false
         
-        // Load từng danh mục riêng biệt
-        async let nowPlayingTask = APIService.shared.nowPlaying()
-        async let upcomingTask = APIService.shared.upcoming()
-        async let topRatedTask = APIService.shared.topRated()
-        async let koreanTask = APIService.shared.koreanMovies()
-        async let japaneseTask = APIService.shared.japaneseMovies()
-        async let vietnameseTask = APIService.shared.vietnameseMovies()
-        async let usukTask = APIService.shared.usukMovies()
-        async let animeTask = APIService.shared.animeMovies()
+        // Load remaining categories sequentially to avoid flooding
+        let categories: [(inout [Movie], () async throws -> [Movie])] = [
+            (&nowPlaying, APIService.shared.nowPlaying),
+            (&upcoming, APIService.shared.upcoming),
+            (&topRated, APIService.shared.topRated),
+            (&korean, APIService.shared.koreanMovies),
+            (&japanese, APIService.shared.japaneseMovies),
+            (&vietnamese, APIService.shared.vietnameseMovies),
+            (&usuk, APIService.shared.usukMovies),
+            (&anime, APIService.shared.animeMovies),
+        ]
         
-        nowPlaying = (try? await nowPlayingTask) ?? []
-        upcoming = (try? await upcomingTask) ?? []
-        topRated = (try? await topRatedTask) ?? []
-        korean = (try? await koreanTask) ?? []
-        japanese = (try? await japaneseTask) ?? []
-        vietnamese = (try? await vietnameseTask) ?? []
-        usuk = (try? await usukTask) ?? []
-        anime = (try? await animeTask) ?? []
+        // Load 2 categories at a time
+        for i in stride(from: 0, to: categories.count, by: 2) {
+            async let first = categories[i].1()
+            async let second = (i + 1 < categories.count) ? categories[i + 1].1() : nil
+            
+            if let result = try? await first {
+                await MainActor.run { categories[i].0 = result }
+            }
+            if i + 1 < categories.count, let result = try? await second {
+                await MainActor.run { categories[i + 1].0 = result }
+            }
+        }
     }
     
-    private func loadTrendingTV() async -> [Movie] {
+    private func loadTrendingTVPages() async -> [Movie] {
         var allTV: [Movie] = []
-        for page in 1...3 {
+        for page in 1...2 {
             let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=\(page)"
             guard let url = URL(string: urlString) else { continue }
             do {
