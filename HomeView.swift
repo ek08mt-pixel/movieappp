@@ -70,7 +70,7 @@ struct HomeView: View {
                                 }.tag(i)
                             }
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .never)).frame(height: 480).drawingGroup()
+                        .tabViewStyle(.page(indexDisplayMode: .never)).frame(height: 480)
                         .onAppear { startAutoScroll() }.onDisappear { stopAutoScroll() }
                         .overlay(alignment: .topLeading) {
                             Button {
