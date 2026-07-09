@@ -99,7 +99,7 @@ struct HomeView: View {
     func stopAutoScroll() { timer?.invalidate(); timer = nil }
 }
 
-// MARK: - SectionGrid (Poster đều)
+} // MARK: - SectionGrid (Poster đều)
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
