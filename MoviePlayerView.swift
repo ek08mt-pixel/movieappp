@@ -152,7 +152,7 @@ struct MoviePlayerView: View {
             if msg.userId != watchService.userId { Spacer().frame(width: 40) }
             VStack(alignment: msg.userId == watchService.userId ? .trailing : .leading, spacing: 2) {
                 Text(msg.userName).font(.system(size: 8)).foregroundColor(.gray)
-                Text(msg.text).font(.system(size: 12)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 6)..background(RoundedRectangle(cornerRadius: 12).fill(msg.userId == watchService.userId ? Color.blue.opacity(0.4) : Color.white.opacity(0.15)))
+                Text(msg.text).font(.system(size: 12)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 12).fill(msg.userId == watchService.userId ? Color.blue.opacity(0.4) : Color.white.opacity(0.15)))
             }
             if msg.userId == watchService.userId { Spacer().frame(width: 40) }
         }
