@@ -10,7 +10,6 @@ struct HomeView: View {
     @State private var showMenu = false
     @State private var menuOffset: CGFloat = -280
     @State private var showGenrePopup = false
-    
     @State private var showContinuePlayer = false
     @State private var continueMovieId: Int?
     @State private var continueMovieTitle = ""
@@ -30,8 +29,7 @@ struct HomeView: View {
                             ForEach(Array(vm.trending24h.prefix(10).enumerated()), id: \.element.id) { i, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
-                                        if let bgURL = movie.backdropURL { CachedAsyncImage(url: bgURL, size: .backdrop).aspectRatio(contentMode: .fill).frame(height: 480).frame(maxWidth: .infinity).clipped().blur(radius: 50).overlay(Color.black.opacity(0.25)).mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom)) }
-                                        else { Rectangle().fill(.ultraThinMaterial.opacity(0.15)).frame(height: 480) }
+                                        if let bgURL = movie.backdropURL { CachedAsyncImage(url: bgURL, size: .backdrop).aspectRatio(contentMode: .fill).frame(height: 480).frame(maxWidth: .infinity).clipped().blur(radius: 50).overlay(Color.black.opacity(0.25)).mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom)) } else { Rectangle().fill(.ultraThinMaterial.opacity(0.15)).frame(height: 480) }
                                         VStack(spacing: 0) {
                                             Spacer()
                                             if let posterURL = movie.posterURL { CachedAsyncImage(url: posterURL).aspectRatio(2/3, contentMode: .fit).frame(height: 320).clipShape(RoundedRectangle(cornerRadius: 24)).shadow(color: .white.opacity(0.1), radius: 10, y: -5).overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 1.5)).overlay(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.05))) }
@@ -87,7 +85,6 @@ struct HomeView: View {
     func stopAutoScroll() { timer?.invalidate(); timer = nil }
 }
 
-// MARK: - SectionGrid (Poster đều)
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     var body: some View {
@@ -99,12 +96,7 @@ struct SectionGrid: View {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(2/3, contentMode: .fill)
-                                        .frame(width: 115, height: 172)
-                                        .clipped()
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 115, height: 172).clipped().clipShape(RoundedRectangle(cornerRadius: 12)).shadow(color: .black.opacity(0.3), radius: 3)
                                     Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115, alignment: .leading)
                                 }
                             }
@@ -116,7 +108,6 @@ struct SectionGrid: View {
     }
 }
 
-// MARK: - BigCard (Poster đều)
 struct BigCard: View {
     let title: String; let icon: String; let movies: [Movie]
     var body: some View {
@@ -128,15 +119,8 @@ struct BigCard: View {
                         ForEach(movies.prefix(5)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie)) {
                                 HStack(spacing: 10) {
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(2/3, contentMode: .fill)
-                                        .frame(width: 50, height: 75)
-                                        .clipped()
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                        Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray)
-                                    }
+                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 50, height: 75).clipped().clipShape(RoundedRectangle(cornerRadius: 8))
+                                    VStack(alignment: .leading, spacing: 2) { Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2); Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray) }
                                     Spacer()
                                 }
                             }
