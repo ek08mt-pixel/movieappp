@@ -1,130 +1,4 @@
 import SwiftUI
-import WebKit
-import CommonCrypto
-
-// MARK: - Telegram Auth WebView (Liquid Glass)
-struct TelegramAuthWebView: View {
-    @Environment(\.dismiss) var dismiss
-    let onSuccess: (String, String, String?) -> Void
-    
-    private let botToken = "8819940584:AAFoBSqOZd_-jxNcO3pTCYF16aGcI-qSg9s"
-    private let botUsername = "Emmew_bot"
-    
-    var authURL: URL {
-        URL(string: "https://oauth.telegram.org/auth?bot_id=\(botToken.components(separatedBy: ":").first ?? "")&origin=\(botUsername)&request_access=write")!
-    }
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { dismiss() }
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.7))
-                    }.padding(16)
-                }
-                TelegramWebView(url: authURL) { userData in
-                    if let data = userData, verifyTelegramData(data) {
-                        let id = data["id"] as? String ?? "\(data["id"] as? Int ?? 0)"
-                        let name = (data["first_name"] as? String) ?? "Telegram User"
-                        let avatar = data["photo_url"] as? String
-                        onSuccess(id, name, avatar)
-                    } else {
-                        onSuccess("\(UUID().uuidString)", "Telegram User", nil)
-                    }
-                    dismiss()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .frame(width: UIScreen.main.bounds.width * 0.9, height: UIScreen.main.bounds.height * 0.7)
-            .background(.ultraThinMaterial.opacity(0.95))
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.2), lineWidth: 1))
-            .shadow(color: .black.opacity(0.5), radius: 30, y: 10)
-        }
-    }
-    
-    func verifyTelegramData(_ data: [String: Any]) -> Bool {
-        guard let hash = data["hash"] as? String else { return false }
-        var checkString = ""
-        let sortedKeys = data.keys.filter { $0 != "hash" }.sorted()
-        for key in sortedKeys {
-            if let value = data[key] { checkString += "\(key)=\(value)\n" }
-        }
-        checkString = String(checkString.dropLast())
-        guard let secretKey = hmacSHA256(key: "WebAppData", message: botToken) else { return false }
-        guard let computedHash = hmacSHA256(key: secretKey.base64EncodedString(), message: checkString) else { return false }
-        return computedHash.hexString() == hash
-    }
-    
-    func hmacSHA256(key: String, message: String) -> Data? {
-        guard let keyData = key.data(using: .utf8), let msgData = message.data(using: .utf8) else { return nil }
-        var hmac = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        keyData.withUnsafeBytes { keyBytes in
-            msgData.withUnsafeBytes { msgBytes in
-                CCHmac(CCHmacAlgorithm(kCCHmacAlgSHA256), keyBytes.baseAddress, keyData.count, msgBytes.baseAddress, msgData.count, &hmac)
-            }
-        }
-        return Data(hmac)
-    }
-}
-
-extension Data {
-    func hexString() -> String { map { String(format: "%02hhx", $0) }.joined() }
-}
-
-// MARK: - Telegram WebView
-struct TelegramWebView: UIViewRepresentable {
-    let url: URL
-    let onCallback: ([String: Any]?) -> Void
-    
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-    
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        let wv = WKWebView(frame: .zero, configuration: config)
-        wv.navigationDelegate = context.coordinator
-        wv.isOpaque = false
-        wv.backgroundColor = .clear
-        wv.scrollView.backgroundColor = .clear
-        wv.load(URLRequest(url: url))
-        return wv
-    }
-    
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
-    
-    class Coordinator: NSObject, WKNavigationDelegate {
-        let parent: TelegramWebView
-        init(_ parent: TelegramWebView) { self.parent = parent }
-        
-        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if let url = navigationAction.request.url?.absoluteString,
-               url.contains("tgWebAppData=") || url.contains("hash=") {
-                if let components = URLComponents(string: url),
-                   let fragment = components.fragment {
-                    let params = fragment.components(separatedBy: "&")
-                    var dict: [String: Any] = [:]
-                    for param in params {
-                        let kv = param.components(separatedBy: "=")
-                        if kv.count == 2 { dict[kv[0]] = kv[1].removingPercentEncoding ?? kv[1] }
-                    }
-                    parent.onCallback(dict)
-                    decisionHandler(.cancel)
-                    return
-                }
-                if let queryItems = URLComponents(string: url)?.queryItems {
-                    var dict: [String: Any] = [:]
-                    for item in queryItems { dict[item.name] = item.value }
-                    parent.onCallback(dict)
-                    decisionHandler(.cancel)
-                    return
-                }
-            }
-            decisionHandler(.allow)
-        }
-    }
-}
 
 // MARK: - ProfileView
 struct ProfileView: View {
@@ -134,7 +8,7 @@ struct ProfileView: View {
     @State private var isEditingName = false
     @State private var tempName: String = ""
     @State private var showAuth = false
-    @State private var showTelegramAuth = false
+    @State private var showTelegramOTP = false
     @Environment(\.dismiss) var dismiss
     
     let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill",
@@ -181,7 +55,7 @@ struct ProfileView: View {
                         VStack(spacing: 16) {
                             Text("Đăng nhập để đồng bộ dữ liệu").font(.caption).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal, 40)
                             
-                            Button { showTelegramAuth = true } label: {
+                            Button { showTelegramOTP = true } label: {
                                 HStack(spacing: 10) {
                                     Image(systemName: "paperplane.circle.fill").font(.system(size: 22))
                                     Text("Tiếp tục với Telegram").font(.system(size: 16, weight: .medium))
@@ -204,12 +78,87 @@ struct ProfileView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) { ImagePicker(image: $inputImage) }
         .sheet(isPresented: $showAuth) { SmartAuthView { email, password in appState.smartLogin(email: email, password: password); showAuth = false } }
-        .fullScreenCover(isPresented: $showTelegramAuth) {
-            TelegramAuthWebView { telegramId, name, avatarURL in
+        .sheet(isPresented: $showTelegramOTP) {
+            TelegramOTPView { telegramId, name, avatarURL in
                 appState.telegramLogin(telegramId: telegramId, name: name, avatarURL: avatarURL)
             }
         }
         .onChange(of: inputImage) { img in if let img = img, let data = img.jpegData(compressionQuality: 0.7) { appState.avatarImageData = data; appState.selectedAvatar = ""; appState.save() } }
+    }
+}
+
+// MARK: - Telegram OTP View
+struct TelegramOTPView: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var otpCode = ""
+    @State private var isLoading = false
+    @State private var errorMsg = ""
+    let onSuccess: (String, String, String?) -> Void
+    
+    private let botToken = "8819940584:AAFoBSqOZd_-jxNcO3pTCYF16aGcI-qSg9s"
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.95).ignoresSafeArea()
+            VStack(spacing: 24) {
+                Text("Đăng nhập Telegram").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                
+                Text("1. Mở Telegram, tìm @Emmew_bot\n2. Nhắn /start để nhận mã OTP\n3. Nhập mã bên dưới")
+                    .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+                
+                TextField("Mã OTP", text: $otpCode)
+                    .textFieldStyle(.plain).foregroundColor(.white)
+                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                    .multilineTextAlignment(.center)
+                    .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                    .padding(.horizontal, 30)
+                    .keyboardType(.numberPad)
+                    .onChange(of: otpCode) { newValue in
+                        if newValue.count >= 6 {
+                            verifyOTP(code: newValue)
+                        }
+                    }
+                
+                if !errorMsg.isEmpty { Text(errorMsg).font(.caption).foregroundColor(.red) }
+                if isLoading { ProgressView().tint(.white) }
+                
+                Button { dismiss() } label: { Text("Đóng").foregroundColor(.gray).padding(.top, 10) }
+            }
+            .padding(.vertical, 40)
+        }
+    }
+    
+    func verifyOTP(code: String) {
+        isLoading = true; errorMsg = ""
+        
+        guard let url = URL(string: "https://api.telegram.org/bot\(botToken)/getUpdates?limit=5") else { errorMsg = "Lỗi kết nối"; isLoading = false; return }
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let result = json["result"] as? [[String: Any]] else {
+                DispatchQueue.main.async { self.errorMsg = "Không thể kết nối bot"; self.isLoading = false }
+                return
+            }
+            
+            for update in result {
+                if let message = update["message"] as? [String: Any],
+                   let text = message["text"] as? String,
+                   text.trimmingCharacters(in: .whitespaces) == code,
+                   let from = message["from"] as? [String: Any],
+                   let userId = from["id"] as? Int64,
+                   let firstName = from["first_name"] as? String {
+                    let avatar = from["photo_url"] as? String
+                    DispatchQueue.main.async {
+                        self.onSuccess("\(userId)", firstName, avatar)
+                        self.dismiss()
+                    }
+                    return
+                }
+            }
+            
+            DispatchQueue.main.async { self.errorMsg = "Mã OTP không đúng"; self.isLoading = false }
+        }.resume()
     }
 }
 
