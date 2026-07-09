@@ -30,7 +30,7 @@ struct HomeView: View {
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
                                         if let bgURL = movie.backdropURL {
-                                            CachedAsyncImage(url: bgURL)
+                                            CachedAsyncImage(url: bgURL, size: .backdrop)
                                                 .aspectRatio(contentMode: .fill)
                                                 .frame(height: 480)
                                                 .frame(maxWidth: .infinity)
@@ -130,7 +130,7 @@ struct HomeView: View {
                                 NavigationLink(destination: MovieDetailView(movie: mod)) {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
-                                            CachedAsyncImage(url: url).aspectRatio(16/9, contentMode: .fill).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 16))
+                                            CachedAsyncImage(url: url, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 16))
                                         } else { RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)).frame(height: 180) }
                                         LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 16))
                                         VStack(alignment: .leading, spacing: 4) {
