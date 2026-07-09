@@ -45,19 +45,10 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                 .onAppear {
-                    player.play()
-                    player.volume = volume
-                    setupTimeObserver()
-                    resetControlsTimer()
-                    loadOverlayData()
-                    lockToLandscape()
+                    player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape()
                 }
                 .onDisappear {
-                    saveProgress()
-                    player.pause()
-                    player.replaceCurrentItem(with: nil)
-                    controlsTimer?.invalidate()
-                    unlockOrientation()
+                    saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation()
                 }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
@@ -70,18 +61,12 @@ struct MoviePlayerView: View {
                 HStack(spacing:50){Button{seek(-10)}label:{Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}; Button{player.rate==0 ? player.play():player.pause()}label:{Image(systemName:player.rate==0 ? "play.fill":"pause.fill").font(.system(size:28,weight:.bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15),lineWidth:0.5))}; Button{seek(10)}label:{Image(systemName:"goforward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}}
                 VStack{Spacer(); VStack(spacing:6){Slider(value:$currentTime,in:0...max(duration,1)){e in isSeeking=e; if !e{player.seek(to:CMTime(seconds:currentTime,preferredTimescale:600))}}.accentColor(.white).padding(.horizontal); HStack{Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7));Spacer();Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))}.padding(.horizontal)
                     HStack(spacing:16){
-                        // Tập trước
                         Button{prevEpisode()}label:{Image(systemName:"backward.end.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
-                        // Khóa xoay
                         Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation":"lock.open.rotation").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
-                        // Phụ đề
                         Button{showSubtitlePopup=true}label:{Image(systemName:"captions.bubble").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
-                        // Âm thanh
                         Button{showAudioPopup=true}label:{Image(systemName:"waveform").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
-                        // Tập sau
                         Button{nextEpisode()}label:{Image(systemName:"forward.end.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
                         Spacer()
-                        // Xoay ngang
                         Button{toggleOrientation()}label:{Image(systemName:"rotate.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8))}
                     }.padding(.horizontal).padding(.bottom,20)}.background(LinearGradient(colors:[.clear,.black.opacity(0.5)],startPoint:.top,endPoint:.bottom))}
                 VStack{HStack{Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Spacer();Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1);Spacer();HStack(spacing:6){Button{pipController?.startPictureInPicture()}label:{Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSettings=true}label:{Image(systemName:"gearshape.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))};Button{showSourceMenu=true}label:{Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}}}.padding(.horizontal,8).padding(.top,50);Spacer()}
@@ -99,36 +84,28 @@ struct MoviePlayerView: View {
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
     }
     
-    // MARK: - Overlay
     var youtubeOverlay: some View {
         ZStack(alignment:.bottom){ Color.black.opacity(0.4).ignoresSafeArea().onTapGesture{closeOverlay()}
             VStack(spacing:0){ Capsule().fill(.white.opacity(0.5)).frame(width:40,height:5).padding(.top,10)
                 ScrollView{ VStack(alignment:.leading,spacing:16){
                     if let movie=currentMovie { VStack(alignment:.leading,spacing:8){ Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white); HStack(spacing:10){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:10)); VStack(alignment:.leading,spacing:4){Text(movie.title).font(.headline).foregroundColor(.white).lineLimit(2); if !seasons.isEmpty{Text("\(seasons.count) mùa").font(.caption).foregroundColor(.gray)}; if !collectionMovies.isEmpty{Text("\(collectionMovies.count) phần").font(.caption).foregroundColor(.gray)}};Spacer()}.padding(10).background(RoundedRectangle(cornerRadius:12).fill(.ultraThinMaterial.opacity(0.3)))
-                        
-                        // Danh sách tập ngang
                         if let detail = selectedSeasonDetail {
                             VStack(alignment:.leading,spacing:6){
                                 Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption).foregroundColor(.white.opacity(0.7))
                                 ScrollView(.horizontal,showsIndicators:false){
                                     HStack(spacing:6){
                                         ForEach(detail.episodes){ep in
-                                            Button{
-                                                loadStream(season: ep.seasonNumber, episode: ep.episodeNumber)
-                                                closeOverlay()
-                                            }label:{
-                                                Text("\(ep.episodeNumber)")
-                                                    .font(.system(size:11,weight:.medium))
+                                            Button{ loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() }label:{
+                                                Text("\(ep.episodeNumber)").font(.system(size:11,weight:.medium))
                                                     .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
                                                     .frame(width:32,height:32)
-                                                    .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : .ultraThinMaterial.opacity(0.4)))
+                                                    .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)))
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                        
                         if !collectionMovies.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(collectionMovies.filter{$0.id != movieId}){part in Button{openMovie(part)}label:{VStack(spacing:4){CachedAsyncImage(url:part.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:70,height:105).clipShape(RoundedRectangle(cornerRadius:8)); Text(part.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:70)}}}}} }
                         if !seasons.isEmpty { ScrollView(.horizontal,showsIndicators:false){HStack(spacing:6){ForEach(seasons){season in Button{selectedSeasonNumber=season.seasonNumber; Task{selectedSeasonDetail=try? await APIService.shared.fetchSeasonDetail(tvId:movieId,seasonNumber:season.seasonNumber)}}label:{Text(season.name).font(.caption).fontWeight(selectedSeasonNumber==season.seasonNumber ? .bold:.regular).foregroundColor(selectedSeasonNumber==season.seasonNumber ? .white:.gray).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(selectedSeasonNumber==season.seasonNumber ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)):AnyShapeStyle(.ultraThinMaterial.opacity(0.2))))}}}} } } }
                     if !similarMovies.isEmpty { VStack(alignment:.leading,spacing:8){Text("Phim tương tự").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal,showsIndicators:false){HStack(spacing:8){ForEach(similarMovies.prefix(15)){movie in Button{openMovie(movie)}label:{VStack(spacing:4){CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:90,height:135).clipShape(RoundedRectangle(cornerRadius:10));Text(movie.title).font(.system(size:9)).foregroundColor(.white).lineLimit(2).frame(width:90)}}}}}} }
@@ -137,7 +114,6 @@ struct MoviePlayerView: View {
         }
     }
     
-    // MARK: - Popups
     var sourcePopup: some View {
         VStack(spacing:8){Text("nguồn phát").font(.system(size:11,weight:.medium,design:.rounded)).foregroundColor(.white.opacity(0.8))
             ForEach(MovieSource.allCases,id:\.self){ src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:6){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:5,height:5);Text(src.rawValue).font(.system(size:12,design:.rounded)).foregroundColor(.white);if selectedSource==src{Image(systemName:"checkmark").font(.system(size:9)).foregroundColor(.white)}}.padding(.horizontal,12).padding(.vertical,8).background(RoundedRectangle(cornerRadius:10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius:10).stroke(Color.white.opacity(0.15),lineWidth:0.5))}}
@@ -150,168 +126,72 @@ struct MoviePlayerView: View {
     
     var subtitlePopup: some View {
         VStack(spacing:8){Text("Phụ đề").font(.system(size:13,weight:.bold)).foregroundColor(.white)
-            Button{selectedSubtitle=nil;showSubtitlePopup=false}label:{Text("Tắt").font(.system(size:12)).foregroundColor(selectedSubtitle==nil ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedSubtitle==nil ? .white:.ultraThinMaterial.opacity(0.4)))}
-            ForEach(availableSubtitles,id:\.self){sub in Button{selectedSubtitle=sub;showSubtitlePopup=false}label:{Text(sub).font(.system(size:12)).foregroundColor(selectedSubtitle==sub ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedSubtitle==sub ? .white:.ultraThinMaterial.opacity(0.4)))}}
+            Button{selectedSubtitle=nil;showSubtitlePopup=false}label:{Text("Tắt").font(.system(size:12)).foregroundColor(selectedSubtitle==nil ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedSubtitle==nil ? .white:Color.white.opacity(0.15)))}
+            ForEach(availableSubtitles,id:\.self){sub in Button{selectedSubtitle=sub;showSubtitlePopup=false}label:{Text(sub).font(.system(size:12)).foregroundColor(selectedSubtitle==sub ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedSubtitle==sub ? .white:Color.white.opacity(0.15)))}}
         }.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.7))).overlay(RoundedRectangle(cornerRadius:18).stroke(.white.opacity(0.15),lineWidth:0.5)).frame(width:180)
     }
     
     var audioPopup: some View {
         VStack(spacing:8){Text("Âm thanh").font(.system(size:13,weight:.bold)).foregroundColor(.white)
-            ForEach(availableAudio,id:\.self){aud in Button{selectedAudio=aud;showAudioPopup=false}label:{Text(aud).font(.system(size:12)).foregroundColor(selectedAudio==aud ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedAudio==aud ? .white:.ultraThinMaterial.opacity(0.4)))}}
+            ForEach(availableAudio,id:\.self){aud in Button{selectedAudio=aud;showAudioPopup=false}label:{Text(aud).font(.system(size:12)).foregroundColor(selectedAudio==aud ? .black:.white).frame(maxWidth:.infinity).padding(.vertical,8).background(Capsule().fill(selectedAudio==aud ? .white:Color.white.opacity(0.15)))}}
         }.padding(14).background(RoundedRectangle(cornerRadius:18).fill(.ultraThinMaterial.opacity(0.7))).overlay(RoundedRectangle(cornerRadius:18).stroke(.white.opacity(0.15),lineWidth:0.5)).frame(width:180)
     }
     
-    // MARK: - Actions
     func popupBackground(action:@escaping()->Void)->some View { Color.black.opacity(0.01).ignoresSafeArea().onTapGesture{action()} }
     func closeOverlay() { withAnimation(.spring(response:0.25,dampingFraction:0.8)){overlayOffset=UIScreen.main.bounds.height}; DispatchQueue.main.asyncAfter(deadline:.now()+0.25){showOverlay=false} }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
-    
-    func prevEpisode() {
-        guard let ep = episodeNumber, ep > 1 else { return }
-        loadStream(season: seasonNumber, episode: ep - 1)
-    }
-    
-    func nextEpisode() {
-        guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
-        loadStream(season: seasonNumber, episode: ep + 1)
-    }
-    
-    func toggleOrientationLock() {
-        isOrientationLocked.toggle()
-        if isOrientationLocked { lockToLandscape() }
-    }
+    func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; loadStream(season: seasonNumber, episode: ep - 1) }
+    func nextEpisode() { guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }; loadStream(season: seasonNumber, episode: ep + 1) }
+    func toggleOrientationLock() { isOrientationLocked.toggle(); if isOrientationLocked { lockToLandscape() } }
     
     func loadOverlayData() { Task { 
         similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []
         if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}
         if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}
         currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType)
-        // Load subtitle/audio info
-        if let item = player.currentItem {
-            if let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible) {
-                availableSubtitles = group.options.map { $0.displayName }
-            }
-            if let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
-                availableAudio = group.options.map { $0.displayName }
-            }
-        }
     } }
     
     func loadStream(season: Int? = nil, episode: Int? = nil) {
-        let ep = episode ?? episodeNumber ?? 1
-        let s = season ?? seasonNumber
-        seasonNumber = s
-        episodeNumber = ep
+        let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
+        seasonNumber = s; episodeNumber = ep
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
-        
         Task {
             do {
                 let imdbID = try await fetchIMDB()
-                
                 switch selectedSource {
                 case .phimapi:
-                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { result in
-                            continuation.resume(with: result)
-                        }
-                    }
-                    await MainActor.run {
-                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                        player.play()
-                        hasStartedPlaying = true
-                        sourceStatus[.phimapi] = true
-                        isLoading = false
-                        tryResume()
-                    }
+                    let url = try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { c.resume(with: $0) } }
+                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.phimapi] = true; isLoading = false; tryResume() }
                     saveHistory()
-                    
                 case .xem20:
-                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        Xem20Service.shared.fetchStream(title: movieTitle, season: s, episode: ep) { result in
-                            continuation.resume(with: result)
-                        }
-                    }
-                    await MainActor.run {
-                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                        player.play()
-                        hasStartedPlaying = true
-                        sourceStatus[.xem20] = true
-                        isLoading = false
-                        tryResume()
-                    }
+                    let url = try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, Error>) in Xem20Service.shared.fetchStream(title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
+                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.xem20] = true; isLoading = false; tryResume() }
                     saveHistory()
-                    
                 case .nguonc:
-                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { result in
-                            continuation.resume(with: result)
-                        }
-                    }
-                    await MainActor.run {
-                        nguonCEmbedURL = url
-                        nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"
-                        isLoading = false
-                        sourceStatus[.nguonc] = true
-                        showNguonCWebView = true
-                    }
-                    
+                    let url = try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, Error>) in NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
+                    await MainActor.run { nguonCEmbedURL = url; nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }
                 case .vsmov:
-                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { result in
-                            continuation.resume(with: result)
-                        }
-                    }
-                    await MainActor.run {
-                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                        player.play()
-                        hasStartedPlaying = true
-                        sourceStatus[.vsmov] = true
-                        isLoading = false
-                        tryResume()
-                    }
+                    let url = try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, Error>) in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
+                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }
                     saveHistory()
-                    
                 case .stravo:
-                    let url = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-                        StravoService.shared.fetchStream(imdbID: imdbID, season: s, episode: ep) { result in
-                            continuation.resume(with: result)
-                        }
-                    }
+                    let url = try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, Error>) in StravoService.shared.fetchStream(imdbID: imdbID, season: s, episode: ep) { c.resume(with: $0) } }
                     let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": ["Referer": "https://lok-lok.cc/", "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"]])
-                    await MainActor.run {
-                        player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
-                        player.play()
-                        hasStartedPlaying = true
-                        sourceStatus[.stravo] = true
-                        isLoading = false
-                        tryResume()
-                    }
+                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(asset: asset)); player.play(); hasStartedPlaying = true; sourceStatus[.stravo] = true; isLoading = false; tryResume() }
                     saveHistory()
                 }
             } catch {
-                await MainActor.run {
-                    sourceStatus[selectedSource] = false
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
+                await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false }
             }
         }
     }
     
-    func tryResume() {
-        guard !didResume, resumeTime > 0 else { return }
-        didResume = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600))
-        }
-    }
+    func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
     
     func fetchIMDB() async throws -> String {
         if let cached = imdbIDCache { return cached }
         var id: String?
-        if mediaType == "tv" || seasonNumber != nil {
-            id = try? await APIService.shared.fetchExternalIDs(tvId: movieId)
-        }
+        if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }
         if id == nil || id?.isEmpty == true {
             let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
             struct E: Codable { let imdb_id: String? }
@@ -322,35 +202,17 @@ struct MoviePlayerView: View {
         return finalID
     }
     
-    func lockToLandscape() {
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-        }
-    }
-    
-    func unlockOrientation() {
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-        }
-    }
+    func lockToLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
+    func unlockOrientation() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }
     
     func saveProgress() {
         guard hasStartedPlaying, currentTime > 0, duration > 0 else { return }
-        let progress = WatchProgress(
-            movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString,
-            mediaType: mediaType, season: seasonNumber, episode: episodeNumber,
-            currentTime: currentTime, duration: duration, lastWatched: Date()
-        )
-        appState.updateProgress(progress)
+        appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: currentTime, duration: duration, lastWatched: Date()))
     }
     
     func saveHistory() {
         let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
-        if !appState.watchHistory.contains(where: { $0.id == movieId }) {
-            appState.watchHistory.insert(m, at: 0)
-            if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }
-            appState.save()
-        }
+        if !appState.watchHistory.contains(where: { $0.id == movieId }) { appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
     }
     
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
@@ -366,8 +228,7 @@ struct MoviePlayerView: View {
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false
-        vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true
+        let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
         try? AVAudioSession.sharedInstance().setActive(true); return vc
     }
