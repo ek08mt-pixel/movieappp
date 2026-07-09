@@ -97,7 +97,7 @@ struct MoviePlayerView: View {
                                 .font(.system(size:10,weight:.medium))
                                 .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
                                 .frame(width:30,height:30)
-                                .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : .ultraThinMaterial.opacity(0.4)))
+                                .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)))
                                 .overlay(Circle().stroke(.white.opacity(0.15),lineWidth:0.5))
                         }
                     }
