@@ -99,7 +99,7 @@ struct MoviePlayerView: View {
                             .frame(maxWidth:.infinity)
                             .background(
                                 RoundedRectangle(cornerRadius:10)
-                                    .fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : .ultraThinMaterial.opacity(0.4))
+                                    .fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15))
                                     .overlay(RoundedRectangle(cornerRadius:10).stroke(.white.opacity(0.15),lineWidth:0.5))
                             )
                     }
