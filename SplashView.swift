@@ -1,118 +1,95 @@
 import SwiftUI
 
 struct SplashView: View {
-    @State private var isActive = false
-    @State private var scale: CGFloat = 0.8
-    @State private var opacity: Double = 0
-    @State private var glowOpacity: Double = 0.3
-    @State private var rotation: Double = 0
+    @EnvironmentObject var appState: AppState
+    @State private var showMain = false
+    @State private var isBlocked = false
+    @State private var blockTitle = ""
+    @State private var blockMessage = ""
+    @State private var buttonText = ""
+    @State private var buttonURL = ""
+    @State private var isLoading = true
+    
+    private let configURL = "https://gist.githubusercontent.com/ek08mt-pixel/05d20393f190cd3457a0b9912e87d22d/raw/dbc6fab4d82f0e5326f2cb521b9a65f61815f1fc/emmew_config.json"
+    private let currentVersion = "1.0"
     
     var body: some View {
-        if isActive {
-            MainTabView()
-                .transition(.opacity.animation(.easeInOut(duration: 0.8)))
-        } else {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#2A2A2A").opacity(0.6), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 300, height: 300).blur(radius: 60).offset(x: -80, y: -200).rotationEffect(.degrees(rotation))
-                    
-                    Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#1F1F1F").opacity(0.5), .clear], startPoint: .bottomTrailing, endPoint: .topLeading))
-                        .frame(width: 250, height: 250).blur(radius: 50).offset(x: 100, y: 100).rotationEffect(.degrees(-rotation))
-                    
-                    Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "#252525").opacity(0.4), .clear], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 280, height: 280).blur(radius: 55).offset(x: -50, y: 150).rotationEffect(.degrees(rotation * 0.7))
-                    
-                    Color.black.opacity(0.5)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            if isLoading {
+                VStack(spacing: 20) {
+                    Text("Emmew").font(.system(size: 42, weight: .bold, design: .serif)).foregroundColor(.white)
+                    ProgressView().tint(.white).scaleEffect(1.2)
                 }
-                .ignoresSafeArea()
-                
-                ForEach(0..<12) { i in
-                    Circle()
-                        .fill(.white.opacity(0.12))
-                        .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
-                        .blur(radius: 1)
-                        .offset(x: CGFloat.random(in: -150...150), y: CGFloat.random(in: -300...300))
-                        .opacity(glowOpacity)
-                }
-                
-                VStack(spacing: 0) {
+            } else if isBlocked {
+                VStack(spacing: 24) {
                     Spacer()
                     
-                    VStack(spacing: 22) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 32)
-                                .fill(.ultraThinMaterial.opacity(0.4))
-                                .frame(width: 160, height: 160)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 32)
-                                        .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                                )
-                                .shadow(color: .white.opacity(0.1), radius: 20, y: 10)
-                            
-                            Image(systemName: "play.rectangle.fill")
-                                .font(.system(size: 70, weight: .bold))
-                                .foregroundColor(.white)
-                                .shadow(color: .white.opacity(0.5), radius: 10)
-                        }
-                        .scaleEffect(scale)
-                        .opacity(opacity)
-                        
-                        Text("EMCC")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .tracking(10)
-                            .scaleEffect(scale)
-                            .opacity(opacity)
-                            .shadow(color: .white.opacity(0.3), radius: 10)
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 64))
+                        .foregroundColor(.white.opacity(0.7))
+                    
+                    Text(blockTitle.isEmpty ? "Oops... hết date mất rùi" : blockTitle)
+                        .font(.title2).fontWeight(.bold).foregroundColor(.white).multilineTextAlignment(.center)
+                    
+                    Text(blockMessage.isEmpty ? "Nhắn @onebraincellcat để lấy file mới " : blockMessage)
+                        .font(.body).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal, 40)
+                    
+                    if !buttonURL.isEmpty {
+                        Button {
+                            if let url = URL(string: buttonURL) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text(buttonText.isEmpty ? "Tải bản mới" : buttonText)
+                                .font(.headline).foregroundColor(.white)
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .background(Capsule().fill(.ultraThinMaterial))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                        }.padding(.horizontal, 50)
                     }
                     
                     Spacer()
-                    
-                    Text("© 2026 Emmew, Inc. All Rights Reserved.")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.25))
-                        .padding(.bottom, 40)
-                        .opacity(opacity)
+                    Text("Emmew © 2026").font(.caption).foregroundColor(.gray.opacity(0.5))
                 }
+            } else {
+                MainTabView().environmentObject(appState)
             }
-            .onAppear {
-                withAnimation(.easeOut(duration: 1.8)) {
-                    scale = 1.0
-                    opacity = 1.0
-                }
-                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                    glowOpacity = 0.6
-                }
-                withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation(.easeInOut(duration: 0.8)) {
-                        isActive = true
+        }
+        .task { await checkConfig() }
+    }
+    
+    func checkConfig() async {
+        guard let url = URL(string: configURL) else { proceedToApp(); return }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let allowed = json["allowed"] as? Bool ?? true
+                let latestVersion = json["latestVersion"] as? String ?? "1.0"
+                
+                await MainActor.run {
+                    if !allowed || latestVersion != currentVersion {
+                        self.isBlocked = true
+                        self.blockTitle = json["blockTitle"] as? String ?? ""
+                        self.blockMessage = json["blockMessage"] as? String ?? ""
+                        self.buttonText = json["buttonText"] as? String ?? ""
+                        self.buttonURL = json["buttonURL"] as? String ?? ""
+                        self.isLoading = false
+                    } else {
+                        proceedToApp()
                     }
                 }
+            } else {
+                await MainActor.run { proceedToApp() }
             }
+        } catch {
+            await MainActor.run { proceedToApp() }
         }
     }
-}
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 6: (a, r, g, b) = (255, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
-        case 8: (a, r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
-        default: (a, r, g, b) = (255, 0, 0, 0)
-        }
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
+    
+    func proceedToApp() {
+        withAnimation { showMain = true; isLoading = false }
     }
 }
