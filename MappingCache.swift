@@ -495,25 +495,19 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        // Ưu tiên 1: match chính xác tmdb.id
-        if let exactTMDB = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+        // Ưu tiên 1: match chính xác tmdb.id + tmdb.season
+        if let exactMatch = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
+            ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) {
-            return exactTMDB
+            return exactMatch
         }
         
-        // Ưu tiên 2: match origin_name chính xác tuyệt đối
-        let exactNameMatches = items.filter { item in
-            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-            return originName == normalizedTitle
-        }
-        if !exactNameMatches.isEmpty {
-            if isSeries, let match = exactNameMatches.first(where: { isSeriesType($0["type"] as? String ?? "") }) {
-                return match
-            }
-            if !isSeries, let match = exactNameMatches.first(where: { isSingleType($0["type"] as? String ?? "") }) {
-                return match
-            }
+        // Ưu tiên 2: match chính xác tmdb.id (cùng series)
+        if let sameSeries = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+        }) {
+            return sameSeries
         }
         
         // Ưu tiên 3: với series, tìm item có season khớp + origin_name chứa title
@@ -537,7 +531,6 @@ final class PhimAPIService {
                 return seasonAndTitleMatched.first
             }
             
-            // Fallback: chỉ khớp season
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
                 let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
@@ -557,29 +550,30 @@ final class PhimAPIService {
             }
         }
         
-        // Ưu tiên 4: match origin_name contains title + season
+        // Ưu tiên 4: match origin_name chính xác
+        let exactNameMatches = items.filter { item in
+            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+            return originName == normalizedTitle
+        }
+        if !exactNameMatches.isEmpty {
+            if isSeries, let match = exactNameMatches.first(where: { isSeriesType($0["type"] as? String ?? "") }) { return match }
+            if !isSeries, let match = exactNameMatches.first(where: { isSingleType($0["type"] as? String ?? "") }) { return match }
+        }
+        
+        // Ưu tiên 5: match origin_name contains title + season
         for item in items {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             let itemType = item["type"] as? String ?? "single"
             let itemSeason = (item["tmdb"] as? [String: Any])?["season"] as? Int
             let extractedSeason = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
-            
             if originName.contains(normalizedTitle) {
-                if isSeries && isSeriesType(itemType) {
-                    let s = itemSeason ?? extractedSeason
-                    if s == targetSeason { return item }
-                } else if !isSeries && isSingleType(itemType) {
-                    return item
-                }
+                if isSeries && isSeriesType(itemType) { if (itemSeason ?? extractedSeason) == targetSeason { return item } }
+                else if !isSeries && isSingleType(itemType) { return item }
             }
         }
         
-        // Ưu tiên 5: lấy item đầu tiên cùng loại
-        if isSeries {
-            return items.first(where: { isSeriesType($0["type"] as? String ?? "") })
-        } else {
-            return items.first(where: { isSingleType($0["type"] as? String ?? "") })
-        }
+        if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
+        else { return items.first(where: { isSingleType($0["type"] as? String ?? "") }) }
     }
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
@@ -722,46 +716,26 @@ final class Xem20Service {
     }
     
     private func ensureCookie(completion: @escaping () -> Void) {
-        if !cookie.isEmpty {
-            completion()
-            return
-        }
-        
-        guard let url = URL(string: baseURL) else {
-            completion()
-            return
-        }
-        
+        if !cookie.isEmpty { completion(); return }
+        guard let url = URL(string: baseURL) else { completion(); return }
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        
         URLSession.shared.dataTask(with: request) { [weak self] _, response, _ in
             if let httpResponse = response as? HTTPURLResponse,
                let headers = httpResponse.allHeaderFields as? [String: String],
-               let setCookie = headers["Set-Cookie"] {
-                self?.cookie = setCookie
-            }
+               let setCookie = headers["Set-Cookie"] { self?.cookie = setCookie }
             completion()
         }.resume()
     }
     
     private func search(keyword: String, completion: @escaping ([Xem20Movie]) -> Void) {
         let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? keyword
-        guard let url = URL(string: "\(baseURL)/tim-kiem?keyword=\(encoded)") else {
-            completion([])
-            return
-        }
-        
+        guard let url = URL(string: "\(baseURL)/tim-kiem?keyword=\(encoded)") else { completion([]); return }
         var request = URLRequest(url: url)
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        
         URLSession.shared.dataTask(with: request) { data, _, _ in
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion([])
-                return
-            }
-            
+            guard let data = data, let html = String(data: data, encoding: .utf8) else { completion([]); return }
             var movies: [Xem20Movie] = []
             let pattern = #"<a[^>]*href="(/phim/[^"]*)"[^>]*>"#
             if let regex = try? NSRegularExpression(pattern: pattern) {
@@ -772,8 +746,7 @@ final class Xem20Service {
                         let path = String(html[r])
                         if seen.contains(path) { continue }
                         seen.insert(path)
-                        let title = self.extractTitle(from: html)
-                        movies.append(Xem20Movie(title: title, slug: path))
+                        movies.append(Xem20Movie(title: self.extractTitle(from: html), slug: path))
                     }
                 }
             }
@@ -782,28 +755,18 @@ final class Xem20Service {
     }
     
     private func getEpisodes(slug: String, completion: @escaping ([Xem20Episode]) -> Void) {
-        guard let url = URL(string: "\(baseURL)\(slug)") else {
-            completion([])
-            return
-        }
-        
+        guard let url = URL(string: "\(baseURL)\(slug)") else { completion([]); return }
         var request = URLRequest(url: url)
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        
         URLSession.shared.dataTask(with: request) { data, _, _ in
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion([])
-                return
-            }
-            
+            guard let data = data, let html = String(data: data, encoding: .utf8) else { completion([]); return }
             var episodes: [Xem20Episode] = []
             let pattern = #"<a[^>]*href="(/xem-phim/[^"]*)"[^>]*>([^<]*)</a>"#
             if let regex = try? NSRegularExpression(pattern: pattern) {
                 let matches = regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
                 for match in matches {
-                    if let urlRange = Range(match.range(at: 1), in: html),
-                       let nameRange = Range(match.range(at: 2), in: html) {
+                    if let urlRange = Range(match.range(at: 1), in: html), let nameRange = Range(match.range(at: 2), in: html) {
                         let path = String(html[urlRange])
                         let name = String(html[nameRange]).trimmingCharacters(in: .whitespaces)
                         episodes.append(Xem20Episode(name: name, path: path))
@@ -815,66 +778,28 @@ final class Xem20Service {
     }
     
     private func getStream(path: String, completion: @escaping (URL?) -> Void) {
-        guard let url = URL(string: "\(baseURL)\(path)") else {
-            completion(nil)
-            return
-        }
-        
+        guard let url = URL(string: "\(baseURL)\(path)") else { completion(nil); return }
         var request = URLRequest(url: url)
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        
         URLSession.shared.dataTask(with: request) { data, _, _ in
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(nil)
-                return
-            }
-            
+            guard let data = data, let html = String(data: data, encoding: .utf8) else { completion(nil); return }
             let videoPattern = #"<video[^>]*src="(https?://[^"]+\.m3u8)""#
-            if let regex = try? NSRegularExpression(pattern: videoPattern),
-               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-               let r = Range(match.range(at: 1), in: html) {
-                completion(URL(string: String(html[r])))
-                return
-            }
-            
+            if let regex = try? NSRegularExpression(pattern: videoPattern), let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)), let r = Range(match.range(at: 1), in: html) { completion(URL(string: String(html[r]))); return }
             let m3u8Pattern = #"https?://[^"'\s]+\.m3u8[^"'\s]*"#
-            if let regex = try? NSRegularExpression(pattern: m3u8Pattern),
-               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-               let r = Range(match.range, in: html) {
-                completion(URL(string: String(html[r])))
-                return
-            }
-            
+            if let regex = try? NSRegularExpression(pattern: m3u8Pattern), let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)), let r = Range(match.range, in: html) { completion(URL(string: String(html[r]))); return }
             let mp4Pattern = #"https?://[^"'\s]+\.mp4[^"'\s]*"#
-            if let regex = try? NSRegularExpression(pattern: mp4Pattern),
-               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-               let r = Range(match.range, in: html) {
-                completion(URL(string: String(html[r])))
-                return
-            }
-            
+            if let regex = try? NSRegularExpression(pattern: mp4Pattern), let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)), let r = Range(match.range, in: html) { completion(URL(string: String(html[r]))); return }
             completion(nil)
         }.resume()
     }
     
     private func extractTitle(from html: String) -> String {
         let pattern = #"<h3[^>]*class="[^"]*title[^"]*"[^>]*>([^<]*)</h3>"#
-        if let regex = try? NSRegularExpression(pattern: pattern),
-           let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-           let r = Range(match.range(at: 1), in: html) {
-            return String(html[r]).trimmingCharacters(in: .whitespaces)
-        }
+        if let regex = try? NSRegularExpression(pattern: pattern), let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)), let r = Range(match.range(at: 1), in: html) { return String(html[r]).trimmingCharacters(in: .whitespaces) }
         return ""
     }
 }
 
-struct Xem20Movie {
-    let title: String
-    let slug: String
-}
-
-struct Xem20Episode {
-    let name: String
-    let path: String
-}
+struct Xem20Movie { let title: String; let slug: String }
+struct Xem20Episode { let name: String; let path: String }
