@@ -9,6 +9,7 @@ final class MappingCache {
     private let vsmovKey = "cache_vsmov_mapping"
     private let stravoKey = "cache_stravo_mapping"
     private let phimapiKey = "cache_phimapi_mapping"
+    private let xem20Key = "cache_xem20_mapping"
     
     private init() {}
     
@@ -40,6 +41,15 @@ final class MappingCache {
         save(d, for: phimapiKey)
     }
     
+    func getXem20URL(slug: String, episodeName: String) -> String? {
+        dict(for: xem20Key)["\(slug)_\(episodeName)"]
+    }
+    func setXem20URL(slug: String, episodeName: String, url: String) {
+        var d = dict(for: xem20Key)
+        d["\(slug)_\(episodeName)"] = url
+        save(d, for: xem20Key)
+    }
+    
     private func dict(for key: String) -> [String: String] {
         defaults.dictionary(forKey: key) as? [String: String] ?? [:]
     }
@@ -51,6 +61,7 @@ final class MappingCache {
         defaults.removeObject(forKey: vsmovKey)
         defaults.removeObject(forKey: stravoKey)
         defaults.removeObject(forKey: phimapiKey)
+        defaults.removeObject(forKey: xem20Key)
     }
 }
 
@@ -484,14 +495,12 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        // Ưu tiên 1: match chính xác tmdb.id
         if let exactTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) {
             return exactTMDB
         }
         
-        // Ưu tiên 2: với series, tìm item có season khớp targetSeason
         if isSeries {
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
@@ -503,7 +512,6 @@ final class PhimAPIService {
             }
             
             if !seasonMatched.isEmpty {
-                // Ưu tiên item không có tmdb.id (item gốc, không phải spin-off)
                 if let original = seasonMatched.first(where: {
                     let id = ($0["tmdb"] as? [String: Any])?["id"]
                     return id == nil || id is NSNull
@@ -514,7 +522,6 @@ final class PhimAPIService {
             }
         }
         
-        // Ưu tiên 3: match origin_name contains title + season
         for item in items {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             let itemType = item["type"] as? String ?? "single"
@@ -531,7 +538,6 @@ final class PhimAPIService {
             }
         }
         
-        // Ưu tiên 4: lấy item đầu tiên cùng loại
         if isSeries {
             return items.first(where: { isSeriesType($0["type"] as? String ?? "") })
         } else {
@@ -614,4 +620,226 @@ final class PhimAPIService {
         }
         return nil
     }
+}
+
+// MARK: - Xem20 Service
+final class Xem20Service {
+    static let shared = Xem20Service()
+    private let cache = MappingCache.shared
+    private let baseURL = "https://xem20.net"
+    private var cookie = ""
+    private let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+    private init() {}
+    
+    func fetchStream(
+        title: String,
+        season: Int? = nil,
+        episode: Int? = nil,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
+        let ep = episode ?? 1
+        
+        ensureCookie { [weak self] in
+            guard let self = self else { return }
+            
+            self.search(keyword: title) { movies in
+                guard let movie = movies.first else {
+                    completion(.failure(StreamServiceError.noMatchFound(id: title)))
+                    return
+                }
+                
+                // Xem20 thường có phim bộ dạng slug-phan-X
+                var slug = movie.slug
+                if let s = season, s > 1 {
+                    slug = slug.replacingOccurrences(of: "-phan-\\d+", with: "-phan-\(s)", options: .regularExpression)
+                    if slug == movie.slug {
+                        slug = "\(movie.slug)-phan-\(s)"
+                    }
+                }
+                
+                self.getEpisodes(slug: slug) { episodes in
+                    guard let epItem = episodes.first(where: { $0.name.contains("\(ep)") || $0.name.contains(String(format: "%02d", ep)) }) else {
+                        // Thử lấy tập đầu tiên nếu không tìm thấy
+                        if let first = episodes.first {
+                            self.getStream(path: first.path) { streamURL in
+                                if let url = streamURL {
+                                    completion(.success(url))
+                                } else {
+                                    completion(.failure(StreamServiceError.episodeNotFound(ep: "Tập \(ep)")))
+                                }
+                            }
+                        } else {
+                            completion(.failure(StreamServiceError.episodeNotFound(ep: "Tập \(ep)")))
+                        }
+                        return
+                    }
+                    
+                    self.getStream(path: epItem.path) { streamURL in
+                        if let url = streamURL {
+                            completion(.success(url))
+                        } else {
+                            completion(.failure(StreamServiceError.noStreamURL))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func ensureCookie(completion: @escaping () -> Void) {
+        if !cookie.isEmpty {
+            completion()
+            return
+        }
+        
+        guard let url = URL(string: baseURL) else {
+            completion()
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTask(with: request) { [weak self] _, response, _ in
+            if let httpResponse = response as? HTTPURLResponse,
+               let headers = httpResponse.allHeaderFields as? [String: String],
+               let setCookie = headers["Set-Cookie"] {
+                self?.cookie = setCookie
+            }
+            completion()
+        }.resume()
+    }
+    
+    private func search(keyword: String, completion: @escaping ([Xem20Movie]) -> Void) {
+        let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? keyword
+        guard let url = URL(string: "\(baseURL)/tim-kiem?keyword=\(encoded)") else {
+            completion([])
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion([])
+                return
+            }
+            
+            var movies: [Xem20Movie] = []
+            let pattern = #"<a[^>]*href="(/phim/[^"]*)"[^>]*>"#
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let matches = regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
+                var seen = Set<String>()
+                for match in matches {
+                    if let r = Range(match.range(at: 1), in: html) {
+                        let path = String(html[r])
+                        if seen.contains(path) { continue }
+                        seen.insert(path)
+                        let title = self.extractTitle(from: html)
+                        movies.append(Xem20Movie(title: title, slug: path))
+                    }
+                }
+            }
+            completion(movies)
+        }.resume()
+    }
+    
+    private func getEpisodes(slug: String, completion: @escaping ([Xem20Episode]) -> Void) {
+        guard let url = URL(string: "\(baseURL)\(slug)") else {
+            completion([])
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion([])
+                return
+            }
+            
+            var episodes: [Xem20Episode] = []
+            let pattern = #"<a[^>]*href="(/xem-phim/[^"]*)"[^>]*>([^<]*)</a>"#
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let matches = regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
+                for match in matches {
+                    if let urlRange = Range(match.range(at: 1), in: html),
+                       let nameRange = Range(match.range(at: 2), in: html) {
+                        let path = String(html[urlRange])
+                        let name = String(html[nameRange]).trimmingCharacters(in: .whitespaces)
+                        episodes.append(Xem20Episode(name: name, path: path))
+                    }
+                }
+            }
+            completion(episodes)
+        }.resume()
+    }
+    
+    private func getStream(path: String, completion: @escaping (URL?) -> Void) {
+        guard let url = URL(string: "\(baseURL)\(path)") else {
+            completion(nil)
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(nil)
+                return
+            }
+            
+            let videoPattern = #"<video[^>]*src="(https?://[^"]+\.m3u8)""#
+            if let regex = try? NSRegularExpression(pattern: videoPattern),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let r = Range(match.range(at: 1), in: html) {
+                completion(URL(string: String(html[r])))
+                return
+            }
+            
+            let m3u8Pattern = #"https?://[^"'\s]+\.m3u8[^"'\s]*"#
+            if let regex = try? NSRegularExpression(pattern: m3u8Pattern),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let r = Range(match.range, in: html) {
+                completion(URL(string: String(html[r])))
+                return
+            }
+            
+            let mp4Pattern = #"https?://[^"'\s]+\.mp4[^"'\s]*"#
+            if let regex = try? NSRegularExpression(pattern: mp4Pattern),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let r = Range(match.range, in: html) {
+                completion(URL(string: String(html[r])))
+                return
+            }
+            
+            completion(nil)
+        }.resume()
+    }
+    
+    private func extractTitle(from html: String) -> String {
+        let pattern = #"<h3[^>]*class="[^"]*title[^"]*"[^>]*>([^<]*)</h3>"#
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+           let r = Range(match.range(at: 1), in: html) {
+            return String(html[r]).trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+}
+
+struct Xem20Movie {
+    let title: String
+    let slug: String
+}
+
+struct Xem20Episode {
+    let name: String
+    let path: String
 }
