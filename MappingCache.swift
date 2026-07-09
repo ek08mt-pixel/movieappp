@@ -495,12 +495,28 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
+        // Ưu tiên 1: match chính xác tmdb.id
         if let exactTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) {
             return exactTMDB
         }
         
+        // Ưu tiên 2: match origin_name chính xác tuyệt đối (không chứa số phần)
+        let exactNameMatches = items.filter { item in
+            let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+            return originName == normalizedTitle
+        }
+        if !exactNameMatches.isEmpty {
+            if isSeries, let match = exactNameMatches.first(where: { isSeriesType($0["type"] as? String ?? "") }) {
+                return match
+            }
+            if !isSeries, let match = exactNameMatches.first(where: { isSingleType($0["type"] as? String ?? "") }) {
+                return match
+            }
+        }
+        
+        // Ưu tiên 3: với series, tìm item có season khớp targetSeason
         if isSeries {
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
@@ -522,6 +538,7 @@ final class PhimAPIService {
             }
         }
         
+        // Ưu tiên 4: match origin_name contains title + season
         for item in items {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             let itemType = item["type"] as? String ?? "single"
@@ -538,6 +555,7 @@ final class PhimAPIService {
             }
         }
         
+        // Ưu tiên 5: lấy item đầu tiên cùng loại
         if isSeries {
             return items.first(where: { isSeriesType($0["type"] as? String ?? "") })
         } else {
@@ -648,7 +666,6 @@ final class Xem20Service {
                     return
                 }
                 
-                // Xem20 thường có phim bộ dạng slug-phan-X
                 var slug = movie.slug
                 if let s = season, s > 1 {
                     slug = slug.replacingOccurrences(of: "-phan-\\d+", with: "-phan-\(s)", options: .regularExpression)
@@ -659,7 +676,6 @@ final class Xem20Service {
                 
                 self.getEpisodes(slug: slug) { episodes in
                     guard let epItem = episodes.first(where: { $0.name.contains("\(ep)") || $0.name.contains(String(format: "%02d", ep)) }) else {
-                        // Thử lấy tập đầu tiên nếu không tìm thấy
                         if let first = episodes.first {
                             self.getStream(path: first.path) { streamURL in
                                 if let url = streamURL {
