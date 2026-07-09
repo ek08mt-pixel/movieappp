@@ -47,6 +47,7 @@ enum StreamServiceError: LocalizedError {
 // MARK: - Helpers
 private func isSeriesType(_ type: String) -> Bool { type == "series" || type == "tv" || type == "hoathinh" }
 private func isSingleType(_ type: String) -> Bool { type == "single" || type == "movie" }
+private func isLiveActionSeries(_ type: String) -> Bool { type == "series" || type == "tv" }
 private func extractSeasonFromOriginName(_ originName: String) -> Int? {
     for pattern in ["Season (\\d+)", "season (\\d+)", "Phần (\\d+)", "phần (\\d+)"] {
         if let regex = try? NSRegularExpression(pattern: pattern),
@@ -56,8 +57,7 @@ private func extractSeasonFromOriginName(_ originName: String) -> Int? {
     return nil
 }
 
-// MARK: - NguonC Service (giữ nguyên)
-
+// MARK: - NguonC Service
 final class NguonCService {
     static let shared = NguonCService()
     private let cache = MappingCache.shared
@@ -137,8 +137,7 @@ final class NguonCService {
     }
 }
 
-// MARK: - Stravo Service (giữ nguyên)
-
+// MARK: - Stravo Service
 final class StravoService {
     static let shared = StravoService()
     private let cache = MappingCache.shared
@@ -173,8 +172,7 @@ final class StravoService {
     }
 }
 
-// MARK: - VSMOV Service (giữ nguyên)
-
+// MARK: - VSMOV Service
 final class VSMOVService {
     static let shared = VSMOVService()
     private let cache = MappingCache.shared
@@ -232,8 +230,7 @@ final class VSMOVService {
     }
 }
 
-// MARK: - PhimAPI Service (ĐÃ SỬA: bỏ TMDB API cho series)
-
+// MARK: - PhimAPI Service
 final class PhimAPIService {
     static let shared = PhimAPIService()
     private let cache = MappingCache.shared
@@ -246,13 +243,11 @@ final class PhimAPIService {
         
         if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
         
-        // Với series, vào thẳng fallback search vì TMDB API luôn trả về season mới nhất
         if isSeries {
             fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
             return
         }
         
-        // Với movie, dùng TMDB API
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
@@ -289,15 +284,28 @@ final class PhimAPIService {
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
+        let isTV = (mediaType == "tv")
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        if let exactMatch = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason }) { return exactMatch }
-        if let sameSeries = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) { return sameSeries }
+        // Ưu tiên 1: match chính xác tmdb.id + tmdb.season
+        if let exactMatch = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
+            ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
+        }) { return exactMatch }
         
+        // Ưu tiên 2: match tmdb.id (cùng series) nhưng ưu tiên type series/tv
+        let sameSeriesItems = items.filter { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }
+        if !sameSeriesItems.isEmpty {
+            if isTV, let liveAction = sameSeriesItems.first(where: { isLiveActionSeries($0["type"] as? String ?? "") }) { return liveAction }
+            return sameSeriesItems.first
+        }
+        
+        // Ưu tiên 3: series khớp season + origin_name chứa title, ưu tiên live-action
         if isSeries {
             let seasonAndTitleMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
+                if isTV && !isLiveActionSeries(item["type"] as? String ?? "") { return false }
                 let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
                 let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
                 return s == targetSeason && originName.contains(normalizedTitle)
@@ -306,8 +314,10 @@ final class PhimAPIService {
                 if let original = seasonAndTitleMatched.first(where: { (($0["tmdb"] as? [String: Any])?["id"]) == nil }) { return original }
                 return seasonAndTitleMatched.first
             }
+            
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
+                if isTV && !isLiveActionSeries(item["type"] as? String ?? "") { return false }
                 let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
                 return s == targetSeason
             }
@@ -317,12 +327,14 @@ final class PhimAPIService {
             }
         }
         
+        // Ưu tiên 4: match origin_name chính xác
         let exactNameMatches = items.filter { ($0["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces) == normalizedTitle }
         if !exactNameMatches.isEmpty {
             if isSeries, let match = exactNameMatches.first(where: { isSeriesType($0["type"] as? String ?? "") }) { return match }
             if !isSeries, let match = exactNameMatches.first(where: { isSingleType($0["type"] as? String ?? "") }) { return match }
         }
         
+        // Ưu tiên 5: match origin_name contains title + season
         for item in items {
             let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
             if originName.contains(normalizedTitle) {
@@ -375,8 +387,7 @@ final class PhimAPIService {
     }
 }
 
-// MARK: - Xem20 Service (giữ nguyên)
-
+// MARK: - Xem20 Service
 final class Xem20Service {
     static let shared = Xem20Service()
     private let cache = MappingCache.shared
