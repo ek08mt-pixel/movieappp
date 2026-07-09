@@ -30,13 +30,14 @@ struct MoviePlayerView: View {
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
     @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     @State private var imdbIDCache: String?
+    @State private var hasStartedPlaying = false
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                 .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData() }
-                .onDisappear { player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate() }
+                .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate() }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
             if showBrightnessSlider { HStack { TinySlider(value: brightness, icon: "sun.max.fill").padding(.leading, 14); Spacer() } }
@@ -112,6 +113,7 @@ struct MoviePlayerView: View {
                     await MainActor.run {
                         player.replaceCurrentItem(with: AVPlayerItem(url: url))
                         player.play()
+                        hasStartedPlaying = true
                         sourceStatus[.phimapi] = true
                         isLoading = false
                     }
@@ -126,6 +128,7 @@ struct MoviePlayerView: View {
                     await MainActor.run {
                         player.replaceCurrentItem(with: AVPlayerItem(url: url))
                         player.play()
+                        hasStartedPlaying = true
                         sourceStatus[.xem20] = true
                         isLoading = false
                     }
@@ -154,6 +157,7 @@ struct MoviePlayerView: View {
                     await MainActor.run {
                         player.replaceCurrentItem(with: AVPlayerItem(url: url))
                         player.play()
+                        hasStartedPlaying = true
                         sourceStatus[.vsmov] = true
                         isLoading = false
                     }
@@ -169,6 +173,7 @@ struct MoviePlayerView: View {
                     await MainActor.run {
                         player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
                         player.play()
+                        hasStartedPlaying = true
                         sourceStatus[.stravo] = true
                         isLoading = false
                     }
@@ -200,7 +205,31 @@ struct MoviePlayerView: View {
         return finalID
     }
     
-    func saveHistory() { let m=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType); if !appState.watchHistory.contains(where:{$0.id==movieId}){appState.watchHistory.insert(m,at:0); if appState.watchHistory.count>50{appState.watchHistory.removeLast()}; appState.save()} }
+    func saveProgress() {
+        guard hasStartedPlaying, currentTime > 0, duration > 0 else { return }
+        let progress = WatchProgress(
+            movieId: movieId,
+            movieTitle: movieTitle,
+            posterPath: posterURL?.absoluteString,
+            mediaType: mediaType,
+            season: seasonNumber,
+            episode: episodeNumber,
+            currentTime: currentTime,
+            duration: duration,
+            lastWatched: Date()
+        )
+        appState.updateProgress(progress)
+    }
+    
+    func saveHistory() {
+        let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType)
+        if !appState.watchHistory.contains(where: { $0.id == movieId }) {
+            appState.watchHistory.insert(m, at: 0)
+            if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }
+            appState.save()
+        }
+    }
+    
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
