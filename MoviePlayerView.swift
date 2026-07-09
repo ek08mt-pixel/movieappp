@@ -81,7 +81,6 @@ struct MoviePlayerView: View {
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
     }
     
-    // MARK: - Episode List Helper
     @ViewBuilder
     func episodeRow(detail: TVSeasonDetail) -> some View {
         VStack(alignment:.leading,spacing:4){
@@ -106,7 +105,6 @@ struct MoviePlayerView: View {
         }
     }
     
-    // MARK: - Overlay
     var youtubeOverlay: some View {
         ZStack(alignment:.bottom){ Color.black.opacity(0.4).ignoresSafeArea().onTapGesture{closeOverlay()}
             VStack(spacing:0){ Capsule().fill(.white.opacity(0.5)).frame(width:40,height:5).padding(.top,10)
@@ -126,7 +124,7 @@ struct MoviePlayerView: View {
     }
     
     var movieInfoCard: some View {
-        return Group {
+        Group {
             if let movie = currentMovie {
                 HStack(spacing:12){
                     CachedAsyncImage(url:movie.posterURL).aspectRatio(2/3,contentMode:.fill).frame(width:60,height:90).clipShape(RoundedRectangle(cornerRadius:10))
@@ -193,7 +191,6 @@ struct MoviePlayerView: View {
         }
     }
     
-    // MARK: - Popups
     var sourcePopup: some View {
         VStack(spacing:10){Text("Nguồn phát").font(.system(size:14,weight:.bold)).foregroundColor(.white)
             ForEach(MovieSource.allCases,id:\.self){ src in Button{selectedSource=src;showSourceMenu=false;loadStream()}label:{HStack(spacing:8){Circle().fill(sourceStatus[src]==true ? .green:sourceStatus[src]==false ? .red:.gray).frame(width:6,height:6);Text(src.rawValue).font(.system(size:13)).foregroundColor(.white);Spacer();if selectedSource==src{Image(systemName:"checkmark").font(.system(size:11)).foregroundColor(.white)}}.padding(.horizontal,14).padding(.vertical,10).background(RoundedRectangle(cornerRadius:10).fill(selectedSource==src ? .white.opacity(0.15):.white.opacity(0.05)))} }
@@ -202,6 +199,9 @@ struct MoviePlayerView: View {
     
     var settingsPopup: some View {
         VStack(spacing:12){Text("Cài đặt").font(.system(size:14,weight:.bold)).foregroundColor(.white)
+            Text("Chất lượng").font(.system(size:11)).foregroundColor(.white.opacity(0.6))
+            LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:8){ForEach(["4K","1080p","720p","480p","360p"],id:\.self){q in Button{showSettings=false}label:{Text(q).font(.system(size:12)).foregroundColor(.white.opacity(0.6)).frame(maxWidth:.infinity).padding(.vertical,8).background(RoundedRectangle(cornerRadius:8).fill(Color.white.opacity(0.05)))} }}
+            Divider().background(Color.white.opacity(0.1))
             Text("Tốc độ").font(.system(size:11)).foregroundColor(.white.opacity(0.6))
             HStack(spacing:8){ForEach(["0.5x","1.0x","1.5x","2.0x"],id:\.self){s in Button{player.rate=Float(s.replacingOccurrences(of:"x",with:"")) ?? 1.0;showSettings=false}label:{Text(s).font(.system(size:12)).foregroundColor(.white).padding(.horizontal,12).padding(.vertical,6).background(Capsule().fill(.white.opacity(0.1)))} } }
         }.padding(18).background(RoundedRectangle(cornerRadius:16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius:16).stroke(.white.opacity(0.2),lineWidth:0.5)).frame(width:260)
@@ -219,7 +219,6 @@ struct MoviePlayerView: View {
         }.padding(18).background(RoundedRectangle(cornerRadius:16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius:16).stroke(.white.opacity(0.2),lineWidth:0.5)).frame(width:240)
     }
     
-    // MARK: - Actions
     func closeOverlay() { withAnimation(.spring(response:0.25,dampingFraction:0.8)){overlayOffset=UIScreen.main.bounds.height}; DispatchQueue.main.asyncAfter(deadline:.now()+0.25){showOverlay=false} }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
     func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; loadStream(season: seasonNumber, episode: ep - 1) }
