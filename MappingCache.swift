@@ -47,7 +47,6 @@ enum StreamServiceError: LocalizedError {
 // MARK: - Helpers
 private func isSeriesType(_ type: String) -> Bool { type == "series" || type == "tv" || type == "hoathinh" }
 private func isSingleType(_ type: String) -> Bool { type == "single" || type == "movie" }
-private func isLiveActionSeries(_ type: String) -> Bool { type == "series" || type == "tv" }
 private func extractSeasonFromOriginName(_ originName: String) -> Int? {
     for pattern in ["Season (\\d+)", "season (\\d+)", "Phần (\\d+)", "phần (\\d+)"] {
         if let regex = try? NSRegularExpression(pattern: pattern),
@@ -284,7 +283,6 @@ final class PhimAPIService {
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
-        let isTV = (mediaType == "tv")
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
@@ -294,18 +292,15 @@ final class PhimAPIService {
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exactMatch }
         
-        // Ưu tiên 2: match tmdb.id (cùng series) nhưng ưu tiên type series/tv
-        let sameSeriesItems = items.filter { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }
-        if !sameSeriesItems.isEmpty {
-            if isTV, let liveAction = sameSeriesItems.first(where: { isLiveActionSeries($0["type"] as? String ?? "") }) { return liveAction }
-            return sameSeriesItems.first
+        // Ưu tiên 2: match tmdb.id (cùng series)
+        if let sameSeries = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) {
+            return sameSeries
         }
         
-        // Ưu tiên 3: series khớp season + origin_name chứa title, ưu tiên live-action
+        // Ưu tiên 3: series khớp season + origin_name chứa title
         if isSeries {
             let seasonAndTitleMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                if isTV && !isLiveActionSeries(item["type"] as? String ?? "") { return false }
                 let originName = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
                 let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
                 return s == targetSeason && originName.contains(normalizedTitle)
@@ -317,7 +312,6 @@ final class PhimAPIService {
             
             let seasonMatched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                if isTV && !isLiveActionSeries(item["type"] as? String ?? "") { return false }
                 let s = ((item["tmdb"] as? [String: Any])?["season"] as? Int) ?? extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
                 return s == targetSeason
             }
