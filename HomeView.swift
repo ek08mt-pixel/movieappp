@@ -97,7 +97,7 @@ struct HomeView: View {
     func closeMenu() { withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = false; menuOffset = -280 } }
     func startAutoScroll() { timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { currentIndex = (currentIndex + 1) % 10 } } }
     func stopAutoScroll() { timer?.invalidate(); timer = nil }
-}
+
 
 // MARK: - SectionGrid (Poster đều)
 struct SectionGrid: View {
