@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var continueSeason: Int?
     @State private var continueEpisode: Int?
     @State private var continuePosterURL: URL?
+    @State private var continueCurrentTime: Double = 0
     
     var body: some View {
         NavigationStack {
@@ -146,6 +147,7 @@ struct HomeView: View {
                                                 continueSeason = prog.season
                                                 continueEpisode = prog.episode
                                                 continuePosterURL = URL(string: prog.posterPath ?? "")
+                                                continueCurrentTime = prog.currentTime
                                                 showContinuePlayer = true
                                             } label: {
                                                 VStack(alignment: .leading, spacing: 0) {
@@ -155,13 +157,11 @@ struct HomeView: View {
                                                             .frame(width: 200, height: 112)
                                                             .clipShape(RoundedRectangle(cornerRadius: 10))
                                                         
-                                                        // Play button center
                                                         Image(systemName: "play.circle.fill")
                                                             .font(.system(size: 32))
                                                             .foregroundColor(.white.opacity(0.9))
                                                             .shadow(color: .black.opacity(0.5), radius: 4)
                                                         
-                                                        // Bottom info
                                                         VStack {
                                                             Spacer()
                                                             HStack {
@@ -388,7 +388,8 @@ struct HomeView: View {
                     mediaType: continueMediaType,
                     seasonNumber: continueSeason,
                     episodeNumber: continueEpisode,
-                    posterURL: continuePosterURL
+                    posterURL: continuePosterURL,
+                    resumeTime: continueCurrentTime
                 )
                 .environmentObject(appState)
             }
