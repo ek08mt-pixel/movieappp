@@ -242,7 +242,14 @@ struct MoviePlayerView: View {
     func loadStream(season: Int? = nil, episode: Int? = nil) {
         let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
         seasonNumber = s; episodeNumber = ep
-        isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
+// Load season detail nếu là TV
+if mediaType == "tv" || s != nil {
+    selectedSeasonNumber = s
+    Task {
+        selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1)
+    }
+}
+isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task {
             do {
                 let imdbID = try await fetchIMDB()
