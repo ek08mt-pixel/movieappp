@@ -30,20 +30,9 @@ struct KeychainHelper {
 
 // MARK: - Watch Progress Model
 struct WatchProgress: Codable, Equatable {
-    let movieId: Int
-    let movieTitle: String
-    let posterPath: String?
-    let mediaType: String?
-    var season: Int?
-    var episode: Int?
-    var currentTime: Double
-    var duration: Double
-    var lastWatched: Date
-    
-    var progress: Double {
-        guard duration > 0 else { return 0 }
-        return min(currentTime / duration, 1.0)
-    }
+    let movieId: Int; let movieTitle: String; let posterPath: String?; let mediaType: String?
+    var season: Int?; var episode: Int?; var currentTime: Double; var duration: Double; var lastWatched: Date
+    var progress: Double { guard duration > 0 else { return 0 }; return min(currentTime / duration, 1.0) }
 }
 
 // MARK: - AppState
@@ -56,98 +45,54 @@ class AppState: ObservableObject {
     @Published var nickname = ""
     @Published var selectedAvatar = "person.circle.fill"
     @Published var avatarImageData: Data?
-    @Published var googleAvatarURL: String? = nil
+    @Published var telegramAvatarURL: String? = nil
     
     init() { load() }
     
     func register(email: String, password: String) {
-        var accounts = getAllAccounts()
-        accounts[email] = password
-        saveAllAccounts(accounts)
-        self.email = email
-        self.isLoggedIn = true
-        self.favorites = []
-        self.watchHistory = []
-        self.watchProgressList = []
-        save()
-        saveLastEmail(email)
+        var accounts = getAllAccounts(); accounts[email] = password; saveAllAccounts(accounts)
+        self.email = email; self.isLoggedIn = true; self.favorites = []; self.watchHistory = []; self.watchProgressList = []
+        save(); saveLastEmail(email)
     }
     
     func login(email: String, password: String) {
         let accounts = getAllAccounts()
-        if let savedPassword = accounts[email], savedPassword == password {
-            self.email = email
-            self.isLoggedIn = true
-            load()
-            saveLastEmail(email)
-        }
+        if let savedPassword = accounts[email], savedPassword == password { self.email = email; self.isLoggedIn = true; load(); saveLastEmail(email) }
     }
     
     func smartLogin(email: String, password: String) {
         let accounts = getAllAccounts()
         if let savedPassword = accounts[email] {
-            if savedPassword == password {
-                self.email = email
-                self.isLoggedIn = true
-                load()
-                saveLastEmail(email)
-            }
+            if savedPassword == password { self.email = email; self.isLoggedIn = true; load(); saveLastEmail(email) }
         } else {
-            var newAccounts = accounts
-            newAccounts[email] = password
-            saveAllAccounts(newAccounts)
-            self.email = email
-            self.isLoggedIn = true
-            self.favorites = []
-            self.watchHistory = []
-            self.watchProgressList = []
-            save()
-            saveLastEmail(email)
+            var newAccounts = accounts; newAccounts[email] = password; saveAllAccounts(newAccounts)
+            self.email = email; self.isLoggedIn = true; self.favorites = []; self.watchHistory = []; self.watchProgressList = []
+            save(); saveLastEmail(email)
         }
     }
     
-    func googleLogin(googleId: String, name: String, avatarURL: String?) {
-        self.email = googleId
-        self.nickname = name
-        self.googleAvatarURL = avatarURL
-        self.isLoggedIn = true
-        load()
-        save()
-        if let data = googleId.data(using: .utf8) {
-            KeychainHelper.save(key: "lastLoggedInGoogleId", data: data)
-        }
+    func telegramLogin(telegramId: String, name: String, avatarURL: String?) {
+        self.email = "tg_\(telegramId)"; self.nickname = name; self.telegramAvatarURL = avatarURL
+        self.isLoggedIn = true; load(); save()
+        if let data = email.data(using: .utf8) { KeychainHelper.save(key: "lastLoggedInEmail", data: data) }
     }
     
     private func saveAllAccounts(_ accounts: [String: String]) {
-        if let data = try? JSONEncoder().encode(accounts) {
-            KeychainHelper.save(key: "allAccounts", data: data)
-        }
+        if let data = try? JSONEncoder().encode(accounts) { KeychainHelper.save(key: "allAccounts", data: data) }
     }
     
     private func getAllAccounts() -> [String: String] {
-        guard let data = KeychainHelper.load(key: "allAccounts"),
-              let accounts = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return [:]
-        }
+        guard let data = KeychainHelper.load(key: "allAccounts"), let accounts = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
         return accounts
     }
     
     private func saveLastEmail(_ email: String) {
-        if let data = email.data(using: .utf8) {
-            KeychainHelper.save(key: "lastLoggedInEmail", data: data)
-        }
+        if let data = email.data(using: .utf8) { KeychainHelper.save(key: "lastLoggedInEmail", data: data) }
     }
     
     func logout() {
-        isLoggedIn = false
-        email = ""
-        nickname = ""
-        selectedAvatar = "person.circle.fill"
-        avatarImageData = nil
-        googleAvatarURL = nil
-        favorites = []
-        watchHistory = []
-        watchProgressList = []
+        isLoggedIn = false; email = ""; nickname = ""; selectedAvatar = "person.circle.fill"
+        avatarImageData = nil; telegramAvatarURL = nil; favorites = []; watchHistory = []; watchProgressList = []
         save()
     }
     
@@ -171,10 +116,6 @@ class AppState: ObservableObject {
     }
     
     func load() {
-        let savedGoogleIdData = KeychainHelper.load(key: "lastLoggedInGoogleId")
-        let savedGoogleId = savedGoogleIdData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-        if !savedGoogleId.isEmpty { self.email = savedGoogleId }
-        
         let savedEmailData = KeychainHelper.load(key: "lastLoggedInEmail")
         let savedEmail = savedEmailData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
         if !savedEmail.isEmpty { self.email = savedEmail }
@@ -185,22 +126,14 @@ class AppState: ObservableObject {
         nickname = UserDefaults.standard.string(forKey: "\(prefix)_nickname") ?? ""
         selectedAvatar = UserDefaults.standard.string(forKey: "\(prefix)_avatar") ?? "person.circle.fill"
         avatarImageData = UserDefaults.standard.data(forKey: "\(prefix)_avatarImage")
-        if let fav = UserDefaults.standard.data(forKey: "\(prefix)_favorites"),
-           let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
-        if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"),
-           let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
-        if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"),
-           let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) { watchProgressList = p }
+        if let fav = UserDefaults.standard.data(forKey: "\(prefix)_favorites"), let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
+        if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"), let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
+        if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"), let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) { watchProgressList = p }
     }
 }
 
 @main
 struct AppEntry: App {
     @StateObject var appState = AppState()
-    
-    var body: some Scene {
-        WindowGroup {
-            SplashView().environmentObject(appState)
-        }
-    }
+    var body: some Scene { WindowGroup { SplashView().environmentObject(appState) } }
 }
