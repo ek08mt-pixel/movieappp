@@ -22,7 +22,6 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Load critical data first
         async let trendingTask = APIService.shared.trending24h()
         async let genresTask = APIService.shared.genres()
         
@@ -32,38 +31,28 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        // Load TV in background
-        Task.detached(priority: .background) { [weak self] in
-            let tv = await self?.loadTrendingTVPages() ?? []
-            await MainActor.run { self?.trendingTV = tv }
-        }
-        
         isLoading = false
         
-        // Load remaining categories sequentially to avoid flooding
-        let categories: [(inout [Movie], () async throws -> [Movie])] = [
-            (&nowPlaying, APIService.shared.nowPlaying),
-            (&upcoming, APIService.shared.upcoming),
-            (&topRated, APIService.shared.topRated),
-            (&korean, APIService.shared.koreanMovies),
-            (&japanese, APIService.shared.japaneseMovies),
-            (&vietnamese, APIService.shared.vietnameseMovies),
-            (&usuk, APIService.shared.usukMovies),
-            (&anime, APIService.shared.animeMovies),
-        ]
-        
-        // Load 2 categories at a time
-        for i in stride(from: 0, to: categories.count, by: 2) {
-            async let first = categories[i].1()
-            async let second = (i + 1 < categories.count) ? categories[i + 1].1() : nil
-            
-            if let result = try? await first {
-                await MainActor.run { categories[i].0 = result }
-            }
-            if i + 1 < categories.count, let result = try? await second {
-                await MainActor.run { categories[i + 1].0 = result }
-            }
+        // Load TV in background
+        Task { [weak self] in
+            guard let self = self else { return }
+            let tv = await self.loadTrendingTVPages()
+            await MainActor.run { self.trendingTV = tv }
         }
+        
+        // Load remaining categories in pairs
+        await loadCategory { self.nowPlaying = (try? await APIService.shared.nowPlaying()) ?? [] }
+        await loadCategory { self.upcoming = (try? await APIService.shared.upcoming()) ?? [] }
+        await loadCategory { self.topRated = (try? await APIService.shared.topRated()) ?? [] }
+        await loadCategory { self.korean = (try? await APIService.shared.koreanMovies()) ?? [] }
+        await loadCategory { self.japanese = (try? await APIService.shared.japaneseMovies()) ?? [] }
+        await loadCategory { self.vietnamese = (try? await APIService.shared.vietnameseMovies()) ?? [] }
+        await loadCategory { self.usuk = (try? await APIService.shared.usukMovies()) ?? [] }
+        await loadCategory { self.anime = (try? await APIService.shared.animeMovies()) ?? [] }
+    }
+    
+    private func loadCategory(_ block: @escaping () async -> Void) async {
+        await block()
     }
     
     private func loadTrendingTVPages() async -> [Movie] {
