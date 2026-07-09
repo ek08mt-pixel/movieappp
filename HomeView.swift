@@ -11,7 +11,6 @@ struct HomeView: View {
     @State private var menuOffset: CGFloat = -280
     @State private var showGenrePopup = false
     
-    // Continue watching state
     @State private var showContinuePlayer = false
     @State private var continueMovieId: Int?
     @State private var continueMovieTitle = ""
@@ -133,7 +132,7 @@ struct HomeView: View {
                             }.padding(.vertical, 10)
                         }
                         
-                        // Continue Watching - dạng ngang đẹp
+                        // Continue Watching
                         if !appState.watchProgressList.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
@@ -150,38 +149,43 @@ struct HomeView: View {
                                                 showContinuePlayer = true
                                             } label: {
                                                 VStack(alignment: .leading, spacing: 0) {
-                                                    ZStack(alignment: .bottomLeading) {
+                                                    ZStack(alignment: .center) {
                                                         CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
                                                             .aspectRatio(16/9, contentMode: .fill)
                                                             .frame(width: 200, height: 112)
                                                             .clipShape(RoundedRectangle(cornerRadius: 10))
                                                         
-                                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        // Play button center
+                                                        Image(systemName: "play.circle.fill")
+                                                            .font(.system(size: 32))
+                                                            .foregroundColor(.white.opacity(0.9))
+                                                            .shadow(color: .black.opacity(0.5), radius: 4)
                                                         
-                                                        VStack(alignment: .leading, spacing: 2) {
-                                                            if let ep = prog.episode {
-                                                                Text("S\(prog.season ?? 1) E\(ep)")
-                                                                    .font(.system(size: 9, weight: .bold))
-                                                                    .foregroundColor(.white.opacity(0.9))
-                                                                    .padding(.horizontal, 6)
-                                                                    .padding(.vertical, 2)
-                                                                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
-                                                            }
+                                                        // Bottom info
+                                                        VStack {
                                                             Spacer()
-                                                            Text(prog.movieTitle)
-                                                                .font(.system(size: 11, weight: .semibold))
-                                                                .foregroundColor(.white)
-                                                                .lineLimit(1)
+                                                            HStack {
+                                                                if let ep = prog.episode {
+                                                                    Text("S\(prog.season ?? 1):E\(ep)")
+                                                                        .font(.system(size: 8, weight: .bold))
+                                                                        .foregroundColor(.white)
+                                                                        .padding(.horizontal, 5)
+                                                                        .padding(.vertical, 2)
+                                                                        .background(Capsule().fill(.black.opacity(0.6)))
+                                                                }
+                                                                Spacer()
+                                                                Text(formatRemaining(prog))
+                                                                    .font(.system(size: 8, weight: .medium))
+                                                                    .foregroundColor(.white)
+                                                                    .padding(.horizontal, 5)
+                                                                    .padding(.vertical, 2)
+                                                                    .background(Capsule().fill(.black.opacity(0.6)))
+                                                            }
+                                                            .padding(6)
                                                             
-                                                            Text("Còn \(formatRemaining(prog))")
-                                                                .font(.system(size: 9))
-                                                                .foregroundColor(.gray)
-                                                            
-                                                            // Progress bar
                                                             GeometryReader { geo in
                                                                 RoundedRectangle(cornerRadius: 1)
-                                                                    .fill(.white.opacity(0.25))
+                                                                    .fill(.white.opacity(0.3))
                                                                     .frame(height: 2)
                                                                     .overlay(alignment: .leading) {
                                                                         RoundedRectangle(cornerRadius: 1)
@@ -191,15 +195,26 @@ struct HomeView: View {
                                                             }
                                                             .frame(height: 2)
                                                         }
-                                                        .padding(8)
                                                     }
+                                                    .frame(width: 200, height: 112)
+                                                    
+                                                    Text(prog.movieTitle)
+                                                        .font(.system(size: 11, weight: .semibold))
+                                                        .foregroundColor(.white)
+                                                        .lineLimit(1)
+                                                        .frame(width: 200, alignment: .leading)
+                                                        .padding(.top, 4)
                                                 }
-                                                .frame(width: 200)
                                             }
                                         }
                                     }.padding(.horizontal, 20)
                                 }
                             }.padding(.top, 24)
+                        }
+                        
+                        // Vì bạn đã xem
+                        if let last = appState.watchHistory.last {
+                            SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h)
                         }
                         
                         if let mod = vm.movieOfDay {
@@ -223,8 +238,6 @@ struct HomeView: View {
                             }.padding(.top, 16)
                         }
                         
-                        if !appState.watchHistory.isEmpty { SectionGrid(title: "Tiếp tục khám phá", movies: appState.watchHistory) }
-                        if let last = appState.watchHistory.last { SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h) }
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
@@ -383,9 +396,9 @@ struct HomeView: View {
     }
     
     func formatRemaining(_ prog: WatchProgress) -> String {
-        let remaining = prog.duration - prog.currentTime
-        guard remaining > 0 else { return "Đã xem hết" }
+        let remaining = max(prog.duration - prog.currentTime, 0)
         let mins = Int(remaining) / 60
+        if remaining <= 0 { return "Đã xem hết" }
         if mins > 0 { return "Còn \(mins) phút" }
         return "Sắp hết"
     }
