@@ -22,6 +22,7 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
+        // Load critical first
         async let trendingTask = APIService.shared.trending24h()
         async let genresTask = APIService.shared.genres()
         
@@ -31,8 +32,6 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        isLoading = false
-        
         // Load TV in background
         Task { [weak self] in
             guard let self = self else { return }
@@ -40,19 +39,26 @@ class HomeViewModel: ObservableObject {
             await MainActor.run { self.trendingTV = tv }
         }
         
-        // Load remaining categories in pairs
-        await loadCategory { self.nowPlaying = (try? await APIService.shared.nowPlaying()) ?? [] }
-        await loadCategory { self.upcoming = (try? await APIService.shared.upcoming()) ?? [] }
-        await loadCategory { self.topRated = (try? await APIService.shared.topRated()) ?? [] }
-        await loadCategory { self.korean = (try? await APIService.shared.koreanMovies()) ?? [] }
-        await loadCategory { self.japanese = (try? await APIService.shared.japaneseMovies()) ?? [] }
-        await loadCategory { self.vietnamese = (try? await APIService.shared.vietnameseMovies()) ?? [] }
-        await loadCategory { self.usuk = (try? await APIService.shared.usukMovies()) ?? [] }
-        await loadCategory { self.anime = (try? await APIService.shared.animeMovies()) ?? [] }
-    }
-    
-    private func loadCategory(_ block: @escaping () async -> Void) async {
-        await block()
+        // Load all categories concurrently
+        async let nowPlayingTask = APIService.shared.nowPlaying()
+        async let upcomingTask = APIService.shared.upcoming()
+        async let topRatedTask = APIService.shared.topRated()
+        async let koreanTask = APIService.shared.koreanMovies()
+        async let japaneseTask = APIService.shared.japaneseMovies()
+        async let vietnameseTask = APIService.shared.vietnameseMovies()
+        async let usukTask = APIService.shared.usukMovies()
+        async let animeTask = APIService.shared.animeMovies()
+        
+        nowPlaying = (try? await nowPlayingTask) ?? []
+        upcoming = (try? await upcomingTask) ?? []
+        topRated = (try? await topRatedTask) ?? []
+        korean = (try? await koreanTask) ?? []
+        japanese = (try? await japaneseTask) ?? []
+        vietnamese = (try? await vietnameseTask) ?? []
+        usuk = (try? await usukTask) ?? []
+        anime = (try? await animeTask) ?? []
+        
+        isLoading = false
     }
     
     private func loadTrendingTVPages() async -> [Movie] {
