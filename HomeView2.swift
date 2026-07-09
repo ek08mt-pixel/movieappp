@@ -30,8 +30,7 @@ struct HomeView: View {
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                                     ZStack {
                                         if let bgURL = movie.backdropURL { CachedAsyncImage(url: bgURL, size: .backdrop).aspectRatio(contentMode: .fill).frame(height: 480).frame(maxWidth: .infinity).clipped().blur(radius: 50).overlay(Color.black.opacity(0.25)).mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom)) } else { Rectangle().fill(.ultraThinMaterial.opacity(0.15)).frame(height: 480) }
-                                        VStack(spacing: 0) {
-                                            Spacer()
+                                        VStack(spacing: 0) { Spacer()
                                             if let posterURL = movie.posterURL { CachedAsyncImage(url: posterURL).aspectRatio(2/3, contentMode: .fit).frame(height: 320).clipShape(RoundedRectangle(cornerRadius: 24)).shadow(color: .white.opacity(0.1), radius: 10, y: -5).overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 1.5)).overlay(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.05))) }
                                             Spacer().frame(height: 14)
                                             Text(movie.title).font(.system(size: 24, weight: .bold, design: .serif)).foregroundColor(.white).multilineTextAlignment(.center).shadow(color: .black.opacity(0.9), radius: 8).padding(.horizontal, 24)
