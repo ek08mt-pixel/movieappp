@@ -54,6 +54,31 @@ class AppState: ObservableObject {
         }
     }
     
+    func smartLogin(email: String, password: String) {
+        let accounts = getAllAccounts()
+        if let savedPassword = accounts[email] {
+            // Email đã tồn tại -> login
+            if savedPassword == password {
+                self.email = email
+                self.isLoggedIn = true
+                load()
+            }
+        } else {
+            // Email mới -> tự đăng ký rồi login
+            var newAccounts = accounts
+            newAccounts[email] = password
+            if let data = try? JSONEncoder().encode(newAccounts) {
+                UserDefaults.standard.set(data, forKey: "allAccounts")
+            }
+            self.email = email
+            self.isLoggedIn = true
+            self.favorites = []
+            self.watchHistory = []
+            self.watchProgressList = []
+            save()
+        }
+    }
+    
     private func getAllAccounts() -> [String: String] {
         guard let data = UserDefaults.standard.data(forKey: "allAccounts"),
               let accounts = try? JSONDecoder().decode([String: String].self, from: data) else {
