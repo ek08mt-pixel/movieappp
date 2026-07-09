@@ -29,13 +29,21 @@ class AppState: ObservableObject {
     @Published var selectedAvatar = "person.circle.fill"
     @Published var avatarImageData: Data?
     
-    init() { load() }
+    private let cloudStore = NSUbiquitousKeyValueStore.default
+    
+    init() {
+        NotificationCenter.default.addObserver(forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: cloudStore, queue: .main) { [weak self] _ in
+            self?.load()
+        }
+        load()
+    }
     
     func register(email: String, password: String) {
         var accounts = getAllAccounts()
         accounts[email] = password
         if let data = try? JSONEncoder().encode(accounts) {
-            UserDefaults.standard.set(data, forKey: "allAccounts")
+            cloudStore.set(data, forKey: "allAccounts")
+            cloudStore.synchronize()
         }
         self.email = email
         self.isLoggedIn = true
@@ -43,7 +51,8 @@ class AppState: ObservableObject {
         self.watchHistory = []
         self.watchProgressList = []
         save()
-        UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
+        cloudStore.set(email, forKey: "lastLoggedInEmail")
+        cloudStore.synchronize()
     }
     
     func login(email: String, password: String) {
@@ -52,7 +61,8 @@ class AppState: ObservableObject {
             self.email = email
             self.isLoggedIn = true
             load()
-            UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
+            cloudStore.set(email, forKey: "lastLoggedInEmail")
+            cloudStore.synchronize()
         }
     }
     
@@ -63,13 +73,15 @@ class AppState: ObservableObject {
                 self.email = email
                 self.isLoggedIn = true
                 load()
-                UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
+                cloudStore.set(email, forKey: "lastLoggedInEmail")
+                cloudStore.synchronize()
             }
         } else {
             var newAccounts = accounts
             newAccounts[email] = password
             if let data = try? JSONEncoder().encode(newAccounts) {
-                UserDefaults.standard.set(data, forKey: "allAccounts")
+                cloudStore.set(data, forKey: "allAccounts")
+                cloudStore.synchronize()
             }
             self.email = email
             self.isLoggedIn = true
@@ -77,12 +89,13 @@ class AppState: ObservableObject {
             self.watchHistory = []
             self.watchProgressList = []
             save()
-            UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
+            cloudStore.set(email, forKey: "lastLoggedInEmail")
+            cloudStore.synchronize()
         }
     }
     
     private func getAllAccounts() -> [String: String] {
-        guard let data = UserDefaults.standard.data(forKey: "allAccounts"),
+        guard let data = cloudStore.data(forKey: "allAccounts"),
               let accounts = try? JSONDecoder().decode([String: String].self, from: data) else {
             return [:]
         }
@@ -99,7 +112,8 @@ class AppState: ObservableObject {
         watchHistory = []
         watchProgressList = []
         save()
-        UserDefaults.standard.removeObject(forKey: "lastLoggedInEmail")
+        cloudStore.removeObject(forKey: "lastLoggedInEmail")
+        cloudStore.synchronize()
     }
     
     func updateProgress(_ progress: WatchProgress) {
@@ -122,11 +136,8 @@ class AppState: ObservableObject {
     }
     
     func load() {
-        // Khôi phục email từ lần đăng nhập trước
-        let savedEmail = UserDefaults.standard.string(forKey: "lastLoggedInEmail") ?? ""
-        if !savedEmail.isEmpty {
-            self.email = savedEmail
-        }
+        let savedEmail = cloudStore.string(forKey: "lastLoggedInEmail") ?? ""
+        if !savedEmail.isEmpty { self.email = savedEmail }
         
         let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
         isLoggedIn = UserDefaults.standard.bool(forKey: "\(prefix)_isLoggedIn")
