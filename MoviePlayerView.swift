@@ -114,7 +114,7 @@ struct MoviePlayerView: View {
                     if let movie=currentMovie {
                         VStack(alignment:.leading,spacing:8){
                             Text("Đang xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                            movieInfoCard(movie: movie)
+                            movieInfoCard
                         }
                         if !collectionMovies.isEmpty { collectionRow }
                         if !seasons.isEmpty { seasonRow }
