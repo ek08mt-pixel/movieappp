@@ -6,8 +6,7 @@ struct ProfileView: View {
     @State private var inputImage: UIImage?
     @State private var isEditingName = false
     @State private var tempName: String = ""
-    @State private var showRegister = false
-    @State private var showLogin = false
+    @State private var showAuth = false
     @Environment(\.dismiss) var dismiss
     
     let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill",
@@ -91,27 +90,16 @@ struct ProfileView: View {
                         Spacer().frame(height: UIScreen.main.bounds.height * 0.15)
                         
                         VStack(spacing: 16) {
-                            Text("Đăng ký hoặc đăng nhập để đồng bộ danh sách phim yêu thích")
+                            Text("Đăng nhập để lưu danh sách phim yêu thích")
                                 .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
-                            Button { showRegister = true } label: {
-                                Text("Đăng ký").font(.headline).foregroundColor(.white)
+                            Button { showAuth = true } label: {
+                                Text("Tiếp tục với Email").font(.headline).foregroundColor(.white)
                                     .frame(maxWidth: .infinity).padding(.vertical, 14)
                                     .background(Capsule().fill(.ultraThinMaterial))
                                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
                             }.padding(.horizontal, 30)
-                            
-                            Button { showLogin = true } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "envelope.fill").font(.system(size: 16))
-                                    Text("Đăng nhập với Gmail").font(.system(size: 15, weight: .medium))
-                                }
-                                .foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
-                                .background(Capsule().fill(.ultraThinMaterial))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                            }
-                            .padding(.horizontal, 30).padding(.vertical, 10)
                         }
                         
                         Spacer().frame(height: UIScreen.main.bounds.height * 0.15)
@@ -129,16 +117,10 @@ struct ProfileView: View {
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) { ImagePicker(image: $inputImage) }
-        .sheet(isPresented: $showRegister) {
-            RegisterView { email, password in
-                appState.register(email: email, password: password)
-                showRegister = false
-            }
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView { email, password in
-                appState.login(email: email, password: password)
-                showLogin = false
+        .sheet(isPresented: $showAuth) {
+            SmartAuthView { email, password in
+                appState.smartLogin(email: email, password: password)
+                showAuth = false
             }
         }
         .onChange(of: inputImage) { img in
@@ -149,17 +131,24 @@ struct ProfileView: View {
     }
 }
 
-struct RegisterView: View {
+// MARK: - Smart Auth View (1 form duy nhất)
+struct SmartAuthView: View {
     @State private var email = ""
     @State private var password = ""
-    let onRegister: (String, String) -> Void
+    @State private var errorMsg = ""
+    let onAuth: (String, String) -> Void
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
             Color.black.opacity(0.95).ignoresSafeArea()
             VStack(spacing: 20) {
-                Text("Đăng ký").font(.title2).fontWeight(.bold).foregroundColor(.white)
+                Text("Đăng nhập")
+                    .font(.title2).fontWeight(.bold).foregroundColor(.white)
+                
+                Text("Nhập email và mật khẩu.\nNếu chưa có tài khoản, hệ thống sẽ tự tạo mới.")
+                    .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
                 
                 TextField("Email", text: $email)
                     .textFieldStyle(.plain).foregroundColor(.white)
@@ -172,12 +161,18 @@ struct RegisterView: View {
                     .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
                     .padding(.horizontal, 30)
                 
+                if !errorMsg.isEmpty {
+                    Text(errorMsg).font(.caption).foregroundColor(.red)
+                }
+                
                 Button {
-                    if email.contains("@") && email.contains(".") && password.count >= 4 {
-                        onRegister(email, password)
+                    guard email.contains("@"), email.contains("."), password.count >= 4 else {
+                        errorMsg = "Email hoặc mật khẩu không hợp lệ"
+                        return
                     }
+                    onAuth(email, password)
                 } label: {
-                    Text("Đăng ký").font(.headline).foregroundColor(.white)
+                    Text("Tiếp tục").font(.headline).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Capsule().fill(.ultraThinMaterial))
                         .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
@@ -189,46 +184,7 @@ struct RegisterView: View {
     }
 }
 
-struct LoginView: View {
-    @State private var email = ""
-    @State private var password = ""
-    let onLogin: (String, String) -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.95).ignoresSafeArea()
-            VStack(spacing: 20) {
-                Text("Đăng nhập").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                
-                TextField("Email", text: $email)
-                    .textFieldStyle(.plain).foregroundColor(.white)
-                    .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                    .padding(.horizontal, 30)
-                    .keyboardType(.emailAddress).autocapitalization(.none)
-                
-                SecureField("Mật khẩu", text: $password)
-                    .textFieldStyle(.plain).foregroundColor(.white)
-                    .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                    .padding(.horizontal, 30)
-                
-                Button {
-                    if email.contains("@") && email.contains(".") && password.count >= 4 {
-                        onLogin(email, password)
-                    }
-                } label: {
-                    Text("Đăng nhập").font(.headline).foregroundColor(.white)
-                        .frame(maxWidth: .infinity).padding(.vertical, 14)
-                        .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
-                }.padding(.horizontal, 30)
-                
-                Button("Đóng") { dismiss() }.foregroundColor(.gray)
-            }
-        }
-    }
-}
-
+// MARK: - Image Picker (giữ nguyên)
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Environment(\.dismiss) var dismiss
