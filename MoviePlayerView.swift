@@ -15,6 +15,7 @@ enum MovieSource: String, CaseIterable { case phimapi="PhimAPI", xem20="Xem20", 
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
+    var resumeTime: Double = 0
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
     @State private var selectedSource: MovieSource = .phimapi; @State private var sourceStatus: [MovieSource: Bool] = [:]
@@ -30,6 +31,7 @@ struct MoviePlayerView: View {
     @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     @State private var imdbIDCache: String?
     @State private var hasStartedPlaying = false
+    @State private var didResume = false
     
     var body: some View {
         ZStack {
@@ -128,6 +130,7 @@ struct MoviePlayerView: View {
                         hasStartedPlaying = true
                         sourceStatus[.phimapi] = true
                         isLoading = false
+                        tryResume()
                     }
                     saveHistory()
                     
@@ -143,6 +146,7 @@ struct MoviePlayerView: View {
                         hasStartedPlaying = true
                         sourceStatus[.xem20] = true
                         isLoading = false
+                        tryResume()
                     }
                     saveHistory()
                     
@@ -172,6 +176,7 @@ struct MoviePlayerView: View {
                         hasStartedPlaying = true
                         sourceStatus[.vsmov] = true
                         isLoading = false
+                        tryResume()
                     }
                     saveHistory()
                     
@@ -188,6 +193,7 @@ struct MoviePlayerView: View {
                         hasStartedPlaying = true
                         sourceStatus[.stravo] = true
                         isLoading = false
+                        tryResume()
                     }
                     saveHistory()
                 }
@@ -198,6 +204,14 @@ struct MoviePlayerView: View {
                     isLoading = false
                 }
             }
+        }
+    }
+    
+    func tryResume() {
+        guard !didResume, resumeTime > 0 else { return }
+        didResume = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600))
         }
     }
     
@@ -279,4 +293,4 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
 
 struct TinySlider: View { let value: CGFloat; let icon: String
     var body: some View { VStack(spacing:4){Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5));ZStack(alignment:.bottom){Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60);Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y:-value*52)} } }
-} 
+}
