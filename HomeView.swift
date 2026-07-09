@@ -70,7 +70,7 @@ struct HomeView: View {
                                 }.tag(i)
                             }
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .never)).frame(height: 480)
+                        .tabViewStyle(.page(indexDisplayMode: .never)).frame(height: 480).drawingGroup()
                         .onAppear { startAutoScroll() }.onDisappear { stopAutoScroll() }
                         .overlay(alignment: .topLeading) {
                             Button {
@@ -219,7 +219,6 @@ struct HomeView: View {
                             }.padding(.horizontal, 20)
                         }
                         
-                        // Copyright
                         VStack(spacing: 4) {
                             Divider().background(Color.white.opacity(0.1))
                             Text("© 2026 Emmew. All rights reserved.")
@@ -244,7 +243,6 @@ struct HomeView: View {
                     Spacer()
                 }.ignoresSafeArea()
                 
-                // Genre Popup - giữa màn hình
                 if showGenrePopup {
                     Color.black.opacity(0.5).ignoresSafeArea().onTapGesture {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showGenrePopup = false }
@@ -329,7 +327,7 @@ struct SectionGrid: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack { Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white); Spacer(); NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) } }.padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 14) {
+                    LazyHStack(spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 VStack(alignment: .leading, spacing: 6) {
@@ -338,7 +336,7 @@ struct SectionGrid: View {
                                 }
                             }
                         }
-                    }.padding(.horizontal, 20)
+                    }.padding(.horizontal, 20).drawingGroup()
                 }
             }.padding(.top, 24)
         }
