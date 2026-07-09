@@ -227,7 +227,14 @@ struct MoviePlayerView: View {
     
     func loadOverlayData() { Task { 
         similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []
-        if mediaType=="tv"{seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []}
+        if mediaType=="tv"{
+            seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []
+            // Auto-load season detail cho season hiện tại
+            if let s = seasonNumber {
+                selectedSeasonNumber = s
+                selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s)
+            }
+        }
         if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}
         currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType)
     } }
