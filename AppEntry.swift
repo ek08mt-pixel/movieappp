@@ -43,6 +43,7 @@ class AppState: ObservableObject {
         self.watchHistory = []
         self.watchProgressList = []
         save()
+        UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
     }
     
     func login(email: String, password: String) {
@@ -51,20 +52,20 @@ class AppState: ObservableObject {
             self.email = email
             self.isLoggedIn = true
             load()
+            UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
         }
     }
     
     func smartLogin(email: String, password: String) {
         let accounts = getAllAccounts()
         if let savedPassword = accounts[email] {
-            // Email đã tồn tại -> login
             if savedPassword == password {
                 self.email = email
                 self.isLoggedIn = true
                 load()
+                UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
             }
         } else {
-            // Email mới -> tự đăng ký rồi login
             var newAccounts = accounts
             newAccounts[email] = password
             if let data = try? JSONEncoder().encode(newAccounts) {
@@ -76,6 +77,7 @@ class AppState: ObservableObject {
             self.watchHistory = []
             self.watchProgressList = []
             save()
+            UserDefaults.standard.set(email, forKey: "lastLoggedInEmail")
         }
     }
     
@@ -97,6 +99,7 @@ class AppState: ObservableObject {
         watchHistory = []
         watchProgressList = []
         save()
+        UserDefaults.standard.removeObject(forKey: "lastLoggedInEmail")
     }
     
     func updateProgress(_ progress: WatchProgress) {
@@ -119,6 +122,12 @@ class AppState: ObservableObject {
     }
     
     func load() {
+        // Khôi phục email từ lần đăng nhập trước
+        let savedEmail = UserDefaults.standard.string(forKey: "lastLoggedInEmail") ?? ""
+        if !savedEmail.isEmpty {
+            self.email = savedEmail
+        }
+        
         let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
         isLoggedIn = UserDefaults.standard.bool(forKey: "\(prefix)_isLoggedIn")
         email = UserDefaults.standard.string(forKey: "\(prefix)_email") ?? ""
