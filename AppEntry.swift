@@ -56,6 +56,7 @@ class AppState: ObservableObject {
     @Published var nickname = ""
     @Published var selectedAvatar = "person.circle.fill"
     @Published var avatarImageData: Data?
+    @Published var googleAvatarURL: String? = nil
     
     init() { load() }
     
@@ -105,6 +106,18 @@ class AppState: ObservableObject {
         }
     }
     
+    func googleLogin(googleId: String, name: String, avatarURL: String?) {
+        self.email = googleId
+        self.nickname = name
+        self.googleAvatarURL = avatarURL
+        self.isLoggedIn = true
+        load()
+        save()
+        if let data = googleId.data(using: .utf8) {
+            KeychainHelper.save(key: "lastLoggedInGoogleId", data: data)
+        }
+    }
+    
     private func saveAllAccounts(_ accounts: [String: String]) {
         if let data = try? JSONEncoder().encode(accounts) {
             KeychainHelper.save(key: "allAccounts", data: data)
@@ -131,6 +144,7 @@ class AppState: ObservableObject {
         nickname = ""
         selectedAvatar = "person.circle.fill"
         avatarImageData = nil
+        googleAvatarURL = nil
         favorites = []
         watchHistory = []
         watchProgressList = []
@@ -157,6 +171,10 @@ class AppState: ObservableObject {
     }
     
     func load() {
+        let savedGoogleIdData = KeychainHelper.load(key: "lastLoggedInGoogleId")
+        let savedGoogleId = savedGoogleIdData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        if !savedGoogleId.isEmpty { self.email = savedGoogleId }
+        
         let savedEmailData = KeychainHelper.load(key: "lastLoggedInEmail")
         let savedEmail = savedEmailData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
         if !savedEmail.isEmpty { self.email = savedEmail }
