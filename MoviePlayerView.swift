@@ -83,22 +83,25 @@ struct MoviePlayerView: View {
     
     @ViewBuilder
     func episodeRow(detail: TVSeasonDetail) -> some View {
-        VStack(alignment:.leading,spacing:4){
-            Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption2).foregroundColor(.white.opacity(0.6))
-            ScrollView(.horizontal,showsIndicators:false){
-                HStack(spacing:6){
-                    ForEach(detail.episodes){ep in
-                        Button{
-                            loadStream(season: ep.seasonNumber, episode: ep.episodeNumber)
-                            closeOverlay()
-                        }label:{
-                            Text("\(ep.episodeNumber)")
-                                .font(.system(size:10,weight:.medium))
-                                .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
-                                .frame(width:30,height:30)
-                                .background(Circle().fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)))
-                                .overlay(Circle().stroke(.white.opacity(0.15),lineWidth:0.5))
-                        }
+        VStack(alignment:.leading,spacing:6){
+            Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)")
+                .font(.caption).foregroundColor(.white.opacity(0.6))
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                ForEach(detail.episodes){ep in
+                    Button{
+                        loadStream(season: ep.seasonNumber, episode: ep.episodeNumber)
+                        closeOverlay()
+                    }label:{
+                        Text("\(ep.episodeNumber)")
+                            .font(.system(size:11,weight:.medium))
+                            .foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white)
+                            .frame(height:36)
+                            .frame(maxWidth:.infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius:10)
+                                    .fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : .ultraThinMaterial.opacity(0.4))
+                                    .overlay(RoundedRectangle(cornerRadius:10).stroke(.white.opacity(0.15),lineWidth:0.5))
+                            )
                     }
                 }
             }
