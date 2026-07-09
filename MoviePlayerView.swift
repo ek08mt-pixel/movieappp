@@ -210,7 +210,7 @@ struct MoviePlayerView: View {
     func tryResume() {
         guard !didResume, resumeTime > 0 else { return }
         didResume = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600))
         }
     }
