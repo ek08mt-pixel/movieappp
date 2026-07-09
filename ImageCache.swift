@@ -5,10 +5,17 @@ class ImageCache {
     private var cache = NSCache<NSString, UIImage>()
     private var runningRequests: Set<String> = []
     private let lock = NSLock()
+    private let session: URLSession
     
     init() {
-        cache.countLimit = 300
-        cache.totalCostLimit = 80 * 1024 * 1024
+        cache.countLimit = 400
+        cache.totalCostLimit = 100 * 1024 * 1024
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForResource = 5
+        config.timeoutIntervalForRequest = 5
+        config.httpMaximumConnectionsPerHost = 4
+        config.requestCachePolicy = .returnCacheDataElseLoad
+        session = URLSession(configuration: config)
     }
     
     func get(for url: URL, size: String = "thumb") -> UIImage? {
@@ -98,7 +105,7 @@ struct CachedAsyncImage: View {
     }
     
     private func loadAndResize(url: URL, targetSize: CGSize) async -> UIImage? {
-        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 8)
+        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 5)
         request.setValue("image/jpeg,image/png,image/webp", forHTTPHeaderField: "Accept")
         
         guard let (data, _) = try? await URLSession.shared.data(for: request),
@@ -119,4 +126,4 @@ extension UIImage {
             self.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
-}
+} 
