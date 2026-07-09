@@ -1,8 +1,28 @@
 import SwiftUI
 
+// MARK: - Watch Progress Model
+struct WatchProgress: Codable, Equatable {
+    let movieId: Int
+    let movieTitle: String
+    let posterPath: String?
+    let mediaType: String?
+    var season: Int?
+    var episode: Int?
+    var currentTime: Double
+    var duration: Double
+    var lastWatched: Date
+    
+    var progress: Double {
+        guard duration > 0 else { return 0 }
+        return min(currentTime / duration, 1.0)
+    }
+}
+
+// MARK: - AppState
 class AppState: ObservableObject {
     @Published var favorites: [Movie] = []
     @Published var watchHistory: [Movie] = []
+    @Published var watchProgressList: [WatchProgress] = []
     @Published var isLoggedIn = false
     @Published var email = ""
     @Published var nickname = ""
@@ -21,6 +41,7 @@ class AppState: ObservableObject {
         self.isLoggedIn = true
         self.favorites = []
         self.watchHistory = []
+        self.watchProgressList = []
         save()
     }
     
@@ -49,6 +70,14 @@ class AppState: ObservableObject {
         avatarImageData = nil
         favorites = []
         watchHistory = []
+        watchProgressList = []
+        save()
+    }
+    
+    func updateProgress(_ progress: WatchProgress) {
+        watchProgressList.removeAll { $0.movieId == progress.movieId && $0.season == progress.season && $0.episode == progress.episode }
+        watchProgressList.insert(progress, at: 0)
+        if watchProgressList.count > 30 { watchProgressList.removeLast() }
         save()
     }
     
@@ -61,6 +90,7 @@ class AppState: ObservableObject {
         UserDefaults.standard.set(avatarImageData, forKey: "\(prefix)_avatarImage")
         if let fav = try? JSONEncoder().encode(favorites) { UserDefaults.standard.set(fav, forKey: "\(prefix)_favorites") }
         if let hist = try? JSONEncoder().encode(watchHistory) { UserDefaults.standard.set(hist, forKey: "\(prefix)_history") }
+        if let prog = try? JSONEncoder().encode(watchProgressList) { UserDefaults.standard.set(prog, forKey: "\(prefix)_progress") }
     }
     
     func load() {
@@ -74,6 +104,8 @@ class AppState: ObservableObject {
            let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
         if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"),
            let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
+        if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"),
+           let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) { watchProgressList = p }
     }
 }
 
