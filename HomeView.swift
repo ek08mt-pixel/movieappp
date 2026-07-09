@@ -11,6 +11,15 @@ struct HomeView: View {
     @State private var menuOffset: CGFloat = -280
     @State private var showGenrePopup = false
     
+    // Continue watching state
+    @State private var showContinuePlayer = false
+    @State private var continueMovieId: Int?
+    @State private var continueMovieTitle = ""
+    @State private var continueMediaType: String?
+    @State private var continueSeason: Int?
+    @State private var continueEpisode: Int?
+    @State private var continuePosterURL: URL?
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -124,57 +133,68 @@ struct HomeView: View {
                             }.padding(.vertical, 10)
                         }
                         
-                        // Continue Watching
+                        // Continue Watching - dạng ngang đẹp
                         if !appState.watchProgressList.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
                                 ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 14) {
+                                    LazyHStack(spacing: 12) {
                                         ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
-                                            NavigationLink(destination: MoviePlayerView(
-                                                movieId: prog.movieId,
-                                                movieTitle: prog.movieTitle,
-                                                mediaType: prog.mediaType,
-                                                seasonNumber: prog.season,
-                                                episodeNumber: prog.episode,
-                                                posterURL: URL(string: prog.posterPath ?? "")
-                                            ).environmentObject(appState)) {
-                                                VStack(alignment: .leading, spacing: 6) {
-                                                    ZStack(alignment: .bottom) {
+                                            Button {
+                                                continueMovieId = prog.movieId
+                                                continueMovieTitle = prog.movieTitle
+                                                continueMediaType = prog.mediaType
+                                                continueSeason = prog.season
+                                                continueEpisode = prog.episode
+                                                continuePosterURL = URL(string: prog.posterPath ?? "")
+                                                showContinuePlayer = true
+                                            } label: {
+                                                VStack(alignment: .leading, spacing: 0) {
+                                                    ZStack(alignment: .bottomLeading) {
                                                         CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
-                                                            .aspectRatio(2/3, contentMode: .fill)
-                                                            .frame(width: 115, height: 172)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                            .aspectRatio(16/9, contentMode: .fill)
+                                                            .frame(width: 200, height: 112)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
                                                         
-                                                        GeometryReader { geo in
-                                                            RoundedRectangle(cornerRadius: 2)
-                                                                .fill(.white.opacity(0.3))
-                                                                .frame(height: 3)
-                                                                .overlay(alignment: .leading) {
-                                                                    RoundedRectangle(cornerRadius: 2)
-                                                                        .fill(.blue)
-                                                                        .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
-                                                                }
+                                                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        
+                                                        VStack(alignment: .leading, spacing: 2) {
+                                                            if let ep = prog.episode {
+                                                                Text("S\(prog.season ?? 1) E\(ep)")
+                                                                    .font(.system(size: 9, weight: .bold))
+                                                                    .foregroundColor(.white.opacity(0.9))
+                                                                    .padding(.horizontal, 6)
+                                                                    .padding(.vertical, 2)
+                                                                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
+                                                            }
+                                                            Spacer()
+                                                            Text(prog.movieTitle)
+                                                                .font(.system(size: 11, weight: .semibold))
+                                                                .foregroundColor(.white)
+                                                                .lineLimit(1)
+                                                            
+                                                            Text("Còn \(formatRemaining(prog))")
+                                                                .font(.system(size: 9))
+                                                                .foregroundColor(.gray)
+                                                            
+                                                            // Progress bar
+                                                            GeometryReader { geo in
+                                                                RoundedRectangle(cornerRadius: 1)
+                                                                    .fill(.white.opacity(0.25))
+                                                                    .frame(height: 2)
+                                                                    .overlay(alignment: .leading) {
+                                                                        RoundedRectangle(cornerRadius: 1)
+                                                                            .fill(.blue)
+                                                                            .frame(width: geo.size.width * CGFloat(prog.progress), height: 2)
+                                                                    }
+                                                            }
+                                                            .frame(height: 2)
                                                         }
-                                                        .frame(height: 3)
-                                                        .padding(.horizontal, 4)
-                                                        .padding(.bottom, 4)
-                                                    }
-                                                    .shadow(color: .black.opacity(0.3), radius: 3)
-                                                    
-                                                    Text(prog.movieTitle)
-                                                        .font(.system(size: 10))
-                                                        .fontWeight(.semibold)
-                                                        .foregroundColor(.white)
-                                                        .lineLimit(2)
-                                                        .frame(width: 115, alignment: .leading)
-                                                    
-                                                    if let ep = prog.episode {
-                                                        Text("S\(prog.season ?? 1) E\(ep)")
-                                                            .font(.system(size: 8))
-                                                            .foregroundColor(.gray)
+                                                        .padding(8)
                                                     }
                                                 }
+                                                .frame(width: 200)
                                             }
                                         }
                                     }.padding(.horizontal, 20)
@@ -347,6 +367,27 @@ struct HomeView: View {
                     .overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } }
             }
         }
+        .fullScreenCover(isPresented: $showContinuePlayer) {
+            if let id = continueMovieId {
+                MoviePlayerView(
+                    movieId: id,
+                    movieTitle: continueMovieTitle,
+                    mediaType: continueMediaType,
+                    seasonNumber: continueSeason,
+                    episodeNumber: continueEpisode,
+                    posterURL: continuePosterURL
+                )
+                .environmentObject(appState)
+            }
+        }
+    }
+    
+    func formatRemaining(_ prog: WatchProgress) -> String {
+        let remaining = prog.duration - prog.currentTime
+        guard remaining > 0 else { return "Đã xem hết" }
+        let mins = Int(remaining) / 60
+        if mins > 0 { return "Còn \(mins) phút" }
+        return "Sắp hết"
     }
     
     func uniqueGenres() -> [Genre] {
