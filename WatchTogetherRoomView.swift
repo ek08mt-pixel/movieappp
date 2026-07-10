@@ -111,11 +111,51 @@ struct WatchTogetherRoomView: View {
                 }
             }
             .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 16)
+            
             ScrollView {
-                VStack(spacing: 12) { ForEach(fakeRooms) { room in fakeRoomCard(room) } }
+                VStack(spacing: 12) {
+                    if service.hasPendingRoom {
+                        pendingRoomCard
+                    }
+                    ForEach(fakeRooms) { room in fakeRoomCard(room) }
+                }
                 .padding(.horizontal, 16).padding(.bottom, 120)
             }
         }
+    }
+    
+    var pendingRoomCard: some View {
+        Button {
+            service.rejoinPendingRoom { _ in }
+        } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.35)).frame(width: 64, height: 88)
+                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.7)))
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text(service.pendingRoomName).font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                        Image(systemName: "clock.arrow.circlepath").font(.system(size: 8)).foregroundColor(.yellow).padding(3).background(Circle().fill(.yellow.opacity(0.15)))
+                    }
+                    Text(service.pendingRoomMovie.isEmpty ? "Chưa chọn phim" : service.pendingRoomMovie)
+                        .font(.system(size: 12)).foregroundColor(.gray)
+                    Text("\(formatPendingTime()) nữa phòng biến mất, quay lại xem tiếp?")
+                        .font(.system(size: 10)).foregroundColor(.yellow.opacity(0.7))
+                }
+                Spacer()
+                Image(systemName: "arrow.right.circle.fill").font(.system(size: 20)).foregroundColor(.white.opacity(0.6))
+            }
+            .padding(12)
+        }
+        .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.3)))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.yellow.opacity(0.2), lineWidth: 0.5))
+    }
+    
+    func formatPendingTime() -> String {
+        let m = service.pendingLeaveSeconds / 60
+        let s = service.pendingLeaveSeconds % 60
+        if m > 0 { return "\(m) phút \(s) giây" }
+        return "\(s) giây"
     }
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
@@ -206,7 +246,10 @@ struct WatchTogetherRoomView: View {
                             CustomPlayerVC(player: player, pipController: $pipController)
                             VStack(spacing: 0) {
                                 HStack {
-                                    Button { service.leaveRoom(); player.pause(); player.replaceCurrentItem(with: nil) } label: {
+                                    Button {
+                                        service.leaveRoomTemporarily(movieTitle: currentMovieTitle)
+                                        player.pause()
+                                    } label: {
                                         Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     }
                                     Spacer()
