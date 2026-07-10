@@ -18,7 +18,6 @@ class WatchTogetherService: ObservableObject {
     @Published var participants: [Participant] = []
     @Published var remoteState: RemotePlaybackState?
     
-    // Tạm rời phòng
     @Published var pendingRoomCode: String = ""
     @Published var pendingRoomName: String = ""
     @Published var pendingRoomMovie: String = ""
@@ -122,19 +121,22 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
-    func leaveRoomTemporarily(movieTitle: String) {
+    // Chuẩn bị rời phòng - lưu pending, không đụng gì đến state khác
+    func prepareToLeave(movieTitle: String, code: String, name: String) {
         leaveTimer?.invalidate()
         timer?.invalidate()
         timer = nil
         
-        pendingRoomCode = roomCode
-        pendingRoomName = currentRoomName
+        pendingRoomCode = code
+        pendingRoomName = name
         pendingRoomMovie = movieTitle
         pendingLeaveSeconds = 300
         hasPendingRoom = true
         
-        put(path: "rooms/\(roomCode)/info/participants/\(userId)/isOnline", data: false) { _ in }
+        // Đánh dấu offline
+        put(path: "rooms/\(code)/info/participants/\(userId)/isOnline", data: false)
         
+        // Countdown
         leaveTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -152,6 +154,15 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
+    // Gọi sau khi View đã về lobby an toàn
+    func didReturnToLobby() {
+        isInRoom = false
+        currentRoomCode = ""
+        currentRoomName = ""
+        messages = []
+        participants = []
+    }
+    
     func rejoinPendingRoom(completion: @escaping (Bool) -> Void) {
         guard hasPendingRoom, !pendingRoomCode.isEmpty else {
             completion(false)
@@ -163,7 +174,6 @@ class WatchTogetherService: ObservableObject {
         currentRoomCode = pendingRoomCode
         currentRoomName = pendingRoomName
         isInRoom = true
-        isHost = true
         hasPendingRoom = false
         
         put(path: "rooms/\(roomCode)/info/participants/\(userId)/isOnline", data: true) { _ in
