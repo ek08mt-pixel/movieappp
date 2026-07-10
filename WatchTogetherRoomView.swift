@@ -124,33 +124,46 @@ struct WatchTogetherRoomView: View {
     }
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.35)).frame(width: 64, height: 88)
+    HStack(spacing: 12) {
+        // Poster
+        if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w200\(path)") {
+            CachedAsyncImage(url: url)
+                .aspectRatio(2/3, contentMode: .fill)
+                .frame(width: 64, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.35))
+                .frame(width: 64, height: 88)
                 .overlay(Image(systemName: "play.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.7)))
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text(room.roomName).font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                    Image(systemName: room.isPrivate ? "lock.fill" : "globe").font(.system(size: 8)).foregroundColor(.white.opacity(0.4)).padding(3).background(Circle().fill(.white.opacity(0.1)))
-                }
-                Text(room.movieTitle).font(.system(size: 12)).foregroundColor(.gray)
-                HStack(spacing: 8) {
-                    HStack(spacing: -8) {
-                        ForEach(room.avatars.prefix(4), id: \.self) { av in
-                            Text(av).font(.system(size: 11)).frame(width: 22, height: 22).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 0.5))
-                        }
-                    }
-                    Text("\(room.viewerCount) người").font(.system(size: 11)).foregroundColor(.white.opacity(0.5)).padding(.leading, 4)
-                }
-            }
-            Spacer()
-            VStack(spacing: 3) {
-                Circle().fill(.green).frame(width: 6, height: 6)
-                Text("Live").font(.system(size: 7)).foregroundColor(.green.opacity(0.8))
-            }.padding(.trailing, 4)
         }
-        .padding(12).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.22)))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.06), lineWidth: 0.5))
+        
+        VStack(alignment: .leading, spacing: 6) {
+            Text(room.movieTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+            Text(room.roomName).font(.system(size: 11)).foregroundColor(.gray).lineLimit(1)
+            
+            HStack(spacing: 8) {
+                HStack(spacing: -8) {
+                    ForEach(room.avatars.prefix(4), id: \.self) { av in
+                        Text(av).font(.system(size: 10)).frame(width: 20, height: 20)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                            .overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 0.5))
+                    }
+                    if room.viewerCount > 4 {
+                        Text("+\(room.viewerCount - 4)").font(.system(size: 8)).foregroundColor(.white.opacity(0.6))
+                    }
+                }
+                Text("\(room.viewerCount) người").font(.system(size: 10)).foregroundColor(.white.opacity(0.5))
+            }
+        }
+        Spacer()
+        VStack(alignment: .trailing, spacing: 4) {
+            Text("Đang xem").font(.system(size: 8)).foregroundColor(.green)
+            Text(room.currentTime).font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundColor(.white.opacity(0.7))
+        }
     }
+    .padding(12).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.22)))
+    .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.06), lineWidth: 0.5))
+}
     
     // MARK: - Create Room
     var createRoomView: some View {
