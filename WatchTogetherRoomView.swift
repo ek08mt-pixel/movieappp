@@ -23,8 +23,7 @@ struct WatchTogetherRoomView: View {
     @State private var joinCode = ""
     @State private var showCreateRoom = false
     @State private var showSearchMovie = false
-    @State private var visibleMessages: [WatchTogetherService.ChatMessage] = []
-    @State private var messageFadeTimer: Timer?
+    @FocusState private var isInputFocused: Bool
     
     @State private var fakeRooms: [FakeRoom] = [
         FakeRoom(roomName: "Người deep", movieTitle: "Oppenheimer", viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"], isPrivate: false),
@@ -35,14 +34,14 @@ struct WatchTogetherRoomView: View {
         FakeRoom(roomName: "Rock & Movie", movieTitle: "Bohemian Rhapsody", viewerCount: 4, avatars: ["🐻","🐼","🐨","🐯"], isPrivate: true),
         FakeRoom(roomName: "🌌 Sci fi Universe", movieTitle: "Dune: Part Two", viewerCount: 5, avatars: ["🦊","🐸","🐵","🐮","🐷"], isPrivate: false),
         FakeRoom(roomName: "babi xinh iuu", movieTitle: "Deadpool 3", viewerCount: 6, avatars: ["🐹","🐭","🦄","🐙","🐱","🐶"], isPrivate: false),
-        FakeRoom(roomName: "👻 Ma sì to ri ", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true),
+        FakeRoom(roomName: "👻 Ma sì to ri", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true),
         FakeRoom(roomName: "Indie Corner", movieTitle: "Everything Everywhere", viewerCount: 2, avatars: ["🐨","🐯"], isPrivate: false),
         FakeRoom(roomName: "Anime", movieTitle: "Spirited Away", viewerCount: 4, avatars: ["🦊","🐸","🐵","🐮"], isPrivate: false),
         FakeRoom(roomName: "🔥 Hot Pick", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false),
     ]
     
     @State private var refreshTimer: Timer?
-    let backupRoomNames = ["ai đoá ai đóa ", "gigi ngungục ", "ziku ", "Music & Movie", "📺 Series Addict", "bò cinema", " newjeans neverdie", "🔥 Trending Now", " Hidden Gems", "hanpham ", "🌴 Tropical Night", "siu anh hùng "]
+    let backupRoomNames = ["ai đoá ai đóa", "gigi ngungục", "ziku", "Music & Movie", "📺 Series Addict", "bò cinema", "newjeans neverdie", "🔥 Trending Now", "Hidden Gems", "hanpham", "🌴 Tropical Night", "siu anh hùng"]
     let backupMovies = ["Barbie", "The Batman", "Spider-Man", "Joker", "Inception", "Tenet", "Dunkirk", "Memento", "La La Land", "Whiplash", "Get Out", "Us"]
     
     var body: some View {
@@ -58,20 +57,7 @@ struct WatchTogetherRoomView: View {
             }
         }
         .onAppear { startFakeRoomRefresh() }
-        .onDisappear { refreshTimer?.invalidate(); messageFadeTimer?.invalidate() }
-        .onChange(of: service.messages.count) { _ in
-            updateVisibleMessages()
-        }
-    }
-    
-    func updateVisibleMessages() {
-        visibleMessages = Array(service.messages.suffix(5))
-        messageFadeTimer?.invalidate()
-        messageFadeTimer = Timer.scheduledTimer(withTimeInterval: 6, repeats: false) { _ in
-            withAnimation(.easeOut(duration: 0.5)) {
-                visibleMessages = Array(service.messages.suffix(3))
-            }
-        }
+        .onDisappear { refreshTimer?.invalidate() }
     }
     
     func startFakeRoomRefresh() {
@@ -101,9 +87,7 @@ struct WatchTogetherRoomView: View {
             
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(fakeRooms) { room in
-                        fakeRoomCard(room)
-                    }
+                    ForEach(fakeRooms) { room in fakeRoomCard(room) }
                 }
                 .padding(.horizontal, 16).padding(.bottom, 120)
             }
@@ -114,20 +98,17 @@ struct WatchTogetherRoomView: View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.35)).frame(width: 64, height: 88)
                 .overlay(Image(systemName: "play.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.7)))
-            
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Text(room.roomName).font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
                     Image(systemName: room.isPrivate ? "lock.fill" : "globe").font(.system(size: 8)).foregroundColor(.white.opacity(0.4)).padding(3).background(Circle().fill(.white.opacity(0.1)))
                 }
                 Text(room.movieTitle).font(.system(size: 12)).foregroundColor(.gray)
-                
                 HStack(spacing: 8) {
                     HStack(spacing: -8) {
                         ForEach(room.avatars.prefix(4), id: \.self) { av in
                             Text(av).font(.system(size: 11)).frame(width: 22, height: 22)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
-                                .overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 0.5))
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 0.5))
                         }
                     }
                     Text("\(room.viewerCount) người").font(.system(size: 11)).foregroundColor(.white.opacity(0.5)).padding(.leading, 4)
@@ -139,8 +120,7 @@ struct WatchTogetherRoomView: View {
                 Text("Live").font(.system(size: 7)).foregroundColor(.green.opacity(0.8))
             }.padding(.trailing, 4)
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.22)))
+        .padding(12).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.22)))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.06), lineWidth: 0.5))
     }
     
@@ -151,56 +131,39 @@ struct WatchTogetherRoomView: View {
                 Button { showCreateRoom = false } label: {
                     Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
                 }
-                Spacer()
-                Text("Tạo phòng").font(.headline).foregroundColor(.white)
-                Spacer()
+                Spacer(); Text("Tạo phòng").font(.headline).foregroundColor(.white); Spacer()
                 Circle().fill(.clear).frame(width: 40)
-            }
-            .padding(.horizontal, 16).padding(.top, 50)
+            }.padding(.horizontal, 16).padding(.top, 50)
             
             VStack(spacing: 14) {
                 TextField("Tên của bạn", text: $userName).font(.system(size: 14)).foregroundColor(.white).padding(14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
-                
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 TextField("Tên phòng", text: $roomName).font(.system(size: 14)).foregroundColor(.white).padding(14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
-                
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 Button {
                     guard !userName.isEmpty else { return }
-                    service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in
-                        showCreateRoom = false
-                    }
+                    service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false }
                 } label: {
                     Text("Tạo phòng").font(.headline).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Capsule().fill(.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
                 }
-                
                 HStack {
                     Rectangle().fill(.white.opacity(0.1)).frame(height: 0.5)
                     Text("hoặc").font(.caption).foregroundColor(.gray)
                     Rectangle().fill(.white.opacity(0.1)).frame(height: 0.5)
                 }
-                
                 TextField("Nhập mã phòng", text: $joinCode).font(.system(size: 14)).foregroundColor(.white).padding(14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5)).keyboardType(.numberPad)
-                
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5)).keyboardType(.numberPad)
                 Button {
                     guard !userName.isEmpty, joinCode.count == 6 else { return }
-                    service.joinRoom(code: joinCode, userName: userName) { success, _ in
-                        if success { showCreateRoom = false }
-                    }
+                    service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } }
                 } label: {
                     Text("Vào phòng").font(.headline).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Capsule().fill(.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
                 }
-            }
-            .padding(.horizontal, 20)
+            }.padding(.horizontal, 20)
             Spacer()
-        }
-        .background(Color.black.ignoresSafeArea())
+        }.background(Color.black.ignoresSafeArea())
     }
     
     // MARK: - In Room
@@ -209,44 +172,53 @@ struct WatchTogetherRoomView: View {
             let isLandscape = geo.size.width > geo.size.height
             
             ZStack {
-                // Video player
-                CustomPlayerVC(player: player, pipController: .constant(nil)).ignoresSafeArea()
-                
-                // Rave chat - chữ trực tiếp trên video, không background
-                VStack {
-                    Spacer()
-                    raveChatView
-                }
-                
-                // Top bar
-                VStack {
-                    HStack {
-                        Button {
-                            service.leaveRoom()
-                            player.pause()
-                            player.replaceCurrentItem(with: nil)
-                        } label: {
-                            Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                        }
-                        Spacer()
-                        Text(service.currentRoomName).font(.caption).foregroundColor(.white.opacity(0.8))
-                        Spacer()
-                        HStack(spacing: 6) {
-                            Button { showSearchMovie = true } label: {
-                                Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                            }
-                            Button { showViewerPanel = true } label: {
-                                HStack(spacing: -4) {
-                                    ForEach(service.participants.prefix(2), id: \.userId) { p in
-                                        Text(p.avatar).font(.system(size: 10)).frame(width: 20, height: 20).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                    }
-                                }
-                                .padding(6).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
-                            }
-                        }
+                if isLandscape {
+                    // Ngang: Video full + chat overlay phải
+                    HStack(spacing: 0) {
+                        CustomPlayerVC(player: player, pipController: .constant(nil))
+                            .frame(width: geo.size.width * 0.62)
+                        imessageChatPanel
+                            .frame(width: geo.size.width * 0.38)
                     }
-                    .padding(.horizontal, 12).padding(.top, 50)
-                    Spacer()
+                    .ignoresSafeArea()
+                } else {
+                    // Dọc: Video trên + Chat iMessage dưới
+                    VStack(spacing: 0) {
+                        // Video
+                        ZStack {
+                            CustomPlayerVC(player: player, pipController: .constant(nil))
+                            // Top bar overlay trên video
+                            VStack {
+                                HStack {
+                                    Button {
+                                        service.leaveRoom(); player.pause(); player.replaceCurrentItem(with: nil)
+                                    } label: {
+                                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                    }
+                                    Spacer()
+                                    Text(service.currentRoomName).font(.caption).foregroundColor(.white.opacity(0.8))
+                                    Spacer()
+                                    HStack(spacing: 6) {
+                                        Button { showSearchMovie = true } label: {
+                                            Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                        }
+                                        Button { showViewerPanel = true } label: {
+                                            HStack(spacing: -4) {
+                                                ForEach(service.participants.prefix(2), id: \.userId) { p in
+                                                    Text(p.avatar).font(.system(size: 10)).frame(width: 20, height: 20).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                                }
+                                            }.padding(6).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
+                                        }
+                                    }
+                                }.padding(.horizontal, 12).padding(.top, 50)
+                                Spacer()
+                            }
+                        }
+                        .frame(height: geo.size.height * 0.42)
+                        
+                        // Chat iMessage
+                        imessageChatPanel
+                    }
                 }
             }
         }
@@ -261,73 +233,107 @@ struct WatchTogetherRoomView: View {
             else if state.action == "seek" { player.seek(to: target) }
         }
         .onChange(of: player.rate) { newRate in
-            if service.isInRoom && service.isHost {
-                service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime)
-            }
+            if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) }
         }
     }
     
-    // MARK: - Rave Chat (trong suốt, chữ trên video)
-    var raveChatView: some View {
+    // MARK: - iMessage Chat Panel
+    var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Tin nhắn - trong suốt, chỉ hiện 5 cái gần nhất
-            VStack(spacing: 3) {
-                ForEach(visibleMessages) { msg in
-                    raveChatRow(msg)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+            // Header bar
+            HStack {
+                Text(service.currentRoomName)
+                    .font(.system(size: 12, weight: .semibold)).foregroundColor(.white.opacity(0.7))
+                Spacer()
+                Text("#\(service.currentRoomCode)")
+                    .font(.system(size: 10)).foregroundColor(.white.opacity(0.4))
             }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 4)
-            .animation(.easeInOut(duration: 0.3), value: visibleMessages.count)
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .background(.ultraThinMaterial.opacity(0.3))
             
-            // Input bar siêu mỏng
-            HStack(spacing: 4) {
-                TextField("", text: $watchMessage)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.25)))
-                    .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
-                    .overlay(
-                        HStack {
-                            if watchMessage.isEmpty {
-                                Text("Nhắn tin...").font(.system(size: 11)).foregroundColor(.white.opacity(0.35)).padding(.leading, 14)
-                            }
-                            Spacer()
+            // Messages
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(service.messages) { msg in
+                            imessageBubble(msg).id(msg.id)
                         }
-                    )
-                    .onSubmit { sendRaveMessage() }
-                
-                Button { sendRaveMessage() } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(watchMessage.isEmpty ? .clear : .white)
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                }
+                .onChange(of: service.messages.count) { _ in
+                    if let last = service.messages.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 6)
+            .background(.ultraThinMaterial.opacity(0.15))
+            
+            // Input bar iMessage style
+            HStack(spacing: 10) {
+                TextField("Nhắn tin...", text: $watchMessage)
+                    .focused($isInputFocused)
+                    .font(.system(size: 15))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                    .onSubmit { sendImessage() }
+                
+                if !watchMessage.isEmpty {
+                    Button { sendImessage() } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(.ultraThinMaterial.opacity(0.5))
+        }
+        .background(.ultraThinMaterial.opacity(0.25))
+    }
+    
+    func imessageBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
+        let isMe = msg.userId == service.userId
+        
+        return HStack(alignment: .bottom, spacing: 8) {
+            if !isMe {
+                // Avatar người khác
+                Text(msg.avatar).font(.system(size: 16))
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+            } else { Spacer() }
+            
+            VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
+                Text(msg.userName).font(.system(size: 10)).foregroundColor(.white.opacity(0.5))
+                Text(msg.text)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(isMe ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.3))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(.white.opacity(isMe ? 0.15 : 0.08), lineWidth: 0.5)
+                    )
+            }
+            
+            if isMe {
+                Text(msg.avatar).font(.system(size: 16))
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+            } else { Spacer() }
         }
     }
     
-    func raveChatRow(_ msg: WatchTogetherService.ChatMessage) -> some View {
-        HStack(spacing: 4) {
-            Text(msg.avatar).font(.system(size: 10))
-            Text(msg.userName).font(.system(size: 10, weight: .bold)).foregroundColor(.white.opacity(0.85))
-            Text(msg.text).font(.system(size: 11)).foregroundColor(.white.opacity(0.75)).lineLimit(1)
-            Spacer()
-        }
-        .padding(.horizontal, 8).padding(.vertical, 3)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.15)))
-    }
-    
-    func sendRaveMessage() {
+    func sendImessage() {
         let trimmed = watchMessage.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         service.sendMessage(text: trimmed)
         watchMessage = ""
-        visibleMessages = Array(service.messages.suffix(5))
     }
     
     // MARK: - Load Movie
@@ -335,25 +341,20 @@ struct WatchTogetherRoomView: View {
         Task {
             do {
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
-                
                 var streamURL: URL?
-                
                 do {
                     streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
                         PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) }
                     }
-                } catch { print("PhimAPI failed: \(error)") }
-                
+                } catch { print("PhimAPI: \(error)") }
                 if streamURL == nil {
                     do {
                         streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
                             SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) }
                         }
-                    } catch { print("Sofaflix failed: \(error)") }
+                    } catch { print("Sofaflix: \(error)") }
                 }
-                
-                guard let url = streamURL else { print("All sources failed"); return }
-                
+                guard let url = streamURL else { return }
                 await MainActor.run {
                     player.replaceCurrentItem(with: AVPlayerItem(url: url))
                     player.play()
@@ -391,7 +392,6 @@ struct WatchTogetherRoomView: View {
                     }
                 }
             }
-        }
-        .background(Color.black.opacity(0.95))
+        }.background(Color.black.opacity(0.95))
     }
 }
