@@ -144,7 +144,7 @@ struct FilmHubView: View {
         case "Phim đoạt giải": CategoryFullView(category: CategoryConfig(id: 0, name: "Oscar Winners", posterName: "", type: .keyword, tmdbId: 2959))
         case "Ngày này năm xưa": ThisDayHistoryView()
         case "Cặp bài trùng": PairView()
-        case "Quote huyền thoại": QuoteView()
+        case "Quote huyền thoại": QuoteView(movieId: 550)
         case "So sánh phim": CompareView()
         case "Top doanh thu": CategoryFullView(category: CategoryConfig(id: 0, name: "Top Revenue", posterName: "", type: .keyword, tmdbId: 210024))
         case "Vũ trụ điện ảnh": UniverseView()
