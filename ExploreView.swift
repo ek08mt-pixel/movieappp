@@ -78,7 +78,7 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal)
+                LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal)
             }
         }
     }
@@ -88,9 +88,14 @@ struct ExploreView: View {
 struct FilmHubView: View {
     @Environment(\.dismiss) var dismiss
     let hubItems: [(String, String, Color)] = [
-        ("⭐", "Diễn viên hot", .orange), ("🎬", "Đạo diễn tài ba", .purple), ("🏆", "Phim đoạt giải", .yellow),
-        ("📅", "Ngày này năm xưa", .blue), ("👥", "Cặp bài trùng", .pink), ("💬", "Quote huyền thoại", .teal),
-        ("🔗", "So sánh phim", .green), ("📊", "Top doanh thu", .red), ("🎪", "Vũ trụ điện ảnh", .indigo), ("🔥", "Trending hôm nay", .mint)
+        ("Diễn viên hot", "Ngôi sao được yêu thích", .orange),
+        ("Đạo diễn tài ba", "Nhà làm phim xuất sắc", .purple),
+        ("Ngày này năm xưa", "Phim công chiếu hôm nay", .blue),
+        ("Cặp bài trùng", "Bạn diễn ăn ý nhất", .pink),
+        ("Quote huyền thoại", "Câu thoại bất hủ", .teal),
+        ("So sánh phim", "Đối đầu điện ảnh", .green),
+        ("Top doanh thu", "Phòng vé toàn cầu", .red),
+        ("Vũ trụ điện ảnh", "MCU, DC, Star Wars...", .indigo)
     ]
     let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
@@ -99,15 +104,14 @@ struct FilmHubView: View {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("Góc phim").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Góc phim").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(hubItems, id: \.1) { emoji, title, color in
+                        ForEach(hubItems, id: \.0) { title, subtitle, color in
                             NavigationLink(destination: hubDestination(for: title)) {
                                 VStack(spacing: 8) {
-                                    Text(emoji).font(.system(size: 36))
-                                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
-                                    Text(subtitle(for: title)).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                }.frame(maxWidth: .infinity).padding(.vertical, 24)
+                                    Text(title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                    Text(subtitle).font(.system(size: 11)).foregroundColor(.gray).lineLimit(1)
+                                }.frame(maxWidth: .infinity).padding(.vertical, 28)
                                 .background(RoundedRectangle(cornerRadius: 16).fill(color.opacity(0.15)))
                                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(color.opacity(0.2), lineWidth: 0.5))
                             }
@@ -116,24 +120,14 @@ struct FilmHubView: View {
                     Spacer().frame(height: 120)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true)
     }
     
-    func subtitle(for t: String) -> String {
-        switch t {
-        case "Diễn viên hot": return "Ngôi sao được yêu thích"
-        case "Đạo diễn tài ba": return "Nhà làm phim xuất sắc"
-        case "Phim đoạt giải": return "Oscar, Cannes & more"
-        case "Ngày này năm xưa": return "Phim công chiếu hôm nay"
-        case "Cặp bài trùng": return "Bạn diễn ăn ý nhất"
-        case "Quote huyền thoại": return "Câu thoại bất hủ"
-        case "So sánh phim": return "Đối đầu điện ảnh"
-        case "Top doanh thu": return "Phòng vé toàn cầu"
-        case "Vũ trụ điện ảnh": return "MCU, DC, Star Wars..."
-        case "Trending hôm nay": return "Phim & sao đang hot"
-        default: return ""
-        }
+    var backButton: some View {
+        Button { dismiss() } label: {
+            Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)))
+        }.padding(.top, 54).padding(.leading, 16)
     }
     
     @ViewBuilder
@@ -141,15 +135,13 @@ struct FilmHubView: View {
         switch t {
         case "Diễn viên hot": ActorHotView()
         case "Đạo diễn tài ba": DirectorView(directorName: "Christopher Nolan")
-        case "Phim đoạt giải": CategoryFullView(category: CategoryConfig(id: 0, name: "Oscar Winners", posterName: "", type: .keyword, tmdbId: 2959))
         case "Ngày này năm xưa": ThisDayHistoryView()
         case "Cặp bài trùng": PairView()
         case "Quote huyền thoại": QuoteView(movieId: 550)
         case "So sánh phim": CompareView()
-        case "Top doanh thu": CategoryFullView(category: CategoryConfig(id: 0, name: "Top Revenue", posterName: "", type: .keyword, tmdbId: 210024))
+        case "Top doanh thu": CategoryFullView(category: CategoryConfig(id: 0, name: "Doanh thu", posterName: "", type: .keyword, tmdbId: 210024))
         case "Vũ trụ điện ảnh": UniverseView()
-        case "Trending hôm nay": TrendingHubView()
-        default: Text("Đang phát triển").foregroundColor(.gray).frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.black)
+        default: Color.black
         }
     }
 }
@@ -163,9 +155,9 @@ struct ActorHotView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("⭐ Diễn viên hot").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Diễn viên hot").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        ForEach(movies.prefix(15)) { m in
+                        ForEach(Array(movies.enumerated().prefix(15)), id: \.offset) { _, m in
                             NavigationLink(destination: MovieDetailView(movie: m)) {
                                 VStack(spacing: 6) {
                                     CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 10))
@@ -177,12 +169,15 @@ struct ActorHotView: View {
                     Spacer().frame(height: 100)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true).task { movies = (try? await APIService.shared.popular()) ?? [] }
+    }
+    var backButton: some View {
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
-// MARK: - This Day History View
+// MARK: - This Day History
 struct ThisDayHistoryView: View {
     @Environment(\.dismiss) var dismiss
     @State private var movies: [Movie] = []
@@ -191,13 +186,11 @@ struct ThisDayHistoryView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("📅 Ngày này năm xưa").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    let today = Calendar.current.dateComponents([.month, .day], from: Date())
-                    Text("Phim công chiếu ngày \(today.day ?? 1)/\(today.month ?? 1)").font(.headline).foregroundColor(.gray).padding(.horizontal, 16)
-                    ForEach(movies.prefix(8)) { m in
+                    Text("Ngày này năm xưa").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(Array(movies.prefix(8).enumerated()), id: \.offset) { _, m in
                         NavigationLink(destination: MovieDetailView(movie: m)) {
                             HStack(spacing: 12) {
-                                CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 70, height: 105).clipShape(RoundedRectangle(cornerRadius: 10))
+                                CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 10))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(m.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                                     Text(m.releaseDate ?? "").font(.caption).foregroundColor(.gray)
@@ -210,36 +203,53 @@ struct ThisDayHistoryView: View {
                     Spacer().frame(height: 100)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true).task { movies = (try? await APIService.shared.topRated()) ?? [] }
+    }
+    var backButton: some View {
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
 // MARK: - Pair View
 struct PairView: View {
     @Environment(\.dismiss) var dismiss
-    let pairs: [(String, String, Int)] = [("Brad Pitt", "Leonardo DiCaprio", 2), ("Tom Hanks", "Meg Ryan", 4), ("Emma Stone", "Ryan Gosling", 3), ("Robert De Niro", "Al Pacino", 4), ("Johnny Depp", "Helena Bonham Carter", 7)]
+    let pairs: [(String, String, Int)] = [
+        ("Brad Pitt", "Leonardo DiCaprio", 2), ("Tom Hanks", "Meg Ryan", 4),
+        ("Emma Stone", "Ryan Gosling", 3), ("Robert De Niro", "Al Pacino", 4),
+        ("Johnny Depp", "Helena Bonham Carter", 7), ("Scarlett Johansson", "Chris Evans", 8),
+        ("Jennifer Lawrence", "Bradley Cooper", 4), ("Keanu Reeves", "Sandra Bullock", 2)
+    ]
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 20) {
-                    Text("👥 Cặp bài trùng").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                VStack(spacing: 16) {
+                    Text("Cặp bài trùng").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     ForEach(pairs, id: \.0) { a, b, count in
                         VStack(spacing: 12) {
-                            HStack(spacing: 20) {
-                                VStack { Text("🎭").font(.system(size: 50)); Text(a).font(.system(size: 14, weight: .semibold)).foregroundColor(.white) }
-                                Text("❤️").font(.system(size: 24))
-                                VStack { Text("🎭").font(.system(size: 50)); Text(b).font(.system(size: 14, weight: .semibold)).foregroundColor(.white) }
+                            HStack(spacing: 16) {
+                                VStack(spacing: 6) {
+                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(a.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white))
+                                    Text(a).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                                }
+                                Text("❤️").font(.system(size: 20))
+                                VStack(spacing: 6) {
+                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(b.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white))
+                                    Text(b).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                                }
                             }
-                            Text("Đã đóng chung \(count) phim").font(.system(size: 13)).foregroundColor(.orange).padding(.vertical, 4).padding(.horizontal, 12).background(Capsule().fill(.orange.opacity(0.15)))
-                        }.padding(20).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 18).stroke(.pink.opacity(0.2), lineWidth: 0.5)).padding(.horizontal, 16)
+                            Text("Đã đóng chung \(count) phim").font(.system(size: 13, weight: .medium)).foregroundColor(.pink).padding(.vertical, 4).padding(.horizontal, 12).background(Capsule().fill(.pink.opacity(0.15)))
+                        }.padding(16).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 18).stroke(.pink.opacity(0.15), lineWidth: 0.5)).padding(.horizontal, 16)
                     }
                     Spacer().frame(height: 100)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true)
+    }
+    var backButton: some View {
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
@@ -252,66 +262,78 @@ struct CompareView: View {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("🔗 So sánh phim").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("So sánh phim").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     if let a = m1, let b = m2 {
-                        HStack(spacing: 8) {
-                            VStack { CachedAsyncImage(url: a.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12)); Text(a.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2); Text("⭐ \(a.ratingText)").font(.caption).foregroundColor(.yellow) }
-                            Text("VS").font(.system(size: 20, weight: .black)).foregroundColor(.red).padding(.horizontal, 4)
-                            VStack { CachedAsyncImage(url: b.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12)); Text(b.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2); Text("⭐ \(b.ratingText)").font(.caption).foregroundColor(.yellow) }
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
+                                VStack(spacing: 6) {
+                                    CachedAsyncImage(url: a.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12))
+                                    Text(a.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                }
+                                VStack(spacing: 8) {
+                                    Text("VS").font(.system(size: 22, weight: .black)).foregroundColor(.red)
+                                    VStack(spacing: 4) {
+                                        CompareRow(label: "Điểm", left: a.ratingText, right: b.ratingText)
+                                        CompareRow(label: "Năm", left: a.releaseDate ?? "-", right: b.releaseDate ?? "-")
+                                    }
+                                }
+                                VStack(spacing: 6) {
+                                    CachedAsyncImage(url: b.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12))
+                                    Text(b.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                }
+                            }
                         }.padding(16).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).padding(.horizontal, 16)
                     }
                     Spacer().frame(height: 100)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true).task { let movies = (try? await APIService.shared.popular()) ?? []; m1 = movies.first; m2 = movies.dropFirst().first }
+    }
+    var backButton: some View {
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
-// MARK: - Trending Hub View
-struct TrendingHubView: View {
-    @Environment(\.dismiss) var dismiss
-    @State private var movies: [Movie] = []
+struct CompareRow: View {
+    let label: String; let left: String; let right: String
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            Color.black.ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: 20) {
-                    Text("🔥 Trending hôm nay").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 12) { ForEach(movies.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal, 16) }
-                    Spacer().frame(height: 100)
-                }
-            }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
-        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.popular()) ?? [] }
+        HStack(spacing: 8) {
+            Text(left).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50)
+            Text(label).font(.system(size: 10)).foregroundColor(.gray).frame(width: 40)
+            Text(right).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50)
+        }
     }
 }
 
 // MARK: - Universe View
 struct UniverseView: View {
     @Environment(\.dismiss) var dismiss
-    let universes: [(String, String, Int, CategoryConfig.CategoryType)] = [
-        ("Marvel Studios", "🦸", 420, .studio), ("DC Extended", "🦇", 429, .studio),
-        ("Star Wars", "⭐", 1, .studio), ("Wizarding World", "⚡", 174, .studio),
-        ("Jurassic Saga", "🦖", 56, .studio), ("Fast Saga", "🏎️", 3325, .studio),
-        ("James Bond", "🔫", 214, .studio), ("Transformers", "🤖", 248, .studio)
+    let universes: [(String, Int, CategoryConfig.CategoryType)] = [
+        ("Marvel Studios", 420, .studio), ("DC Extended", 429, .studio),
+        ("Star Wars", 1, .studio), ("Wizarding World", 174, .studio),
+        ("Jurassic Saga", 56, .studio), ("Fast Saga", 3325, .studio),
+        ("James Bond", 214, .studio), ("Transformers", 248, .studio)
     ]
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("🎪 Vũ trụ điện ảnh").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    ForEach(universes, id: \.0) { name, emoji, tmdbId, type in
+                    Text("Vũ trụ điện ảnh").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(universes, id: \.0) { name, tmdbId, type in
                         NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: name, posterName: "", type: type, tmdbId: tmdbId))) {
-                            HStack(spacing: 12) { Text(emoji).font(.system(size: 30)); VStack(alignment: .leading) { Text(name).font(.system(size: 16, weight: .semibold)).foregroundColor(.white); Text("Xem tất cả phim").font(.caption).foregroundColor(.gray) }; Spacer(); Image(systemName: "chevron.right").foregroundColor(.gray) }.padding(.horizontal, 16).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
+                            HStack(spacing: 12) { VStack(alignment: .leading) { Text(name).font(.system(size: 16, weight: .semibold)).foregroundColor(.white); Text("Xem tất cả phim").font(.caption).foregroundColor(.gray) }; Spacer(); Image(systemName: "chevron.right").foregroundColor(.gray) }.padding(.horizontal, 16).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
                         }
                     }
                     Spacer().frame(height: 120)
                 }
             }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            backButton
         }.navigationBarHidden(true)
+    }
+    var backButton: some View {
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
@@ -328,7 +350,7 @@ struct CategoryFullView: View {
             if isLoading && movies.isEmpty { ProgressView().tint(.white) }
             else if movies.isEmpty { Text("Không tìm thấy").foregroundColor(.gray) }
             else { ScrollView { LazyVGrid(columns: columns, spacing: 16) { ForEach(movies) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { VStack(spacing: 6) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 4, y: 2); Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2); HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) } }.padding(6).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.2))) } } }.padding(.horizontal, 16).padding(.top, 90).padding(.bottom, 100) } }
-            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
+            Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
         }.navigationBarHidden(true).task { do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }; isLoading = false }
     }
 }
