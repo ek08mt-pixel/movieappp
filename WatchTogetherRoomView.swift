@@ -9,6 +9,8 @@ struct FakeRoom: Identifiable {
     var viewerCount: Int
     var avatars: [String]
     var isPrivate: Bool
+    var posterPath: String?
+    var currentTime: String
 }
 
 // MARK: - Main View
