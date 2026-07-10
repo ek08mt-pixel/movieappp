@@ -8,7 +8,6 @@ struct ProfileView: View {
     @State private var isEditingName = false
     @State private var tempName: String = ""
     @State private var showAuth = false
-    @State private var showTelegramOTP = false
     @Environment(\.dismiss) var dismiss
     
     let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill",
@@ -27,8 +26,6 @@ struct ProfileView: View {
                         VStack(spacing: 12) {
                             if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
                                 Image(uiImage: uiImage).resizable().aspectRatio(contentMode: .fill).frame(width: 90, height: 90).clipShape(Circle()).overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
-                            } else if let avatarURL = appState.telegramAvatarURL, let url = URL(string: avatarURL) {
-                                CachedAsyncImage(url: url, size: .detail).aspectRatio(contentMode: .fill).frame(width: 90, height: 90).clipShape(Circle()).overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
                             } else {
                                 Image(systemName: appState.selectedAvatar).font(.system(size: 50)).foregroundColor(.white).frame(width: 90, height: 90).background(Circle().fill(.ultraThinMaterial)).overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
                             }
@@ -55,16 +52,9 @@ struct ProfileView: View {
                         VStack(spacing: 16) {
                             Text("Đăng nhập để đồng bộ dữ liệu").font(.caption).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal, 40)
                             
-                            Button { showTelegramOTP = true } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "paperplane.circle.fill").font(.system(size: 22))
-                                    Text("Tiếp tục với Telegram").font(.system(size: 16, weight: .medium))
-                                }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14).background(Capsule().fill(.ultraThinMaterial)).overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
-                            }.padding(.horizontal, 30)
-                            
                             Button { showAuth = true } label: {
                                 HStack(spacing: 10) { Image(systemName: "envelope.fill").font(.system(size: 18)); Text("Tiếp tục với Email").font(.system(size: 16, weight: .medium)) }
-                                .foregroundColor(.white.opacity(0.7)).frame(maxWidth: .infinity).padding(.vertical, 12).background(Capsule().fill(.white.opacity(0.05))).overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                .foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 14).background(Capsule().fill(.ultraThinMaterial)).overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
                             }.padding(.horizontal, 30)
                         }
                         Spacer().frame(height: UIScreen.main.bounds.height * 0.15)
@@ -78,87 +68,7 @@ struct ProfileView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) { ImagePicker(image: $inputImage) }
         .sheet(isPresented: $showAuth) { SmartAuthView { email, password in appState.smartLogin(email: email, password: password); showAuth = false } }
-        .sheet(isPresented: $showTelegramOTP) {
-            TelegramOTPView { telegramId, name, avatarURL in
-                appState.telegramLogin(telegramId: telegramId, name: name, avatarURL: avatarURL)
-            }
-        }
         .onChange(of: inputImage) { img in if let img = img, let data = img.jpegData(compressionQuality: 0.7) { appState.avatarImageData = data; appState.selectedAvatar = ""; appState.save() } }
-    }
-}
-
-// MARK: - Telegram OTP View
-struct TelegramOTPView: View {
-    @Environment(\.dismiss) var dismiss
-    @State private var otpCode = ""
-    @State private var isLoading = false
-    @State private var errorMsg = ""
-    let onSuccess: (String, String, String?) -> Void
-    
-    private let botToken = "8819940584:AAFoBSqOZd_-jxNcO3pTCYF16aGcI-qSg9s"
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.95).ignoresSafeArea()
-            VStack(spacing: 24) {
-                Text("Đăng nhập Telegram").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                
-                Text("1. Mở Telegram, tìm @Emmew_bot\n2. Nhắn /start để nhận mã OTP\n3. Nhập mã bên dưới")
-                    .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
-                
-                TextField("Mã OTP", text: $otpCode)
-                    .textFieldStyle(.plain).foregroundColor(.white)
-                    .font(.system(size: 32, weight: .bold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .padding(12).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
-                    .padding(.horizontal, 30)
-                    .keyboardType(.numberPad)
-                    .onChange(of: otpCode) { newValue in
-                        if newValue.count >= 6 {
-                            verifyOTP(code: newValue)
-                        }
-                    }
-                
-                if !errorMsg.isEmpty { Text(errorMsg).font(.caption).foregroundColor(.red) }
-                if isLoading { ProgressView().tint(.white) }
-                
-                Button { dismiss() } label: { Text("Đóng").foregroundColor(.gray).padding(.top, 10) }
-            }
-            .padding(.vertical, 40)
-        }
-    }
-    
-    func verifyOTP(code: String) {
-        isLoading = true; errorMsg = ""
-        
-        guard let url = URL(string: "https://api.telegram.org/bot\(botToken)/getUpdates?limit=5") else { errorMsg = "Lỗi kết nối"; isLoading = false; return }
-        
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let result = json["result"] as? [[String: Any]] else {
-                DispatchQueue.main.async { self.errorMsg = "Không thể kết nối bot"; self.isLoading = false }
-                return
-            }
-            
-            for update in result {
-                if let message = update["message"] as? [String: Any],
-                   let text = message["text"] as? String,
-                   text.trimmingCharacters(in: .whitespaces) == code,
-                   let from = message["from"] as? [String: Any],
-                   let userId = from["id"] as? Int64,
-                   let firstName = from["first_name"] as? String {
-                    let avatar = from["photo_url"] as? String
-                    DispatchQueue.main.async {
-                        self.onSuccess("\(userId)", firstName, avatar)
-                        self.dismiss()
-                    }
-                    return
-                }
-            }
-            
-            DispatchQueue.main.async { self.errorMsg = "Mã OTP không đúng"; self.isLoading = false }
-        }.resume()
     }
 }
 
