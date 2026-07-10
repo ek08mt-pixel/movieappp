@@ -8,21 +8,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Generate App Icon
-        run: |
-          curl -L -o icon.png "https://raw.githubusercontent.com/ek08mt-pixel/movieappp/refs/heads/main/AppIcon.png"
-          mkdir -p Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset
-          
-          sips -z 1024 1024 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-1024.png
-          sips -z 180 180 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@3x.png
-          sips -z 120 120 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-60@2x.png
-          sips -z 76 76 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76.png
-          sips -z 152 152 icon.png --out Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/icon-76@2x.png
-          
-          cat > Payload/PhimHay.app/Assets.xcassets/AppIcon.appiconset/Contents.json << 'EOF'
-          {"images":[{"size":"60x60","idiom":"iphone","filename":"icon-60@2x.png","scale":"2x"},{"size":"60x60","idiom":"iphone","filename":"icon-60@3x.png","scale":"3x"},{"size":"76x76","idiom":"ipad","filename":"icon-76.png","scale":"1x"},{"size":"76x76","idiom":"ipad","filename":"icon-76@2x.png","scale":"2x"},{"size":"1024x1024","idiom":"ios-marketing","filename":"icon-1024.png","scale":"1x"}],"info":{"version":1,"author":"xcode"}}
-          EOF
-      
       - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
@@ -51,6 +36,16 @@ jobs:
           mkdir -p Payload/PhimHay.app
           cp App Payload/PhimHay.app/
           
+          # Generate App Icon sau khi đã có Payload
+          curl -L -o icon.png "https://raw.githubusercontent.com/ek08mt-pixel/movieappp/refs/heads/main/AppIcon.png"
+          
+          # Tạo các kích thước icon trong app bundle
+          sips -z 120 120 icon.png --out Payload/PhimHay.app/AppIcon60x60@2x.png
+          sips -z 180 180 icon.png --out Payload/PhimHay.app/AppIcon60x60@3x.png
+          sips -z 76 76 icon.png --out Payload/PhimHay.app/AppIcon76x76.png
+          sips -z 152 152 icon.png --out Payload/PhimHay.app/AppIcon76x76@2x.png
+          sips -z 1024 1024 icon.png --out Payload/PhimHay.app/AppIcon1024x1024.png
+          
           cat > Payload/PhimHay.app/Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -64,7 +59,21 @@ jobs:
           <key>CFBundlePackageType</key><string>APPL</string>
           <key>LSRequiresIPhoneOS</key><true/>
           <key>UILaunchScreen</key><dict/>
-          <key>CFBundleIconName</key><string>AppIcon</string>
+          <key>CFBundleIconFiles</key>
+          <array>
+              <string>AppIcon60x60</string>
+              <string>AppIcon76x76</string>
+          </array>
+          <key>CFBundleIcons</key>
+          <dict>
+              <key>CFBundlePrimaryIcon</key>
+              <dict>
+                  <key>CFBundleIconFiles</key>
+                  <array>
+                      <string>AppIcon60x60</string>
+                  </array>
+              </dict>
+          </dict>
           <key>UISupportedInterfaceOrientations</key>
           <array>
               <string>UIInterfaceOrientationPortrait</string>
