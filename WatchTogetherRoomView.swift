@@ -204,14 +204,11 @@ struct WatchTogetherRoomView: View {
         GeometryReader { geo in
             if isLandscape {
                 ZStack {
-                    // Video player full màn hình landscape
                     CustomPlayerVC(player: player, pipController: $pipController)
                         .ignoresSafeArea()
                     
-                    // Controls overlay - căn theo video player (full màn hình)
                     videoControlsOverlay
                     
-                    // Chat overlay (mặc định ẩn)
                     if showChat {
                         HStack {
                             Spacer()
@@ -221,7 +218,6 @@ struct WatchTogetherRoomView: View {
                         }
                     }
                     
-                    // Nút toggle chat
                     VStack {
                         Spacer()
                         HStack {
@@ -243,7 +239,6 @@ struct WatchTogetherRoomView: View {
                 .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
-                    // Video player + overlay căn theo video
                     ZStack {
                         CustomPlayerVC(player: player, pipController: $pipController)
                         videoControlsOverlay
@@ -305,11 +300,9 @@ struct WatchTogetherRoomView: View {
         if showControls { controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     }
     
-    // MARK: - Video Controls Overlay (căn giữa video player)
     var videoControlsOverlay: some View {
         GeometryReader { geo in
             ZStack {
-                // Top bar
                 VStack {
                     HStack {
                         Button {
@@ -354,7 +347,6 @@ struct WatchTogetherRoomView: View {
                     
                     Spacer()
                     
-                    // Center controls
                     if showControls {
                         HStack(spacing: 44) {
                             Button { seek(-10) } label: {
@@ -414,7 +406,6 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header - KHÔNG di chuyển khi bàn phím hiện
             VStack(spacing: 0) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -468,7 +459,6 @@ struct WatchTogetherRoomView: View {
                 }.padding(.horizontal, 12).padding(.vertical, 4)
             }
             
-            // Message list - KHÔNG di chuyển
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 6) {
@@ -484,7 +474,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Input bar - CHỈ phần này di chuyển theo bàn phím
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
@@ -553,7 +542,7 @@ struct WatchTogetherRoomView: View {
         seasons = []; isLoadingSeasons = true
         
         // Dùng chính API từ APIService - giống hệt cách Home gọi
-        if movie.mediaType == "tv" || movie.isSeries {
+        if movie.mediaType == "tv" {
             Task {
                 do {
                     let fetchedSeasons = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
