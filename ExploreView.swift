@@ -149,31 +149,117 @@ struct FilmHubView: View {
 // MARK: - Actor Hot View
 struct ActorHotView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var movies: [Movie] = []
+    @State private var actors: [Actor] = []
+    @State private var searchText = ""
+    @State private var selectedActor: Actor?
+    
+    let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    
+    // Data fake ban đầu
+    let fakeActors: [Actor] = [
+        Actor(id: 6193, name: "Leonardo DiCaprio", profilePath: "/wo2hJpn04vbtmh0B9utCFHMDk4E.jpg", knownForDepartment: "Diễn viên", popularity: 100),
+        Actor(id: 1245, name: "Scarlett Johansson", profilePath: "/6NsMbJXRlDZuDzatN2akFdGuTvx.jpg", knownForDepartment: "Diễn viên", popularity: 95),
+        Actor(id: 500, name: "Tom Cruise", profilePath: "/eOh4N19Eh0y4j2xV3tyMOtvjRWk.jpg", knownForDepartment: "Diễn viên", popularity: 92),
+        Actor(id: 2524, name: "Tom Hanks", profilePath: "/eKF1sGJRr7FR2x14VxSdARO5H5a.jpg", knownForDepartment: "Diễn viên", popularity: 88),
+        Actor(id: 17419, name: "Brad Pitt", profilePath: "/cckcYc2v0yh6J4kY5tP1jwDhT2.jpg", knownForDepartment: "Diễn viên", popularity: 85),
+        Actor(id: 1136406, name: "Margot Robbie", profilePath: "/euDPyqLnuS4pGPhp8iVtFyS2GA.jpg", knownForDepartment: "Diễn viên", popularity: 90),
+        Actor(id: 1892, name: "Matt Damon", profilePath: "/eQ4B3F2UMjMx9Dz3nBVFhGqE1o.jpg", knownForDepartment: "Diễn viên", popularity: 75),
+        Actor(id: 380, name: "Robert De Niro", profilePath: "/cT8htcckIuyI1Lqwt1CvDcA0RZ.jpg", knownForDepartment: "Diễn viên", popularity: 80),
+        Actor(id: 287, name: "Bradley Cooper", profilePath: "/jJtUzRG8I36CVLqVr7B0lB0r0V.jpg", knownForDepartment: "Diễn viên", popularity: 82),
+        Actor(id: 234352, name: "Florence Pugh", profilePath: "/8fV8Vw0hBzKwCo4S4vL1jYP2z.jpg", knownForDepartment: "Diễn viên", popularity: 78),
+        Actor(id: 1289967, name: "Timothée Chalamet", profilePath: "/6l2Z7fT0IyqLFkqQl8ZR0OmBt.jpg", knownForDepartment: "Diễn viên", popularity: 88),
+        Actor(id: 4495, name: "Joaquin Phoenix", profilePath: "/qL0IHuSfVwW1EtMK2AnXjzmRL.jpg", knownForDepartment: "Diễn viên", popularity: 72),
+    ]
+    
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 20) {
-                    Text("Diễn viên hot").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 70).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        ForEach(Array(movies.enumerated().prefix(15)), id: \.offset) { _, m in
-                            NavigationLink(destination: MovieDetailView(movie: m)) {
-                                VStack(spacing: 6) {
-                                    CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 10))
-                                    Text(m.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2)
+                VStack(spacing: 16) {
+                    Text("Diễn viên hot")
+                        .font(.largeTitle.bold()).foregroundColor(.white)
+                        .padding(.top, 70).padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Search bar
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass").foregroundColor(.gray)
+                        TextField("Tìm diễn viên...", text: $searchText)
+                            .foregroundColor(.white)
+                            .onChange(of: searchText) { _ in
+                                filterActors()
+                            }
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
+                    .padding(.horizontal, 16)
+                    
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(actors) { actor in
+                            Button {
+                                selectedActor = actor
+                            } label: {
+                                VStack(spacing: 8) {
+                                    if let url = actor.profileURL {
+                                        CachedAsyncImage(url: url)
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(Circle())
+                                            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                                    } else {
+                                        Circle()
+                                            .fill(.ultraThinMaterial.opacity(0.4))
+                                            .frame(width: 80, height: 80)
+                                            .overlay(
+                                                Text(String(actor.name.prefix(1)))
+                                                    .font(.system(size: 30, weight: .bold))
+                                                    .foregroundColor(.gray)
+                                            )
+                                    }
+                                    Text(actor.name)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.center)
+                                    if let known = actor.knownForDepartment {
+                                        Text(known)
+                                            .font(.system(size: 9))
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                             }
                         }
-                    }.padding(.horizontal, 16)
+                    }
+                    .padding(.horizontal, 16)
+                    
                     Spacer().frame(height: 100)
                 }
             }
             backButton
-        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.popular()) ?? [] }
+        }
+        .navigationBarHidden(true)
+        .fullScreenCover(item: $selectedActor) { actor in
+            ActorDetailView(actor: actor)
+        }
+        .task {
+            actors = fakeActors
+        }
     }
+    
+    func filterActors() {
+        if searchText.isEmpty {
+            actors = fakeActors
+        } else {
+            actors = fakeActors.filter { $0.name.lowercased().contains(searchText.lowercased()) }
+        }
+    }
+    
     var backButton: some View {
-        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
+        Button { dismiss() } label: {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)))
+        }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
