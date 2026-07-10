@@ -50,7 +50,7 @@ struct WatchTogetherRoomView: View {
     @State private var selectedEpisode: TVEpisode?
     @State private var flyingEmojis: [FlyingEmoji] = []
     @State private var dominantColor: Color = Color(red: 0.05, green: 0.02, blue: 0.12)
-    @State private var showChatOverlay = false
+    @State private var showChat = true
     @State private var isLoadingEpisode = false
     
     @State private var fakeRooms: [FakeRoom] = [
@@ -248,156 +248,119 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                // LANDSCAPE: video full, KHÔNG chat panel
                 ZStack {
+                    // Video full màn hình
                     CustomPlayerVC(player: player, pipController: $pipController)
                         .ignoresSafeArea()
+                        .onTapGesture { toggleControlsInRoom() }
                     
-                    // Controls overlay full màn hình
-                    VStack(spacing: 0) {
-                        // Top bar
-                        HStack {
-                            Button {
-                                player.pause()
-                                player.replaceCurrentItem(with: nil)
-                                service.leaveRoom()
-                                forcePortrait()
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .semibold)).foregroundColor(.white)
-                                    .padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6)))
-                            }
-                            Spacer()
-                            if showControls {
-                                HStack(spacing: 8) {
-                                    Button { showEpisodePanel = true } label: {
-                                        Image(systemName: "list.bullet").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                                            .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                    }
-                                    Button { pipController?.startPictureInPicture() } label: {
-                                        Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white)
-                                            .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                    }
-                                    Button { forcePortrait() } label: {
-                                        Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white)
-                                            .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                    }
-                                }
-                            }
-                        }.padding(.horizontal, 16).padding(.top, 50)
-                        
+                    // Controls overlay
+                    videoControlsOverlay
+                    
+                    // Chat panel overlay bên phải
+                    HStack(spacing: 0) {
                         Spacer()
-                        
-                        // Center controls
-                        if showControls {
-                            HStack(spacing: 60) {
-                                Button { seek(-10) } label: {
-                                    Image(systemName: "gobackward.10").font(.system(size: 30)).foregroundColor(.white)
-                                        .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                }
-                                Button {
-                                    if player.rate == 0 { player.play() } else { player.pause() }
-                                    if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
-                                } label: {
-                                    Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 40)).foregroundColor(.white)
-                                        .padding(22).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6)))
-                                }
-                                Button { seek(10) } label: {
-                                    Image(systemName: "goforward.10").font(.system(size: 30)).foregroundColor(.white)
-                                        .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                }
-                            }.transition(.opacity)
+                        if showChat {
+                            landscapeChatPanel
+                                .frame(width: geo.size.width * 0.32)
+                                .transition(.move(edge: .trailing))
                         }
-                        
+                    }
+                    
+                    // Nút toggle chat
+                    VStack {
                         Spacer()
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation(.spring(response: 0.35)) { showChat.toggle() }
+                            } label: {
+                                Image(systemName: showChat ? "chevron.right" : "message")
+                                    .font(.system(size: 14)).foregroundColor(.white)
+                                    .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                            }
+                        }
+                        .padding(.trailing, showChat ? geo.size.width * 0.32 + 8 : 8)
+                        .padding(.bottom, 12)
                     }
                 }
-                .onTapGesture { toggleControlsInRoom() }
+                .ignoresSafeArea()
+                .animation(.spring(response: 0.35), value: showChat)
             } else {
-                // PORTRAIT
                 VStack(spacing: 0) {
-                    // Video player
                     ZStack {
                         CustomPlayerVC(player: player, pipController: $pipController)
-                        
                         VStack(spacing: 0) {
-                            // Top bar - nút to hơn
                             HStack {
                                 Button {
-                                    player.pause()
-                                    player.replaceCurrentItem(with: nil)
-                                    service.leaveRoom()
+                                    player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom()
                                 } label: {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 18, weight: .semibold)).foregroundColor(.white)
-                                        .padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6)))
+                                    Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                                        .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                 }
                                 Spacer()
                                 if showControls {
-                                    HStack(spacing: 8) {
+                                    HStack(spacing: 6) {
                                         Button { showEpisodePanel = true } label: {
-                                            Image(systemName: "list.bullet").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                                                .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                                            Image(systemName: "list.bullet").font(.system(size: 10, weight: .bold)).foregroundColor(.white)
+                                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                         }
                                         Button { pipController?.startPictureInPicture() } label: {
-                                            Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white)
-                                                .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                                            Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white)
+                                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                         }
                                         Button { toggleOrientation() } label: {
-                                            Image(systemName: "rotate.right").font(.system(size: 14)).foregroundColor(.white)
-                                                .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                                            Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white)
+                                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                         }
                                     }
                                 }
-                            }.padding(.horizontal, 16).padding(.top, 50)
+                            }.padding(.horizontal, 12).padding(.top, 50)
                             
                             if showControls {
                                 Button { showEpisodePanel = true } label: {
                                     Text(currentMovieTitle.isEmpty ? "Chọn phim" : currentMovieTitle)
-                                        .font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1)
-                                        .padding(.horizontal, 16).padding(.vertical, 9)
+                                        .font(.system(size: 12, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                                        .padding(.horizontal, 14).padding(.vertical, 8)
                                         .background(Capsule().fill(Material.ultraThinMaterial.opacity(0.65)))
                                         .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
                                 }
-                                .padding(.top, 8)
+                                .padding(.top, 6)
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
                             
                             Spacer()
                             
-                            // Center controls - to hơn, căn giữa
                             if showControls {
-                                HStack(spacing: 56) {
+                                HStack(spacing: 44) {
                                     Button { seek(-10) } label: {
-                                        Image(systemName: "gobackward.10").font(.system(size: 32)).foregroundColor(.white)
-                                            .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.45)))
+                                        Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white)
+                                            .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
                                     }
                                     Button {
                                         if player.rate == 0 { player.play() } else { player.pause() }
                                         if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
                                     } label: {
-                                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 42)).foregroundColor(.white)
-                                            .padding(22).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6)))
+                                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 30)).foregroundColor(.white)
+                                            .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.55)))
                                     }
                                     Button { seek(10) } label: {
-                                        Image(systemName: "goforward.10").font(.system(size: 32)).foregroundColor(.white)
-                                            .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.45)))
+                                        Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white)
+                                            .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
                                     }
                                 }.transition(.opacity)
                             }
-                            
                             Spacer()
                         }
                     }
-                    .frame(height: geo.size.height * 0.38)
+                    .frame(height: geo.size.height * 0.42)
                     .onTapGesture { toggleControlsInRoom() }
-                    .contentShape(Rectangle())
                     
-                    // Chat panel
                     imessageChatPanel
                 }
             }
         }
+        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
@@ -439,44 +402,123 @@ struct WatchTogetherRoomView: View {
         ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
     }
     
+    var videoControlsOverlay: some View {
+        VStack {
+            Spacer()
+            if showControls {
+                HStack(spacing: 40) {
+                    Button { seek(-10) } label: {
+                        Image(systemName: "gobackward.10").font(.system(size: 20)).foregroundColor(.white)
+                            .padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
+                    }
+                    Button { player.rate == 0 ? player.play() : player.pause() } label: {
+                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 24)).foregroundColor(.white)
+                            .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                    }
+                    Button { seek(10) } label: {
+                        Image(systemName: "goforward.10").font(.system(size: 20)).foregroundColor(.white)
+                            .padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
+                    }
+                }.padding(.bottom, 20).transition(.opacity)
+            }
+            Spacer()
+        }
+    }
+    
     func toggleControlsInRoom() {
         withAnimation(.easeInOut(duration: 0.25)) { showControls.toggle() }
         controlsTimer?.invalidate()
-        if showControls { controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
+        if showControls { controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
+    }
+    
+    // MARK: - Landscape Chat
+    var landscapeChatPanel: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Chat").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                Spacer()
+                Text("\(service.messages.count)").font(.system(size: 10)).foregroundColor(.white.opacity(0.4))
+            }
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(Material.ultraThinMaterial.opacity(0.4))
+            
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 4) {
+                        ForEach(service.messages) { msg in
+                            HStack(alignment: .top, spacing: 4) {
+                                Text(msg.avatar).font(.system(size: 10))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(msg.userName).font(.system(size: 9, weight: .semibold)).foregroundColor(.white.opacity(0.7)).lineLimit(1)
+                                    Text(msg.text).font(.system(size: 12)).foregroundColor(.white).fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                        }
+                    }
+                }
+                .onChange(of: service.messages.count) { _ in
+                    if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                }
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(["❤️","😭","🤣","🔥","👏","💀"], id: \.self) { e in
+                        Button { sendReaction(e) } label: { Text(e).font(.system(size: 16)) }
+                    }
+                }.padding(.horizontal, 8).padding(.vertical, 4)
+            }
+            
+            HStack(spacing: 4) {
+                TextField("Nhắn...", text: $watchMessage).font(.system(size: 12)).foregroundColor(.white)
+                    .padding(.horizontal, 8).padding(.vertical, 6)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.4)))
+                    .onSubmit { sendImessage() }
+                if !watchMessage.isEmpty {
+                    Button { sendImessage() } label: {
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 22)).foregroundColor(.white)
+                    }
+                }
+            }.padding(.horizontal, 8).padding(.vertical, 6)
+        }
+        .background(
+            ZStack {
+                dominantColor.opacity(0.2)
+                Rectangle().fill(Material.ultraThinMaterial)
+            }
+        )
     }
     
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle)
-                        .font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                        .font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
                     Text("Phòng của \(service.currentRoomName)")
-                        .font(.system(size: 11)).foregroundColor(.gray)
+                        .font(.system(size: 10)).foregroundColor(.gray)
                 }
                 Spacer()
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button { showSearchMovie = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundColor(.white)
-                            .padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
+                        Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
                     }
                     Button { showViewerPanel = true } label: {
                         HStack(spacing: -4) {
                             ForEach(service.participants.prefix(2), id: \.userId) { p in
-                                Text(p.avatar).font(.system(size: 10)).frame(width: 18, height: 18)
-                                    .background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
+                                Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
                             }
-                        }.padding(6).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.35)))
+                        }.padding(5).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.35)))
                     }
                 }
-            }.padding(.horizontal, 16).padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.3)))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.06), lineWidth: 0.5))
-                .padding(.horizontal, 8).padding(.top, 6)
+            }.padding(.horizontal, 14).padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.3)))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
+                .padding(.horizontal, 6).padding(.top, 4)
             
-            // Progress bar
             if duration > 0 {
                 VStack(spacing: 2) {
                     HStack {
@@ -491,49 +533,45 @@ struct WatchTogetherRoomView: View {
                             Circle().fill(.white).frame(width: 8, height: 8).offset(x: max(0, g.size.width * CGFloat(currentTime / max(duration, 1)) - 4))
                         }
                     }.frame(height: 8)
-                }.padding(.horizontal, 14).padding(.vertical, 4)
+                }.padding(.horizontal, 12).padding(.vertical, 4)
             }
             
-            // Emoji reactions
-            HStack(spacing: 22) {
+            HStack(spacing: 20) {
                 ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in
-                    Button { sendReaction(e) } label: { Text(e).font(.system(size: 24)) }
+                    Button { sendReaction(e) } label: { Text(e).font(.system(size: 22)) }
                 }
-            }.padding(.horizontal, 14).padding(.vertical, 6)
+            }.padding(.horizontal, 12).padding(.vertical, 4)
             
-            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 8) {
-                        Color.clear.frame(height: 4)
+                    LazyVStack(spacing: 6) {
+                        Color.clear.frame(height: 2)
                         ForEach(Array(service.messages.enumerated()), id: \.element.id) { idx, msg in
                             imessageBubble(msg, showAvatar: shouldShowAvatar(at: idx)).id(msg.id)
                         }
                         Color.clear.frame(height: 4)
-                    }.padding(.horizontal, 14)
+                    }.padding(.horizontal, 12)
                 }
                 .onChange(of: service.messages.count) { _ in
                     if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
             }
             
-            // Input - TO HƠN, tận dụng khoảng trống
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
-                    .focused($isInputFocused)
-                    .font(.system(size: 18)).foregroundColor(.white)
-                    .padding(.horizontal, 22).padding(.vertical, 18)
-                    .background(RoundedRectangle(cornerRadius: 28).fill(Material.ultraThinMaterial.opacity(0.5)))
-                    .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    .focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
+                    .padding(.horizontal, 18).padding(.vertical, 14)
+                    .background(RoundedRectangle(cornerRadius: 24).fill(Material.ultraThinMaterial.opacity(0.5)))
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
                     .onSubmit { sendImessage() }
                 if !watchMessage.isEmpty {
                     Button { sendImessage() } label: {
-                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 44)).foregroundColor(.white)
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white)
                     }
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .padding(.bottom, max(keyboardHeight - 20, 60))
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .padding(.bottom, max(keyboardHeight - 40, 35))
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
         .background(
@@ -564,31 +602,25 @@ struct WatchTogetherRoomView: View {
     
     func imessageBubble(_ msg: WatchTogetherService.ChatMessage, showAvatar: Bool) -> some View {
         let isMe = msg.userId == service.userId
-        return HStack(alignment: .bottom, spacing: 8) {
+        return HStack(alignment: .bottom, spacing: 6) {
             if !isMe {
-                if showAvatar { Text(msg.avatar).font(.system(size: 18)).frame(width: 34, height: 34).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) }
-                else { Color.clear.frame(width: 34, height: 34) }
+                if showAvatar { Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) }
+                else { Color.clear.frame(width: 30, height: 30) }
             } else { Spacer() }
             VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
-                if showAvatar { Text(msg.userName).font(.system(size: 11)).foregroundColor(.white.opacity(0.5)) }
-                Text(msg.text).font(.system(size: 15)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Material.ultraThinMaterial.opacity(isMe ? 0.55 : 0.35)))
-                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(isMe ? 0.18 : 0.08), lineWidth: 0.5))
+                if showAvatar { Text(msg.userName).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) }
+                Text(msg.text).font(.system(size: 14)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(isMe ? 0.5 : 0.3)))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(isMe ? 0.15 : 0.08), lineWidth: 0.5))
             }
             if isMe {
-                if showAvatar { Text(msg.avatar).font(.system(size: 18)).frame(width: 34, height: 34).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) }
-                else { Color.clear.frame(width: 34, height: 34) }
+                if showAvatar { Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) }
+                else { Color.clear.frame(width: 30, height: 30) }
             } else { Spacer() }
         }
     }
     
-    func sendImessage() {
-        let t = watchMessage.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty else { return }
-        service.sendMessage(text: t)
-        watchMessage = ""
-        isInputFocused = false
-    }
+    func sendImessage() { let t = watchMessage.trimmingCharacters(in: .whitespaces); guard !t.isEmpty else { return }; service.sendMessage(text: t); watchMessage = ""; isInputFocused = false }
     func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t; if service.isHost { service.sendPlaybackState(action: "seek", time: t) } }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%02d:%02d:%02d", m/60, m, sec) }
     
@@ -606,8 +638,8 @@ struct WatchTogetherRoomView: View {
             do {
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
                 var streamURL: URL?
-                streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) } }
-                if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) } } }
+                streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) } }
+                if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) } } }
                 guard let url = streamURL else { return }
                 await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); if service.isHost { service.sendPlaybackState(action: "play", time: 0) } }
             } catch { print("Load error: \(error)") }
