@@ -313,7 +313,7 @@ struct WatchTogetherRoomView: View {
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(isMe ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.3))
+                            .fill(.ultraThinMaterial.opacity(isMe ? 0.5 : 0.3))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
