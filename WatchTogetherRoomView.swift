@@ -412,7 +412,7 @@ struct WatchTogetherRoomView: View {
             .padding(.bottom, keyboardHeight > 0 ? keyboardHeight - 100 : 28)
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
-        .background(.regularMaterial.opacity(0.35))
+        .background(.ultraThinMaterial)
     }
     
     func shouldShowAvatar(at index: Int) -> Bool {
