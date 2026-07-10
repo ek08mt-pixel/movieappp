@@ -247,15 +247,14 @@ struct WatchTogetherRoomView: View {
                             VStack(spacing: 0) {
                                 HStack {
                                     Button {
-    player.pause()
-    player.replaceCurrentItem(with: nil)
-    let code = service.currentRoomCode
-    let name = service.currentRoomName
-    service.prepareToLeave(movieTitle: currentMovieTitle, code: code, name: name)
-    service.didReturnToLobby()
-} label: {
-    Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-}
+                                        player.pause()
+                                        player.replaceCurrentItem(with: nil)
+                                        let code = service.currentRoomCode
+                                        let name = service.currentRoomName
+                                        service.prepareToLeave(movieTitle: currentMovieTitle, code: code, name: name)
+                                        service.didReturnToLobby()
+                                    } label: {
+                                        Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     }
                                     Spacer()
                                     if showControls {
@@ -662,3 +661,4 @@ struct WatchTogetherRoomView: View {
         }
         .background(Color.black.opacity(0.95))
     }
+}
