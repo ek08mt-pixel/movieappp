@@ -456,45 +456,54 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Load Movie
     func loadMovieForRoom(_ movie: Movie) {
-        currentMovieTitle = movie.title
-        currentMovie = movie
-        selectedSeason = nil
-        episodes = []
-        selectedEpisode = nil
-        
-        if movie.mediaType == "tv" {
-            Task {
-                if let s = try? await APIService.shared.fetchTVSeasons(tvId: movie.id) {
-                    await MainActor.run { seasons = s }
-                }
-            }
-        }
-        
+    currentMovieTitle = movie.title
+    currentMovie = movie
+    selectedSeason = nil
+    episodes = []
+    selectedEpisode = nil
+    seasons = []
+    
+    print("DEBUG: mediaType = \(movie.mediaType ?? "nil")")
+    
+    if movie.mediaType == "tv" {
         Task {
             do {
-                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
-                var streamURL: URL?
-                do {
-                    streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
-                        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) }
-                    }
-                } catch { print("PhimAPI: \(error)") }
-                if streamURL == nil {
-                    do {
-                        streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
-                            SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) }
-                        }
-                    } catch { print("Sofaflix: \(error)") }
-                }
-                guard let url = streamURL else { return }
+                let s = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
                 await MainActor.run {
-                    player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                    player.play()
-                    if service.isHost { service.sendPlaybackState(action: "play", time: 0) }
+                    self.seasons = s
+                    print("DEBUG: loaded \(s.count) seasons")
                 }
-            } catch { print("Load error: \(error)") }
+            } catch {
+                print("DEBUG: load seasons error: \(error)")
+            }
         }
     }
+    
+    Task {
+        do {
+            let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
+            var streamURL: URL?
+            do {
+                streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
+                    PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) }
+                }
+            } catch { print("PhimAPI: \(error)") }
+            if streamURL == nil {
+                do {
+                    streamURL = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
+                        SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: selectedSeason?.seasonNumber, episode: selectedEpisode?.episodeNumber) { cont.resume(with: $0) }
+                    }
+                } catch { print("Sofaflix: \(error)") }
+            }
+            guard let url = streamURL else { return }
+            await MainActor.run {
+                player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                player.play()
+                if service.isHost { service.sendPlaybackState(action: "play", time: 0) }
+            }
+        } catch { print("Load error: \(error)") }
+    }
+}
     
     func loadEpisode(_ ep: TVEpisode) {
         guard let movie = currentMovie else { return }
