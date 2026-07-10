@@ -183,7 +183,9 @@ struct WatchTogetherRoomView: View {
                     guard !userName.isEmpty else { return }
                     service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false }
                 } label: {
-                    HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(LinearGradient(colors: [Color.purple.opacity(0.4), Color.blue.opacity(0.3)], startPoint: .leading, endPoint: .trailing))).overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 0.5)).shadow(color: .purple.opacity(0.2), radius: 10, y: 4)
+                    HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16)..background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5)))
+.overlay(Capsule().stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.5))
+.shadow(color: .white.opacity(0.05), radius: 8, y: 2)
                 }
                 HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }
                 TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5)).keyboardType(.numberPad)
