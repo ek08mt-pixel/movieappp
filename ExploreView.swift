@@ -155,20 +155,19 @@ struct ActorHotView: View {
     
     let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
-    // Data fake ban đầu
     let fakeActors: [Actor] = [
-        Actor(id: 6193, name: "Leonardo DiCaprio", profilePath: "/wo2hJpn04vbtmh0B9utCFHMDk4E.jpg", knownForDepartment: "Diễn viên", popularity: 100),
-        Actor(id: 1245, name: "Scarlett Johansson", profilePath: "/6NsMbJXRlDZuDzatN2akFdGuTvx.jpg", knownForDepartment: "Diễn viên", popularity: 95),
-        Actor(id: 500, name: "Tom Cruise", profilePath: "/eOh4N19Eh0y4j2xV3tyMOtvjRWk.jpg", knownForDepartment: "Diễn viên", popularity: 92),
-        Actor(id: 2524, name: "Tom Hanks", profilePath: "/eKF1sGJRr7FR2x14VxSdARO5H5a.jpg", knownForDepartment: "Diễn viên", popularity: 88),
-        Actor(id: 17419, name: "Brad Pitt", profilePath: "/cckcYc2v0yh6J4kY5tP1jwDhT2.jpg", knownForDepartment: "Diễn viên", popularity: 85),
-        Actor(id: 1136406, name: "Margot Robbie", profilePath: "/euDPyqLnuS4pGPhp8iVtFyS2GA.jpg", knownForDepartment: "Diễn viên", popularity: 90),
-        Actor(id: 1892, name: "Matt Damon", profilePath: "/eQ4B3F2UMjMx9Dz3nBVFhGqE1o.jpg", knownForDepartment: "Diễn viên", popularity: 75),
-        Actor(id: 380, name: "Robert De Niro", profilePath: "/cT8htcckIuyI1Lqwt1CvDcA0RZ.jpg", knownForDepartment: "Diễn viên", popularity: 80),
-        Actor(id: 287, name: "Bradley Cooper", profilePath: "/jJtUzRG8I36CVLqVr7B0lB0r0V.jpg", knownForDepartment: "Diễn viên", popularity: 82),
-        Actor(id: 234352, name: "Florence Pugh", profilePath: "/8fV8Vw0hBzKwCo4S4vL1jYP2z.jpg", knownForDepartment: "Diễn viên", popularity: 78),
-        Actor(id: 1289967, name: "Timothée Chalamet", profilePath: "/6l2Z7fT0IyqLFkqQl8ZR0OmBt.jpg", knownForDepartment: "Diễn viên", popularity: 88),
-        Actor(id: 4495, name: "Joaquin Phoenix", profilePath: "/qL0IHuSfVwW1EtMK2AnXjzmRL.jpg", knownForDepartment: "Diễn viên", popularity: 72),
+        Actor(id: 6193, name: "Leonardo DiCaprio", character: nil, profilePath: "/wo2hJpn04vbtmh0B9utCFHMDk4E.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 1245, name: "Scarlett Johansson", character: nil, profilePath: "/6NsMbJXRlDZuDzatN2akFdGuTvx.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 500, name: "Tom Cruise", character: nil, profilePath: "/eOh4N19Eh0y4j2xV3tyMOtvjRWk.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 2524, name: "Tom Hanks", character: nil, profilePath: "/eKF1sGJRr7FR2x14VxSdARO5H5a.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 17419, name: "Brad Pitt", character: nil, profilePath: "/cckcYc2v0yh6J4kY5tP1jwDhT2.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 1136406, name: "Margot Robbie", character: nil, profilePath: "/euDPyqLnuS4pGPhp8iVtFyS2GA.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 1892, name: "Matt Damon", character: nil, profilePath: "/eQ4B3F2UMjMx9Dz3nBVFhGqE1o.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 380, name: "Robert De Niro", character: nil, profilePath: "/cT8htcckIuyI1Lqwt1CvDcA0RZ.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 287, name: "Bradley Cooper", character: nil, profilePath: "/jJtUzRG8I36CVLqVr7B0lB0r0V.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 234352, name: "Florence Pugh", character: nil, profilePath: "/8fV8Vw0hBzKwCo4S4vL1jYP2z.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 1289967, name: "Timothée Chalamet", character: nil, profilePath: "/6l2Z7fT0IyqLFkqQl8ZR0OmBt.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
+        Actor(id: 4495, name: "Joaquin Phoenix", character: nil, profilePath: "/qL0IHuSfVwW1EtMK2AnXjzmRL.jpg", biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: "Diễn viên"),
     ]
     
     var body: some View {
@@ -181,14 +180,11 @@ struct ActorHotView: View {
                         .padding(.top, 70).padding(.horizontal, 16)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // Search bar
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundColor(.gray)
                         TextField("Tìm diễn viên...", text: $searchText)
                             .foregroundColor(.white)
-                            .onChange(of: searchText) { _ in
-                                filterActors()
-                            }
+                            .onChange(of: searchText) { _ in filterActors() }
                     }
                     .padding(12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
@@ -210,56 +206,31 @@ struct ActorHotView: View {
                                         Circle()
                                             .fill(.ultraThinMaterial.opacity(0.4))
                                             .frame(width: 80, height: 80)
-                                            .overlay(
-                                                Text(String(actor.name.prefix(1)))
-                                                    .font(.system(size: 30, weight: .bold))
-                                                    .foregroundColor(.gray)
-                                            )
+                                            .overlay(Text(String(actor.name.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.gray))
                                     }
-                                    Text(actor.name)
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(.white)
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.center)
-                                    if let known = actor.knownForDepartment {
-                                        Text(known)
-                                            .font(.system(size: 9))
-                                            .foregroundColor(.gray)
-                                    }
+                                    Text(actor.name).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                    if let known = actor.knownForDepartment { Text(known).font(.system(size: 9)).foregroundColor(.gray) }
                                 }
                             }
                         }
-                    }
-                    .padding(.horizontal, 16)
-                    
+                    }.padding(.horizontal, 16)
                     Spacer().frame(height: 100)
                 }
             }
             backButton
         }
         .navigationBarHidden(true)
-        .fullScreenCover(item: $selectedActor) { actor in
-            ActorDetailView(actor: actor)
-        }
-        .task {
-            actors = fakeActors
-        }
+        .fullScreenCover(item: $selectedActor) { actor in ActorDetailView(actor: actor) }
+        .task { actors = fakeActors }
     }
     
     func filterActors() {
-        if searchText.isEmpty {
-            actors = fakeActors
-        } else {
-            actors = fakeActors.filter { $0.name.lowercased().contains(searchText.lowercased()) }
-        }
+        if searchText.isEmpty { actors = fakeActors }
+        else { actors = fakeActors.filter { $0.name.lowercased().contains(searchText.lowercased()) } }
     }
     
     var backButton: some View {
-        Button { dismiss() } label: {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)))
-        }.padding(.top, 54).padding(.leading, 16)
+        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
     }
 }
 
@@ -277,11 +248,7 @@ struct ThisDayHistoryView: View {
                         NavigationLink(destination: MovieDetailView(movie: m)) {
                             HStack(spacing: 12) {
                                 CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 10))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(m.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                    Text(m.releaseDate ?? "").font(.caption).foregroundColor(.gray)
-                                    Text(m.overview).font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).lineLimit(3)
-                                }
+                                VStack(alignment: .leading, spacing: 4) { Text(m.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Text(m.releaseDate ?? "").font(.caption).foregroundColor(.gray); Text(m.overview).font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).lineLimit(3) }
                                 Spacer()
                             }.padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
                         }.padding(.horizontal, 16)
@@ -292,20 +259,13 @@ struct ThisDayHistoryView: View {
             backButton
         }.navigationBarHidden(true).task { movies = (try? await APIService.shared.topRated()) ?? [] }
     }
-    var backButton: some View {
-        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
-    }
+    var backButton: some View { Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16) }
 }
 
 // MARK: - Pair View
 struct PairView: View {
     @Environment(\.dismiss) var dismiss
-    let pairs: [(String, String, Int)] = [
-        ("Brad Pitt", "Leonardo DiCaprio", 2), ("Tom Hanks", "Meg Ryan", 4),
-        ("Emma Stone", "Ryan Gosling", 3), ("Robert De Niro", "Al Pacino", 4),
-        ("Johnny Depp", "Helena Bonham Carter", 7), ("Scarlett Johansson", "Chris Evans", 8),
-        ("Jennifer Lawrence", "Bradley Cooper", 4), ("Keanu Reeves", "Sandra Bullock", 2)
-    ]
+    let pairs: [(String, String, Int)] = [("Brad Pitt", "Leonardo DiCaprio", 2), ("Tom Hanks", "Meg Ryan", 4), ("Emma Stone", "Ryan Gosling", 3), ("Robert De Niro", "Al Pacino", 4), ("Johnny Depp", "Helena Bonham Carter", 7), ("Scarlett Johansson", "Chris Evans", 8), ("Jennifer Lawrence", "Bradley Cooper", 4), ("Keanu Reeves", "Sandra Bullock", 2)]
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
@@ -315,15 +275,9 @@ struct PairView: View {
                     ForEach(pairs, id: \.0) { a, b, count in
                         VStack(spacing: 12) {
                             HStack(spacing: 16) {
-                                VStack(spacing: 6) {
-                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(a.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white))
-                                    Text(a).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                                }
+                                VStack(spacing: 6) { Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(a.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white)); Text(a).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1) }
                                 Text("❤️").font(.system(size: 20))
-                                VStack(spacing: 6) {
-                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(b.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white))
-                                    Text(b).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                                }
+                                VStack(spacing: 6) { Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70).overlay(Text(String(b.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.white)); Text(b).font(.system(size: 12, weight: .semibold)).foregroundColor(.white).lineLimit(1) }
                             }
                             Text("Đã đóng chung \(count) phim").font(.system(size: 13, weight: .medium)).foregroundColor(.pink).padding(.vertical, 4).padding(.horizontal, 12).background(Capsule().fill(.pink.opacity(0.15)))
                         }.padding(16).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 18).stroke(.pink.opacity(0.15), lineWidth: 0.5)).padding(.horizontal, 16)
@@ -334,9 +288,7 @@ struct PairView: View {
             backButton
         }.navigationBarHidden(true)
     }
-    var backButton: some View {
-        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
-    }
+    var backButton: some View { Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16) }
 }
 
 // MARK: - Compare View
@@ -352,21 +304,13 @@ struct CompareView: View {
                     if let a = m1, let b = m2 {
                         VStack(spacing: 12) {
                             HStack(spacing: 12) {
-                                VStack(spacing: 6) {
-                                    CachedAsyncImage(url: a.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12))
-                                    Text(a.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
-                                }
+                                VStack(spacing: 6) { CachedAsyncImage(url: a.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12)); Text(a.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center) }
                                 VStack(spacing: 8) {
                                     Text("VS").font(.system(size: 22, weight: .black)).foregroundColor(.red)
-                                    VStack(spacing: 4) {
-                                        CompareRow(label: "Điểm", left: a.ratingText, right: b.ratingText)
-                                        CompareRow(label: "Năm", left: a.releaseDate ?? "-", right: b.releaseDate ?? "-")
-                                    }
+                                    CompareRow(label: "Điểm", left: a.ratingText, right: b.ratingText)
+                                    CompareRow(label: "Năm", left: a.releaseDate ?? "-", right: b.releaseDate ?? "-")
                                 }
-                                VStack(spacing: 6) {
-                                    CachedAsyncImage(url: b.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12))
-                                    Text(b.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
-                                }
+                                VStack(spacing: 6) { CachedAsyncImage(url: b.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 12)); Text(b.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center) }
                             }
                         }.padding(16).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).padding(.horizontal, 16)
                     }
@@ -376,31 +320,18 @@ struct CompareView: View {
             backButton
         }.navigationBarHidden(true).task { let movies = (try? await APIService.shared.popular()) ?? []; m1 = movies.first; m2 = movies.dropFirst().first }
     }
-    var backButton: some View {
-        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
-    }
+    var backButton: some View { Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16) }
 }
 
 struct CompareRow: View {
     let label: String; let left: String; let right: String
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(left).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50)
-            Text(label).font(.system(size: 10)).foregroundColor(.gray).frame(width: 40)
-            Text(right).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50)
-        }
-    }
+    var body: some View { HStack(spacing: 8) { Text(left).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50); Text(label).font(.system(size: 10)).foregroundColor(.gray).frame(width: 40); Text(right).font(.system(size: 11, weight: .bold)).foregroundColor(.yellow).frame(width: 50) } }
 }
 
 // MARK: - Universe View
 struct UniverseView: View {
     @Environment(\.dismiss) var dismiss
-    let universes: [(String, Int, CategoryConfig.CategoryType)] = [
-        ("Marvel Studios", 420, .studio), ("DC Extended", 429, .studio),
-        ("Star Wars", 1, .studio), ("Wizarding World", 174, .studio),
-        ("Jurassic Saga", 56, .studio), ("Fast Saga", 3325, .studio),
-        ("James Bond", 214, .studio), ("Transformers", 248, .studio)
-    ]
+    let universes: [(String, Int, CategoryConfig.CategoryType)] = [("Marvel Studios", 420, .studio), ("DC Extended", 429, .studio), ("Star Wars", 1, .studio), ("Wizarding World", 174, .studio), ("Jurassic Saga", 56, .studio), ("Fast Saga", 3325, .studio), ("James Bond", 214, .studio), ("Transformers", 248, .studio)]
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
@@ -418,9 +349,7 @@ struct UniverseView: View {
             backButton
         }.navigationBarHidden(true)
     }
-    var backButton: some View {
-        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16)
-    }
+    var backButton: some View { Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 16) }
 }
 
 // MARK: - CategoryFullView
