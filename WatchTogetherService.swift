@@ -85,32 +85,36 @@ class WatchTogetherService: ObservableObject {
     }
     
     func joinRoom(code: String, userName: String, completion: @escaping (Bool, String?) -> Void) {
-        self.userName = userName
-        self.userId = UUID().uuidString
-        self.roomCode = code
-        self.isHost = false
+    self.userName = userName
+    self.userId = UUID().uuidString
+    self.roomCode = code
+    self.isHost = false
+    
+    get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
+        guard let self = self, let data = data, data["code"] != nil else {
+            DispatchQueue.main.async { completion(false, nil) }
+            return
+        }
         
-        get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
-            guard let self = self, let data = data, data["code"] != nil else {
-                DispatchQueue.main.async { completion(false, nil) }
-                return
-            }
-            
-            let roomName = data["roomName"] as? String ?? ""
-            let avatar = WatchTogetherService.defaultAvatars[abs(self.userId.hashValue) % WatchTogetherService.defaultAvatars.count]
-            
-            let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "avatar": avatar, "isOnline": true]
-            self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { _ in
-                DispatchQueue.main.async {
+        let roomName = data["roomName"] as? String ?? ""
+        let avatar = WatchTogetherService.defaultAvatars[abs(self.userId.hashValue) % WatchTogetherService.defaultAvatars.count]
+        
+        let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "avatar": avatar, "isOnline": true]
+        self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { success in
+            DispatchQueue.main.async {
+                if success {
                     self.currentRoomCode = code
                     self.currentRoomName = roomName
                     self.isInRoom = true
                     self.startListening()
                     completion(true, roomName)
+                } else {
+                    completion(false, nil)
                 }
             }
         }
     }
+}
     
     func leaveRoom() {
         timer?.invalidate()
