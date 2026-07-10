@@ -282,7 +282,7 @@ struct WatchTogetherRoomView: View {
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white).padding(.horizontal, 18).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.5))).overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5)).onSubmit { sendImessage() }
                 if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white) } }
-            }.padding(.horizontal, 14).padding(.vertical, 10).padding(.bottom, max(keyboardHeight - 80, 28))animation(.easeOut(duration: 0.25), value: keyboardHeight)
+            }.padding(.horizontal, 14).padding(.vertical, 10).padding(.bottom, max(keyboardHeight - 80, 28)).animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }.background(.ultraThinMaterial)
     }
     
