@@ -571,4 +571,3 @@ struct WatchTogetherRoomView: View {
             }
         }.background(Color.black.opacity(0.95))
     }
-}
