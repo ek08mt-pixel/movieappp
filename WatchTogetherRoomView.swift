@@ -50,7 +50,6 @@ struct WatchTogetherRoomView: View {
     @State private var selectedEpisode: TVEpisode?
     @State private var flyingEmojis: [FlyingEmoji] = []
     @State private var dominantColor: Color = Color(red: 0.05, green: 0.02, blue: 0.12)
-    @State private var showChat = false
     @State private var isLoadingEpisode = false
     @State private var isLoadingSeasons = false
     
@@ -202,55 +201,43 @@ struct WatchTogetherRoomView: View {
     // MARK: - In Room
     var inRoomView: some View {
         GeometryReader { geo in
+            let safeTop = geo.safeAreaInsets.top
+            let safeBottom = geo.safeAreaInsets.bottom
+            
             if isLandscape {
-                ZStack {
-                    CustomPlayerVC(player: player, pipController: $pipController)
-                        .ignoresSafeArea()
-                    
-                    videoControlsOverlay
-                    
-                    if showChat {
-                        HStack {
-                            Spacer()
-                            landscapeChatPanel
-                                .frame(width: geo.size.width * 0.3)
-                                .transition(.move(edge: .trailing))
-                        }
+                // LANDSCAPE: video trái + chat phải
+                HStack(spacing: 0) {
+                    // Video player
+                    ZStack {
+                        CustomPlayerVC(player: player, pipController: $pipController)
+                        videoControlsOverlay
                     }
+                    .frame(width: geo.size.width * 0.65)
+                    .onTapGesture { toggleControlsInRoom() }
                     
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            Button {
-                                withAnimation(.spring(response: 0.35)) { showChat.toggle() }
-                            } label: {
-                                Image(systemName: showChat ? "chevron.right" : "message")
-                                    .font(.system(size: 13)).foregroundColor(.white)
-                                    .padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                            }
-                        }
-                        .padding(.trailing, showChat ? geo.size.width * 0.3 + 8 : 8)
-                        .padding(.bottom, 12)
-                    }
+                    // Chat panel
+                    landscapeChatPanel
+                        .frame(width: geo.size.width * 0.35)
                 }
-                .ignoresSafeArea()
-                .animation(.spring(response: 0.35), value: showChat)
-                .onTapGesture { toggleControlsInRoom() }
             } else {
+                // PORTRAIT: video trên + chat dưới
+                let videoHeight = geo.size.width * 9 / 16
+                
                 VStack(spacing: 0) {
                     ZStack {
                         CustomPlayerVC(player: player, pipController: $pipController)
                         videoControlsOverlay
                     }
-                    .frame(height: geo.size.height * 0.42)
+                    .frame(height: videoHeight)
                     .onTapGesture { toggleControlsInRoom() }
                     
                     imessageChatPanel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .padding(.top, safeTop)
+                .padding(.bottom, safeBottom)
             }
         }
-        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
@@ -300,164 +287,189 @@ struct WatchTogetherRoomView: View {
         if showControls { controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     }
     
+    // MARK: - Video Controls Overlay
     var videoControlsOverlay: some View {
-        GeometryReader { geo in
-            ZStack {
-                VStack {
-                    HStack {
-                        Button {
-                            player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                                .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                        }
-                        Spacer()
-                        if showControls {
-                            HStack(spacing: 6) {
-                                Button { showEpisodePanel = true } label: {
-                                    Image(systemName: "list.bullet").font(.system(size: 10, weight: .bold)).foregroundColor(.white)
-                                        .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                }
-                                Button { pipController?.startPictureInPicture() } label: {
-                                    Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white)
-                                        .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                }
-                                Button { toggleOrientation() } label: {
-                                    Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white)
-                                        .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.top ?? 50)
-                    
-                    if showControls {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom()
+                } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                        .padding(8).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                }
+                Spacer()
+                if showControls {
+                    HStack(spacing: 6) {
                         Button { showEpisodePanel = true } label: {
-                            Text(currentMovieTitle.isEmpty ? "Chọn phim" : currentMovieTitle)
-                                .font(.system(size: 12, weight: .medium)).foregroundColor(.white).lineLimit(1)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(Capsule().fill(Material.ultraThinMaterial.opacity(0.65)))
-                                .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            Image(systemName: "list.bullet").font(.system(size: 10, weight: .bold)).foregroundColor(.white)
+                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                         }
-                        .padding(.top, 6)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    
-                    Spacer()
-                    
-                    if showControls {
-                        HStack(spacing: 44) {
-                            Button { seek(-10) } label: {
-                                Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white)
-                                    .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
-                            }
-                            Button {
-                                if player.rate == 0 { player.play() } else { player.pause() }
-                                if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
-                            } label: {
-                                Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 30)).foregroundColor(.white)
-                                    .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.55)))
-                            }
-                            Button { seek(10) } label: {
-                                Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white)
-                                    .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
-                            }
+                        Button { pipController?.startPictureInPicture() } label: {
+                            Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white)
+                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                         }
-                        .transition(.opacity)
+                        Button { toggleOrientation() } label: {
+                            Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white)
+                                .padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+                        }
                     }
-                    
-                    Spacer()
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
+            .padding(.horizontal, 12)
+            
+            if showControls {
+                Button { showEpisodePanel = true } label: {
+                    Text(currentMovieTitle.isEmpty ? "Chọn phim" : currentMovieTitle)
+                        .font(.system(size: 12, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Capsule().fill(Material.ultraThinMaterial.opacity(0.65)))
+                        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
+                }
+                .padding(.top, 6)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            
+            Spacer()
+            
+            if showControls {
+                HStack(spacing: 44) {
+                    Button { seek(-10) } label: {
+                        Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white)
+                            .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
+                    }
+                    Button {
+                        if player.rate == 0 { player.play() } else { player.pause() }
+                        if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
+                    } label: {
+                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 30)).foregroundColor(.white)
+                            .padding(16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.55)))
+                    }
+                    Button { seek(10) } label: {
+                        Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white)
+                            .padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
+                    }
+                }
+                .transition(.opacity)
+            }
+            
+            Spacer()
         }
     }
     
-    // MARK: - Landscape Chat
+    // MARK: - Landscape Chat Panel
     var landscapeChatPanel: some View {
         VStack(spacing: 0) {
-            HStack { Text("Chat").font(.system(size: 12, weight: .semibold)).foregroundColor(.white); Spacer(); Text("\(service.messages.count)").font(.system(size: 10)).foregroundColor(.white.opacity(0.4)) }
-                .padding(.horizontal, 10).padding(.vertical, 8).background(Material.ultraThinMaterial.opacity(0.4))
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                    Text("Phòng của \(service.currentRoomName)").font(.system(size: 9)).foregroundColor(.gray)
+                }
+                Spacer()
+                Button { showViewerPanel = true } label: {
+                    HStack(spacing: -4) {
+                        ForEach(service.participants.prefix(2), id: \.userId) { p in
+                            Text(p.avatar).font(.system(size: 8)).frame(width: 14, height: 14).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
+                        }
+                    }.padding(4).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.35)))
+                }
+            }.padding(.horizontal, 8).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Material.ultraThinMaterial.opacity(0.3)))
+            
+            if duration > 0 {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.1)).frame(height: 2)
+                        Capsule().fill(.white.opacity(0.4)).frame(width: max(2, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 2)
+                    }
+                }.frame(height: 2).padding(.horizontal, 8).padding(.vertical, 2)
+            }
+            
+            HStack(spacing: 12) {
+                ForEach(["❤️","😭","🤣","🔥","👏","💀"], id: \.self) { e in
+                    Button { sendReaction(e) } label: { Text(e).font(.system(size: 14)) }
+                }
+            }.padding(.horizontal, 8).padding(.vertical, 3)
+            
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 4) {
                         ForEach(service.messages) { msg in
-                            HStack(alignment: .top, spacing: 4) {
-                                Text(msg.avatar).font(.system(size: 10))
-                                VStack(alignment: .leading, spacing: 1) { Text(msg.userName).font(.system(size: 9, weight: .semibold)).foregroundColor(.white.opacity(0.7)).lineLimit(1); Text(msg.text).font(.system(size: 12)).foregroundColor(.white).fixedSize(horizontal: false, vertical: true) }
+                            HStack(alignment: .top, spacing: 3) {
+                                Text(msg.avatar).font(.system(size: 9))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(msg.userName).font(.system(size: 8, weight: .semibold)).foregroundColor(.white.opacity(0.7)).lineLimit(1)
+                                    Text(msg.text).font(.system(size: 10)).foregroundColor(.white).fixedSize(horizontal: false, vertical: true)
+                                }
                                 Spacer()
-                            }.padding(.horizontal, 8).padding(.vertical, 2)
+                            }.padding(.horizontal, 6).padding(.vertical, 1)
                         }
                     }
                 }.onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) { ForEach(["❤️","😭","🤣","🔥","👏","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 16)) } } }.padding(.horizontal, 8).padding(.vertical, 4)
-            }
+            
             HStack(spacing: 4) {
-                TextField("Nhắn...", text: $watchMessage).font(.system(size: 12)).foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.4))).onSubmit { sendImessage() }
-                if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 22)).foregroundColor(.white) } }
-            }.padding(.horizontal, 8).padding(.vertical, 6)
-        }.background(ZStack { dominantColor.opacity(0.2); Rectangle().fill(Material.ultraThinMaterial) })
+                TextField("Nhắn...", text: $watchMessage).font(.system(size: 11)).foregroundColor(.white)
+                    .padding(.horizontal, 8).padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Material.ultraThinMaterial.opacity(0.4)))
+                    .onSubmit { sendImessage() }
+                if !watchMessage.isEmpty {
+                    Button { sendImessage() } label: {
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 18)).foregroundColor(.white)
+                    }
+                }
+            }.padding(.horizontal, 6).padding(.vertical, 4)
+        }
+        .background(ZStack { dominantColor.opacity(0.2); Rectangle().fill(Material.ultraThinMaterial) })
     }
     
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle)
-                            .font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                        Text("Phòng của \(service.currentRoomName)").font(.system(size: 10)).foregroundColor(.gray)
-                    }
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Button { showSearchMovie = true } label: {
-                            Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
-                        }
-                        Button { showViewerPanel = true } label: {
-                            HStack(spacing: -4) {
-                                ForEach(service.participants.prefix(2), id: \.userId) { p in
-                                    Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
-                                }
-                            }.padding(5).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.35)))
-                        }
-                    }
-                }.padding(.horizontal, 14).padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.3)))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
-                .padding(.horizontal, 6).padding(.top, 4)
-                
-                if duration > 0 {
-                    VStack(spacing: 2) {
-                        HStack {
-                            Text(formatTime(currentTime)).font(.system(size: 9, design: .monospaced)).foregroundColor(.gray)
-                            Spacer()
-                            if duration > 0 {
-                                Text("\(Int((currentTime / max(duration, 1)) * 100))%").font(.system(size: 9)).foregroundColor(.gray)
-                            }
-                        }
-                        GeometryReader { g in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(.white.opacity(0.1)).frame(height: 3)
-                                Capsule().fill(.white.opacity(0.5))
-                                    .frame(width: max(3, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 3)
-                                Circle().fill(.white).frame(width: 8, height: 8)
-                                    .offset(x: max(0, min(g.size.width - 8, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 4)))
-                            }
-                        }.frame(height: 8)
-                    }.padding(.horizontal, 12).padding(.vertical, 4)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                    Text("Phòng của \(service.currentRoomName)").font(.system(size: 10)).foregroundColor(.gray)
                 }
-                
-                HStack(spacing: 20) {
-                    ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in
-                        Button { sendReaction(e) } label: { Text(e).font(.system(size: 22)) }
+                Spacer()
+                HStack(spacing: 6) {
+                    Button { showSearchMovie = true } label: {
+                        Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
                     }
+                    Button { showViewerPanel = true } label: {
+                        HStack(spacing: -4) {
+                            ForEach(service.participants.prefix(2), id: \.userId) { p in
+                                Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(Material.ultraThinMaterial.opacity(0.35)))
+                            }
+                        }.padding(5).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.35)))
+                    }
+                }
+            }.padding(.horizontal, 14).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.3)))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
+            .padding(.horizontal, 6).padding(.top, 4)
+            
+            if duration > 0 {
+                VStack(spacing: 2) {
+                    HStack {
+                        Text(formatTime(currentTime)).font(.system(size: 9, design: .monospaced)).foregroundColor(.gray)
+                        Spacer()
+                        Text("\(Int((currentTime / max(duration, 1)) * 100))%").font(.system(size: 9)).foregroundColor(.gray)
+                    }
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.1)).frame(height: 3)
+                            Capsule().fill(.white.opacity(0.5)).frame(width: max(3, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 3)
+                            Circle().fill(.white).frame(width: 8, height: 8).offset(x: max(0, min(g.size.width - 8, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 4)))
+                        }
+                    }.frame(height: 8)
                 }.padding(.horizontal, 12).padding(.vertical, 4)
             }
+            
+            HStack(spacing: 20) {
+                ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in
+                    Button { sendReaction(e) } label: { Text(e).font(.system(size: 22)) }
+                }
+            }.padding(.horizontal, 12).padding(.vertical, 4)
             
             ScrollViewReader { proxy in
                 ScrollView {
@@ -474,6 +486,7 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
+            // Input bar với safe area bottom
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
@@ -488,7 +501,7 @@ struct WatchTogetherRoomView: View {
                 }
             }
             .padding(.horizontal, 14).padding(.top, 10)
-            .padding(.bottom, keyboardHeight > 0 ? 12 : 35)
+            .padding(.bottom, keyboardHeight > 0 ? 8 : 0)
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
         .background(ZStack { dominantColor.opacity(0.3); Rectangle().fill(Material.ultraThinMaterial) })
@@ -533,33 +546,26 @@ struct WatchTogetherRoomView: View {
     
     func sendImessage() { let t = watchMessage.trimmingCharacters(in: .whitespaces); guard !t.isEmpty else { return }; service.sendMessage(text: t); watchMessage = ""; isInputFocused = false }
     func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t; if service.isHost { service.sendPlaybackState(action: "seek", time: t) } }
-    func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%02d:%02d:%02d", m/60, m, sec) }
+    func formatTime(_ s: Double) -> String { let ts = Int(max(0, s)); let h = ts / 3600; let m = (ts % 3600) / 60; let sec = ts % 60; if h > 0 { return String(format: "%d:%02d:%02d", h, m, sec) }; return String(format: "%02d:%02d", m, sec) }
     
-    // MARK: - Load Movie (DÙNG API từ APIService giống hệt Home)
+    // MARK: - Load Movie
     func loadMovieForRoom(_ movie: Movie) {
         currentMovieTitle = movie.title; currentMovie = movie
         selectedSeason = nil; episodes = []; selectedEpisode = nil
         seasons = []; isLoadingSeasons = true
         
-        // Dùng chính API từ APIService - giống hệt cách Home gọi
         if movie.mediaType == "tv" {
             Task {
                 do {
                     let fetchedSeasons = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
-                    await MainActor.run {
-                        self.seasons = fetchedSeasons
-                        self.isLoadingSeasons = false
-                    }
+                    await MainActor.run { self.seasons = fetchedSeasons; self.isLoadingSeasons = false }
                 } catch {
                     print("❌ WatchTogether: Lỗi fetch seasons:", error)
                     await MainActor.run { self.isLoadingSeasons = false }
                 }
             }
-        } else {
-            isLoadingSeasons = false
-        }
+        } else { isLoadingSeasons = false }
         
-        // Load stream
         Task {
             do {
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
@@ -574,10 +580,7 @@ struct WatchTogetherRoomView: View {
     
     func loadEpisode(_ ep: TVEpisode) {
         guard let movie = currentMovie else { return }
-        currentMovieTitle = "\(movie.title) - Tập \(ep.episodeNumber)"
-        selectedEpisode = ep
-        isLoadingEpisode = true
-        
+        currentMovieTitle = "\(movie.title) - Tập \(ep.episodeNumber)"; selectedEpisode = ep; isLoadingEpisode = true
         Task {
             do {
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
@@ -598,18 +601,15 @@ struct WatchTogetherRoomView: View {
         return id
     }
     
-    // MARK: - Episode Popup (liquid glass)
+    // MARK: - Episode Popup
     var episodePopupOverlay: some View {
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showEpisodePanel = false }
-            
             VStack(spacing: 0) {
                 HStack {
                     Text("Chọn tập").font(.system(size: 17, weight: .bold)).foregroundColor(.white)
                     Spacer()
-                    Button { showEpisodePanel = false } label: {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.6))
-                    }
+                    Button { showEpisodePanel = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.6)) }
                 }.padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 12)
                 
                 if isLoadingEpisode || isLoadingSeasons {
@@ -623,23 +623,14 @@ struct WatchTogetherRoomView: View {
                 } else if let selSeason = selectedSeason {
                     VStack(alignment: .leading, spacing: 6) {
                         Button { withAnimation { selectedSeason = nil; episodes = [] } } label: {
-                            HStack {
-                                Image(systemName: "chevron.left").font(.system(size: 11))
-                                Text(selSeason.name).font(.system(size: 14, weight: .semibold)).foregroundColor(.white); Spacer()
-                            }.padding(.horizontal, 20).padding(.vertical, 8)
+                            HStack { Image(systemName: "chevron.left").font(.system(size: 11)); Text(selSeason.name).font(.system(size: 14, weight: .semibold)).foregroundColor(.white); Spacer() }.padding(.horizontal, 20).padding(.vertical, 8)
                         }
                         Divider().background(.white.opacity(0.1)).padding(.horizontal, 20)
                         ScrollView {
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 5), spacing: 10) {
                                 ForEach(episodes) { ep in
-                                    Button {
-                                        selectedEpisode = ep; showEpisodePanel = false; loadEpisode(ep)
-                                    } label: {
-                                        Text("\(ep.episodeNumber)").font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(selectedEpisode?.id == ep.id ? .black : .white)
-                                            .frame(height: 38).frame(maxWidth: .infinity)
-                                            .background(RoundedRectangle(cornerRadius: 10)
-                                                .fill(selectedEpisode?.id == ep.id ? AnyShapeStyle(Color.white) : AnyShapeStyle(Material.ultraThinMaterial.opacity(0.3))))
+                                    Button { selectedEpisode = ep; showEpisodePanel = false; loadEpisode(ep) } label: {
+                                        Text("\(ep.episodeNumber)").font(.system(size: 14, weight: .medium)).foregroundColor(selectedEpisode?.id == ep.id ? .black : .white).frame(height: 38).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 10).fill(selectedEpisode?.id == ep.id ? AnyShapeStyle(Color.white) : AnyShapeStyle(Material.ultraThinMaterial.opacity(0.3))))
                                     }
                                 }
                             }.padding(.horizontal, 20).padding(.top, 8)
@@ -651,26 +642,16 @@ struct WatchTogetherRoomView: View {
                             ForEach(seasons) { season in
                                 Button {
                                     withAnimation {
-                                        selectedSeason = season
-                                        isLoadingEpisode = true
+                                        selectedSeason = season; isLoadingEpisode = true
                                         Task {
                                             do {
                                                 let detail = try await APIService.shared.fetchSeasonDetail(tvId: currentMovie?.id ?? 0, seasonNumber: season.seasonNumber)
                                                 await MainActor.run { episodes = detail.episodes; isLoadingEpisode = false }
-                                            } catch {
-                                                print("❌ WatchTogether: Lỗi fetch season detail:", error)
-                                                await MainActor.run { isLoadingEpisode = false }
-                                            }
+                                            } catch { print("❌ WatchTogether: Lỗi fetch season detail:", error); await MainActor.run { isLoadingEpisode = false } }
                                         }
                                     }
                                 } label: {
-                                    HStack {
-                                        Text(season.name).font(.system(size: 15)).foregroundColor(.white)
-                                        Spacer()
-                                        Text("\(season.episodeCount) tập").font(.system(size: 12)).foregroundColor(.gray)
-                                        Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.gray)
-                                    }.padding(.horizontal, 20).padding(.vertical, 13)
-                                    .background(RoundedRectangle(cornerRadius: 12).fill(Material.ultraThinMaterial.opacity(0.25)))
+                                    HStack { Text(season.name).font(.system(size: 15)).foregroundColor(.white); Spacer(); Text("\(season.episodeCount) tập").font(.system(size: 12)).foregroundColor(.gray); Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.gray) }.padding(.horizontal, 20).padding(.vertical, 13).background(RoundedRectangle(cornerRadius: 12).fill(Material.ultraThinMaterial.opacity(0.25)))
                                 }
                             }
                         }.padding(.horizontal, 16).padding(.vertical, 10)
@@ -678,16 +659,8 @@ struct WatchTogetherRoomView: View {
                 }
             }
             .frame(width: 320)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24).fill(Material.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 24).fill(Color.black.opacity(0.7))
-                }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
-            )
+            .background(ZStack { RoundedRectangle(cornerRadius: 24).fill(Material.ultraThinMaterial); RoundedRectangle(cornerRadius: 24).fill(Color.black.opacity(0.7)) })
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05), .clear, .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8))
             .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
         }
     }
