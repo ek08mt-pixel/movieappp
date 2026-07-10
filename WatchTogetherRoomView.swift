@@ -409,7 +409,7 @@ struct WatchTogetherRoomView: View {
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
-            .padding(.bottom, max(keyboardHeight > 0 ? 8 : 28, 8))
+            .padding(.bottom, keyboardHeight > 0 ? keyboardHeight - 100 : 28)
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
         .background(.regularMaterial.opacity(0.35))
