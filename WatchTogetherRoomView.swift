@@ -92,7 +92,6 @@ struct WatchTogetherRoomView: View {
             else if showCreateRoom { createRoomView }
             else { lobbyView }
             
-            // Flying emojis overlay
             ForEach(flyingEmojis) { fe in
                 Text(fe.emoji)
                     .font(.system(size: 32))
@@ -163,7 +162,7 @@ struct WatchTogetherRoomView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
             } else {
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(.ultraThinMaterial.opacity(0.4))
+                    .fill(Material.ultraThinMaterial.opacity(0.4))
                     .frame(width: 68, height: 94)
                     .overlay(Image(systemName: "play.circle.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)))
             }
@@ -174,7 +173,7 @@ struct WatchTogetherRoomView: View {
                     HStack(spacing: -10) {
                         ForEach(room.avatars.prefix(4), id: \.self) { av in
                             Text(av).font(.system(size: 10)).frame(width: 22, height: 22)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
+                                .background(Circle().fill(Material.ultraThinMaterial.opacity(0.7)))
                                 .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                         }
                         if room.viewerCount > 4 { Text("+\(room.viewerCount - 4)").font(.system(size: 8)).foregroundColor(.white.opacity(0.6)).padding(.leading, 4) }
@@ -197,7 +196,7 @@ struct WatchTogetherRoomView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 22)
-                .fill(.ultraThinMaterial.opacity(0.18))
+                .fill(Material.ultraThinMaterial.opacity(0.18))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22)
@@ -215,7 +214,7 @@ struct WatchTogetherRoomView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(12)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        .background(Circle().fill(Material.ultraThinMaterial.opacity(0.4)))
                         .overlay(Circle().stroke(.white.opacity(0.12), lineWidth: 0.5))
                 }
                 Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44)
@@ -227,20 +226,20 @@ struct WatchTogetherRoomView: View {
                     Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count])
                         .font(.system(size: 28))
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        .background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                         .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                 }.padding(.horizontal, 4)
                 
                 TextField("Tên của bạn", text: $userName)
                     .font(.system(size: 15)).foregroundColor(.white)
                     .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)))
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25)))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 
                 TextField("Tên phòng (tuỳ chọn)", text: $roomName)
                     .font(.system(size: 15)).foregroundColor(.white)
                     .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)))
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25)))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 
                 Button {
@@ -266,7 +265,7 @@ struct WatchTogetherRoomView: View {
                 TextField("Nhập mã phòng 6 số", text: $joinCode)
                     .font(.system(size: 15)).foregroundColor(.white)
                     .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)))
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25)))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
                     .keyboardType(.numberPad)
                 
@@ -279,7 +278,7 @@ struct WatchTogetherRoomView: View {
                         Text("Vào phòng").font(.headline)
                     }
                     .foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
+                    .background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5)))
                     .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
                 }
             }.padding(.horizontal, 24)
@@ -308,20 +307,20 @@ struct WatchTogetherRoomView: View {
                                     } label: {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
-                                            .padding(9).background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                                            .padding(9).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6)))
                                             .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                                     }
                                     Spacer()
                                     if showControls {
                                         HStack(spacing: 8) {
                                             Button { showEpisodePanel = true } label: {
-                                                Image(systemName: "list.bullet").font(.system(size: 11, weight: .bold)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                                Image(systemName: "list.bullet").font(.system(size: 11, weight: .bold)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                             }
                                             Button { pipController?.startPictureInPicture() } label: {
-                                                Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                                Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                             }
                                             Button { toggleOrientation() } label: {
-                                                Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                                Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                             }
                                         }
                                     }
@@ -331,17 +330,17 @@ struct WatchTogetherRoomView: View {
                                 if showControls {
                                     HStack(spacing: 50) {
                                         Button { seek(-10) } label: {
-                                            Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
+                                            Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                                         }
                                         Button {
                                             if player.rate == 0 { player.play() } else { player.pause() }
                                             if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
                                             addEventLog(player.rate == 0 ? "▶️ Play" : "⏸️ Pause")
                                         } label: {
-                                            Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 34)).foregroundColor(.white).padding(20).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5)).shadow(color: .white.opacity(0.1), radius: 12)
+                                            Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 34)).foregroundColor(.white).padding(20).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5)).shadow(color: .white.opacity(0.1), radius: 12)
                                         }
                                         Button { seek(10) } label: {
-                                            Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
+                                            Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                                         }
                                     }.transition(.opacity).padding(.bottom, 20)
                                 }
@@ -407,7 +406,7 @@ struct WatchTogetherRoomView: View {
                 Image(systemName: "chevron.down").font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
             }
             .padding(.horizontal, 16).padding(.vertical, 10)
-            .background(Capsule().fill(.ultraThinMaterial.opacity(0.7)))
+            .background(Capsule().fill(Material.ultraThinMaterial.opacity(0.7)))
             .overlay(Capsule().stroke(LinearGradient(colors: [.white.opacity(0.2), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
         }
@@ -419,23 +418,23 @@ struct WatchTogetherRoomView: View {
             if showControls {
                 HStack(spacing: 45) {
                     Button { seek(-10) } label: {
-                        Image(systemName: "gobackward.10").font(.system(size: 22)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        Image(systemName: "gobackward.10").font(.system(size: 22)).foregroundColor(.white).padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                     }
                     Button { player.rate == 0 ? player.play() : player.pause() } label: {
-                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).shadow(color: .white.opacity(0.1), radius: 10)
+                        Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28)).foregroundColor(.white).padding(14).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6))).shadow(color: .white.opacity(0.1), radius: 10)
                     }
                     Button { seek(10) } label: {
-                        Image(systemName: "goforward.10").font(.system(size: 22)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        Image(systemName: "goforward.10").font(.system(size: 22)).foregroundColor(.white).padding(10).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                     }
                 }.padding(.bottom, 24).transition(.opacity)
             }
             HStack(spacing: 10) {
                 Spacer()
                 Button { pipController?.startPictureInPicture() } label: {
-                    Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.45)))
+                    Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.45)))
                 }
                 Button { toggleOrientation() } label: {
-                    Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.45)))
+                    Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.45)))
                 }
             }.padding(.trailing, 12).padding(.bottom, 8)
         }
@@ -450,7 +449,6 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(currentMovieTitle.isEmpty ? "🎬 Chưa chọn phim" : "🎬 \(currentMovieTitle)").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
@@ -459,23 +457,22 @@ struct WatchTogetherRoomView: View {
                 Spacer()
                 HStack(spacing: 8) {
                     Button { showSearchMovie = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.4))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                        Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundColor(.white).padding(7).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
                     }
                     Button { showViewerPanel = true } label: {
                         HStack(spacing: -6) {
                             ForEach(service.participants.prefix(3), id: \.userId) { p in
-                                Text(p.avatar).font(.system(size: 10)).frame(width: 18, height: 18).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                Text(p.avatar).font(.system(size: 10)).frame(width: 18, height: 18).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                             }
-                        }.padding(6).background(Capsule().fill(.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                        }.padding(6).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
                     }
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.35)))
+            .background(RoundedRectangle(cornerRadius: 18).fill(Material.ultraThinMaterial.opacity(0.35)))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08), lineWidth: 0.5))
             .padding(.horizontal, 8).padding(.top, 6)
             
-            // Progress bar
             if duration > 0 {
                 VStack(spacing: 4) {
                     HStack {
@@ -498,7 +495,6 @@ struct WatchTogetherRoomView: View {
                 }.padding(.horizontal, 16).padding(.vertical, 6)
             }
             
-            // Event logs
             if !eventLogs.isEmpty {
                 VStack(spacing: 1) {
                     ForEach(eventLogs) { log in
@@ -512,7 +508,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Emoji reactions
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 22) {
                     ForEach(["😭","🤣","👏","❤️","🔥","💀","🎉","😍","🙏","💯"], id: \.self) { e in
@@ -521,7 +516,6 @@ struct WatchTogetherRoomView: View {
                 }.padding(.horizontal, 16).padding(.vertical, 8)
             }
             
-            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 8) {
@@ -537,12 +531,11 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Input
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .focused($isInputFocused).font(.system(size: 16)).foregroundColor(.white)
                     .padding(.horizontal, 18).padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 25).fill(.ultraThinMaterial.opacity(0.5)))
+                    .background(RoundedRectangle(cornerRadius: 25).fill(Material.ultraThinMaterial.opacity(0.5)))
                     .overlay(RoundedRectangle(cornerRadius: 25).stroke(.white.opacity(0.15), lineWidth: 0.5))
                     .onSubmit { sendImessage() }
                 if !watchMessage.isEmpty {
@@ -558,7 +551,7 @@ struct WatchTogetherRoomView: View {
         .background(
             ZStack {
                 dominantColor.opacity(0.25)
-                Rectangle().fill(.ultraThinMaterial)
+                Rectangle().fill(Material.ultraThinMaterial)
             }
         )
     }
@@ -585,18 +578,18 @@ struct WatchTogetherRoomView: View {
         return HStack(alignment: .bottom, spacing: 8) {
             if !isMe {
                 if showAvatar {
-                    Text(msg.avatar).font(.system(size: 16)).frame(width: 32, height: 32).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    Text(msg.avatar).font(.system(size: 16)).frame(width: 32, height: 32).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
                 } else { Color.clear.frame(width: 32, height: 32) }
             } else { Spacer() }
             VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
                 if showAvatar && !isMe { Text(msg.userName).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) }
                 Text(msg.text).font(.system(size: 15)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(isMe ? 0.55 : 0.35)))
+                    .background(RoundedRectangle(cornerRadius: 18).fill(Material.ultraThinMaterial.opacity(isMe ? 0.55 : 0.35)))
                     .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(isMe ? 0.18 : 0.08), lineWidth: 0.5))
             }
             if isMe {
                 if showAvatar {
-                    Text(msg.avatar).font(.system(size: 16)).frame(width: 32, height: 32).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    Text(msg.avatar).font(.system(size: 16)).frame(width: 32, height: 32).background(Circle().fill(Material.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
                 } else { Color.clear.frame(width: 32, height: 32) }
             } else { Spacer() }
         }
@@ -672,14 +665,14 @@ struct WatchTogetherRoomView: View {
                 VStack(spacing: 14) {
                     ForEach(service.participants, id: \.userId) { p in
                         HStack(spacing: 14) {
-                            Text(p.avatar).font(.system(size: 28)).frame(width: 50, height: 50).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                            Text(p.avatar).font(.system(size: 28)).frame(width: 50, height: 50).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
                                 .overlay(Circle().fill(p.isOnline ? Color.green : Color.gray).frame(width: 12, height: 12).overlay(Circle().stroke(Color.black, lineWidth: 2)).offset(x: 18, y: 18))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(p.userName).font(.system(size: 15, weight: .medium)).foregroundColor(.white)
                                 Text(p.isOnline ? "Đang xem" : "Đã rời").font(.system(size: 12)).foregroundColor(p.isOnline ? .green.opacity(0.8) : .gray)
                             }
                             Spacer()
-                            if p.userId == service.currentUserId { Text("Bạn").font(.system(size: 10, weight: .bold)).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(.ultraThinMaterial.opacity(0.4))) }
+                            if p.userId == service.currentUserId { Text("Bạn").font(.system(size: 10, weight: .bold)).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.4))) }
                         }.padding(.horizontal, 20)
                     }
                 }
@@ -717,7 +710,10 @@ struct WatchTogetherRoomView: View {
                                     Text("\(ep.episodeNumber)").font(.system(size: 14, weight: .medium))
                                         .foregroundColor(selectedEpisode?.id == ep.id ? .black : .white)
                                         .frame(height: 40).frame(maxWidth: .infinity)
-                                        .background(RoundedRectangle(cornerRadius: 10).fill(selectedEpisode?.id == ep.id ? Color.white : .ultraThinMaterial.opacity(0.3)))
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(selectedEpisode?.id == ep.id ? AnyShapeStyle(Color.white) : AnyShapeStyle(Material.ultraThinMaterial.opacity(0.3)))
+                                        )
                                 }
                             }
                         }.padding(.horizontal, 18)
@@ -745,7 +741,7 @@ struct WatchTogetherRoomView: View {
                                     Spacer()
                                     Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.gray)
                                 }.padding(.horizontal, 18).padding(.vertical, 14)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
+                                .background(RoundedRectangle(cornerRadius: 14).fill(Material.ultraThinMaterial.opacity(0.3)))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
                             }
                         }
