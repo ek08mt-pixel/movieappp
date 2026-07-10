@@ -14,7 +14,6 @@ struct FakeRoom: Identifiable {
 // MARK: - Main Watch Together View
 struct WatchTogetherRoomView: View {
     @StateObject private var service = WatchTogetherService.shared
-    @State private var showLobby = true
     @State private var player = AVPlayer()
     @State private var currentTime: Double = 0
     @State private var showChat = true
@@ -25,16 +24,15 @@ struct WatchTogetherRoomView: View {
     @State private var joinCode = ""
     @State private var showCreateRoom = false
     @State private var showSearchMovie = false
-    @State private var selectedMovie: Movie?
     
     // Fake rooms for lobby
     let fakeRooms: [FakeRoom] = [
-        FakeRoom(roomName: "Phim kinh dị đêm", movieTitle: "The Conjuring", posterPath: "/poster1.jpg", viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"]),
-        FakeRoom(roomName: "Romantic night", movieTitle: "Titanic", posterPath: "/poster2.jpg", viewerCount: 6, avatars: ["🦊","🐸","🐵","🐮","🐷","🐹"]),
-        FakeRoom(roomName: "Anime fans", movieTitle: "Your Name", posterPath: "/poster3.jpg", viewerCount: 3, avatars: ["🐭","🦄","🐙"]),
-        FakeRoom(roomName: "Marathon Marvel", movieTitle: "Avengers: Endgame", posterPath: "/poster4.jpg", viewerCount: 5, avatars: ["🐱","🐼","🐨","🐯","🦊"]),
-        FakeRoom(roomName: "Hài cuối tuần", movieTitle: "Deadpool", posterPath: "/poster5.jpg", viewerCount: 2, avatars: ["🐶","🐰"]),
-        FakeRoom(roomName: "Sci-fi night", movieTitle: "Interstellar", posterPath: "/poster6.jpg", viewerCount: 6, avatars: ["🐻","🐼","🐨","🐯","🦊","🐸"]),
+        FakeRoom(roomName: "Phim kinh dị đêm", movieTitle: "The Conjuring", posterPath: nil, viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"]),
+        FakeRoom(roomName: "Romantic night", movieTitle: "Titanic", posterPath: nil, viewerCount: 6, avatars: ["🦊","🐸","🐵","🐮","🐷","🐹"]),
+        FakeRoom(roomName: "Anime fans", movieTitle: "Your Name", posterPath: nil, viewerCount: 3, avatars: ["🐭","🦄","🐙"]),
+        FakeRoom(roomName: "Marathon Marvel", movieTitle: "Avengers: Endgame", posterPath: nil, viewerCount: 5, avatars: ["🐱","🐼","🐨","🐯","🦊"]),
+        FakeRoom(roomName: "Hài cuối tuần", movieTitle: "Deadpool", posterPath: nil, viewerCount: 2, avatars: ["🐶","🐰"]),
+        FakeRoom(roomName: "Sci-fi night", movieTitle: "Interstellar", posterPath: nil, viewerCount: 6, avatars: ["🐻","🐼","🐨","🐯","🦊","🐸"]),
     ]
     
     var body: some View {
@@ -42,13 +40,10 @@ struct WatchTogetherRoomView: View {
             Color.black.ignoresSafeArea()
             
             if service.isInRoom {
-                // Màn hình trong room
                 inRoomView
             } else if showCreateRoom {
-                // Màn hình tạo phòng
                 createRoomView
             } else {
-                // Sảnh lobby
                 lobbyView
             }
         }
@@ -57,7 +52,6 @@ struct WatchTogetherRoomView: View {
     // MARK: - Lobby View
     var lobbyView: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text("Xem chung")
                     .font(.title2.bold())
@@ -75,15 +69,12 @@ struct WatchTogetherRoomView: View {
             .padding(.top, 50)
             .padding(.bottom, 12)
             
-            // Fake rooms grid
             ScrollView {
                 VStack(spacing: 14) {
-                    // Phòng thật (nếu có)
                     if service.isInRoom {
                         realRoomCard
                     }
                     
-                    // Fake rooms
                     ForEach(fakeRooms) { room in
                         fakeRoomCard(room)
                     }
@@ -96,7 +87,7 @@ struct WatchTogetherRoomView: View {
     
     var realRoomCard: some View {
         Button {
-            showLobby = false
+            // Đã trong room, không cần action
         } label: {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 10)
@@ -131,18 +122,16 @@ struct WatchTogetherRoomView: View {
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
         Button {
-            // Join fake room - hiện tại chỉ để show
+            // Fake room - hiện tại chỉ show
         } label: {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(.ultraThinMaterial.opacity(0.4))
                     .frame(width: 60, height: 80)
                     .overlay(
-                        VStack(spacing: 4) {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.8))
                     )
                 
                 VStack(alignment: .leading, spacing: 6) {
@@ -163,8 +152,7 @@ struct WatchTogetherRoomView: View {
                 Spacer()
                 VStack(spacing: 4) {
                     Circle().fill(.green).frame(width: 8, height: 8)
-                    Text("Live")
-                        .font(.system(size: 8)).foregroundColor(.green)
+                    Text("Live").font(.system(size: 8)).foregroundColor(.green)
                 }
             }
             .padding(12)
@@ -260,7 +248,6 @@ struct WatchTogetherRoomView: View {
             
             ZStack {
                 if isLandscape {
-                    // Ngang: video full + chat overlay
                     CustomPlayerVC(player: player, pipController: .constant(nil))
                         .ignoresSafeArea()
                     
@@ -273,7 +260,6 @@ struct WatchTogetherRoomView: View {
                         .transition(.move(edge: .bottom))
                     }
                 } else {
-                    // Dọc: video trên + chat dưới
                     VStack(spacing: 0) {
                         CustomPlayerVC(player: player, pipController: .constant(nil))
                             .frame(height: geo.size.height * 0.5)
@@ -283,7 +269,6 @@ struct WatchTogetherRoomView: View {
                     }
                 }
                 
-                // Overlay controls
                 VStack {
                     HStack {
                         Button {
@@ -334,7 +319,9 @@ struct WatchTogetherRoomView: View {
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $showSearchMovie) {
-            SearchView()
+            SearchView(onSelectMovie: { movie in
+                loadMovieForRoom(movie)
+            })
         }
         .onChange(of: service.remoteState?.timestamp) { _ in
             guard let state = service.remoteState, !service.isHost else { return }
@@ -350,10 +337,52 @@ struct WatchTogetherRoomView: View {
         }
     }
     
+    // MARK: - Load Movie
+    func loadMovieForRoom(_ movie: Movie) {
+        Task {
+            do {
+                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
+                let url = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
+                    PhimAPIService.shared.fetchStream(
+                        imdbID: imdbID,
+                        tmdbID: movie.id,
+                        title: movie.title,
+                        mediaType: movie.mediaType,
+                        season: nil,
+                        episode: nil
+                    ) { result in
+                        cont.resume(with: result)
+                    }
+                }
+                await MainActor.run {
+                    player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                    player.play()
+                    if service.isHost {
+                        service.sendPlaybackState(action: "play", time: 0)
+                    }
+                }
+            } catch {
+                print("Load movie error: \(error)")
+            }
+        }
+    }
+    
+    func fetchIMDBID(for tmdbID: Int, mediaType: String?) async throws -> String {
+        if mediaType == "tv" {
+            if let id = try? await APIService.shared.fetchExternalIDs(tvId: tmdbID), !id.isEmpty {
+                return id
+            }
+        }
+        let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(tmdbID)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+        struct E: Codable { let imdb_id: String? }
+        let imdb = try JSONDecoder().decode(E.self, from: data).imdb_id
+        guard let id = imdb, !id.isEmpty else { throw NSError(domain: "", code: -1) }
+        return id
+    }
+    
     // MARK: - Chat Overlay
     var chatOverlayPortrait: some View {
         VStack(spacing: 0) {
-            // Messages (có thể kéo lên)
             let msgs = service.messages
             ScrollViewReader { proxy in
                 ScrollView {
@@ -372,7 +401,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Input bar
             HStack(spacing: 6) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .font(.system(size: 13)).foregroundColor(.white)
