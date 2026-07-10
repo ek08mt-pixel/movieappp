@@ -249,15 +249,13 @@ struct WatchTogetherRoomView: View {
                                     Button {
     player.pause()
     player.replaceCurrentItem(with: nil)
-    let movie = currentMovieTitle
-    service.leaveRoomTemporarily(movieTitle: movie)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-        service.isInRoom = false
-        service.currentRoomCode = ""
-        service.currentRoomName = ""
-    }
+    let code = service.currentRoomCode
+    let name = service.currentRoomName
+    service.prepareToLeave(movieTitle: currentMovieTitle, code: code, name: name)
+    service.didReturnToLobby()
 } label: {
-                                        Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+    Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+}
                                     }
                                     Spacer()
                                     if showControls {
