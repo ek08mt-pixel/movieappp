@@ -6,6 +6,9 @@ struct SearchView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMovie: Movie?
     
+    // Callback khi chọn phim - dùng cho Watch Together
+    var onSelectMovie: ((Movie) -> Void)?
+    
     private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     
     var body: some View {
@@ -45,7 +48,14 @@ struct SearchView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 15) {
                                 ForEach(vm.results) { movie in
-                                    Button { selectedMovie = movie } label: {
+                                    Button {
+                                        if let callback = onSelectMovie {
+                                            callback(movie)
+                                            dismiss()
+                                        } else {
+                                            selectedMovie = movie
+                                        }
+                                    } label: {
                                         VStack(spacing: 6) {
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8))
