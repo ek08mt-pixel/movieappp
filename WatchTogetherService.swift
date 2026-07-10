@@ -8,7 +8,6 @@ class WatchTogetherService: ObservableObject {
     var userId: String = ""
     private var userName: String = ""
     private var timer: Timer?
-    private var leaveTimer: Timer?
     
     @Published var isInRoom = false
     @Published var isHost = false
@@ -17,12 +16,6 @@ class WatchTogetherService: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var participants: [Participant] = []
     @Published var remoteState: RemotePlaybackState?
-    
-    @Published var pendingRoomCode: String = ""
-    @Published var pendingRoomName: String = ""
-    @Published var pendingRoomMovie: String = ""
-    @Published var pendingLeaveSeconds: Int = 300
-    @Published var hasPendingRoom: Bool = false
     
     var currentUserId: String { userId }
     
@@ -85,7 +78,6 @@ class WatchTogetherService: ObservableObject {
         put(path: "rooms/\(code)/info", data: roomData) { _ in
             DispatchQueue.main.async {
                 self.isInRoom = true
-                self.hasPendingRoom = false
                 self.startListening()
                 completion(code)
             }
@@ -113,7 +105,6 @@ class WatchTogetherService: ObservableObject {
                     self.currentRoomCode = code
                     self.currentRoomName = roomName
                     self.isInRoom = true
-                    self.hasPendingRoom = false
                     self.startListening()
                     completion(true, roomName)
                 }
@@ -121,71 +112,7 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
-    // Chuẩn bị rời phòng - lưu pending, không đụng gì đến state khác
-    func prepareToLeave(movieTitle: String, code: String, name: String) {
-        leaveTimer?.invalidate()
-        timer?.invalidate()
-        timer = nil
-        
-        pendingRoomCode = code
-        pendingRoomName = name
-        pendingRoomMovie = movieTitle
-        pendingLeaveSeconds = 300
-        hasPendingRoom = true
-        
-        // Đánh dấu offline
-        put(path: "rooms/\(code)/info/participants/\(userId)/isOnline", data: false)
-        
-        // Countdown
-        leaveTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if self.pendingLeaveSeconds > 0 {
-                    self.pendingLeaveSeconds -= 1
-                } else {
-                    self.leaveTimer?.invalidate()
-                    self.hasPendingRoom = false
-                    self.delete(path: "rooms/\(self.pendingRoomCode)/info/participants/\(self.userId)") { _ in }
-                    self.pendingRoomCode = ""
-                    self.roomCode = ""
-                    self.userId = ""
-                }
-            }
-        }
-    }
-    
-    // Gọi sau khi View đã về lobby an toàn
-    func didReturnToLobby() {
-        isInRoom = false
-        currentRoomCode = ""
-        currentRoomName = ""
-        messages = []
-        participants = []
-    }
-    
-    func rejoinPendingRoom(completion: @escaping (Bool) -> Void) {
-        guard hasPendingRoom, !pendingRoomCode.isEmpty else {
-            completion(false)
-            return
-        }
-        
-        leaveTimer?.invalidate()
-        roomCode = pendingRoomCode
-        currentRoomCode = pendingRoomCode
-        currentRoomName = pendingRoomName
-        isInRoom = true
-        hasPendingRoom = false
-        
-        put(path: "rooms/\(roomCode)/info/participants/\(userId)/isOnline", data: true) { _ in
-            DispatchQueue.main.async {
-                self.startListening()
-                completion(true)
-            }
-        }
-    }
-    
     func leaveRoom() {
-        leaveTimer?.invalidate()
         timer?.invalidate()
         timer = nil
         delete(path: "rooms/\(roomCode)/info/participants/\(userId)") { _ in }
@@ -197,8 +124,6 @@ class WatchTogetherService: ObservableObject {
         participants = []
         roomCode = ""
         userId = ""
-        hasPendingRoom = false
-        pendingRoomCode = ""
     }
     
     func sendPlaybackState(action: String, time: Double) {
