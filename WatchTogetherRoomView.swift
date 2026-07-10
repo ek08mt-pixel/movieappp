@@ -442,7 +442,7 @@ struct WatchTogetherRoomView: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("🎬 \(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle)").font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                    Text("🐈‍⬛ \(currentMovieTitle.isEmpty ? "Chưa chọn phim" : currentMovieTitle)").font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
                     Text("Phòng của \(service.currentRoomName)").font(.system(size: 10)).foregroundColor(.gray)
                 }
                 Spacer()
