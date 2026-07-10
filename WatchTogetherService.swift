@@ -122,26 +122,19 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
-    // Tạm rời phòng - không xóa khỏi Firebase
     func leaveRoomTemporarily(movieTitle: String) {
         leaveTimer?.invalidate()
         timer?.invalidate()
         timer = nil
         
-        pendingRoomCode = currentRoomCode
+        pendingRoomCode = roomCode
         pendingRoomName = currentRoomName
         pendingRoomMovie = movieTitle
         pendingLeaveSeconds = 300
         hasPendingRoom = true
         
-        // Vẫn đánh dấu offline nhưng không xóa participant
         put(path: "rooms/\(roomCode)/info/participants/\(userId)/isOnline", data: false) { _ in }
         
-        isInRoom = false
-        currentRoomCode = ""
-        currentRoomName = ""
-        
-        // Countdown 5 phút
         leaveTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -152,12 +145,13 @@ class WatchTogetherService: ObservableObject {
                     self.hasPendingRoom = false
                     self.delete(path: "rooms/\(self.pendingRoomCode)/info/participants/\(self.userId)") { _ in }
                     self.pendingRoomCode = ""
+                    self.roomCode = ""
+                    self.userId = ""
                 }
             }
         }
     }
     
-    // Quay lại phòng đang pending
     func rejoinPendingRoom(completion: @escaping (Bool) -> Void) {
         guard hasPendingRoom, !pendingRoomCode.isEmpty else {
             completion(false)
@@ -169,6 +163,7 @@ class WatchTogetherService: ObservableObject {
         currentRoomCode = pendingRoomCode
         currentRoomName = pendingRoomName
         isInRoom = true
+        isHost = true
         hasPendingRoom = false
         
         put(path: "rooms/\(roomCode)/info/participants/\(userId)/isOnline", data: true) { _ in
