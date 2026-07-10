@@ -140,7 +140,7 @@ struct FilmHubView: View {
     func hubDestination(for t: String) -> some View {
         switch t {
         case "Diễn viên hot": ActorHotView()
-        case "Đạo diễn tài ba": DirectorView()
+        case "Đạo diễn tài ba": DirectorView(directorName: "Christopher Nolan")
         case "Phim đoạt giải": CategoryFullView(category: CategoryConfig(id: 0, name: "Oscar Winners", posterName: "", type: .keyword, tmdbId: 2959))
         case "Ngày này năm xưa": ThisDayHistoryView()
         case "Cặp bài trùng": PairView()
@@ -157,33 +157,28 @@ struct FilmHubView: View {
 // MARK: - Actor Hot View
 struct ActorHotView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var actors: [Person] = []
+    @State private var movies: [Movie] = []
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
                     Text("⭐ Diễn viên hot").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(actors.prefix(15)) { p in
-                                VStack(spacing: 8) {
-                                    if let path = p.profilePath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-                                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(width: 120, height: 160).clipShape(RoundedRectangle(cornerRadius: 16))
-                                    } else {
-                                        RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)).frame(width: 120, height: 160).overlay(Text("🎭").font(.system(size: 40)))
-                                    }
-                                    Text(p.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                                    Text(p.knownFor).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                }.frame(width: 120)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(movies.prefix(15)) { m in
+                            NavigationLink(destination: MovieDetailView(movie: m)) {
+                                VStack(spacing: 6) {
+                                    CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 10))
+                                    Text(m.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2)
+                                }
                             }
-                        }.padding(.horizontal, 16)
-                    }
+                        }
+                    }.padding(.horizontal, 16)
                     Spacer().frame(height: 100)
                 }
             }
             Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
-        }.navigationBarHidden(true).task { actors = (try? await APIService.shared.trendingPersons()) ?? [] }
+        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.popular()) ?? [] }
     }
 }
 
@@ -199,7 +194,7 @@ struct ThisDayHistoryView: View {
                     Text("📅 Ngày này năm xưa").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     let today = Calendar.current.dateComponents([.month, .day], from: Date())
                     Text("Phim công chiếu ngày \(today.day ?? 1)/\(today.month ?? 1)").font(.headline).foregroundColor(.gray).padding(.horizontal, 16)
-                    ForEach(movies.prefix(10)) { m in
+                    ForEach(movies.prefix(8)) { m in
                         NavigationLink(destination: MovieDetailView(movie: m)) {
                             HStack(spacing: 12) {
                                 CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 70, height: 105).clipShape(RoundedRectangle(cornerRadius: 10))
@@ -216,21 +211,21 @@ struct ThisDayHistoryView: View {
                 }
             }
             Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
-        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.thisDayHistory()) ?? [] }
+        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.topRated()) ?? [] }
     }
 }
 
 // MARK: - Pair View
 struct PairView: View {
     @Environment(\.dismiss) var dismiss
-    let pairs: [(String, String, String, String, Int)] = [("Brad Pitt", "Leonardo DiCaprio", "🇺🇸", "🇺🇸", 2), ("Tom Hanks", "Meg Ryan", "🇺🇸", "🇺🇸", 4), ("Emma Stone", "Ryan Gosling", "🇺🇸", "🇨🇦", 3)]
+    let pairs: [(String, String, Int)] = [("Brad Pitt", "Leonardo DiCaprio", 2), ("Tom Hanks", "Meg Ryan", 4), ("Emma Stone", "Ryan Gosling", 3), ("Robert De Niro", "Al Pacino", 4), ("Johnny Depp", "Helena Bonham Carter", 7)]
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
                     Text("👥 Cặp bài trùng").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    ForEach(pairs, id: \.0) { a, b, f1, f2, count in
+                    ForEach(pairs, id: \.0) { a, b, count in
                         VStack(spacing: 12) {
                             HStack(spacing: 20) {
                                 VStack { Text("🎭").font(.system(size: 50)); Text(a).font(.system(size: 14, weight: .semibold)).foregroundColor(.white) }
@@ -258,52 +253,37 @@ struct CompareView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     Text("🔗 So sánh phim").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    if let m1, let m2 {
+                    if let a = m1, let b = m2 {
                         HStack(spacing: 8) {
-                            VStack {
-                                CachedAsyncImage(url: m1.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                                Text(m1.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2)
-                                Text("⭐ \(m1.ratingText)").font(.caption).foregroundColor(.yellow)
-                            }
+                            VStack { CachedAsyncImage(url: a.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12)); Text(a.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2); Text("⭐ \(a.ratingText)").font(.caption).foregroundColor(.yellow) }
                             Text("VS").font(.system(size: 20, weight: .black)).foregroundColor(.red).padding(.horizontal, 4)
-                            VStack {
-                                CachedAsyncImage(url: m2.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                                Text(m2.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2)
-                                Text("⭐ \(m2.ratingText)").font(.caption).foregroundColor(.yellow)
-                            }
+                            VStack { CachedAsyncImage(url: b.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 12)); Text(b.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white).lineLimit(2); Text("⭐ \(b.ratingText)").font(.caption).foregroundColor(.yellow) }
                         }.padding(16).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25))).padding(.horizontal, 16)
                     }
                     Spacer().frame(height: 100)
                 }
             }
             Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
-        }.navigationBarHidden(true).task { m1 = try? await APIService.shared.movieDetail(movieId: 550); m2 = try? await APIService.shared.movieDetail(movieId: 680) }
+        }.navigationBarHidden(true).task { let movies = (try? await APIService.shared.popular()) ?? []; m1 = movies.first; m2 = movies.dropFirst().first }
     }
 }
 
 // MARK: - Trending Hub View
 struct TrendingHubView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var movies: [Movie] = []; @State private var actors: [Person] = []
+    @State private var movies: [Movie] = []
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
                     Text("🔥 Trending hôm nay").font(.largeTitle.bold()).foregroundColor(.white).padding(.top, 60).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                    if !movies.isEmpty {
-                        Text("Phim hot").font(.headline).foregroundColor(.white).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                        ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 12) { ForEach(movies.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal, 16) }
-                    }
-                    if !actors.isEmpty {
-                        Text("Diễn viên hot").font(.headline).foregroundColor(.white).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
-                        ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 14) { ForEach(actors.prefix(10)) { p in VStack(spacing: 4) { if let path = p.profilePath, let url = URL(string: "https://image.tmdb.org/t/p/w200\(path)") { CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(width: 70, height: 70).clipShape(Circle()) } else { Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 70, height: 70) }; Text(p.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1) }.frame(width: 80) } }.padding(.horizontal, 16) }
-                    }
+                    ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 12) { ForEach(movies.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal, 16) }
                     Spacer().frame(height: 100)
                 }
             }
             Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }.padding(.top, 54).padding(.leading, 20)
-        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.discoverMovies(minRating: 7.0, minVotes: 500)) ?? []; actors = (try? await APIService.shared.trendingPersons()) ?? [] }
+        }.navigationBarHidden(true).task { movies = (try? await APIService.shared.popular()) ?? [] }
     }
 }
 
@@ -335,7 +315,7 @@ struct UniverseView: View {
     }
 }
 
-// MARK: - CategoryFullView (giữ nguyên)
+// MARK: - CategoryFullView
 struct CategoryFullView: View {
     let category: CategoryConfig
     @State private var movies: [Movie] = []
