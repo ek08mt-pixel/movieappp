@@ -247,13 +247,16 @@ struct WatchTogetherRoomView: View {
                             VStack(spacing: 0) {
                                 HStack {
                                     Button {
-                                        player.pause()
-                                        player.replaceCurrentItem(with: nil)
-                                        service.leaveRoomTemporarily(movieTitle: currentMovieTitle)
-                                        service.isInRoom = false
-                                        service.currentRoomCode = ""
-                                        service.currentRoomName = ""
-                                    } label: {
+    player.pause()
+    player.replaceCurrentItem(with: nil)
+    let movie = currentMovieTitle
+    service.leaveRoomTemporarily(movieTitle: movie)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        service.isInRoom = false
+        service.currentRoomCode = ""
+        service.currentRoomName = ""
+    }
+} label: {
                                         Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     }
                                     Spacer()
