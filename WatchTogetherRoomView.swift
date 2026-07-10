@@ -41,19 +41,19 @@ struct WatchTogetherRoomView: View {
     @State private var selectedEpisode: TVEpisode?
     
     @State private var fakeRooms: [FakeRoom] = [
-        FakeRoom(roomName: "Người deep", movieTitle: "Oppenheimer", viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"], isPrivate: false),
-        FakeRoom(roomName: "🌙 Đêm kinh dị", movieTitle: "The Nun II", viewerCount: 3, avatars: ["🦊","🐸","🐵"], isPrivate: true),
-        FakeRoom(roomName: "cấm zo", movieTitle: "How to Lose a Guy", viewerCount: 5, avatars: ["🐮","🐷","🐹","🐭","🦄"], isPrivate: false),
-        FakeRoom(roomName: "⚡ Marvel Marathon", movieTitle: "Avengers: Endgame", viewerCount: 6, avatars: ["🐱","🐼","🐨","🐯","🦊","🐙"], isPrivate: false),
-        FakeRoom(roomName: "Hàn xẻng xỉu up", movieTitle: "Parasite", viewerCount: 2, avatars: ["🐶","🐰"], isPrivate: false),
-        FakeRoom(roomName: "Rock & Movie", movieTitle: "Bohemian Rhapsody", viewerCount: 4, avatars: ["🐻","🐼","🐨","🐯"], isPrivate: true),
-        FakeRoom(roomName: "🌌 Sci fi Universe", movieTitle: "Dune: Part Two", viewerCount: 5, avatars: ["🦊","🐸","🐵","🐮","🐷"], isPrivate: false),
-        FakeRoom(roomName: "babi xinh iuu", movieTitle: "Deadpool 3", viewerCount: 6, avatars: ["🐹","🐭","🦄","🐙","🐱","🐶"], isPrivate: false),
-        FakeRoom(roomName: "👻 Ma sì to ri", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true),
-        FakeRoom(roomName: "Indie Corner", movieTitle: "Everything Everywhere", viewerCount: 2, avatars: ["🐨","🐯"], isPrivate: false),
-        FakeRoom(roomName: "Anime", movieTitle: "Spirited Away", viewerCount: 4, avatars: ["🦊","🐸","🐵","🐮"], isPrivate: false),
-        FakeRoom(roomName: "🔥 Hot Pick", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false),
-    ]
+    FakeRoom(roomName: "🎬 Deadpool 3", movieTitle: "Deadpool & Wolverine", viewerCount: 6, avatars: ["🐱","🐶","🐰","🐻","🐼","🐨"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "01:12:45"),
+    FakeRoom(roomName: "🌙 Đêm kinh dị", movieTitle: "The Nun II", viewerCount: 3, avatars: ["🦊","🐸","🐵"], isPrivate: true, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:32:18"),
+    FakeRoom(roomName: "⚡ Marvel Marathon", movieTitle: "Avengers: Endgame", viewerCount: 6, avatars: ["🐱","🐼","🐨","🐯","🦊","🐙"], isPrivate: false, posterPath: "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", currentTime: "02:45:10"),
+    FakeRoom(roomName: "🍿 Phim Hàn xỉu up", movieTitle: "Parasite", viewerCount: 4, avatars: ["🐶","🐰","🐷","🐹"], isPrivate: false, posterPath: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", currentTime: "01:05:33"),
+    FakeRoom(roomName: "🎸 Rock & Movie", movieTitle: "Bohemian Rhapsody", viewerCount: 4, avatars: ["🐻","🐼","🐨","🐯"], isPrivate: true, posterPath: "/lHu1wtNaczFPgfDvJflLyh1HdxH.jpg", currentTime: "00:58:22"),
+    FakeRoom(roomName: "🌌 Sci-fi Universe", movieTitle: "Dune: Part Two", viewerCount: 5, avatars: ["🦊","🐸","🐵","🐮","🐷"], isPrivate: false, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", currentTime: "01:42:08"),
+    FakeRoom(roomName: "😂 Cười vỡ bụng", movieTitle: "Deadpool 3", viewerCount: 6, avatars: ["🐹","🐭","🦄","🐙","🐱","🐶"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "00:22:55"),
+    FakeRoom(roomName: "👻 Ghost Stories", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true, posterPath: "/nAU74GmpUk7t5iklEp3bufwDq4n.jpg", currentTime: "00:47:12"),
+    FakeRoom(roomName: "🎥 Indie Corner", movieTitle: "Everything Everywhere", viewerCount: 2, avatars: ["🐨","🐯"], isPrivate: false, posterPath: "/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", currentTime: "01:28:40"),
+    FakeRoom(roomName: "🇯🇵 Anime Night", movieTitle: "Spirited Away", viewerCount: 4, avatars: ["🦊","🐸","🐵","🐮"], isPrivate: false, posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", currentTime: "01:55:00"),
+    FakeRoom(roomName: "🔥 Hot Pick", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false, posterPath: "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg", currentTime: "00:15:30"),
+    FakeRoom(roomName: "💕 Romcom Night", movieTitle: "How to Lose a Guy", viewerCount: 3, avatars: ["🐮","🐷","🐹"], isPrivate: false, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:38:55"),
+]
     
     @State private var refreshTimer: Timer?
     let backupRoomNames = ["ai đoá ai đóa", "gigi ngungục", "ziku", "Music & Movie", "📺 Series Addict", "bò cinema", "newjeans neverdie", "🔥 Trending Now", "Hidden Gems", "hanpham", "🌴 Tropical Night", "siu anh hùng"]
