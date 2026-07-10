@@ -578,7 +578,7 @@ struct WatchTogetherRoomView: View {
                                     Text("\(ep.episodeNumber)").font(.system(size: 13, weight: .medium))
                                         .foregroundColor(selectedEpisode?.id == ep.id ? .black : .white)
                                         .frame(height: 36).frame(maxWidth: .infinity)
-                                        .background(RoundedRectangle(cornerRadius: 8).fill(selectedEpisode?.id == ep.id ? .white : .ultraThinMaterial.opacity(0.3)))
+                                        .background(RoundedRectangle(cornerRadius: 8).fill(selectedEpisode?.id == ep.id ? Color.white : Color.white.opacity(0.15)))
                                 }
                             }
                         }.padding(.horizontal, 16)
