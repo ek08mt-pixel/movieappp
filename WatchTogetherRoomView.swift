@@ -1,22 +1,21 @@
 import SwiftUI
 import AVKit
 
-// MARK: - Fake Room Data for Lobby
+// MARK: - Fake Room Model
 struct FakeRoom: Identifiable {
     let id = UUID()
-    let roomName: String
-    let movieTitle: String
-    let posterPath: String?
-    let viewerCount: Int
-    let avatars: [String]
+    var roomName: String
+    var movieTitle: String
+    var viewerCount: Int
+    var avatars: [String]
+    var isPrivate: Bool
 }
 
-// MARK: - Main Watch Together View
+// MARK: - Main View
 struct WatchTogetherRoomView: View {
     @StateObject private var service = WatchTogetherService.shared
     @State private var player = AVPlayer()
     @State private var currentTime: Double = 0
-    @State private var showChat = true
     @State private var showViewerPanel = false
     @State private var watchMessage = ""
     @State private var userName = ""
@@ -25,14 +24,36 @@ struct WatchTogetherRoomView: View {
     @State private var showCreateRoom = false
     @State private var showSearchMovie = false
     
-    // Fake rooms for lobby
-    let fakeRooms: [FakeRoom] = [
-        FakeRoom(roomName: "Phim kinh dị đêm", movieTitle: "The Conjuring", posterPath: nil, viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"]),
-        FakeRoom(roomName: "Romantic night", movieTitle: "Titanic", posterPath: nil, viewerCount: 6, avatars: ["🦊","🐸","🐵","🐮","🐷","🐹"]),
-        FakeRoom(roomName: "Anime fans", movieTitle: "Your Name", posterPath: nil, viewerCount: 3, avatars: ["🐭","🦄","🐙"]),
-        FakeRoom(roomName: "Marathon Marvel", movieTitle: "Avengers: Endgame", posterPath: nil, viewerCount: 5, avatars: ["🐱","🐼","🐨","🐯","🦊"]),
-        FakeRoom(roomName: "Hài cuối tuần", movieTitle: "Deadpool", posterPath: nil, viewerCount: 2, avatars: ["🐶","🐰"]),
-        FakeRoom(roomName: "Sci-fi night", movieTitle: "Interstellar", posterPath: nil, viewerCount: 6, avatars: ["🐻","🐼","🐨","🐯","🦊","🐸"]),
+    // Fake rooms với tên đa dạng như người thật
+    @State private var fakeRooms: [FakeRoom] = [
+        FakeRoom(roomName: "🎬 Cinephile Club", movieTitle: "Oppenheimer", viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"], isPrivate: false),
+        FakeRoom(roomName: "🌙 Đêm kinh dị", movieTitle: "The Nun II", viewerCount: 3, avatars: ["🦊","🐸","🐵"], isPrivate: true),
+        FakeRoom(roomName: "💕 Romcom Lovers", movieTitle: "How to Lose a Guy", viewerCount: 5, avatars: ["🐮","🐷","🐹","🐭","🦄"], isPrivate: false),
+        FakeRoom(roomName: "⚡ Marvel Marathon", movieTitle: "Avengers: Endgame", viewerCount: 6, avatars: ["🐱","🐼","🐨","🐯","🦊","🐙"], isPrivate: false),
+        FakeRoom(roomName: "🍿 Phim Hàn xỉu up", movieTitle: "Parasite", viewerCount: 2, avatars: ["🐶","🐰"], isPrivate: false),
+        FakeRoom(roomName: "🎸 Rock & Movie", movieTitle: "Bohemian Rhapsody", viewerCount: 4, avatars: ["🐻","🐼","🐨","🐯"], isPrivate: true),
+        FakeRoom(roomName: "🌌 Sci-fi Universe", movieTitle: "Dune: Part Two", viewerCount: 5, avatars: ["🦊","🐸","🐵","🐮","🐷"], isPrivate: false),
+        FakeRoom(roomName: "😂 Cười vỡ bụng", movieTitle: "Deadpool 3", viewerCount: 6, avatars: ["🐹","🐭","🦄","🐙","🐱","🐶"], isPrivate: false),
+        FakeRoom(roomName: "👻 Ghost Stories", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true),
+        FakeRoom(roomName: "🎥 Indie Corner", movieTitle: "Everything Everywhere", viewerCount: 2, avatars: ["🐨","🐯"], isPrivate: false),
+        FakeRoom(roomName: "🇯🇵 Anime Night", movieTitle: "Spirited Away", viewerCount: 4, avatars: ["🦊","🐸","🐵","🐮"], isPrivate: false),
+        FakeRoom(roomName: "🔥 Hot Pick", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false),
+    ]
+    
+    // Timer để tự động đổi tên phòng
+    @State private var refreshTimer: Timer?
+    
+    // Danh sách tên dự phòng để đổi
+    let backupRoomNames = [
+        "🎭 Late Night Movies", "🌟 StarGazers", "🍕 Pizza & Film",
+        "🎵 Music & Movie", "📺 Series Addict", "🏠 Home Cinema",
+        "🌊 Chill Waves", "🔥 Trending Now", "💎 Hidden Gems",
+        "🎪 Movie Circus", "🌴 Tropical Night", "🦸 Hero Squad"
+    ]
+    let backupMovies = [
+        "Barbie", "The Batman", "Spider-Man", "Joker",
+        "Inception", "Tenet", "Dunkirk", "Memento",
+        "La La Land", "Whiplash", "Get Out", "Us"
     ]
     
     var body: some View {
@@ -47,9 +68,26 @@ struct WatchTogetherRoomView: View {
                 lobbyView
             }
         }
+        .onAppear { startFakeRoomRefresh() }
+        .onDisappear { refreshTimer?.invalidate() }
     }
     
-    // MARK: - Lobby View
+    // MARK: - Auto refresh fake rooms
+    func startFakeRoomRefresh() {
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
+                // Đổi 2-3 room ngẫu nhiên
+                for _ in 0..<3 {
+                    let idx = Int.random(in: 0..<fakeRooms.count)
+                    fakeRooms[idx].roomName = backupRoomNames.randomElement() ?? fakeRooms[idx].roomName
+                    fakeRooms[idx].movieTitle = backupMovies.randomElement() ?? fakeRooms[idx].movieTitle
+                    fakeRooms[idx].viewerCount = Int.random(in: 2...6)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Lobby
     var lobbyView: some View {
         VStack(spacing: 0) {
             HStack {
@@ -61,113 +99,97 @@ struct WatchTogetherRoomView: View {
                     showCreateRoom = true
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 26))
                         .foregroundColor(.white)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 50)
-            .padding(.bottom, 12)
+            .padding(.bottom, 16)
             
             ScrollView {
-                VStack(spacing: 14) {
-                    if service.isInRoom {
-                        realRoomCard
-                    }
-                    
+                VStack(spacing: 12) {
                     ForEach(fakeRooms) { room in
                         fakeRoomCard(room)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 100)
+                .padding(.bottom, 120)
             }
-        }
-    }
-    
-    var realRoomCard: some View {
-        Button {
-            // Đã trong room, không cần action
-        } label: {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial.opacity(0.4))
-                    .frame(width: 60, height: 80)
-                    .overlay(Image(systemName: "film").foregroundColor(.white))
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(service.currentRoomName)
-                        .font(.headline).foregroundColor(.white)
-                    Text("Bạn đang trong phòng")
-                        .font(.caption).foregroundColor(.gray)
-                    HStack(spacing: -6) {
-                        ForEach(service.participants.prefix(4), id: \.userId) { p in
-                            Text(p.avatar).font(.system(size: 14))
-                                .frame(width: 24, height: 24)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                        }
-                        Text("+\(service.participants.count)")
-                            .font(.caption).foregroundColor(.gray)
-                    }
-                }
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.3)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
         }
     }
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
-        Button {
-            // Fake room - hiện tại chỉ show
-        } label: {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial.opacity(0.4))
-                    .frame(width: 60, height: 80)
-                    .overlay(
-                        Image(systemName: "play.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white.opacity(0.8))
-                    )
-                
-                VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 12) {
+            // Poster placeholder
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial.opacity(0.35))
+                .frame(width: 64, height: 88)
+                .overlay(
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.white.opacity(0.7))
+                )
+            
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
                     Text(room.roomName)
-                        .font(.headline).foregroundColor(.white)
-                    Text(room.movieTitle)
-                        .font(.caption).foregroundColor(.gray)
-                    HStack(spacing: -6) {
-                        ForEach(room.avatars, id: \.self) { av in
-                            Text(av).font(.system(size: 12))
-                                .frame(width: 24, height: 24)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                        }
-                        Text("\(room.viewerCount) người")
-                            .font(.caption2).foregroundColor(.white.opacity(0.6))
-                    }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Image(systemName: room.isPrivate ? "lock.fill" : "globe")
+                        .font(.system(size: 8))
+                        .foregroundColor(.white.opacity(0.4))
+                        .padding(3)
+                        .background(Circle().fill(.white.opacity(0.1)))
                 }
-                Spacer()
-                VStack(spacing: 4) {
-                    Circle().fill(.green).frame(width: 8, height: 8)
-                    Text("Live").font(.system(size: 8)).foregroundColor(.green)
+                Text(room.movieTitle)
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                
+                HStack(spacing: 8) {
+                    // Avatars
+                    HStack(spacing: -8) {
+                        ForEach(room.avatars.prefix(4), id: \.self) { av in
+                            Text(av)
+                                .font(.system(size: 11))
+                                .frame(width: 22, height: 22)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                                .overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 0.5))
+                        }
+                    }
+                    Text("\(room.viewerCount) người")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.5))
+                        .padding(.leading, 4)
                 }
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+            
+            Spacer()
+            
+            // Live indicator
+            VStack(spacing: 3) {
+                Circle().fill(.green).frame(width: 6, height: 6)
+                Text("Live").font(.system(size: 7)).foregroundColor(.green.opacity(0.8))
+            }
+            .padding(.trailing, 4)
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.ultraThinMaterial.opacity(0.22))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.06), lineWidth: 0.5)
+        )
     }
     
-    // MARK: - Create Room View
+    // MARK: - Create Room
     var createRoomView: some View {
         VStack(spacing: 20) {
             HStack {
-                Button {
-                    showCreateRoom = false
-                } label: {
+                Button { showCreateRoom = false } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
@@ -179,19 +201,16 @@ struct WatchTogetherRoomView: View {
                 Spacer()
                 Circle().fill(.clear).frame(width: 40)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 50)
+            .padding(.horizontal, 16).padding(.top, 50)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 TextField("Tên của bạn", text: $userName)
-                    .font(.system(size: 14)).foregroundColor(.white)
-                    .padding(14)
+                    .font(.system(size: 14)).foregroundColor(.white).padding(14)
                     .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 
                 TextField("Tên phòng", text: $roomName)
-                    .font(.system(size: 14)).foregroundColor(.white)
-                    .padding(14)
+                    .font(.system(size: 14)).foregroundColor(.white).padding(14)
                     .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
                 
@@ -201,8 +220,7 @@ struct WatchTogetherRoomView: View {
                         showCreateRoom = false
                     }
                 } label: {
-                    Text("Tạo phòng")
-                        .font(.headline).foregroundColor(.white)
+                    Text("Tạo phòng").font(.headline).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
                         .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
@@ -215,8 +233,7 @@ struct WatchTogetherRoomView: View {
                 }
                 
                 TextField("Nhập mã phòng", text: $joinCode)
-                    .font(.system(size: 14)).foregroundColor(.white)
-                    .padding(14)
+                    .font(.system(size: 14)).foregroundColor(.white).padding(14)
                     .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.2)))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
                     .keyboardType(.numberPad)
@@ -227,48 +244,42 @@ struct WatchTogetherRoomView: View {
                         if success { showCreateRoom = false }
                     }
                 } label: {
-                    Text("Vào phòng")
-                        .font(.headline).foregroundColor(.white)
+                    Text("Vào phòng").font(.headline).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
                         .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
                 }
             }
             .padding(.horizontal, 20)
-            
             Spacer()
         }
         .background(Color.black.ignoresSafeArea())
     }
     
-    // MARK: - In Room View
+    // MARK: - In Room
     var inRoomView: some View {
         GeometryReader { geo in
             let isLandscape = geo.size.width > geo.size.height
             
             ZStack {
                 if isLandscape {
-                    CustomPlayerVC(player: player, pipController: .constant(nil))
-                        .ignoresSafeArea()
-                    
-                    if showChat {
-                        VStack {
-                            Spacer()
-                            chatOverlayPortrait
-                                .frame(height: geo.size.height * 0.25)
-                        }
-                        .transition(.move(edge: .bottom))
-                    }
+                    CustomPlayerVC(player: player, pipController: .constant(nil)).ignoresSafeArea()
                 } else {
                     VStack(spacing: 0) {
                         CustomPlayerVC(player: player, pipController: .constant(nil))
                             .frame(height: geo.size.height * 0.5)
-                        
-                        chatOverlayPortrait
-                            .frame(height: geo.size.height * 0.5)
+                        Spacer(minLength: 0)
                     }
                 }
                 
+                // Chat overlay - mỏng dưới cùng, trong suốt
+                VStack {
+                    Spacer()
+                    raveChatOverlay
+                        .frame(height: isLandscape ? geo.size.height * 0.22 : geo.size.height * 0.42)
+                }
+                
+                // Top bar
                 VStack {
                     HStack {
                         Button {
@@ -311,17 +322,13 @@ struct WatchTogetherRoomView: View {
                     Spacer()
                 }
             }
-            .animation(.spring(response: 0.35), value: showChat)
         }
         .ignoresSafeArea()
         .sheet(isPresented: $showViewerPanel) {
-            viewerPanel
-                .presentationDetents([.medium])
+            viewerPanel.presentationDetents([.medium])
         }
         .sheet(isPresented: $showSearchMovie) {
-            SearchView(onSelectMovie: { movie in
-                loadMovieForRoom(movie)
-            })
+            SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) })
         }
         .onChange(of: service.remoteState?.timestamp) { _ in
             guard let state = service.remoteState, !service.isHost else { return }
@@ -337,6 +344,97 @@ struct WatchTogetherRoomView: View {
         }
     }
     
+    // MARK: - Rave-style Chat Overlay
+    var raveChatOverlay: some View {
+        VStack(spacing: 0) {
+            // Tin nhắn - hiển thị ngang, trong suốt
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(service.messages) { msg in
+                            raveChatRow(msg).id(msg.id)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                }
+                .onChange(of: service.messages.count) { _ in
+                    if let last = service.messages.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+            }
+            
+            // Input bar - mỏng, trong suốt
+            HStack(spacing: 6) {
+                TextField("", text: $watchMessage)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(.white.opacity(0.06)))
+                    .overlay(Capsule().stroke(.white.opacity(0.08), lineWidth: 0.5))
+                    .overlay(
+                        HStack {
+                            if watchMessage.isEmpty {
+                                Text("Nhắn tin...")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white.opacity(0.25))
+                                    .padding(.leading, 16)
+                            }
+                            Spacer()
+                        }
+                    )
+                    .onSubmit { sendRaveMessage() }
+                
+                Button { sendRaveMessage() } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(watchMessage.isEmpty ? .white.opacity(0.15) : .white)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .padding(.bottom, 2)
+        }
+        .background(.ultraThinMaterial.opacity(0.45))
+    }
+    
+    // Chat row kiểu Rave: avatar + tên + text trên 1 dòng
+    func raveChatRow(_ msg: WatchTogetherService.ChatMessage) -> some View {
+        HStack(spacing: 5) {
+            Text(msg.avatar)
+                .font(.system(size: 10))
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+            
+            Text(msg.userName)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.white.opacity(0.7))
+                .lineLimit(1)
+            
+            Text(msg.text)
+                .font(.system(size: 11))
+                .foregroundColor(.white)
+                .lineLimit(2)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.white.opacity(0.03))
+        )
+    }
+    
+    func sendRaveMessage() {
+        let trimmed = watchMessage.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        service.sendMessage(text: trimmed)
+        watchMessage = ""
+    }
+    
     // MARK: - Load Movie
     func loadMovieForRoom(_ movie: Movie) {
         Task {
@@ -344,15 +442,9 @@ struct WatchTogetherRoomView: View {
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
                 let url = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
                     PhimAPIService.shared.fetchStream(
-                        imdbID: imdbID,
-                        tmdbID: movie.id,
-                        title: movie.title,
-                        mediaType: movie.mediaType,
-                        season: nil,
-                        episode: nil
-                    ) { result in
-                        cont.resume(with: result)
-                    }
+                        imdbID: imdbID, tmdbID: movie.id, title: movie.title,
+                        mediaType: movie.mediaType, season: nil, episode: nil
+                    ) { cont.resume(with: $0) }
                 }
                 await MainActor.run {
                     player.replaceCurrentItem(with: AVPlayerItem(url: url))
@@ -362,7 +454,7 @@ struct WatchTogetherRoomView: View {
                     }
                 }
             } catch {
-                print("Load movie error: \(error)")
+                print("Load error: \(error)")
             }
         }
     }
@@ -380,74 +472,6 @@ struct WatchTogetherRoomView: View {
         return id
     }
     
-    // MARK: - Chat Overlay
-    var chatOverlayPortrait: some View {
-        VStack(spacing: 0) {
-            let msgs = service.messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 4) {
-                        ForEach(msgs) { msg in
-                            inRoomChatBubble(msg).id(msg.id)
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                }
-                .onChange(of: msgs.count) { _ in
-                    if let last = msgs.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                }
-            }
-            
-            HStack(spacing: 6) {
-                TextField("Nhắn tin...", text: $watchMessage)
-                    .font(.system(size: 13)).foregroundColor(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.3)))
-                    .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
-                    .onSubmit { sendInRoomMessage() }
-                
-                Button { sendInRoomMessage() } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(watchMessage.isEmpty ? .white.opacity(0.2) : .white)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .padding(.bottom, 4)
-        }
-        .background(.ultraThinMaterial.opacity(0.6))
-    }
-    
-    func inRoomChatBubble(_ msg: WatchTogetherService.ChatMessage) -> some View {
-        HStack(spacing: 6) {
-            Text(msg.avatar).font(.system(size: 12))
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-            
-            VStack(alignment: .leading, spacing: 1) {
-                Text(msg.userName)
-                    .font(.system(size: 8)).foregroundColor(.white.opacity(0.6))
-                Text(msg.text)
-                    .font(.system(size: 12)).foregroundColor(.white)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.04)))
-    }
-    
-    func sendInRoomMessage() {
-        let trimmed = watchMessage.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        service.sendMessage(text: trimmed)
-        watchMessage = ""
-    }
-    
     // MARK: - Viewer Panel
     var viewerPanel: some View {
         VStack(spacing: 0) {
@@ -455,19 +479,15 @@ struct WatchTogetherRoomView: View {
             Text("Người xem (\(service.participants.count))")
                 .font(.headline).foregroundColor(.white).padding(.vertical, 12)
             
-            let parts = service.participants
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(parts, id: \.userId) { p in
+                    ForEach(service.participants, id: \.userId) { p in
                         HStack(spacing: 12) {
                             Text(p.avatar).font(.system(size: 28))
                                 .frame(width: 48, height: 48)
                                 .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                                .overlay(
-                                    Circle().fill(p.isOnline ? Color.green : Color.gray)
-                                        .frame(width: 10, height: 10)
-                                        .offset(x: 17, y: 17)
-                                )
+                                .overlay(Circle().fill(p.isOnline ? Color.green : Color.gray)
+                                    .frame(width: 10, height: 10).offset(x: 17, y: 17))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(p.userName).font(.system(size: 14, weight: .medium)).foregroundColor(.white)
                                 Text(p.isOnline ? "Đang xem" : "Đã rời").font(.system(size: 11)).foregroundColor(.gray)
