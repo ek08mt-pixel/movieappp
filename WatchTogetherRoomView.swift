@@ -31,6 +31,7 @@ struct WatchTogetherRoomView: View {
     @State private var currentMovieTitle = ""
     @State private var pipController: AVPictureInPictureController?
     @FocusState private var isInputFocused: Bool
+    @State private var keyboardHeight: CGFloat = 0
     
     @State private var fakeRooms: [FakeRoom] = [
         FakeRoom(roomName: "Người deep", movieTitle: "Oppenheimer", viewerCount: 4, avatars: ["🐱","🐶","🐰","🐻"], isPrivate: false),
@@ -63,7 +64,17 @@ struct WatchTogetherRoomView: View {
                 lobbyView
             }
         }
-        .onAppear { startFakeRoomRefresh() }
+        .onAppear {
+            startFakeRoomRefresh()
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { n in
+                if let frame = n.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = frame.height
+                }
+            }
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
+            }
+        }
         .onDisappear { refreshTimer?.invalidate(); controlsTimer?.invalidate() }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
             let o = UIDevice.current.orientation
@@ -131,7 +142,7 @@ struct WatchTogetherRoomView: View {
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.06), lineWidth: 0.5))
     }
     
-    // MARK: - Create Room (giữ nguyên)
+    // MARK: - Create Room
     var createRoomView: some View {
         VStack(spacing: 20) {
             HStack {
@@ -190,8 +201,8 @@ struct WatchTogetherRoomView: View {
                     VStack(spacing: 0) {
                         ZStack {
                             CustomPlayerVC(player: player, pipController: $pipController)
-                            VStack {
-                                // Back button
+                            VStack(spacing: 0) {
+                                // Top bar
                                 HStack {
                                     Button {
                                         service.leaveRoom(); player.pause(); player.replaceCurrentItem(with: nil)
@@ -215,18 +226,17 @@ struct WatchTogetherRoomView: View {
                                 }
                                 .padding(.horizontal, 12).padding(.top, 50)
                                 
-                                Spacer()
-                                
-                                // Dynamic island ở trên cùng video
+                                // Dynamic island - ngay dưới top bar
                                 if showControls {
                                     dynamicIslandView
-                                        .padding(.bottom, 4)
+                                        .padding(.top, 6)
                                         .transition(.move(edge: .top).combined(with: .opacity))
                                 }
                                 
+                                Spacer()
+                                
                                 // Nút play giữa video
                                 if showControls {
-                                    Spacer()
                                     HStack(spacing: 44) {
                                         Button { seek(-10) } label: {
                                             Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
@@ -242,8 +252,9 @@ struct WatchTogetherRoomView: View {
                                         }
                                     }
                                     .transition(.opacity)
-                                    Spacer()
                                 }
+                                
+                                Spacer()
                             }
                         }
                         .frame(height: geo.size.height * 0.42)
@@ -291,8 +302,8 @@ struct WatchTogetherRoomView: View {
                 Image(systemName: "chevron.up").font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
             }
             .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(Capsule().fill(.ultraThinMaterial.opacity(0.7)))
-            .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
+            .background(Capsule().fill(.ultraThinMaterial.opacity(0.65)))
+            .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
         }
     }
     
@@ -338,34 +349,37 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header trong khung chat
+            // Header bo tròn liquid glass trong suốt nhẹ
             HStack {
                 Text(service.currentRoomName)
-                    .font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
+                    .font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
                 Text("#\(service.currentRoomCode)")
-                    .font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
-                    .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(.white.opacity(0.1)))
+                    .font(.system(size: 10)).foregroundColor(.white.opacity(0.5))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.3)))
                 Spacer()
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button { showSearchMovie = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.35)))
                     }
                     Button { showViewerPanel = true } label: {
                         HStack(spacing: -4) {
                             ForEach(service.participants.prefix(2), id: \.userId) { p in
-                                Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.35)))
                             }
-                        }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
+                        }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.35)))
                     }
                 }
             }
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(.ultraThinMaterial.opacity(0.35))
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
+            .padding(.horizontal, 6).padding(.top, 4)
             
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 6) {
-                        Color.clear.frame(height: 2)
+                        Color.clear.frame(height: 4)
                         ForEach(Array(service.messages.enumerated()), id: \.element.id) { idx, msg in
                             imessageBubble(msg, showAvatar: shouldShowAvatar(at: idx))
                                 .id(msg.id)
@@ -383,22 +397,24 @@ struct WatchTogetherRoomView: View {
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .focused($isInputFocused)
-                    .font(.system(size: 16)).foregroundColor(.white)
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 22).fill(.ultraThinMaterial.opacity(0.5)))
-                    .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18).padding(.vertical, 14)
+                    .background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.5)))
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
                     .onSubmit { sendImessage() }
-                    .onTapGesture { isInputFocused = true }
                 
                 if !watchMessage.isEmpty {
                     Button { sendImessage() } label: {
-                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 34)).foregroundColor(.white)
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white)
                     }
                 }
             }
-            .padding(.horizontal, 14).padding(.vertical, 10).padding(.bottom, 24)
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .padding(.bottom, max(keyboardHeight > 0 ? 8 : 28, 8))
+            .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
-        .background(.ultraThinMaterial.opacity(0.18))
+        .background(.ultraThinMaterial.opacity(0.12))
     }
     
     func shouldShowAvatar(at index: Int) -> Bool {
@@ -517,8 +533,7 @@ struct WatchTogetherRoomView: View {
         VStack(spacing: 0) {
             Capsule().fill(.gray.opacity(0.5)).frame(width: 36, height: 5).padding(.top, 10)
             Text("Chọn tập").font(.headline).foregroundColor(.white).padding(.vertical, 12)
-            Text("Tính năng đang phát triển").font(.caption).foregroundColor(.gray)
-                .frame(maxHeight: .infinity)
+            Text("Tính năng đang phát triển").font(.caption).foregroundColor(.gray).frame(maxHeight: .infinity)
         }.background(Color.black.opacity(0.95))
     }
 }
