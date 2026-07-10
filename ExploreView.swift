@@ -34,8 +34,8 @@ struct ExploreView: View {
                                 VStack(spacing: 6) { Text("🎵").font(.system(size: 26)); Text("OST").font(.system(size: 10)).foregroundColor(.white) }
                                     .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
-                            NavigationLink(destination: MoodPickerView()) {
-                                VStack(spacing: 6) { Text("🎭").font(.system(size: 26)); Text("Mood").font(.system(size: 10)).foregroundColor(.white) }
+                            NavigationLink(destination: FilmHubView()) {
+                                VStack(spacing: 6) { Text("🎬").font(.system(size: 26)); Text("Góc phim").font(.system(size: 10)).foregroundColor(.white) }
                                     .frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
                             }
                             NavigationLink(destination: TimelineView()) {
@@ -121,6 +121,166 @@ struct ExploreView: View {
     }
 }
 
+// MARK: - Film Hub View (Góc phim)
+struct FilmHubView: View {
+    @Environment(\.dismiss) var dismiss
+    
+    let hubItems: [(String, String)] = [
+        ("⭐", "Diễn viên hot"),
+        ("🎬", "Đạo diễn tài ba"),
+        ("🏆", "Phim đoạt giải"),
+        ("📅", "Ngày này năm xưa"),
+        ("👥", "Cặp bài trùng"),
+        ("💬", "Quote huyền thoại"),
+        ("🔗", "So sánh phim"),
+        ("📊", "Top doanh thu"),
+        ("🎪", "Vũ trụ điện ảnh"),
+        ("🔥", "Trending hôm nay"),
+    ]
+    
+    let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 14) {
+                    Text("Góc phim")
+                        .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
+                        .padding(.top, 60).padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(hubItems, id: \.1) { emoji, title in
+                            NavigationLink(destination: hubDestination(for: title)) {
+                                VStack(spacing: 8) {
+                                    Text(emoji).font(.system(size: 36))
+                                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
+                                    Text(hubSubtitle(for: title)).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 24)
+                                .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.25)))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    Spacer().frame(height: 120)
+                }
+            }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
+            }
+            .padding(.top, 54).padding(.leading, 20)
+        }
+        .navigationBarHidden(true)
+    }
+    
+    func hubSubtitle(for title: String) -> String {
+        switch title {
+        case "Diễn viên hot": return "Ngôi sao đang được yêu thích"
+        case "Đạo diễn tài ba": return "Nhà làm phim xuất sắc"
+        case "Phim đoạt giải": return "Oscar, Cannes & more"
+        case "Ngày này năm xưa": return "Phim công chiếu hôm nay"
+        case "Cặp bài trùng": return "Bạn diễn ăn ý nhất"
+        case "Quote huyền thoại": return "Câu thoại bất hủ"
+        case "So sánh phim": return "Đối đầu điện ảnh"
+        case "Top doanh thu": return "Phòng vé toàn cầu"
+        case "Vũ trụ điện ảnh": return "MCU, DC, Star Wars..."
+        case "Trending hôm nay": return "Phim & sao đang hot"
+        default: return ""
+        }
+    }
+    
+    @ViewBuilder
+    func hubDestination(for title: String) -> some View {
+        switch title {
+        case "Phim đoạt giải":
+            CategoryFullView(category: CategoryConfig(id: 0, name: "Oscar Winners", posterName: "", type: .keyword, tmdbId: 2959))
+        case "Top doanh thu":
+            CategoryFullView(category: CategoryConfig(id: 0, name: "Top Revenue", posterName: "", type: .keyword, tmdbId: 210024))
+        case "Vũ trụ điện ảnh":
+            UniverseView()
+        default:
+            VStack(spacing: 20) {
+                Image(systemName: "hammer.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.gray)
+                Text(title)
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+                Text("Đang phát triển")
+                    .foregroundColor(.gray)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.ignoresSafeArea())
+        }
+    }
+}
+
+// MARK: - Universe View
+struct UniverseView: View {
+    @Environment(\.dismiss) var dismiss
+    
+    let universes: [(String, String, Int, CategoryConfig.CategoryType)] = [
+        ("Marvel", "🦸", 420, .studio),
+        ("DC", "🦇", 429, .studio),
+        ("Star Wars", "⭐", 1, .studio),
+        ("Harry Potter", "⚡", 174, .studio),
+        ("Jurassic Park", "🦖", 56, .studio),
+        ("Fast & Furious", "🏎️", 3325, .studio),
+        ("James Bond", "🔫", 214, .studio),
+        ("Transformers", "🤖", 248, .studio),
+        ("Pirates of Caribbean", "🏴‍☠️", 285, .studio),
+    ]
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 14) {
+                    Text("Vũ trụ điện ảnh")
+                        .font(.largeTitle).fontWeight(.bold).foregroundColor(.white)
+                        .padding(.top, 60).padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    VStack(spacing: 10) {
+                        ForEach(universes, id: \.0) { name, emoji, tmdbId, type in
+                            NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: name, posterName: "", type: type, tmdbId: tmdbId))) {
+                                HStack(spacing: 12) {
+                                    Text(emoji).font(.system(size: 30))
+                                    Text(name).font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                                    Spacer()
+                                    Image(systemName: "chevron.right").foregroundColor(.gray)
+                                }
+                                .padding(.horizontal, 16).padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
+                            }
+                        }
+                    }.padding(.horizontal, 16)
+                    
+                    Spacer().frame(height: 120)
+                }
+            }
+            
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
+            }
+            .padding(.top, 54).padding(.leading, 20)
+        }
+        .navigationBarHidden(true)
+    }
+}
+
+// MARK: - CategoryFullView (giữ nguyên)
 struct CategoryFullView: View {
     let category: CategoryConfig
     @State private var movies: [Movie] = []
