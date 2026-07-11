@@ -101,24 +101,107 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-                    .overlay(
-                        videoControlsOverlay
-                            .allowsHitTesting(showControls)
-                    )
-                    .onTapGesture { toggleControlsInRoom() }
+                ZStack {
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                    
+                    if showControls {
+                        VStack(spacing: 0) {
+                            Color.clear.frame(height: 12)
+                            
+                            HStack {
+                                Button {
+                                    forcePortrait()
+                                } label: {
+                                    Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                }
+                                Spacer()
+                                Button { showEpisodePanel = true } label: {
+                                    Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                                }
+                                Spacer()
+                                Button { toggleOrientation() } label: {
+                                    Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                }
+                            }
+                            .padding(.horizontal, 12)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 36) {
+                                Button { seek(-10) } label: {
+                                    Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                                }
+                                Button {
+                                    if player.rate == 0 { player.play() } else { player.pause() }
+                                    if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
+                                } label: {
+                                    Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                }
+                                Button { seek(10) } label: {
+                                    Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                                }
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
-                        .frame(height: geo.size.width * 9 / 16)
-                        .clipped()
+                        .frame(height: min(geo.size.width * 9 / 16, geo.size.height * 0.55))
                         .overlay(
-                            videoControlsOverlay
-                                .allowsHitTesting(showControls)
+                            Group {
+                                if showControls {
+                                    VStack(spacing: 0) {
+                                        HStack {
+                                            Button {
+                                                player.pause()
+                                                player.replaceCurrentItem(with: nil)
+                                                service.leaveRoom()
+                                            } label: {
+                                                Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                            }
+                                            Spacer()
+                                            Button { showEpisodePanel = true } label: {
+                                                Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                                            }
+                                            Spacer()
+                                            Button { toggleOrientation() } label: {
+                                                Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                            }
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.top, 48)
+                                        
+                                        Spacer()
+                                        
+                                        HStack(spacing: 36) {
+                                            Button { seek(-10) } label: {
+                                                Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                                            }
+                                            Button {
+                                                if player.rate == 0 { player.play() } else { player.pause() }
+                                                if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
+                                            } label: {
+                                                Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                            }
+                                            Button { seek(10) } label: {
+                                                Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                }
+                            }
                         )
+                        .contentShape(Rectangle())
                         .onTapGesture { toggleControlsInRoom() }
+                    
                     imessageChatPanel
                 }
             }
@@ -132,60 +215,6 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    var videoControlsOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.001)
-            
-            if showControls {
-                VStack(spacing: 0) {
-                    HStack {
-                        Button {
-                            if isLandscape {
-                                forcePortrait()
-                            } else {
-                                player.pause()
-                                player.replaceCurrentItem(with: nil)
-                                service.leaveRoom()
-                            }
-                        } label: {
-                            Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                        }
-                        Spacer()
-                        Button { showEpisodePanel = true } label: {
-                            Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
-                        }
-                        Spacer()
-                        Button { toggleOrientation() } label: {
-                            Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, isLandscape ? 12 : 44)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 36) {
-                        Button { seek(-10) } label: {
-                            Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                        }
-                        Button {
-                            if player.rate == 0 { player.play() } else { player.pause() }
-                            if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
-                        } label: {
-                            Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                        }
-                        Button { seek(10) } label: {
-                            Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                        }
-                    }
-                    .padding(.bottom, isLandscape ? 20 : 0)
-                    
-                    Spacer()
-                }
-            }
-        }
-    }
-    
     func handleRemoteState() { guard let state = service.remoteState, !service.isHost else { return }; let target = CMTime(seconds: state.time, preferredTimescale: 600); if let ep = state.episodeNumber, let sn = state.seasonNumber { if selectedEpisode?.episodeNumber != ep || selectedSeason?.seasonNumber != sn { Task { if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: currentMovie?.id ?? 0, seasonNumber: sn), let episode = detail.episodes.first(where: { $0.episodeNumber == ep }) { await MainActor.run { selectedSeason = seasons.first(where: { $0.seasonNumber == sn }); selectedEpisode = episode; loadEpisode(episode) } } } } }; if state.action == "play" { player.seek(to: target); player.play() } else if state.action == "pause" { player.seek(to: target); player.pause() } else if state.action == "seek" { player.seek(to: target) } }
     func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: isLandscape ? .portrait : .landscapeRight)) }
     func toggleControlsInRoom() { withAnimation(.easeInOut(duration: 0.25)) { showControls.toggle() }; controlsTimer?.invalidate(); if showControls { resetControlsTimer() } }
@@ -197,7 +226,7 @@ struct WatchTogetherRoomView: View {
             HStack { VStack(alignment: .leading, spacing: 2) { Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1); Text(service.currentRoomName).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Spacer(); HStack(spacing: 6) { Button { showSearchMovie = true } label: { Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Button { showViewerPanel = true } label: { HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) } }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))) } } }
             .padding(.horizontal, 12).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))).padding(.horizontal, 8).padding(.top, 4)
             if duration > 0 { VStack(spacing: 2) { HStack { Text(formatTime(currentTime)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }; GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 3); Capsule().fill(.white.opacity(0.6)).frame(width: max(3, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 3) } }.frame(height: 3) }.padding(.horizontal, 12).padding(.vertical, 4) }
-            HStack(spacing: 20) { ForEach(["😭","🤡","👏","🥹","🔥","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } } }.padding(.horizontal, 12).padding(.vertical, 4)
+            HStack(spacing: 20) { ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } } }.padding(.horizontal, 12).padding(.vertical, 4)
             ScrollViewReader { proxy in ScrollView { LazyVStack(spacing: 4) { Color.clear.frame(height: 2); ForEach(Array(service.messages.enumerated()), id: \.element.id) { idx, msg in imessageBubble(msg, showAvatar: shouldShowAvatar(at: idx)).id(msg.id) }; Color.clear.frame(height: 4) }.padding(.horizontal, 12) }.onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } } }
             HStack(spacing: 10) { TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 16)).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 16).background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.6)).overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.12), lineWidth: 0.5))).onSubmit { sendImessage() }; if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 34)).foregroundColor(.white) } } }
             .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 15 : 12)
