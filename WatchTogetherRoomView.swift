@@ -137,12 +137,8 @@ struct WatchTogetherRoomView: View {
             
             if showControls {
                 VStack(spacing: 0) {
-                    // Header
                     HStack {
-                        Button {
-                            if isLandscape { forcePortrait() }
-                            else { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() }
-                        } label: {
+                        Button { if isLandscape { forcePortrait() } else { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } } label: {
                             Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                         Spacer()
@@ -159,7 +155,6 @@ struct WatchTogetherRoomView: View {
                     
                     Spacer()
                     
-                    // Center Controls
                     HStack(spacing: 36) {
                         Button { seek(-10) } label: {
                             Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
