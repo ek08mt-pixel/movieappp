@@ -101,15 +101,14 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-    HStack(spacing: 0) {
-        CustomPlayerVC(player: player, pipController: $pipController)
-            .frame(width: geo.size.width * 0.65)
-            .overlay { videoControlsOverlay }
-            .onTapGesture { toggleControlsInRoom() }
-        landscapeChatPanel
-            .frame(width: geo.size.width * 0.35)
-    }
-}
+                HStack(spacing: 0) {
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .frame(width: geo.size.width * 0.65)
+                        .overlay { videoControlsOverlay }
+                    landscapeChatPanel
+                        .frame(width: geo.size.width * 0.35)
+                }
+                .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
@@ -120,6 +119,15 @@ struct WatchTogetherRoomView: View {
                 }
             }
         }
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.3), value: showControls)
+        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
+        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
+        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
+        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
+        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
+    }
+    
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
