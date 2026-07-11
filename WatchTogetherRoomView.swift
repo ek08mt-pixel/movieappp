@@ -101,10 +101,15 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .overlay { videoControlsOverlay }
-                    .onTapGesture { toggleControlsInRoom() }
+    HStack(spacing: 0) {
+        CustomPlayerVC(player: player, pipController: $pipController)
+            .frame(width: geo.size.width * 0.65)
+            .overlay { videoControlsOverlay }
+            .onTapGesture { toggleControlsInRoom() }
+        landscapeChatPanel
+            .frame(width: geo.size.width * 0.35)
+    }
+}
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
