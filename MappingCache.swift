@@ -275,19 +275,42 @@ final class PhimAPIService {
     }
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let dataObj = json["data"] as? [String: Any], let items = dataObj["items"] as? [[String: Any]] {
-                    let bestMatch = self.findBestMatch(items: items, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
-                    if let match = bestMatch, let slug = match["slug"] as? String { self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion) }
-                    else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
-                } else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
-            } catch { completion(.failure(error)) }
-        }.resume()
+        guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
+        
+        func fetchPage(_ page: Int, accumulatedItems: [[String: Any]], done: @escaping ([[String: Any]]) -> Void) {
+            guard let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20&page=\(page)") else {
+                done(accumulatedItems)
+                return
+            }
+            URLSession.shared.dataTask(with: url) { data, _, error in
+                guard let data = data,
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      json["status"] as? String == "success",
+                      let dataObj = json["data"] as? [String: Any],
+                      let items = dataObj["items"] as? [[String: Any]] else {
+                    done(accumulatedItems)
+                    return
+                }
+                let allItems = accumulatedItems + items
+                let pagination = dataObj["params"] as? [String: Any] ?? dataObj["pagination"] as? [String: Any] ?? [:]
+                let totalPages = pagination["totalPages"] as? Int ?? 1
+                if page < totalPages {
+                    fetchPage(page + 1, accumulatedItems: allItems, done: done)
+                } else {
+                    done(allItems)
+                }
+            }.resume()
+        }
+        
+        fetchPage(1, accumulatedItems: []) { [weak self] allItems in
+            guard let self = self else { completion(.failure(StreamServiceError.noData)); return }
+            let bestMatch = self.findBestMatch(items: allItems, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
+            if let match = bestMatch, let slug = match["slug"] as? String {
+                self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+            } else {
+                completion(.failure(StreamServiceError.noMatchFound(id: title)))
+            }
+        }
     }
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
@@ -295,7 +318,6 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        // SỬA: Ưu tiên khớp origin_name chứa season, bỏ qua tmdb.id vì có thể trỏ đến spin-off
         // 1. Tìm item có origin_name chứa season chính xác + tmdb.id khớp
         if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
@@ -316,7 +338,7 @@ final class PhimAPIService {
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exact }
         
-        // 4. Tmdb.id khớp (cảnh báo: có thể là spin-off, nhưng đã ưu tiên origin_name trước)
+        // 4. Tmdb.id khớp
         if let sameTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) { return sameTMDB }
