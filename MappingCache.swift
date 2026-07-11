@@ -314,7 +314,6 @@ final class PhimAPIService {
         
         fetchPage(1, accumulatedItems: []) { [weak self] allItems in
             guard let self = self else { completion(.failure(StreamServiceError.noData)); return }
-            // Lọc bỏ spin-off trước khi tìm
             let filteredItems = allItems.filter { !isSpinoff($0) }
             let bestMatch = self.findBestMatch(items: filteredItems, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
             if let match = bestMatch, let slug = match["slug"] as? String {
@@ -330,13 +329,11 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        // 1. Tìm item có origin_name chứa season chính xác + tmdb.id khớp
         if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
             extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
         }) { return exact }
         
-        // 2. Tìm item có origin_name chứa season chính xác (bỏ qua tmdb.id)
         if let seasonMatch = items.first(where: {
             guard isSeriesType($0["type"] as? String ?? "") else { return false }
             let origin = ($0["origin_name"] as? String ?? "").lowercased()
@@ -344,13 +341,11 @@ final class PhimAPIService {
             return s == targetSeason && origin.contains(normalizedTitle)
         }) { return seasonMatch }
         
-        // 3. Tmdb.id + tmdb.season khớp
         if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exact }
         
-        // 4. Chọn item series gốc (Season 1 hoặc không có season) cùng tên
         if isSeries {
             let fallbackMatch = items.first(where: {
                 guard isSeriesType($0["type"] as? String ?? "") else { return false }
@@ -361,12 +356,10 @@ final class PhimAPIService {
             if let match = fallbackMatch { return match }
         }
         
-        // 5. Tmdb.id khớp
         if let sameTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) { return sameTMDB }
         
-        // 6. Series + origin_name chứa title
         if isSeries {
             let matched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
@@ -376,10 +369,8 @@ final class PhimAPIService {
             if !matched.isEmpty { return matched.first }
         }
         
-        // 7. Khớp tên chính xác
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         
-        // 8. Fallback
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
@@ -405,27 +396,38 @@ final class PhimAPIService {
             let targetSeason = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
+                // Tính tổng số tập trong server đầu tiên để phát hiện item gộp season
+                var totalEpsInFirstServer = 0
+                if let firstServer = episodes.first,
+                   let serverData = firstServer["server_data"] as? [[String: Any]] {
+                    totalEpsInFirstServer = serverData.count
+                }
+                // Nếu 1 server có > 100 tập, coi như gộp nhiều season (~49 tập/season)
+                let effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
+                
+                // Lọc theo server season
                 for (serverIndex, server) in episodes.enumerated() {
                     let serverSeason = server["season"] as? Int ?? (serverIndex + 1)
-                    if serverSeason != targetSeason { continue }
+                    if serverSeason != targetSeason && totalEpsInFirstServer <= 100 { continue }
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
                             if let name = epItem["name"] as? String,
                                let linkM3u8 = epItem["link_m3u8"] as? String,
                                let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: ep) {
+                               matchEpisode(name: name, target: effectiveEp) {
                                 return streamURL
                             }
                         }
                     }
                 }
+                // Fallback không lọc season, dùng effectiveEp
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
                             if let name = epItem["name"] as? String,
                                let linkM3u8 = epItem["link_m3u8"] as? String,
                                let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: ep) {
+                               matchEpisode(name: name, target: effectiveEp) {
                                 return streamURL
                             }
                         }
@@ -518,4 +520,4 @@ final class SofaflixService {
         }
         return nil
     }
-} 
+}
