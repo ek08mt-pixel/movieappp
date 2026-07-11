@@ -85,6 +85,8 @@ struct WatchTogetherRoomView: View {
         .onDisappear { refreshTimer?.invalidate(); controlsTimer?.invalidate(); forcePortrait() }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in let o = UIDevice.current.orientation; isLandscape = o == .landscapeLeft || o == .landscapeRight }
         .onChange(of: service.isInRoom) { inRoom in if !inRoom { forcePortrait() } }
+        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
+        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
     }
     
     func forcePortrait() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)); isLandscape = false }
@@ -97,11 +99,10 @@ struct WatchTogetherRoomView: View {
     // MARK: - Create Room
     var createRoomView: some View { VStack(spacing: 24) { HStack { Button { showCreateRoom = false } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))) }; Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44) }.padding(.horizontal, 16).padding(.top, 50); VStack(spacing: 16) { HStack { Text("Avatar của bạn:").font(.system(size: 13)).foregroundColor(.white.opacity(0.7)); Spacer(); Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count]).font(.system(size: 28)).frame(width: 44, height: 44).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)) }.padding(.horizontal, 4); TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: { HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }; HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }; TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).keyboardType(.numberPad); Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: { HStack { Image(systemName: "arrow.right.circle.fill"); Text("Vào phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 24); Spacer() }.background(Color.black.ignoresSafeArea()) }
     
-    // MARK: - In Room (ĐÃ SỬA LẠI ĐỂ VIDEO HIỂN THỊ LẠI)
+    // MARK: - In Room
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                // CHẾ ĐỘ XOAY NGANG: Vẫn giữ ZStack để không bị crop
                 ZStack {
                     Color.black.ignoresSafeArea()
                     CustomPlayerVC(player: player, pipController: $pipController)
@@ -115,7 +116,6 @@ struct WatchTogetherRoomView: View {
                         .onTapGesture { toggleControlsInRoom() }
                 }
             } else {
-                // CHẾ ĐỘ DỌC: Quay lại dùng VStack như code gốc để video không bị mất
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
                         .frame(height: geo.size.width * 9 / 16)
@@ -128,22 +128,9 @@ struct WatchTogetherRoomView: View {
                 }
             }
         }
-        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
-        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
-        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
-    }
-            .animation(.easeInOut(duration: 0.3), value: showControls)
-        }
-        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
-        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
-        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    // MARK: - Video Controls (Đã sửa lại vị trí nút cho gọn gàng hơn)
+    // MARK: - Video Controls
     var videoControlsOverlay: some View {
         ZStack {
             Color.black.opacity(0.001)
@@ -195,6 +182,7 @@ struct WatchTogetherRoomView: View {
         }
     }
     
+    // MARK: - Logic Functions
     func handleRemoteState() { guard let state = service.remoteState, !service.isHost else { return }; let target = CMTime(seconds: state.time, preferredTimescale: 600); if let ep = state.episodeNumber, let sn = state.seasonNumber { if selectedEpisode?.episodeNumber != ep || selectedSeason?.seasonNumber != sn { Task { if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: currentMovie?.id ?? 0, seasonNumber: sn), let episode = detail.episodes.first(where: { $0.episodeNumber == ep }) { await MainActor.run { selectedSeason = seasons.first(where: { $0.seasonNumber == sn }); selectedEpisode = episode; loadEpisode(episode) } } } } }; if state.action == "play" { player.seek(to: target); player.play() } else if state.action == "pause" { player.seek(to: target); player.pause() } else if state.action == "seek" { player.seek(to: target) } }
     func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: isLandscape ? .portrait : .landscapeRight)) }
     func toggleControlsInRoom() { withAnimation(.easeInOut(duration: 0.25)) { showControls.toggle() }; controlsTimer?.invalidate(); if showControls { resetControlsTimer() } }
