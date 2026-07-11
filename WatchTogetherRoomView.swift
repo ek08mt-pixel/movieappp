@@ -101,22 +101,21 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-    GeometryReader { geo in
-        CustomPlayerVC(player: player, pipController: $pipController)
-            .frame(width: geo.size.width, height: geo.size.height)
-            .overlay { videoControlsOverlay }
-    }
-    .ignoresSafeArea()
-    .onTapGesture { toggleControlsInRoom() }
-}
+                CustomPlayerVC(player: player, pipController: $pipController)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .overlay { videoControlsOverlay }
+                    .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
-                    CustomPlayerVC(player: player, pipController: $pipController).frame(height: geo.size.width * 9 / 16).overlay { videoControlsOverlay }
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .frame(height: geo.size.width * 9 / 16)
+                        .overlay { videoControlsOverlay }
                         .onTapGesture { toggleControlsInRoom() }
                     imessageChatPanel
-                }.ignoresSafeArea(edges: .bottom)
+                }
             }
         }
+        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
@@ -166,3 +165,4 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Panels
     var viewerPanel: some View { VStack(spacing: 0) { Capsule().fill(.gray.opacity(0.5)).frame(width: 36, height: 5).padding(.top, 10); Text("Người xem (\(service.participants.count))").font(.headline).foregroundColor(.white).padding(.vertical, 12); ScrollView { VStack(spacing: 12) { ForEach(service.participants, id: \.userId) { p in HStack(spacing: 12) { Text(p.avatar).font(.system(size: 28)).frame(width: 48, height: 48).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))).overlay(Circle().fill(p.isOnline ? Color.green : Color.gray).frame(width: 10, height: 10).offset(x: 17, y: 17)); VStack(alignment: .leading, spacing: 2) { Text(p.userName).font(.system(size: 14, weight: .medium)).foregroundColor(.white); Text(p.isOnline ? "Đang xem" : "Đã rời").font(.system(size: 11)).foregroundColor(.gray) }; Spacer() }.padding(.horizontal, 20) } } } }.background(Color.black.opacity(0.95)) }
+}
