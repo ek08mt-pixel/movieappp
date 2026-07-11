@@ -128,13 +128,42 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-        .ignoresSafeArea()
-        .animation(.easeInOut(duration: 0.3), value: showControls)
-        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
-        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
-        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
+    // MARK: - Landscape Chat Panel
+    var landscapeChatPanel: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(displayTitle).font(.system(size: 10, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                    Text(service.currentRoomName).font(.system(size: 8)).foregroundColor(.white.opacity(0.6))
+                }
+                Spacer()
+                Button { showViewerPanel = true } label: {
+                    HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 7)).frame(width: 12, height: 12).background(Circle().fill(.ultraThinMaterial)) } }
+                    .padding(4).background(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
+                }
+            }
+            .padding(.horizontal, 6).padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 0.5)))
+            .padding(.horizontal, 4).padding(.top, 4)
+            
+            if duration > 0 {
+                HStack(spacing: 4) {
+                    Text(formatTime(currentTime)).font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
+                    GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 2); Capsule().fill(.white.opacity(0.4)).frame(width: max(2, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 2) } }.frame(height: 2)
+                    Text(formatTime(duration)).font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
+                }.padding(.horizontal, 6).padding(.vertical, 2)
+            }
+            
+            HStack(spacing: 6) { ForEach(["❤️","😭","🤣","🔥","👏","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 11)) } } }.padding(.horizontal, 6).padding(.vertical, 2)
+            
+            ScrollViewReader { proxy in ScrollView { LazyVStack(spacing: 3) { ForEach(service.messages) { msg in HStack(alignment: .top, spacing: 2) { Text(msg.avatar).font(.system(size: 8)); VStack(alignment: .leading, spacing: 1) { Text(msg.userName).font(.system(size: 7, weight: .semibold)).foregroundColor(.white.opacity(0.7)); Text(msg.text).font(.system(size: 9)).foregroundColor(.white).fixedSize(horizontal: false, vertical: true) }; Spacer() }.padding(.horizontal, 4).padding(.vertical, 1) } }.onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } } }
+            
+            HStack(spacing: 4) {
+                TextField("Nhắn...", text: $watchMessage).font(.system(size: 10)).foregroundColor(.white).padding(.horizontal, 6).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.5))).onSubmit { sendImessage() }
+                if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 16)).foregroundColor(.white) } }
+            }.padding(.horizontal, 4).padding(.vertical, 2)
+        }
+        .background(.ultraThinMaterial.opacity(0.1))
     }
     
     var videoControlsOverlay: some View {
@@ -146,7 +175,7 @@ struct WatchTogetherRoomView: View {
     func toggleControlsInRoom() { withAnimation(.easeInOut(duration: 0.25)) { showControls.toggle() }; controlsTimer?.invalidate(); if showControls { resetControlsTimer() } }
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     
-    // MARK: - Chat
+    // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
             HStack { VStack(alignment: .leading, spacing: 2) { Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1); Text(service.currentRoomName).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Spacer(); HStack(spacing: 6) { Button { showSearchMovie = true } label: { Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Button { showViewerPanel = true } label: { HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) } }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))) } } }
@@ -178,3 +207,4 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Panels
     var viewerPanel: some View { VStack(spacing: 0) { Capsule().fill(.gray.opacity(0.5)).frame(width: 36, height: 5).padding(.top, 10); Text("Người xem (\(service.participants.count))").font(.headline).foregroundColor(.white).padding(.vertical, 12); ScrollView { VStack(spacing: 12) { ForEach(service.participants, id: \.userId) { p in HStack(spacing: 12) { Text(p.avatar).font(.system(size: 28)).frame(width: 48, height: 48).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))).overlay(Circle().fill(p.isOnline ? Color.green : Color.gray).frame(width: 10, height: 10).offset(x: 17, y: 17)); VStack(alignment: .leading, spacing: 2) { Text(p.userName).font(.system(size: 14, weight: .medium)).foregroundColor(.white); Text(p.isOnline ? "Đang xem" : "Đã rời").font(.system(size: 11)).foregroundColor(.gray) }; Spacer() }.padding(.horizontal, 20) } } } }.background(Color.black.opacity(0.95)) }
+}
