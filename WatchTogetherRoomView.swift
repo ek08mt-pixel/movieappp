@@ -103,18 +103,15 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    CustomPlayerVC(player: player, pipController: $pipController)
-                        .ignoresSafeArea()
-                        .aspectRatio(16/9, contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .overlay(
-                            videoControlsOverlay
-                                .allowsHitTesting(showControls)
-                        )
-                        .onTapGesture { toggleControlsInRoom() }
-                }
+                CustomPlayerVC(player: player, pipController: $pipController)
+                    .ignoresSafeArea()
+                    // CHỈ THÊM DÒNG NÀY:
+                    .aspectRatio(16/9, contentMode: .fit)
+                    .overlay(
+                        videoControlsOverlay
+                            .allowsHitTesting(showControls)
+                    )
+                    .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
@@ -128,6 +125,11 @@ struct WatchTogetherRoomView: View {
                 }
             }
         }
+        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
+        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
+        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
+        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
+        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
     // MARK: - Video Controls
