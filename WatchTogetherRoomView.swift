@@ -192,7 +192,7 @@ struct WatchTogetherRoomView: View {
             .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 15 : 12)
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
-        .background(ZStack { if let img = posterImage { Image(uiImage: img).resizable().aspectRatio(contentMode: .fill).blur(radius: 80).opacity(0.25) }; dominantColor.opacity(0.15); Rectangle().fill(.regularMaterial) }).contentShape(Rectangle()).onTapGesture { isInputFocused = false }
+        .background(Color.black).contentShape(Rectangle()).onTapGesture { isInputFocused = false }
     }
     
     func sendReaction(_ emoji: String) { let fe = FlyingEmoji(emoji: emoji, xOffset: CGFloat.random(in: -50...50)); flyingEmojis.append(fe); withAnimation(.easeOut(duration: 1.0)) { if let idx = flyingEmojis.firstIndex(where: { $0.id == fe.id }) { flyingEmojis[idx].offsetY = -100; flyingEmojis[idx].opacity = 0 } }; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { flyingEmojis.removeAll { $0.id == fe.id } } }
