@@ -104,7 +104,8 @@ struct WatchTogetherRoomView: View {
         GeometryReader { geo in
             if isLandscape {
                 CustomPlayerVC(player: player, pipController: $pipController)
-                    .ignoresSafeArea()
+    .ignoresSafeArea()
+    .aspectRatio(contentMode: .fit)
                     // CHỈ THÊM DÒNG NÀY:
                     .overlay(
                         videoControlsOverlay
