@@ -170,11 +170,21 @@ struct WatchTogetherRoomView: View {
                 Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44)
             }.padding(.horizontal, 16).padding(.top, 50)
             VStack(spacing: 16) {
-                TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25)))
-                TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25)))
-                Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: { Text("Tạo phòng").font(.headline).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }
-                TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).keyboardType(.numberPad)
-                Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: { Text("Vào phòng").font(.headline).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }
+                HStack {
+                    Text("Avatar của bạn:").font(.system(size: 13)).foregroundColor(.white.opacity(0.7))
+                    Spacer()
+                    Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count]).font(.system(size: 28)).frame(width: 44, height: 44).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
+                }.padding(.horizontal, 4)
+                TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: {
+                    HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Capsule().stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.5))
+                }
+                HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }
+                TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5)).keyboardType(.numberPad)
+                Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: {
+                    HStack { Image(systemName: "arrow.right.circle.fill"); Text("Vào phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
+                }
             }.padding(.horizontal, 24)
             Spacer()
         }.background(Color.black.ignoresSafeArea())
@@ -216,7 +226,7 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    // MARK: - Video Controls Overlay (dùng chung cho cả portrait & landscape)
+    // Video Controls
     var videoControlsOverlay: some View {
         VStack(spacing: 0) {
             if showControls {
@@ -280,6 +290,7 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
+            // Header liquid glass
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
@@ -299,6 +310,7 @@ struct WatchTogetherRoomView: View {
             .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5)))
             .padding(.horizontal, 8).padding(.top, 6)
             
+            // Progress
             if duration > 0 {
                 VStack(spacing: 2) {
                     HStack {
@@ -315,10 +327,12 @@ struct WatchTogetherRoomView: View {
                 }.padding(.horizontal, 12).padding(.vertical, 4)
             }
             
+            // Reactions
             HStack(spacing: 20) {
                 ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } }
             }.padding(.horizontal, 12).padding(.vertical, 4)
             
+            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 4) {
@@ -330,7 +344,7 @@ struct WatchTogetherRoomView: View {
                 .onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
             
-            // Input - padding bottom theo keyboard
+            // Input - đẩy lên theo keyboard
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
                     .padding(.horizontal, 18).padding(.vertical, 14)
@@ -339,8 +353,9 @@ struct WatchTogetherRoomView: View {
                 if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white) } }
             }
             .padding(.horizontal, 14).padding(.top, 10)
-            .padding(.bottom, max(keyboardHeight > 0 ? 10 : 10, 10))
-            .animation(.easeOut(duration: 0.25), value: keyboardHeight)
+            .padding(.bottom, keyboardHeight > 0 ? 10 : 10)
+            .animation(.easeOut(duration: 0.2), value: keyboardHeight)
+            .offset(y: keyboardHeight > 0 ? -keyboardHeight + 30 : 0)
         }
         .background(ZStack {
             if let img = posterImage {
