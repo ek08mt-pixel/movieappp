@@ -122,7 +122,10 @@ class AppState: ObservableObject {
         
         let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
         isLoggedIn = UserDefaults.standard.bool(forKey: "\(prefix)_isLoggedIn")
-        email = UserDefaults.standard.string(forKey: "\(prefix)_email") ?? ""
+        // SỬA LỖI 1: Chỉ gán email từ UserDefaults nếu email đang rỗng (chưa load được từ Keychain)
+        if email.isEmpty {
+            email = UserDefaults.standard.string(forKey: "\(prefix)_email") ?? ""
+        }
         nickname = UserDefaults.standard.string(forKey: "\(prefix)_nickname") ?? ""
         selectedAvatar = UserDefaults.standard.string(forKey: "\(prefix)_avatar") ?? "person.circle.fill"
         avatarImageData = UserDefaults.standard.data(forKey: "\(prefix)_avatarImage")
