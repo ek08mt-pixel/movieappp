@@ -164,6 +164,10 @@ struct MoviePlayerView: View {
     func loadStream(season: Int? = nil, episode: Int? = nil) {
         let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
         seasonNumber = s; episodeNumber = ep
+        
+        // SỬA LỖI 2: Clear imdbID cache khi đổi season/episode để fetch đúng imdbID
+        imdbIDCache = nil
+        
         if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task {
@@ -192,7 +196,23 @@ struct MoviePlayerView: View {
     }
     
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
-    func fetchIMDB() async throws -> String { if let cached = imdbIDCache { return cached }; var id: String?; if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }; if id == nil || id?.isEmpty == true { let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; id = try? JSONDecoder().decode(E.self, from: data).imdb_id }; guard let finalID = id, !finalID.isEmpty else { throw StreamError.noStreamAvailable }; imdbIDCache = finalID; return finalID }
+    
+    func fetchIMDB() async throws -> String {
+        if let cached = imdbIDCache { return cached }
+        var id: String?
+        if mediaType == "tv" || seasonNumber != nil {
+            id = try? await APIService.shared.fetchExternalIDs(tvId: movieId)
+        }
+        if id == nil || id?.isEmpty == true {
+            let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+            struct E: Codable { let imdb_id: String? }
+            id = try? JSONDecoder().decode(E.self, from: data).imdb_id
+        }
+        guard let finalID = id, !finalID.isEmpty else { throw StreamError.noStreamAvailable }
+        imdbIDCache = finalID
+        return finalID
+    }
+    
     func lockToLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
     func unlockOrientation() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }
     func saveProgress() { guard hasStartedPlaying, currentTime > 0, duration > 0 else { return }; appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: currentTime, duration: duration, lastWatched: Date())) }
