@@ -102,8 +102,7 @@ struct WatchTogetherRoomView: View {
         GeometryReader { geo in
             if isLandscape {
                 CustomPlayerVC(player: player, pipController: $pipController)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
+                    .ignoresSafeArea()
                     .overlay(
                         videoControlsOverlay
                             .allowsHitTesting(showControls)
@@ -113,7 +112,6 @@ struct WatchTogetherRoomView: View {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
                         .frame(height: geo.size.width * 9 / 16)
-                        .clipped()
                         .overlay(
                             videoControlsOverlay
                                 .allowsHitTesting(showControls)
@@ -123,7 +121,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
         }
-        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
@@ -140,13 +137,8 @@ struct WatchTogetherRoomView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Button {
-                            if isLandscape {
-                                forcePortrait()
-                            } else {
-                                player.pause()
-                                player.replaceCurrentItem(with: nil)
-                                service.leaveRoom()
-                            }
+                            if isLandscape { forcePortrait() }
+                            else { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() }
                         } label: {
                             Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
@@ -160,7 +152,7 @@ struct WatchTogetherRoomView: View {
                         }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.top, isLandscape ? 12 : 44)
+                    .padding(.top, isLandscape ? 12 : 50)
                     
                     Spacer()
                     
@@ -178,7 +170,7 @@ struct WatchTogetherRoomView: View {
                             Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
                         }
                     }
-                    .padding(.bottom, isLandscape ? 20 : 0)
+                    .padding(.bottom, isLandscape ? 20 : 60)
                     
                     Spacer()
                 }
