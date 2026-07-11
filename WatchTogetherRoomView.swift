@@ -125,15 +125,8 @@ struct WatchTogetherRoomView: View {
                     }
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: showControls)
         }
-        .animation(.easeInOut(duration: 0.3), value: showControls)
-        .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
-        .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
-        .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
-    }
-        .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
         .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
@@ -230,3 +223,4 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Panels
     var viewerPanel: some View { VStack(spacing: 0) { Capsule().fill(.gray.opacity(0.5)).frame(width: 36, height: 5).padding(.top, 10); Text("Người xem (\(service.participants.count))").font(.headline).foregroundColor(.white).padding(.vertical, 12); ScrollView { VStack(spacing: 12) { ForEach(service.participants, id: \.userId) { p in HStack(spacing: 12) { Text(p.avatar).font(.system(size: 28)).frame(width: 48, height: 48).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))).overlay(Circle().fill(p.isOnline ? Color.green : Color.gray).frame(width: 10, height: 10).offset(x: 17, y: 17)); VStack(alignment: .leading, spacing: 2) { Text(p.userName).font(.system(size: 14, weight: .medium)).foregroundColor(.white); Text(p.isOnline ? "Đang xem" : "Đã rời").font(.system(size: 11)).foregroundColor(.gray) }; Spacer() }.padding(.horizontal, 20) } } } }.background(Color.black.opacity(0.95)) }
+}
