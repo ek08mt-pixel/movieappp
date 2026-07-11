@@ -226,35 +226,33 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    // Video Controls
+    // Video Controls - bỏ PiP + list, chỉ giữ xoay màn hình
     var videoControlsOverlay: some View {
         VStack(spacing: 0) {
             if showControls {
                 HStack {
                     Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                     }
                     Spacer()
                     Button { showEpisodePanel = true } label: {
-                        Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                        Text(displayTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1)
                     }
                     Spacer()
-                    HStack(spacing: 6) {
-                        Button { showEpisodePanel = true } label: { Image(systemName: "list.bullet").font(.system(size: 10, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
-                        Button { pipController?.startPictureInPicture() } label: { Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
-                        Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
+                    Button { toggleOrientation() } label: {
+                        Image(systemName: "rotate.right").font(.system(size: 18, weight: .bold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                     }
                 }
-                .padding(.horizontal, 12).padding(.top, isLandscape ? 8 : 50)
+                .padding(.horizontal, 16).padding(.top, isLandscape ? 12 : 54)
                 
                 Spacer()
                 
-                HStack(spacing: 44) {
-                    Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
-                    Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 30)).foregroundColor(.white).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.45))) }
-                    Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
+                HStack(spacing: 50) {
+                    Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
+                    Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 34)).foregroundColor(.white).padding(18).background(Circle().fill(.ultraThinMaterial.opacity(0.45))) }
+                    Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
                 }
-                .padding(.bottom, isLandscape ? 12 : 0)
+                .padding(.bottom, isLandscape ? 16 : 0)
                 
                 if !isLandscape { Spacer() }
             }
@@ -290,7 +288,7 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header liquid glass
+            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
@@ -344,18 +342,17 @@ struct WatchTogetherRoomView: View {
                 .onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
             
-            // Input - đẩy lên theo keyboard
-            HStack(spacing: 10) {
-                TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
-                    .padding(.horizontal, 18).padding(.vertical, 14)
-                    .background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.6)).overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.12), lineWidth: 0.5)))
+            // Input to hơn
+            HStack(spacing: 12) {
+                TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 18)).foregroundColor(.white)
+                    .padding(.horizontal, 20).padding(.vertical, 16)
+                    .background(RoundedRectangle(cornerRadius: 26).fill(.ultraThinMaterial.opacity(0.65)).overlay(RoundedRectangle(cornerRadius: 26).stroke(.white.opacity(0.15), lineWidth: 0.5)))
                     .onSubmit { sendImessage() }
-                if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white) } }
+                if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 40)).foregroundColor(.white) } }
             }
-            .padding(.horizontal, 14).padding(.top, 10)
-            .padding(.bottom, keyboardHeight > 0 ? 10 : 10)
+            .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 12)
+            .offset(y: keyboardHeight > 0 ? -keyboardHeight + 34 : 0)
             .animation(.easeOut(duration: 0.2), value: keyboardHeight)
-            .offset(y: keyboardHeight > 0 ? -keyboardHeight + 30 : 0)
         }
         .background(ZStack {
             if let img = posterImage {
