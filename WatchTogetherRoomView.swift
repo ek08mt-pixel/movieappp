@@ -99,35 +99,25 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - In Room
     var inRoomView: some View {
-        Group {
+        GeometryReader { geo in
             if isLandscape {
                 CustomPlayerVC(player: player, pipController: $pipController)
-                    .ignoresSafeArea(.all)
+                    .frame(width: geo.size.width, height: geo.size.height)
                     .overlay(
-                        Group {
-                            if showControls {
-                                videoControlsOverlayLandscape
-                            }
-                        }
+                        videoControlsOverlay
+                            .allowsHitTesting(showControls)
                     )
-                    .contentShape(Rectangle())
                     .onTapGesture { toggleControlsInRoom() }
             } else {
-                GeometryReader { geo in
-                    VStack(spacing: 0) {
-                        CustomPlayerVC(player: player, pipController: $pipController)
-                            .frame(height: geo.size.width * 9 / 16)
-                            .overlay(
-                                Group {
-                                    if showControls {
-                                        videoControlsOverlay
-                                    }
-                                }
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture { toggleControlsInRoom() }
-                        imessageChatPanel
-                    }
+                VStack(spacing: 0) {
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .frame(height: geo.size.width * 9 / 16)
+                        .overlay(
+                            videoControlsOverlay
+                                .allowsHitTesting(showControls)
+                        )
+                        .onTapGesture { toggleControlsInRoom() }
+                    imessageChatPanel
                 }
             }
         }
@@ -140,82 +130,48 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    var videoControlsOverlayLandscape: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                }
-                Spacer()
-                Button { showEpisodePanel = true } label: {
-                    Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
-                }
-                Spacer()
-                Button { toggleOrientation() } label: {
-                    Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            
-            Spacer()
-            
-            HStack(spacing: 36) {
-                Button { seek(-10) } label: {
-                    Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                }
-                Button {
-                    if player.rate == 0 { player.play() } else { player.pause() }
-                    if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
-                } label: {
-                    Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                }
-                Button { seek(10) } label: {
-                    Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                }
-            }
-            
-            Spacer()
-        }
-        .background(Color.black.opacity(0.01))
-    }
-    
     var videoControlsOverlay: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                }
-                Spacer()
-                Button { showEpisodePanel = true } label: {
-                    Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
-                }
-                Spacer()
-                Button { toggleOrientation() } label: {
-                    Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+        ZStack {
+            Color.black.opacity(0.001)
+            
+            if showControls {
+                VStack(spacing: 0) {
+                    HStack {
+                        Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
+                            Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        }
+                        Spacer()
+                        Button { showEpisodePanel = true } label: {
+                            Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                        }
+                        Spacer()
+                        Button { toggleOrientation() } label: {
+                            Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, isLandscape ? 4 : 48)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 36) {
+                        Button { seek(-10) } label: {
+                            Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                        }
+                        Button {
+                            if player.rate == 0 { player.play() } else { player.pause() }
+                            if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
+                        } label: {
+                            Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        }
+                        Button { seek(10) } label: {
+                            Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                        }
+                    }
+                    
+                    Spacer()
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 48)
-            
-            Spacer()
-            
-            HStack(spacing: 36) {
-                Button { seek(-10) } label: {
-                    Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                }
-                Button {
-                    if player.rate == 0 { player.play() } else { player.pause() }
-                    if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
-                } label: {
-                    Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                }
-                Button { seek(10) } label: {
-                    Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                }
-            }
-            
-            Spacer()
         }
     }
     
