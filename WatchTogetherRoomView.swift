@@ -162,7 +162,7 @@ struct WatchTogetherRoomView: View {
         }.padding(12).background(RoundedRectangle(cornerRadius: 18).fill(Material.ultraThinMaterial.opacity(0.22))).overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.06), lineWidth: 0.5))
     }
     
-    // MARK: - Create Room (giữ nguyên)
+    // MARK: - Create Room
     var createRoomView: some View {
         VStack(spacing: 24) {
             HStack {
@@ -186,20 +186,21 @@ struct WatchTogetherRoomView: View {
             if isLandscape {
                 ZStack {
                     CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
-                    videoControlsOverlayLandscape
+                    videoControlsOverlay
                 }
+                .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
                     ZStack {
                         CustomPlayerVC(player: player, pipController: $pipController)
                         videoControlsOverlay
                     }
-                    .frame(height: UIScreen.main.bounds.width * 9 / 16)
+                    .frame(height: geo.size.width * 9 / 16)
                     .onTapGesture { toggleControlsInRoom() }
                     
                     imessageChatPanel
                 }
-                .ignoresSafeArea(.keyboard)
+                .ignoresSafeArea(edges: .bottom)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showControls)
@@ -215,33 +216,7 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    var videoControlsOverlayLandscape: some View {
-        VStack {
-            if showControls {
-                HStack {
-                    Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                    }
-                    Spacer()
-                    Text(displayTitle).font(.caption).foregroundColor(.white).lineLimit(1)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        Button { showEpisodePanel = true } label: { Image(systemName: "list.bullet").font(.system(size: 10)).foregroundColor(.white).padding(5).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
-                        Button { pipController?.startPictureInPicture() } label: { Image(systemName: "pip.enter").font(.system(size: 10)).foregroundColor(.white).padding(5).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
-                        Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 10)).foregroundColor(.white).padding(5).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
-                    }
-                }.padding(.horizontal, 12).padding(.top, 8)
-                Spacer()
-                HStack(spacing: 44) {
-                    Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 22)).foregroundColor(.white) }
-                    Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 28)).foregroundColor(.white) }
-                    Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 22)).foregroundColor(.white) }
-                }.padding(.bottom, 12)
-            }
-        }
-    }
-    
-    // MARK: - Video Controls Overlay (Portrait)
+    // MARK: - Video Controls Overlay (dùng chung cho cả portrait & landscape)
     var videoControlsOverlay: some View {
         VStack(spacing: 0) {
             if showControls {
@@ -259,14 +234,19 @@ struct WatchTogetherRoomView: View {
                         Button { pipController?.startPictureInPicture() } label: { Image(systemName: "pip.enter").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
                         Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }
                     }
-                }.padding(.horizontal, 12).padding(.top, 50)
+                }
+                .padding(.horizontal, 12).padding(.top, isLandscape ? 8 : 50)
+                
                 Spacer()
+                
                 HStack(spacing: 44) {
                     Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
                     Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 30)).foregroundColor(.white).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.45))) }
                     Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
                 }
-                Spacer()
+                .padding(.bottom, isLandscape ? 12 : 0)
+                
+                if !isLandscape { Spacer() }
             }
         }
     }
@@ -300,7 +280,6 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat (Portrait)
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
@@ -320,7 +299,6 @@ struct WatchTogetherRoomView: View {
             .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5)))
             .padding(.horizontal, 8).padding(.top, 6)
             
-            // Progress
             if duration > 0 {
                 VStack(spacing: 2) {
                     HStack {
@@ -337,12 +315,10 @@ struct WatchTogetherRoomView: View {
                 }.padding(.horizontal, 12).padding(.vertical, 4)
             }
             
-            // Reactions
             HStack(spacing: 20) {
                 ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } }
             }.padding(.horizontal, 12).padding(.vertical, 4)
             
-            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 4) {
@@ -354,7 +330,7 @@ struct WatchTogetherRoomView: View {
                 .onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
             
-            // Input
+            // Input - padding bottom theo keyboard
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
                     .padding(.horizontal, 18).padding(.vertical, 14)
@@ -362,7 +338,9 @@ struct WatchTogetherRoomView: View {
                     .onSubmit { sendImessage() }
                 if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 36)).foregroundColor(.white) } }
             }
-            .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 10)
+            .padding(.horizontal, 14).padding(.top, 10)
+            .padding(.bottom, max(keyboardHeight > 0 ? 10 : 10, 10))
+            .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
         .background(ZStack {
             if let img = posterImage {
@@ -461,7 +439,7 @@ struct WatchTogetherRoomView: View {
         return id
     }
     
-    // MARK: - Episode Popup (giữ nguyên)
+    // MARK: - Episode Popup
     var episodePopupOverlay: some View {
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showEpisodePanel = false }
