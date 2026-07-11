@@ -65,6 +65,16 @@ private func matchEpisode(name: String, target: Int) -> Bool {
     return false
 }
 
+private func isSpinoff(_ item: [String: Any]) -> Bool {
+    let origin = (item["origin_name"] as? String ?? "").lowercased()
+    let name = (item["name"] as? String ?? "").lowercased()
+    let spinoffKeywords = ["ginpachi", "3-z", "3z", "spin-off", "spinoff", "movie", "live action"]
+    for kw in spinoffKeywords {
+        if origin.contains(kw) || name.contains(kw) { return true }
+    }
+    return false
+}
+
 // MARK: - NguonC Service
 final class NguonCService {
     static let shared = NguonCService()
@@ -304,7 +314,9 @@ final class PhimAPIService {
         
         fetchPage(1, accumulatedItems: []) { [weak self] allItems in
             guard let self = self else { completion(.failure(StreamServiceError.noData)); return }
-            let bestMatch = self.findBestMatch(items: allItems, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
+            // Lọc bỏ spin-off trước khi tìm
+            let filteredItems = allItems.filter { !isSpinoff($0) }
+            let bestMatch = self.findBestMatch(items: filteredItems, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
             if let match = bestMatch, let slug = match["slug"] as? String {
                 self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
             } else {
@@ -338,7 +350,7 @@ final class PhimAPIService {
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exact }
         
-        // 4. SỬA: Không tìm thấy season chính xác -> chọn item series gốc (Season 1 hoặc không có season) cùng tên
+        // 4. Chọn item series gốc (Season 1 hoặc không có season) cùng tên
         if isSeries {
             let fallbackMatch = items.first(where: {
                 guard isSeriesType($0["type"] as? String ?? "") else { return false }
@@ -349,7 +361,7 @@ final class PhimAPIService {
             if let match = fallbackMatch { return match }
         }
         
-        // 5. Tmdb.id khớp (cảnh báo: có thể là spin-off)
+        // 5. Tmdb.id khớp
         if let sameTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) { return sameTMDB }
