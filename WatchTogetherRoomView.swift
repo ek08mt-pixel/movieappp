@@ -101,10 +101,14 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController)
-                    .ignoresSafeArea(.all)
-                    .overlay { videoControlsOverlay }
-                    .onTapGesture { toggleControlsInRoom() }
+    GeometryReader { geo in
+        CustomPlayerVC(player: player, pipController: $pipController)
+            .frame(width: geo.size.width, height: geo.size.height)
+            .overlay { videoControlsOverlay }
+    }
+    .ignoresSafeArea()
+    .onTapGesture { toggleControlsInRoom() }
+}
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController).frame(height: geo.size.width * 9 / 16).overlay { videoControlsOverlay }
