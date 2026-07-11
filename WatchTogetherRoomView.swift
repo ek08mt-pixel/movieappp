@@ -97,20 +97,40 @@ struct WatchTogetherRoomView: View {
     // MARK: - Create Room
     var createRoomView: some View { VStack(spacing: 24) { HStack { Button { showCreateRoom = false } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))) }; Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44) }.padding(.horizontal, 16).padding(.top, 50); VStack(spacing: 16) { HStack { Text("Avatar của bạn:").font(.system(size: 13)).foregroundColor(.white.opacity(0.7)); Spacer(); Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count]).font(.system(size: 28)).frame(width: 44, height: 44).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)) }.padding(.horizontal, 4); TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: { HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }; HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }; TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).keyboardType(.numberPad); Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: { HStack { Image(systemName: "arrow.right.circle.fill"); Text("Vào phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 24); Spacer() }.background(Color.black.ignoresSafeArea()) }
     
-    // MARK: - In Room
+    // MARK: - In Room (ĐÃ SỬA LẠI HOÀN TOÀN)
     var inRoomView: some View {
         GeometryReader { geo in
-            if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea().overlay { videoControlsOverlay }
-                    .onTapGesture { toggleControlsInRoom() }
-            } else {
+            ZStack {
+                // Lớp nền đen ở sau cùng để tránh khoảng trắng khi xoay ngang
+                Color.black.ignoresSafeArea()
+                
+                // Phần Video + Overlay
+                CustomPlayerVC(player: player, pipController: $pipController)
+                    .ignoresSafeArea() // Video tràn ra toàn bộ màn hình
+                    .overlay {
+                        // Layer chứa nút điều khiển
+                        videoControlsOverlay
+                    }
+                    .onTapGesture {
+                        // Ấn vào video để ẩn/hiện nút
+                        toggleControlsInRoom()
+                    }
+                    // QUAN TRỌNG: Ép tỷ lệ 16:9 để video không bao giờ bị méo
+                    .aspectRatio(16/9, contentMode: .fit)
+                    // Giới hạn chiều cao tối đa của video bằng chính chiều cao màn hình (để khi xoay ngang nó chiếm trọn)
+                    .frame(maxHeight: geo.size.height)
+                
+                // Phần Chat Panel (được tách riêng, đặt đè lên video bên dưới)
+                // Dùng VStack + Spacer để chat luôn nằm sát đáy
                 VStack(spacing: 0) {
-                    CustomPlayerVC(player: player, pipController: $pipController).frame(height: geo.size.width * 9 / 16).overlay { videoControlsOverlay }
-                        .onTapGesture { toggleControlsInRoom() }
+                    Spacer() // Đẩy mọi thứ xuống dưới
                     imessageChatPanel
-                }.ignoresSafeArea(edges: .bottom)
+                        // SỬA QUAN TRỌNG: Cho phép phần chat đè lên vùng an toàn (Home indicator) của màn hình
+                        .ignoresSafeArea(edges: .bottom)
+                }
             }
         }
+        // Tắt animation mặc định khi xoay màn hình để chạy mượt hơn
         .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
@@ -119,8 +139,61 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
+    // MARK: - Video Controls Overlay (ĐÃ TỐI ƯU LẠI)
     var videoControlsOverlay: some View {
-        Group { if showControls { VStack(spacing: 0) { HStack { Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: { Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Spacer(); Button { showEpisodePanel = true } label: { Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1) }; Spacer(); Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 12).padding(.top, isLandscape ? 4 : 48); Spacer(); HStack(spacing: 36) { Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }; Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) }; Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) } }; Spacer() } } }
+        Group { 
+            if showControls { 
+                ZStack {
+                    // Lớp nền mờ mờ phía sau để nổi bật nút ấn khi xem trong tối
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false) // Không chặn sự kiện ấn vào video
+                    
+                    VStack(spacing: 0) {
+                        // Thanh Header (Back, Tên phim, Xoay màn hình)
+                        HStack {
+                            Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: { 
+                                Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) 
+                            }
+                            Spacer()
+                            Button { showEpisodePanel = true } label: { 
+                                Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1) 
+                            }
+                            Spacer()
+                            Button { toggleOrientation() } label: { 
+                                Image(systemName: isLandscape ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") // Đổi icon khi xoay
+                                    .font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) 
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, isLandscape ? 8 : 48) // Khi ngang thì bớt khoảng trống trên cùng
+                        
+                        Spacer() // Đẩy nút Play/Pause vào chính giữa video
+                        
+                        // Hàng nút giữa (Tua, Play/Pause)
+                        HStack(spacing: 50) {
+                            Button { seek(-10) } label: { 
+                                Image(systemName: "gobackward.10").font(.system(size: 24)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) 
+                            }
+                            
+                            Button { 
+                                if player.rate == 0 { player.play() } else { player.pause() }
+                                if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } 
+                            } label: { 
+                                Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 32)).foregroundColor(.white).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) 
+                            }
+                            
+                            Button { seek(10) } label: { 
+                                Image(systemName: "goforward.10").font(.system(size: 24)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) 
+                            }
+                        }
+                        
+                        Spacer() // Đẩy nút play xuống dưới nữa (nếu cần cân chỉnh lại độ cao)
+                    }
+                }
+                .ignoresSafeArea() // Để header không bị tai thỏ che
+            }
+        }
     }
     
     func handleRemoteState() { guard let state = service.remoteState, !service.isHost else { return }; let target = CMTime(seconds: state.time, preferredTimescale: 600); if let ep = state.episodeNumber, let sn = state.seasonNumber { if selectedEpisode?.episodeNumber != ep || selectedSeason?.seasonNumber != sn { Task { if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: currentMovie?.id ?? 0, seasonNumber: sn), let episode = detail.episodes.first(where: { $0.episodeNumber == ep }) { await MainActor.run { selectedSeason = seasons.first(where: { $0.seasonNumber == sn }); selectedEpisode = episode; loadEpisode(episode) } } } } }; if state.action == "play" { player.seek(to: target); player.play() } else if state.action == "pause" { player.seek(to: target); player.pause() } else if state.action == "seek" { player.seek(to: target) } }
