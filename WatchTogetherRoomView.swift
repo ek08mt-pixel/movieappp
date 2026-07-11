@@ -115,7 +115,7 @@ struct WatchTogetherRoomView: View {
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
-                        .frame(height: geo.size.width * 9 / 16)
+                        .frame(height: geo.size.width * 9 / 16 + 15)
                         .overlay(
                             videoControlsOverlay
                                 .allowsHitTesting(showControls)
