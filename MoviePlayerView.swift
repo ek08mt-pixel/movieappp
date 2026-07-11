@@ -165,7 +165,6 @@ struct MoviePlayerView: View {
         let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
         seasonNumber = s; episodeNumber = ep
         
-        // SỬA LỖI 2: Clear imdbID cache khi đổi season/episode để fetch đúng imdbID
         imdbIDCache = nil
         
         if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }
@@ -227,9 +226,30 @@ struct MoviePlayerView: View {
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
 
-struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
-    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
+struct CustomPlayerVC: UIViewControllerRepresentable {
+    let player: AVPlayer
+    @Binding var pipController: AVPictureInPictureController?
+    
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let vc = AVPlayerViewController()
+        vc.player = player
+        vc.showsPlaybackControls = false
+        vc.videoGravity = .resizeAspectFill
+        vc.view.backgroundColor = .black
+        vc.view.layer.backgroundColor = UIColor.black.cgColor
+        vc.allowsPictureInPicturePlayback = true
+        vc.canStartPictureInPictureAutomaticallyFromInline = true
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        return vc
+    }
+    
+    func updateUIViewController(_ vc: AVPlayerViewController, context: Context) {
+        vc.videoGravity = .resizeAspectFill
+        if pipController == nil, let layer = vc.view.layer.sublayers?.first as? AVPlayerLayer {
+            pipController = AVPictureInPictureController(playerLayer: layer)
+        }
+    }
 }
 
 struct TinySlider: View { let value: CGFloat; let icon: String
