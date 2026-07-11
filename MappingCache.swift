@@ -338,30 +338,36 @@ final class PhimAPIService {
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exact }
         
-        // 4. Tmdb.id khớp
+        // 4. SỬA: Không tìm thấy season chính xác -> chọn item series gốc (Season 1 hoặc không có season) cùng tên
+        if isSeries {
+            let fallbackMatch = items.first(where: {
+                guard isSeriesType($0["type"] as? String ?? "") else { return false }
+                let origin = ($0["origin_name"] as? String ?? "").lowercased()
+                let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
+                return (s == 1 || s == nil) && origin.contains(normalizedTitle)
+            })
+            if let match = fallbackMatch { return match }
+        }
+        
+        // 5. Tmdb.id khớp (cảnh báo: có thể là spin-off)
         if let sameTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) { return sameTMDB }
         
-        // 5. Series + origin_name chứa title
+        // 6. Series + origin_name chứa title
         if isSeries {
             let matched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
                 let origin = (item["origin_name"] as? String ?? "").lowercased()
                 return origin.contains(normalizedTitle)
             }
-            if !matched.isEmpty {
-                if let withSeason = matched.first(where: { extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason }) {
-                    return withSeason
-                }
-                return matched.first
-            }
+            if !matched.isEmpty { return matched.first }
         }
         
-        // 6. Khớp tên chính xác
+        // 7. Khớp tên chính xác
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         
-        // 7. Fallback
+        // 8. Fallback
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
