@@ -106,7 +106,6 @@ struct WatchTogetherRoomView: View {
                 CustomPlayerVC(player: player, pipController: $pipController)
                     .ignoresSafeArea()
                     // CHỈ THÊM DÒNG NÀY:
-                    .aspectRatio(16/9, contentMode: .fit)
                     .overlay(
                         videoControlsOverlay
                             .allowsHitTesting(showControls)
