@@ -227,30 +227,9 @@ struct MoviePlayerView: View {
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
 
-struct CustomPlayerVC: UIViewControllerRepresentable {
-    let player: AVPlayer
-    @Binding var pipController: AVPictureInPictureController?
-    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
-    
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let vc = AVPlayerViewController()
-        vc.player = player
-        vc.showsPlaybackControls = false
-        vc.videoGravity = videoGravity
-        vc.allowsPictureInPicturePlayback = true
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay)
-        try? AVAudioSession.sharedInstance().setActive(true)
-        return vc
-    }
-    
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
-        ui.videoGravity = videoGravity
-        DispatchQueue.main.async {
-            if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
-                pipController = AVPictureInPictureController(playerLayer: layer)
-            }
-        }
-    }
+struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
+    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
 }
 
 struct TinySlider: View { let value: CGFloat; let icon: String
