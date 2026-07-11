@@ -57,13 +57,19 @@ class AppState: ObservableObject {
     
     func login(email: String, password: String) {
         let accounts = getAllAccounts()
-        if let savedPassword = accounts[email], savedPassword == password { self.email = email; self.isLoggedIn = true; load(); saveLastEmail(email) }
+        if let savedPassword = accounts[email], savedPassword == password {
+            self.email = email; self.isLoggedIn = true
+            save(); saveLastEmail(email)
+        }
     }
     
     func smartLogin(email: String, password: String) {
         let accounts = getAllAccounts()
         if let savedPassword = accounts[email] {
-            if savedPassword == password { self.email = email; self.isLoggedIn = true; load(); saveLastEmail(email) }
+            if savedPassword == password {
+                self.email = email; self.isLoggedIn = true
+                save(); saveLastEmail(email)
+            }
         } else {
             var newAccounts = accounts; newAccounts[email] = password; saveAllAccounts(newAccounts)
             self.email = email; self.isLoggedIn = true; self.favorites = []; self.watchHistory = []; self.watchProgressList = []
@@ -73,7 +79,7 @@ class AppState: ObservableObject {
     
     func telegramLogin(telegramId: String, name: String, avatarURL: String?) {
         self.email = "tg_\(telegramId)"; self.nickname = name; self.telegramAvatarURL = avatarURL
-        self.isLoggedIn = true; load(); save()
+        self.isLoggedIn = true; save()
         if let data = email.data(using: .utf8) { KeychainHelper.save(key: "lastLoggedInEmail", data: data) }
     }
     
@@ -122,10 +128,6 @@ class AppState: ObservableObject {
         
         let prefix = email.isEmpty ? "default" : email.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: "@", with: "_")
         isLoggedIn = UserDefaults.standard.bool(forKey: "\(prefix)_isLoggedIn")
-        // SỬA LỖI 1: Chỉ gán email từ UserDefaults nếu email đang rỗng (chưa load được từ Keychain)
-        if email.isEmpty {
-            email = UserDefaults.standard.string(forKey: "\(prefix)_email") ?? ""
-        }
         nickname = UserDefaults.standard.string(forKey: "\(prefix)_nickname") ?? ""
         selectedAvatar = UserDefaults.standard.string(forKey: "\(prefix)_avatar") ?? "person.circle.fill"
         avatarImageData = UserDefaults.standard.data(forKey: "\(prefix)_avatarImage")
