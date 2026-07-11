@@ -37,7 +37,9 @@ struct ExploreView: View {
                                 NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
                                     ZStack(alignment: .bottomLeading) {
                                         RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
-                                        print("DEBUG posterMap key=\(title), value=\(posterMap[title] ?? "nil")")if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") { CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14)) }
+                                        if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
+                                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                                        }
                                         LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
                                         Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
                                     }.frame(height: 100)
