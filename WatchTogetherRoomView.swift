@@ -97,41 +97,42 @@ struct WatchTogetherRoomView: View {
     // MARK: - Create Room
     var createRoomView: some View { VStack(spacing: 24) { HStack { Button { showCreateRoom = false } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))) }; Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44) }.padding(.horizontal, 16).padding(.top, 50); VStack(spacing: 16) { HStack { Text("Avatar của bạn:").font(.system(size: 13)).foregroundColor(.white.opacity(0.7)); Spacer(); Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count]).font(.system(size: 28)).frame(width: 44, height: 44).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)) }.padding(.horizontal, 4); TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: { HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }; HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }; TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).keyboardType(.numberPad); Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: { HStack { Image(systemName: "arrow.right.circle.fill"); Text("Vào phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 24); Spacer() }.background(Color.black.ignoresSafeArea()) }
     
-    // MARK: - In Room (ĐÃ SỬA LẠI HOÀN TOÀN)
+    // MARK: - In Room (CHỈ VIDEO KHI XOAY NGANG)
     var inRoomView: some View {
         GeometryReader { geo in
             ZStack {
-                // Lớp nền đen ở sau cùng để tránh khoảng trắng khi xoay ngang
                 Color.black.ignoresSafeArea()
                 
-                // Phần Video + Overlay
-                CustomPlayerVC(player: player, pipController: $pipController)
-                    .ignoresSafeArea() // Video tràn ra toàn bộ màn hình
-                    .overlay {
-                        // Layer chứa nút điều khiển
-                        videoControlsOverlay
+                if isLandscape {
+                    // 1. KHI XOAY NGANG: CHỈ CÓ VIDEO TRƠN (Không overlay, không chat)
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .ignoresSafeArea()
+                        .aspectRatio(16/9, contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // Ấn vào video để bật/tắt controls (nếu bạn muốn có nút play khi ấn, hãy thêm overlay vào đây.
+                        // Còn theo yêu cầu "chỉ video xoay ngang thôi", mình để trống ở đây)
+                        .onTapGesture {
+                            // Bạn có thể thêm logic bật tắt controls ở đây nếu muốn
+                        }
+                } else {
+                    // 2. KHI DỌC: Hiện video kèm theo khung chat
+                    CustomPlayerVC(player: player, pipController: $pipController)
+                        .ignoresSafeArea()
+                        .aspectRatio(16/9, contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .overlay { videoControlsOverlay } // Nút Back, Play, Xoay
+                        .onTapGesture { toggleControlsInRoom() }
+                    
+                    // Phần khung chat sát đáy
+                    VStack(spacing: 0) {
+                        Spacer()
+                        imessageChatPanel
+                            .ignoresSafeArea(edges: .bottom)
                     }
-                    .onTapGesture {
-                        // Ấn vào video để ẩn/hiện nút
-                        toggleControlsInRoom()
-                    }
-                    // QUAN TRỌNG: Ép tỷ lệ 16:9 để video không bao giờ bị méo
-                    .aspectRatio(16/9, contentMode: .fit)
-                    // Giới hạn chiều cao tối đa của video bằng chính chiều cao màn hình (để khi xoay ngang nó chiếm trọn)
-                    .frame(maxHeight: geo.size.height)
-                
-                // Phần Chat Panel (được tách riêng, đặt đè lên video bên dưới)
-                // Dùng VStack + Spacer để chat luôn nằm sát đáy
-                VStack(spacing: 0) {
-                    Spacer() // Đẩy mọi thứ xuống dưới
-                    imessageChatPanel
-                        // SỬA QUAN TRỌNG: Cho phép phần chat đè lên vùng an toàn (Home indicator) của màn hình
-                        .ignoresSafeArea(edges: .bottom)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: showControls)
         }
-        // Tắt animation mặc định khi xoay màn hình để chạy mượt hơn
-        .animation(.easeInOut(duration: 0.3), value: showControls)
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
         .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
@@ -139,15 +140,14 @@ struct WatchTogetherRoomView: View {
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
     }
     
-    // MARK: - Video Controls Overlay (ĐÃ TỐI ƯU LẠI)
+    // MARK: - Video Controls Overlay (CHỈ DÙNG KHI DỌC)
     var videoControlsOverlay: some View {
         Group { 
             if showControls { 
                 ZStack {
-                    // Lớp nền mờ mờ phía sau để nổi bật nút ấn khi xem trong tối
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                        .allowsHitTesting(false) // Không chặn sự kiện ấn vào video
+                        .allowsHitTesting(false)
                     
                     VStack(spacing: 0) {
                         // Thanh Header (Back, Tên phim, Xoay màn hình)
@@ -161,14 +161,14 @@ struct WatchTogetherRoomView: View {
                             }
                             Spacer()
                             Button { toggleOrientation() } label: { 
-                                Image(systemName: isLandscape ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") // Đổi icon khi xoay
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
                                     .font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) 
                             }
                         }
                         .padding(.horizontal, 12)
-                        .padding(.top, isLandscape ? 8 : 48) // Khi ngang thì bớt khoảng trống trên cùng
+                        .padding(.top, 48)
                         
-                        Spacer() // Đẩy nút Play/Pause vào chính giữa video
+                        Spacer()
                         
                         // Hàng nút giữa (Tua, Play/Pause)
                         HStack(spacing: 50) {
@@ -188,10 +188,10 @@ struct WatchTogetherRoomView: View {
                             }
                         }
                         
-                        Spacer() // Đẩy nút play xuống dưới nữa (nếu cần cân chỉnh lại độ cao)
+                        Spacer()
                     }
                 }
-                .ignoresSafeArea() // Để header không bị tai thỏ che
+                .ignoresSafeArea()
             }
         }
     }
