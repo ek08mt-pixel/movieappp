@@ -56,6 +56,15 @@ private func extractSeasonFromOriginName(_ originName: String) -> Int? {
     return nil
 }
 
+private func matchEpisode(name: String, target: Int) -> Bool {
+    let n = name.trimmingCharacters(in: .whitespaces)
+    if n == String(format: "Tập %02d", target) { return true }
+    if n == String(format: "Tập %d", target) { return true }
+    if n == "\(target)" { return true }
+    if n.lowercased() == "full" && target == 1 { return true }
+    return false
+}
+
 // MARK: - NguonC Service
 final class NguonCService {
     static let shared = NguonCService()
@@ -209,7 +218,7 @@ final class VSMOVService {
                             for server in episodes {
                                 if let serverData = server["server_data"] as? [[String: Any]] {
                                     for ep in serverData {
-                                        if let name = ep["name"] as? String, let link = ep["link_embed"] as? String, (name.lowercased() == "full" || Int(name) == e) {
+                                        if let name = ep["name"] as? String, let link = ep["link_embed"] as? String, matchEpisode(name: name, target: e) {
                                             let m3u8 = link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
                                             if let streamURL = URL(string: m3u8) { completion(.success(streamURL)); return }
                                         }
@@ -333,12 +342,34 @@ final class PhimAPIService {
     
     private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
         if isSeriesType(phimType) {
+            let targetSeason = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
+                // SỬA LỖI 2: Lọc server theo season trước khi tìm episode
+                for server in episodes {
+                    let serverSeason = server["season"] as? Int ?? targetSeason
+                    if serverSeason != targetSeason { continue }
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: ep) {
+                                return streamURL
+                            }
+                        }
+                    }
+                }
+                // Fallback: không lọc season
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
-                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), name == String(format: "Tập %02d", ep) { return streamURL }
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: ep) {
+                                return streamURL
+                            }
                         }
                     }
                 }
@@ -389,12 +420,34 @@ final class SofaflixService {
     
     private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
         if isSeriesType(phimType) {
+            let targetSeason = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
+                // SỬA LỖI 2: Lọc server theo season trước khi tìm episode
+                for server in episodes {
+                    let serverSeason = server["season"] as? Int ?? targetSeason
+                    if serverSeason != targetSeason { continue }
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: ep) {
+                                return streamURL
+                            }
+                        }
+                    }
+                }
+                // Fallback: không lọc season
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
-                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), name == String(format: "Tập %02d", ep) { return streamURL }
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: ep) {
+                                return streamURL
+                            }
                         }
                     }
                 }
