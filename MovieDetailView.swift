@@ -136,7 +136,8 @@ struct MovieDetailView: View {
                                                 LazyVStack(spacing: 6) {
                                                     ForEach(detail.episodes) { ep in
                                                         Button {
-                                                            playSeason = season.seasonNumber
+                                                            // SỬA LỖI 2: Dùng seasonNumber từ chính episode thay vì từ season
+                                                            playSeason = ep.seasonNumber
                                                             playEpisode = ep.episodeNumber
                                                             showPlayer = true
                                                         } label: {
