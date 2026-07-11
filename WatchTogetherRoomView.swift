@@ -195,10 +195,10 @@ struct WatchTogetherRoomView: View {
         GeometryReader { geo in
             if isLandscape {
                 ZStack {
-                    Color.black.ignoresSafeArea()
                     CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
                     videoControlsOverlay
                 }
+                .background(Color.black)
                 .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
@@ -229,33 +229,33 @@ struct WatchTogetherRoomView: View {
     
     // Video Controls
     var videoControlsOverlay: some View {
-        VStack(spacing: 0) {
+        ZStack {
             if showControls {
-                HStack {
-                    Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                VStack {
+                    HStack {
+                        Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
+                            Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        }
+                        Spacer()
+                        Button { showEpisodePanel = true } label: {
+                            Text(displayTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                        }
+                        Spacer()
+                        Button { toggleOrientation() } label: {
+                            Image(systemName: "rotate.right").font(.system(size: 17, weight: .bold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        }
                     }
+                    .padding(.horizontal, 16).padding(.top, isLandscape ? 4 : 52)
+                    
                     Spacer()
-                    Button { showEpisodePanel = true } label: {
-                        Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                    
+                    HStack(spacing: 40) {
+                        Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 20)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
+                        Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 24)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) }
+                        Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 20)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
                     }
-                    Spacer()
-                    Button { toggleOrientation() } label: {
-                        Image(systemName: "rotate.right").font(.system(size: 15, weight: .bold)).foregroundColor(.white).padding(7).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                    }
+                    .padding(.bottom, isLandscape ? 8 : 40)
                 }
-                .padding(.horizontal, 16).padding(.top, isLandscape ? 6 : 50)
-                
-                Spacer()
-                
-                HStack(spacing: 40) {
-                    Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 20)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
-                    Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 24)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) }
-                    Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 20)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
-                }
-                .padding(.bottom, isLandscape ? 10 : 0)
-                
-                if !isLandscape { Spacer() }
             }
         }
     }
@@ -339,8 +339,6 @@ struct WatchTogetherRoomView: View {
                 .onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
             
-            Spacer()
-            
             // Input
             HStack(spacing: 12) {
                 TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
@@ -349,8 +347,7 @@ struct WatchTogetherRoomView: View {
                     .onSubmit { sendImessage() }
                 if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 38)).foregroundColor(.white) } }
             }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .padding(.bottom, keyboardHeight > 0 ? 0 : 10)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, max(keyboardHeight > 0 ? 8 : 16, 8))
             .animation(.easeOut(duration: 0.2), value: keyboardHeight)
         }
         .background(ZStack {
@@ -362,7 +359,6 @@ struct WatchTogetherRoomView: View {
         })
         .contentShape(Rectangle())
         .onTapGesture { isInputFocused = false }
-        .ignoresSafeArea(.keyboard)
     }
     
     func sendReaction(_ emoji: String) {
