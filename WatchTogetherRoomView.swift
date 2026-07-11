@@ -100,20 +100,32 @@ struct WatchTogetherRoomView: View {
     // MARK: - In Room
     var inRoomView: some View {
         GeometryReader { geo in
-            if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .overlay { videoControlsOverlay }
-                    .onTapGesture { toggleControlsInRoom() }
-            } else {
-                VStack(spacing: 0) {
+            ZStack {
+                if isLandscape {
                     CustomPlayerVC(player: player, pipController: $pipController)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                    
+                    if showControls {
+                        videoControlsOverlay
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        ZStack {
+                            CustomPlayerVC(player: player, pipController: $pipController)
+                                .frame(height: geo.size.width * 9 / 16)
+                            
+                            if showControls {
+                                videoControlsOverlay
+                            }
+                        }
                         .frame(height: geo.size.width * 9 / 16)
-                        .overlay { videoControlsOverlay }
-                        .onTapGesture { toggleControlsInRoom() }
-                    imessageChatPanel
+                        
+                        imessageChatPanel
+                    }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { toggleControlsInRoom() }
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.3), value: showControls)
@@ -125,7 +137,42 @@ struct WatchTogetherRoomView: View {
     }
     
     var videoControlsOverlay: some View {
-        Group { if showControls { VStack(spacing: 0) { HStack { Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: { Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Spacer(); Button { showEpisodePanel = true } label: { Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1) }; Spacer(); Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 12).padding(.top, isLandscape ? 4 : 48); Spacer(); HStack(spacing: 36) { Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }; Button { if player.rate == 0 { player.play() } else { player.pause() }; if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) } } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) }; Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) } }; Spacer() } } }
+        VStack(spacing: 0) {
+            HStack {
+                Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                }
+                Spacer()
+                Button { showEpisodePanel = true } label: {
+                    Text(displayTitle).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                }
+                Spacer()
+                Button { toggleOrientation() } label: {
+                    Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, isLandscape ? 4 : 48)
+            
+            Spacer()
+            
+            HStack(spacing: 36) {
+                Button { seek(-10) } label: {
+                    Image(systemName: "gobackward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                }
+                Button {
+                    if player.rate == 0 { player.play() } else { player.pause() }
+                    if service.isHost { service.sendPlaybackState(action: player.rate == 0 ? "play" : "pause", time: currentTime) }
+                } label: {
+                    Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 22)).foregroundColor(.white).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                }
+                Button { seek(10) } label: {
+                    Image(systemName: "goforward.10").font(.system(size: 18)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                }
+            }
+            
+            Spacer()
+        }
     }
     
     func handleRemoteState() { guard let state = service.remoteState, !service.isHost else { return }; let target = CMTime(seconds: state.time, preferredTimescale: 600); if let ep = state.episodeNumber, let sn = state.seasonNumber { if selectedEpisode?.episodeNumber != ep || selectedSeason?.seasonNumber != sn { Task { if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: currentMovie?.id ?? 0, seasonNumber: sn), let episode = detail.episodes.first(where: { $0.episodeNumber == ep }) { await MainActor.run { selectedSeason = seasons.first(where: { $0.seasonNumber == sn }); selectedEpisode = episode; loadEpisode(episode) } } } } }; if state.action == "play" { player.seek(to: target); player.play() } else if state.action == "pause" { player.seek(to: target); player.pause() } else if state.action == "seek" { player.seek(to: target) } }
