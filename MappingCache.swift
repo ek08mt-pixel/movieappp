@@ -295,31 +295,43 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
+        // 1. Khớp chính xác tmdb.id + tmdb.season
         if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
             ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
         }) { return exact }
         
+        // 2. Khớp tmdb.id + season từ origin_name
         if let same = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
             extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
         }) { return same }
         
+        // 3. SỬA: Khớp tmdb.id (bỏ qua season) - lấy đúng phim trước
+        if let sameTMDB = items.first(where: {
+            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+        }) { return sameTMDB }
+        
+        // 4. Với series, tìm theo origin_name chứa title + season
         if isSeries {
             let matched = items.filter { item in
                 guard isSeriesType(item["type"] as? String ?? "") else { return false }
                 let origin = (item["origin_name"] as? String ?? "").lowercased()
                 let s = extractSeasonFromOriginName(item["origin_name"] as? String ?? "")
-                return s == targetSeason && origin.contains(normalizedTitle)
+                return (s == nil || s == targetSeason) && origin.contains(normalizedTitle)
             }
             if !matched.isEmpty {
-                if let orig = matched.first(where: { ($0["tmdb"] as? [String: Any])?["id"] == nil }) { return orig }
+                if let withSeason = matched.first(where: { extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason }) {
+                    return withSeason
+                }
                 return matched.first
             }
         }
         
+        // 5. Khớp tên chính xác
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         
+        // 6. Fallback: item đầu tiên cùng loại
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
@@ -345,7 +357,6 @@ final class PhimAPIService {
             let targetSeason = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
-                // SỬA LỖI 2: Lọc server theo season trước khi tìm episode
                 for server in episodes {
                     let serverSeason = server["season"] as? Int ?? targetSeason
                     if serverSeason != targetSeason { continue }
@@ -360,7 +371,6 @@ final class PhimAPIService {
                         }
                     }
                 }
-                // Fallback: không lọc season
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
@@ -423,7 +433,6 @@ final class SofaflixService {
             let targetSeason = season ?? 1
             let ep = episode ?? 1
             if let episodes = json["episodes"] as? [[String: Any]] {
-                // SỬA LỖI 2: Lọc server theo season trước khi tìm episode
                 for server in episodes {
                     let serverSeason = server["season"] as? Int ?? targetSeason
                     if serverSeason != targetSeason { continue }
@@ -438,7 +447,6 @@ final class SofaflixService {
                         }
                     }
                 }
-                // Fallback: không lọc season
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
