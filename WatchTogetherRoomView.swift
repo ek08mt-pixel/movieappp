@@ -47,7 +47,7 @@ struct WatchTogetherRoomView: View {
     @State private var posterImage: UIImage?
     @State private var refreshTimer: Timer?
     
-    @State private var fakeRooms: [FakeRoom] = [
+    private static let initialFakeRooms: [FakeRoom] = [
         FakeRoom(roomName: "Deadpool nè", movieTitle: "Deadpool & Wolverine", viewerCount: 6, avatars: ["🐱","🐶","🐰","🐻","🐼","🐨"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "01:12:45"),
         FakeRoom(roomName: "kinh dị", movieTitle: "The Nun II", viewerCount: 3, avatars: ["🦊","🐸","🐵"], isPrivate: true, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:32:18"),
         FakeRoom(roomName: "⚡ Marvel Marathon", movieTitle: "Avengers: Endgame", viewerCount: 6, avatars: ["🐱","🐼","🐨","🐯","🦊","🐙"], isPrivate: false, posterPath: "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", currentTime: "02:45:10"),
@@ -61,6 +61,8 @@ struct WatchTogetherRoomView: View {
         FakeRoom(roomName: "🔥 Hot Hòn Họt", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false, posterPath: "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg", currentTime: "00:15:30"),
         FakeRoom(roomName: "Romcom", movieTitle: "How to Lose a Guy", viewerCount: 3, avatars: ["🐮","🐷","🐹"], isPrivate: false, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:38:55"),
     ]
+    
+    @State private var fakeRooms: [FakeRoom] = WatchTogetherRoomView.initialFakeRooms
     
     var displayTitle: String {
         if currentMovieTitle.isEmpty { return "Chọn phim" }
