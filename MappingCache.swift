@@ -518,4 +518,4 @@ final class SofaflixService {
         }
         return nil
     }
-}
+} 
