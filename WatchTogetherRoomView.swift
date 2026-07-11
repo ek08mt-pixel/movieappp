@@ -554,24 +554,31 @@ struct WatchTogetherRoomView: View {
         selectedSeason = nil; episodes = []; selectedEpisode = nil
         seasons = []; isLoadingSeasons = true
         
-        if movie.mediaType == "tv" {
-            Task {
-                do {
-                    let fetchedSeasons = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
-                    await MainActor.run { self.seasons = fetchedSeasons; self.isLoadingSeasons = false }
-                } catch {
-                    print("❌ WatchTogether: Lỗi fetch seasons:", error)
-                    await MainActor.run { self.isLoadingSeasons = false }
+        let isTV = movie.mediaType == "tv"
+        
+        // SỬA LỖI 3: Luôn thử fetch TV seasons, không phụ thuộc hoàn toàn vào movie.mediaType
+        // vì mediaType có thể bị nil hoặc sai khi movie đến từ một số nguồn trong Watch Together
+        Task {
+            do {
+                let fetchedSeasons = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
+                await MainActor.run {
+                    if !fetchedSeasons.isEmpty {
+                        self.seasons = fetchedSeasons
+                    }
+                    self.isLoadingSeasons = false
                 }
+            } catch {
+                print("❌ WatchTogether: Lỗi fetch seasons:", error)
+                await MainActor.run { self.isLoadingSeasons = false }
             }
-        } else { isLoadingSeasons = false }
+        }
         
         Task {
             do {
-                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
+                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: isTV ? "tv" : nil)
                 var streamURL: URL?
-                streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) } }
-                if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) } } }
+                streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: isTV ? "tv" : "movie", season: nil, episode: nil) { cont.resume(with: $0) } }
+                if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: isTV ? "tv" : "movie", season: nil, episode: nil) { cont.resume(with: $0) } } }
                 guard let url = streamURL else { return }
                 await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); if service.isHost { service.sendPlaybackState(action: "play", time: 0) } }
             } catch { print("Load error: \(error)") }
