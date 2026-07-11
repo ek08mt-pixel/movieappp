@@ -192,7 +192,7 @@ struct WatchTogetherRoomView: View {
             HStack(spacing: 20) { ForEach(["😭","🥹","🤡","😻","🫢","🤯"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } } }.padding(.horizontal, 12).padding(.vertical, 4)
             ScrollViewReader { proxy in ScrollView { LazyVStack(spacing: 4) { Color.clear.frame(height: 2); ForEach(Array(service.messages.enumerated()), id: \.element.id) { idx, msg in imessageBubble(msg, showAvatar: shouldShowAvatar(at: idx)).id(msg.id) }; Color.clear.frame(height: 4) }.padding(.horizontal, 12) }.onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } } }
             HStack(spacing: 10) { TextField("Nhắn tin...", text: $watchMessage).focused($isInputFocused).font(.system(size: 16)).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 16).background(RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial.opacity(0.6)).overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.12), lineWidth: 0.5))).onSubmit { sendImessage() }; if !watchMessage.isEmpty { Button { sendImessage() } label: { Image(systemName: "arrow.up.circle.fill").font(.system(size: 34)).foregroundColor(.white) } } }
-            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 15 : 12)
+            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 25 : 20)
             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
         }
         .background(Color.black).contentShape(Rectangle()).onTapGesture { isInputFocused = false }
