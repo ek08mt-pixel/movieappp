@@ -205,9 +205,7 @@ struct WatchTogetherRoomView: View {
             let safeBottom = geo.safeAreaInsets.bottom
             
             if isLandscape {
-                // LANDSCAPE: video trái + chat phải
                 HStack(spacing: 0) {
-                    // Video player
                     ZStack {
                         CustomPlayerVC(player: player, pipController: $pipController)
                         videoControlsOverlay
@@ -215,12 +213,10 @@ struct WatchTogetherRoomView: View {
                     .frame(width: geo.size.width * 0.65)
                     .onTapGesture { toggleControlsInRoom() }
                     
-                    // Chat panel
                     landscapeChatPanel
                         .frame(width: geo.size.width * 0.35)
                 }
             } else {
-                // PORTRAIT: video trên + chat dưới
                 let videoHeight = geo.size.width * 9 / 16
                 
                 VStack(spacing: 0) {
@@ -486,7 +482,6 @@ struct WatchTogetherRoomView: View {
                 }
             }
             
-            // Input bar với safe area bottom
             HStack(spacing: 10) {
                 TextField("Nhắn tin...", text: $watchMessage)
                     .focused($isInputFocused).font(.system(size: 17)).foregroundColor(.white)
@@ -554,27 +549,31 @@ struct WatchTogetherRoomView: View {
         selectedSeason = nil; episodes = []; selectedEpisode = nil
         seasons = []; isLoadingSeasons = true
         
-        let isTV = movie.mediaType == "tv"
+        print("DEBUG loadMovieForRoom: \(movie.title), id: \(movie.id), mediaType: \(movie.mediaType ?? "nil")")
         
-        // SỬA LỖI 3: Luôn thử fetch TV seasons, không phụ thuộc hoàn toàn vào movie.mediaType
-        // vì mediaType có thể bị nil hoặc sai khi movie đến từ một số nguồn trong Watch Together
         Task {
             do {
                 let fetchedSeasons = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
+                print("DEBUG fetchTVSeasons count: \(fetchedSeasons.count)")
+                for s in fetchedSeasons {
+                    print("DEBUG season: \(s.name), seasonNumber: \(s.seasonNumber)")
+                }
                 await MainActor.run {
                     if !fetchedSeasons.isEmpty {
                         self.seasons = fetchedSeasons
+                        print("DEBUG seasons assigned: \(self.seasons.count)")
                     }
                     self.isLoadingSeasons = false
                 }
             } catch {
-                print("❌ WatchTogether: Lỗi fetch seasons:", error)
+                print("DEBUG fetchTVSeasons error: \(error)")
                 await MainActor.run { self.isLoadingSeasons = false }
             }
         }
         
         Task {
             do {
+                let isTV = movie.mediaType == "tv"
                 let imdbID = try await fetchIMDBID(for: movie.id, mediaType: isTV ? "tv" : nil)
                 var streamURL: URL?
                 streamURL = try? await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: isTV ? "tv" : "movie", season: nil, episode: nil) { cont.resume(with: $0) } }
