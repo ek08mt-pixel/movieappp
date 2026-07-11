@@ -111,7 +111,7 @@ struct WatchTogetherRoomView: View {
             } else {
                 VStack(spacing: 0) {
                     CustomPlayerVC(player: player, pipController: $pipController)
-                        .frame(height: geo.size.width * 9 / 16)
+                        .frame(height: geo.size.width * 9 / 13)
                         .overlay(
                             videoControlsOverlay
                                 .allowsHitTesting(showControls)
@@ -137,7 +137,15 @@ struct WatchTogetherRoomView: View {
             if showControls {
                 VStack(spacing: 0) {
                     HStack {
-                        Button { player.pause(); player.replaceCurrentItem(with: nil); service.leaveRoom() } label: {
+                        Button {
+                            if isLandscape {
+                                forcePortrait()
+                            } else {
+                                player.pause()
+                                player.replaceCurrentItem(with: nil)
+                                service.leaveRoom()
+                            }
+                        } label: {
                             Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                         Spacer()
@@ -150,7 +158,7 @@ struct WatchTogetherRoomView: View {
                         }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.top, isLandscape ? 4 : 48)
+                    .padding(.top, isLandscape ? 4 : 44)
                     
                     Spacer()
                     
@@ -184,7 +192,7 @@ struct WatchTogetherRoomView: View {
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
             HStack { VStack(alignment: .leading, spacing: 2) { Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1); Text(service.currentRoomName).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Spacer(); HStack(spacing: 6) { Button { showSearchMovie = true } label: { Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Button { showViewerPanel = true } label: { HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) } }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))) } } }
-            .padding(.horizontal, 12).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))).padding(.horizontal, 8).padding(.top, 6)
+            .padding(.horizontal, 12).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))).padding(.horizontal, 8).padding(.top, 4)
             if duration > 0 { VStack(spacing: 2) { HStack { Text(formatTime(currentTime)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }; GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 3); Capsule().fill(.white.opacity(0.6)).frame(width: max(3, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 3) } }.frame(height: 3) }.padding(.horizontal, 12).padding(.vertical, 4) }
             HStack(spacing: 20) { ForEach(["😭","🤣","👏","❤️","🔥","💀"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } } }.padding(.horizontal, 12).padding(.vertical, 4)
             ScrollViewReader { proxy in ScrollView { LazyVStack(spacing: 4) { Color.clear.frame(height: 2); ForEach(Array(service.messages.enumerated()), id: \.element.id) { idx, msg in imessageBubble(msg, showAvatar: shouldShowAvatar(at: idx)).id(msg.id) }; Color.clear.frame(height: 4) }.padding(.horizontal, 12) }.onChange(of: service.messages.count) { _ in if let last = service.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } } }
