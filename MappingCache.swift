@@ -307,7 +307,7 @@ final class PhimAPIService {
             extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
         }) { return same }
         
-        // 3. SỬA: Khớp tmdb.id (bỏ qua season) - lấy đúng phim trước
+        // 3. Khớp tmdb.id (bỏ qua season) - lấy đúng phim trước
         if let sameTMDB = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
         }) { return sameTMDB }
@@ -344,6 +344,18 @@ final class PhimAPIService {
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    
+                    // DEBUG LOG
+                    print("DEBUG slug: \(slug), targetSeason: \(season ?? 1), targetEp: \(episode ?? 1)")
+                    if let episodes = json["episodes"] as? [[String: Any]] {
+                        for (i, server) in episodes.enumerated() {
+                            print("DEBUG server[\(i)] season: \(server["season"] ?? "nil"), server_name: \(server["server_name"] ?? "nil")")
+                            if let serverData = server["server_data"] as? [[String: Any]], let first = serverData.first {
+                                print("DEBUG   first ep name: \(first["name"] ?? "nil")")
+                            }
+                        }
+                    }
+                    
                     let phimType: String = (json["item"] as? [String: Any])?["type"] as? String ?? (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
                     if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) { completion(.success(streamURL)); return }
                     completion(.failure(StreamServiceError.noStreamURL))
