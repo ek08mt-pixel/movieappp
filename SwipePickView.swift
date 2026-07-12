@@ -58,19 +58,19 @@ struct SwipePickView: View {
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                             }
                         }
-                        .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 8)
+                        .padding(.horizontal, 20).padding(.top, 50)
+                        
+                        Spacer()
                         
                         // Card stack
                         ZStack {
-                            // Behind card (next movie)
                             if let next = nextMovie {
                                 cardView(movie: next, geo: geo)
                                     .scaleEffect(0.92)
-                                    .offset(y: 16)
-                                    .opacity(0.5)
+                                    .offset(y: 10)
+                                    .opacity(0.4)
                             }
                             
-                            // Front card
                             cardView(movie: currentMovie!, geo: geo)
                                 .offset(x: offset.width)
                                 .rotationEffect(.degrees(Double(offset.width / 20)))
@@ -108,7 +108,8 @@ struct SwipePickView: View {
                                     .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
                             }
                         }
-                        .padding(.bottom, 20)
+                        
+                        Spacer()
                     }
                 }
             }
@@ -123,27 +124,27 @@ struct SwipePickView: View {
         ZStack(alignment: .bottom) {
             CachedAsyncImage(url: movie.posterURL)
                 .aspectRatio(2/3, contentMode: .fill)
-                .frame(width: geo.size.width - 32, height: geo.size.height * 0.6)
+                .frame(width: geo.size.width - 56, height: geo.size.height * 0.45)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
             
             VStack(alignment: .leading, spacing: 0) {
                 Spacer()
                 LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
-                    .frame(height: 140)
+                    .frame(height: 110)
                     .overlay(alignment: .bottomLeading) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(movie.title).font(.system(size: 20, weight: .bold)).foregroundColor(.white).lineLimit(2)
-                            HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(movie.title).font(.system(size: 16, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                            HStack(spacing: 6) {
                                 HStack(spacing: 3) {
-                                    Image(systemName: "star.fill").font(.system(size: 11)).foregroundColor(.yellow)
-                                    Text(movie.ratingText).font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                                    Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
+                                    Text(movie.ratingText).font(.system(size: 11, weight: .bold)).foregroundColor(.white)
                                 }
-                                Text(movie.yearText).font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
+                                Text(movie.yearText).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
                             }
-                            Text(movie.overview).font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).lineLimit(3)
+                            Text(movie.overview).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)).lineLimit(2)
                         }
-                        .padding(.horizontal, 16).padding(.bottom, 16)
+                        .padding(.horizontal, 14).padding(.bottom, 12)
                     }
             }
             .clipShape(RoundedRectangle(cornerRadius: 24))
