@@ -162,8 +162,9 @@ struct MoviePlayerView: View {
     } }
     
     func loadStream(season: Int? = nil, episode: Int? = nil) {
-        let ep = episode ?? episodeNumber ?? 1; let s = season ?? seasonNumber
-        seasonNumber = s; episodeNumber = ep
+    if let s = season { seasonNumber = s }
+    if let e = episode { episodeNumber = e }
+    let ep = episodeNumber ?? 1; let s = seasonNumber
         
         // SỬA LỖI 2: Clear imdbID cache khi đổi season/episode để fetch đúng imdbID
         imdbIDCache = nil
