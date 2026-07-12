@@ -357,14 +357,12 @@ private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]
                 return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
             }
         }
-    }
     
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
         for page in 1...5 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
         return all
     }
-}
 
 extension Movie {
     func withPlaceholder() -> Movie {
