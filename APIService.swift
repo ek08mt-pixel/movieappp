@@ -255,32 +255,31 @@ class APIService {
     }
     
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
-    let urlString: String
-    switch type {
-    case .studio:
-    if categoryID == 213 {
-        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
-    } else {
-        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+        let urlString: String
+        switch type {
+        case .studio:
+            if categoryID == 213 {
+                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
+            } else {
+                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+            }
+        case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
+        case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+        }
+        return try await fetchMultiplePages { [self] page in
+            guard let url = URL(string: "\(urlString)&page=\(page)") else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.map { $0.withPlaceholder() }
+        }
     }
-        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
-    }
-    case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
-    case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)"
-    }
-    return try await fetchMultiplePages { [self] page in
-        guard let url = URL(string: "\(urlString)&page=\(page)") else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholder() }
-    }
-}
     
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
         for page in 1...5 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
         return all
     }
+}
 
 extension Movie {
     func withPlaceholder() -> Movie {
