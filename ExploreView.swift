@@ -100,6 +100,7 @@ struct ExploreView: View {
 // MARK: - Asia Category View
 struct AsiaCategoryView: View {
     @State private var selectedCountry = "all"
+    @State private var allMovies: [Movie] = []
     @State private var movies: [Movie] = []
     @State private var isLoading = true
     @Environment(\.dismiss) var dismiss
@@ -124,7 +125,7 @@ struct AsiaCategoryView: View {
                         ForEach(countries, id: \.0) { code, name in
                             Button {
                                 selectedCountry = code
-                                Task { await loadMovies() }
+                                filterMovies()
                             } label: {
                                 Text(name)
                                     .font(.system(size: 13, weight: selectedCountry == code ? .bold : .regular))
@@ -140,7 +141,7 @@ struct AsiaCategoryView: View {
                 .padding(.top, 60)
                 .padding(.bottom, 8)
                 
-                if isLoading && movies.isEmpty {
+                if isLoading {
                     Spacer()
                     ProgressView().tint(.white)
                     Spacer()
@@ -173,14 +174,19 @@ struct AsiaCategoryView: View {
             BackButton()
         }
         .navigationBarHidden(true)
-        .task { await loadMovies() }
+        .task {
+            allMovies = (try? await APIService.shared.fetchAsiaMovies(language: nil)) ?? []
+            filterMovies()
+            isLoading = false
+        }
     }
     
-    func loadMovies() async {
-        isLoading = true
-        let lang: String? = selectedCountry == "all" ? nil : selectedCountry
-        movies = (try? await APIService.shared.fetchAsiaMovies(language: lang)) ?? []
-        isLoading = false
+    func filterMovies() {
+        if selectedCountry == "all" {
+            movies = allMovies
+        } else {
+            movies = allMovies.filter { $0.originalLanguage == selectedCountry }
+        }
     }
 }
 
