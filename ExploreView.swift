@@ -452,4 +452,3 @@ struct CategoryFullView: View {
             BackButton()
         }.navigationBarHidden(true).task { do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }; isLoading = false }
     }
-}
