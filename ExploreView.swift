@@ -130,7 +130,7 @@ struct AsiaCategoryView: View {
                                     .font(.system(size: 13, weight: selectedCountry == code ? .bold : .regular))
                                     .foregroundColor(selectedCountry == code ? .white : .gray)
                                     .padding(.horizontal, 14).padding(.vertical, 8)
-                                    .background(Capsule().fill(selectedCountry == code ? .ultraThinMaterial.opacity(0.5) : .ultraThinMaterial.opacity(0.2)))
+                                    .background(Capsule().fill(selectedCountry == code ? Material.regularMaterial.opacity(0.5) : Material.regularMaterial.opacity(0.2)))
                                     .overlay(Capsule().stroke(.white.opacity(selectedCountry == code ? 0.2 : 0.05), lineWidth: 0.5))
                             }
                         }
