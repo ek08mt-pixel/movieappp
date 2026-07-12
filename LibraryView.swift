@@ -4,11 +4,6 @@ struct LibraryView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedTab: LibraryTab = .watched
     @State private var playMovie: Movie?
-    @State private var playSeason: Int?
-    @State private var playEpisode: Int?
-    @State private var playResumeTime: Double = 0
-    @State private var playMediaType: String?
-    @State private var showPlayer = false
     
     enum LibraryTab: String, CaseIterable {
         case watched = "Từng xem"
@@ -92,19 +87,18 @@ struct LibraryView: View {
                     }
                 }
             }
-            .fullScreenCover(isPresented: $showPlayer) {
-                if let movie = playMovie {
-                    MoviePlayerView(
-                        movieId: movie.id,
-                        movieTitle: movie.originalTitle ?? movie.title,
-                        mediaType: playMediaType ?? movie.mediaType,
-                        seasonNumber: playSeason,
-                        episodeNumber: playEpisode,
-                        posterURL: movie.posterURL,
-                        resumeTime: playResumeTime
-                    )
-                    .environmentObject(appState)
-                }
+            .fullScreenCover(item: $playMovie) { movie in
+                let progress = appState.watchProgressList.first { $0.movieId == movie.id }
+                MoviePlayerView(
+                    movieId: movie.id,
+                    movieTitle: movie.originalTitle ?? movie.title,
+                    mediaType: movie.mediaType,
+                    seasonNumber: progress?.season,
+                    episodeNumber: progress?.episode,
+                    posterURL: movie.posterURL,
+                    resumeTime: progress?.currentTime ?? 0
+                )
+                .environmentObject(appState)
             }
         }
     }
@@ -149,11 +143,6 @@ struct LibraryView: View {
                 
                 Button {
                     playMovie = movie
-                    playSeason = progress?.season
-                    playEpisode = progress?.episode
-                    playResumeTime = progress?.currentTime ?? 0
-                    playMediaType = progress?.mediaType
-                    showPlayer = true
                 } label: {
                     Circle()
                         .fill(.black.opacity(0.6))
@@ -196,11 +185,6 @@ struct LibraryView: View {
                     
                     Button {
                         playMovie = movie
-                        playSeason = progress?.season
-                        playEpisode = progress?.episode
-                        playResumeTime = progress?.currentTime ?? 0
-                        playMediaType = progress?.mediaType
-                        showPlayer = true
                     } label: {
                         Text("Xem tiếp")
                             .font(.system(size: 12, weight: .medium))
