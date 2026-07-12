@@ -36,8 +36,6 @@ struct SwipePickView: View {
                 }
             } else if let movie = currentMovie {
                 VStack(spacing: 0) {
-                    Spacer().frame(height: 4)
-                    
                     HStack {
                         Button { dismiss() } label: {
                             Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
@@ -54,19 +52,11 @@ struct SwipePickView: View {
                     Spacer()
                     
                     ZStack(alignment: .bottom) {
-                        if let url = movie.posterURL {
-                            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w342\(url.absoluteString.components(separatedBy: "/").last ?? "")")) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().aspectRatio(2/3, contentMode: .fill)
-                                default:
-                                    RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial)
-                                }
-                            }
-                        }
-                        .frame(width: UIScreen.main.bounds.width - 32, height: UIScreen.main.bounds.height * 0.62)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                        CachedAsyncImage(url: movie.posterURL)
+                            .aspectRatio(2/3, contentMode: .fill)
+                            .frame(width: UIScreen.main.bounds.width - 32, height: UIScreen.main.bounds.height * 0.62)
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Spacer()
