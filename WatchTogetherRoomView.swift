@@ -1,6 +1,23 @@
 import SwiftUI
 import AVKit
 
+// MARK: - Watch Player VC
+struct WatchPlayerVC: UIViewControllerRepresentable {
+    let player: AVPlayer
+    @Binding var pipController: AVPictureInPictureController?
+    
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let vc = AVPlayerViewController()
+        vc.player = player
+        vc.showsPlaybackControls = false
+        vc.videoGravity = .resizeAspect
+        vc.view.insetsLayoutMarginsFromSafeArea = false
+        return vc
+    }
+    
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
+}
+
 // MARK: - Fake Room Model
 struct FakeRoom: Identifiable {
     let id = UUID()
@@ -101,7 +118,7 @@ struct WatchTogetherRoomView: View {
     var inRoomView: some View {
         GeometryReader { geo in
             if isLandscape {
-                CustomPlayerVC(player: player, pipController: $pipController)
+                WatchPlayerVC(player: player, pipController: $pipController)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(
                         videoControlsOverlay
@@ -110,7 +127,7 @@ struct WatchTogetherRoomView: View {
                     .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
-                    CustomPlayerVC(player: player, pipController: $pipController)
+                    WatchPlayerVC(player: player, pipController: $pipController)
                         .frame(height: geo.size.width * 9 / 16)
                         .overlay(
                             videoControlsOverlay
