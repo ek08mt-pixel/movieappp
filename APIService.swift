@@ -259,8 +259,10 @@ class APIService {
     switch type {
     case .studio:
     if categoryID == 213 {
-        urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=213&sort_by=popularity.desc&language=\(language)"
+        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
     } else {
+        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+    }
         urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
     }
     case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
