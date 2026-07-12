@@ -7,7 +7,8 @@ struct ExploreView: View {
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
         ("Netflix", 175661, .keyword), ("Marvel", 420, .studio),
-        ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio)
+        ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio), ("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
+("iQiyi", 1429, .studio), ("Viki", 1583, .studio)
     ]
     
     let posterMap: [String: String] = [
