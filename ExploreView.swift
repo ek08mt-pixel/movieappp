@@ -5,10 +5,12 @@ struct ExploreView: View {
     @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
+    ("IMDb Top", 210024, .keyword),
     ("Netflix", 213, .studio), ("Marvel", 420, .studio),
-("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio),
-("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
-("iQiyi", 1429, .studio), ("Viki", 1583, .studio), ("Anime", 210024, .keyword)
+    ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio),
+    ("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
+    ("Disney+", 2739, .studio), ("Hulu", 453, .studio), ("Paramount+", 4330, .studio),
+    ("Peacock", 3353, .studio), ("Anime", 210024, .keyword), ("Châu Á", 0, .asia)
 ]
     
     let posterMap: [String: String] = [
