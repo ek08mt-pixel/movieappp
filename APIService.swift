@@ -1,6 +1,6 @@
 import Foundation
 
-class APIService {
+class APIService }
     static let shared = APIService()
     private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     private let baseURL = "https://api.themoviedb.org/3"
