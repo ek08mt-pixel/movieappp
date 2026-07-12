@@ -11,7 +11,7 @@ struct LibraryView: View {
     @State private var showPlayer = false
     
     enum LibraryTab: String, CaseIterable {
-        case watched = "Vừa xem"
+        case watched = "Từng xem"
         case saved = "Đã lưu"
     }
     
@@ -170,10 +170,13 @@ struct LibraryView: View {
             
             // Info
             VStack(alignment: .leading, spacing: 6) {
-                Text(movie.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
+                // Tên phim bấm vô trang chi tiết
+                NavigationLink(destination: MovieDetailView(movie: movie)) {
+                    Text(movie.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
                 
                 if let ep = progress?.episode, let s = progress?.season {
                     Text("S\(s):E\(ep)")
