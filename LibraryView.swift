@@ -5,7 +5,7 @@ struct LibraryView: View {
     @State private var selectedTab: LibraryTab = .watched
     
     enum LibraryTab: String, CaseIterable {
-        case watched = "Từng xem"
+        case watched = "Vừa xem"
         case saved = "Đã lưu"
     }
     
@@ -50,28 +50,34 @@ struct LibraryView: View {
                         ScrollView {
                             LazyVGrid(
                                 columns: [
-                                    GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10)
+                                    GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12)
                                 ],
-                                spacing: 10
+                                spacing: 16
                             ) {
                                 ForEach(currentMovies) { movie in
                                     NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                        VStack(spacing: 6) {
+                                        VStack(alignment: .leading, spacing: 6) {
                                             CachedAsyncImage(url: movie.posterURL)
                                                 .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(height: 160)
                                                 .frame(maxWidth: .infinity)
                                                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(Color(white: 0.12))
-                                                        .opacity(movie.posterURL == nil ? 1 : 0)
-                                                )
+                                                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                                             Text(movie.title)
-                                                .font(.system(size: 9, weight: .medium))
+                                                .font(.system(size: 10, weight: .medium))
                                                 .foregroundColor(.white)
                                                 .lineLimit(2)
+                                                .frame(height: 30, alignment: .top)
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill")
+                                                    .font(.system(size: 8))
+                                                    .foregroundColor(.yellow)
+                                                Text(movie.ratingText)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                            }
                                         }
                                     }
                                 }
