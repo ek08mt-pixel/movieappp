@@ -3,6 +3,12 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedTab: LibraryTab = .watched
+    @State private var playMovie: Movie?
+    @State private var playSeason: Int?
+    @State private var playEpisode: Int?
+    @State private var playResumeTime: Double = 0
+    @State private var playMediaType: String?
+    @State private var showPlayer = false
     
     enum LibraryTab: String, CaseIterable {
         case watched = "Vừa xem"
@@ -12,6 +18,8 @@ struct LibraryView: View {
     var currentMovies: [Movie] {
         selectedTab == .saved ? appState.favorites : appState.watchHistory
     }
+    
+    private let savedColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
         NavigationStack {
@@ -46,7 +54,38 @@ struct LibraryView: View {
                                 .foregroundColor(.gray)
                         }
                         .frame(maxHeight: .infinity)
+                    } else if selectedTab == .saved {
+                        // Grid 3 cột cho Đã lưu
+                        ScrollView {
+                            LazyVGrid(columns: savedColumns, spacing: 16) {
+                                ForEach(currentMovies) { movie in
+                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                        VStack(spacing: 6) {
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(height: 160)
+                                                .frame(maxWidth: .infinity)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                                            Text(movie.title)
+                                                .font(.system(size: 10, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .lineLimit(2)
+                                                .frame(height: 30, alignment: .top)
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill").font(.system(size: 8)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 100)
+                        }
                     } else {
+                        // List cho Từng xem
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(currentMovies) { movie in
@@ -58,6 +97,20 @@ struct LibraryView: View {
                             .padding(.bottom, 100)
                         }
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showPlayer) {
+                if let movie = playMovie {
+                    MoviePlayerView(
+                        movieId: movie.id,
+                        movieTitle: movie.title,
+                        mediaType: playMediaType,
+                        seasonNumber: playSeason,
+                        episodeNumber: playEpisode,
+                        posterURL: movie.posterURL,
+                        resumeTime: playResumeTime
+                    )
+                    .environmentObject(appState)
                 }
             }
         }
@@ -93,9 +146,15 @@ struct LibraryView: View {
         let hasProgress = (progress?.currentTime ?? 0) > 0 && (progress?.duration ?? 1) > 0
         let progressValue = hasProgress ? (progress!.currentTime / progress!.duration) : 0
         
-        return NavigationLink(destination: MovieDetailView(movie: movie)) {
+        return Button {
+            playMovie = movie
+            playSeason = progress?.season
+            playEpisode = progress?.episode
+            playResumeTime = progress?.currentTime ?? 0
+            playMediaType = progress?.mediaType
+            showPlayer = true
+        } label: {
             HStack(spacing: 12) {
-                // Poster với nút play
                 ZStack(alignment: .center) {
                     CachedAsyncImage(url: movie.posterURL)
                         .aspectRatio(2/3, contentMode: .fill)
@@ -103,7 +162,6 @@ struct LibraryView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                     
-                    // Nút play đen bo tròn
                     Circle()
                         .fill(.black.opacity(0.6))
                         .frame(width: 36, height: 36)
@@ -115,7 +173,6 @@ struct LibraryView: View {
                         )
                 }
                 
-                // Info
                 VStack(alignment: .leading, spacing: 6) {
                     Text(movie.title)
                         .font(.system(size: 15, weight: .semibold))
@@ -123,10 +180,10 @@ struct LibraryView: View {
                         .lineLimit(1)
                     
                     if let ep = progress?.episode, let s = progress?.season {
-                        Text("Season \(s) • Tập \(ep)")
+                        Text("S\(s):E\(ep)")
                             .font(.system(size: 11))
                             .foregroundColor(.gray)
-                    } else {
+                    } else if hasProgress {
                         Text(movie.yearText)
                             .font(.system(size: 11))
                             .foregroundColor(.gray)
@@ -137,7 +194,6 @@ struct LibraryView: View {
                             .font(.system(size: 11))
                             .foregroundColor(.white.opacity(0.6))
                         
-                        // Thanh tiến trình
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 Capsule()
@@ -150,7 +206,6 @@ struct LibraryView: View {
                         }
                         .frame(height: 4)
                         
-                        // Nút xem tiếp
                         Text("Xem tiếp")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
@@ -176,6 +231,7 @@ struct LibraryView: View {
                     )
             )
         }
+        .buttonStyle(.plain)
     }
     
     func formatProgressTime(_ seconds: Double) -> String {
