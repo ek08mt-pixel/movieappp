@@ -10,8 +10,7 @@ struct WatchPlayerVC: UIViewControllerRepresentable {
         let vc = AVPlayerViewController()
         vc.player = player
         vc.showsPlaybackControls = false
-        vc.videoGravity = .resizeAspectFill
-        vc.view.clipsToBounds = true
+        vc.videoGravity = .resizeAspect
         return vc
     }
     
