@@ -11,6 +11,7 @@ struct CategoryConfig: Identifiable {
         case studio
         case keyword
         case genre
+        case asia
     }
     
     static let allCategories: [CategoryConfig] = [
