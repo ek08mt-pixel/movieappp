@@ -14,6 +14,11 @@ struct SwipePickView: View {
         return movies[currentIndex]
     }
     
+    var nextMovie: Movie? {
+        guard currentIndex + 1 < movies.count else { return nil }
+        return movies[currentIndex + 1]
+    }
+    
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -35,7 +40,7 @@ struct SwipePickView: View {
                             }
                         }
                     }
-                } else if let movie = currentMovie {
+                } else {
                     VStack(spacing: 0) {
                         // Header
                         HStack {
@@ -53,74 +58,57 @@ struct SwipePickView: View {
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                             }
                         }
-                        .padding(.horizontal, 20).padding(.top, 50)
+                        .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 8)
                         
-                        // Card
-                        ZStack(alignment: .bottom) {
-                            CachedAsyncImage(url: movie.posterURL)
-                                .aspectRatio(2/3, contentMode: .fill)
-                                .frame(width: geo.size.width - 40, height: geo.size.height * 0.52)
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
-                                .shadow(color: .black.opacity(0.4), radius: 15, y: 8)
-                            
-                            VStack(alignment: .leading, spacing: 0) {
-                                Spacer()
-                                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                                    .frame(height: 120)
-                                    .overlay(alignment: .bottomLeading) {
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(movie.title).font(.system(size: 17, weight: .bold)).foregroundColor(.white).lineLimit(2)
-                                            HStack(spacing: 6) {
-                                                HStack(spacing: 3) {
-                                                    Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
-                                                    Text(movie.ratingText).font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                                }
-                                                Text(movie.yearText).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
-                                            }
-                                            Text(movie.overview).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)).lineLimit(2)
-                                        }
-                                        .padding(.horizontal, 16).padding(.bottom, 14)
-                                    }
+                        // Card stack
+                        ZStack {
+                            // Behind card (next movie)
+                            if let next = nextMovie {
+                                cardView(movie: next, geo: geo)
+                                    .scaleEffect(0.92)
+                                    .offset(y: 16)
+                                    .opacity(0.5)
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            
+                            // Front card
+                            cardView(movie: currentMovie!, geo: geo)
+                                .offset(x: offset.width)
+                                .rotationEffect(.degrees(Double(offset.width / 20)))
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { offset = $0.translation }
+                                        .onEnded {
+                                            if $0.translation.width > 100 { swipeRight() }
+                                            else if $0.translation.width < -100 { swipeLeft() }
+                                            else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
+                                        }
+                                )
                         }
-                        .offset(x: offset.width, y: offset.height * 0.4)
-                        .rotationEffect(.degrees(Double(offset.width / 20)))
-                        .gesture(
-                            DragGesture()
-                                .onChanged { offset = $0.translation }
-                                .onEnded {
-                                    if $0.translation.width > 100 { swipeRight() }
-                                    else if $0.translation.width < -100 { swipeLeft() }
-                                    else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
-                                }
-                        )
                         
                         Spacer()
                         
                         // Buttons
                         HStack(spacing: 40) {
                             Button { swipeLeft() } label: {
-                                Image(systemName: "xmark").font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.red).padding(14)
+                                Image(systemName: "xmark").font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.red).padding(16)
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     .overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
                             }
-                            NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                Image(systemName: "info.circle.fill").font(.system(size: 18))
-                                    .foregroundColor(.blue).padding(14)
+                            NavigationLink(destination: MovieDetailView(movie: currentMovie!)) {
+                                Image(systemName: "info.circle.fill").font(.system(size: 20))
+                                    .foregroundColor(.blue).padding(16)
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
                             }
                             Button { swipeRight() } label: {
-                                Image(systemName: "heart.fill").font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.green).padding(14)
+                                Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.green).padding(16)
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                     .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
                             }
                         }
-                        
-                        Spacer()
+                        .padding(.bottom, 20)
                     }
                 }
             }
@@ -129,6 +117,37 @@ struct SwipePickView: View {
         .toolbar(.hidden, for: .tabBar)
         .task { await loadMovies() }
         .fullScreenCover(isPresented: $showLikedList) { LikedMoviesView(movies: likedMovies) }
+    }
+    
+    func cardView(movie: Movie, geo: GeometryProxy) -> some View {
+        ZStack(alignment: .bottom) {
+            CachedAsyncImage(url: movie.posterURL)
+                .aspectRatio(2/3, contentMode: .fill)
+                .frame(width: geo.size.width - 32, height: geo.size.height * 0.6)
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+                LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
+                    .frame(height: 140)
+                    .overlay(alignment: .bottomLeading) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(movie.title).font(.system(size: 20, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                            HStack(spacing: 8) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "star.fill").font(.system(size: 11)).foregroundColor(.yellow)
+                                    Text(movie.ratingText).font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                                }
+                                Text(movie.yearText).font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
+                            }
+                            Text(movie.overview).font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).lineLimit(3)
+                        }
+                        .padding(.horizontal, 16).padding(.bottom, 16)
+                    }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+        }
     }
     
     func loadMovies() async {
