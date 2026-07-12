@@ -193,7 +193,7 @@ struct SwipePickOverlay: View {
                             }
                         }
                     }
-                    .padding(.top, 120)
+                    .padding(.top, + 120)
                 }
                 Spacer()
             }
