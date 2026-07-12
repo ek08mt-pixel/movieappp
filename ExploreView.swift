@@ -165,36 +165,39 @@ struct SwipePickOverlay: View {
                 if let movie = currentMovie {
                     VStack(spacing: 20) {
                         ZStack {
-                        if let next = nextMovie {
-                            cardView(movie: next)
-                                .scaleEffect(0.92)
-                                .offset(y: 12)
-                                .opacity(0.5)
+                            if let next = nextMovie {
+                                cardView(movie: next)
+                                    .scaleEffect(0.92)
+                                    .offset(y: 12)
+                                    .opacity(0.5)
+                            }
+                            cardView(movie: movie)
+                                .offset(x: offset.width)
+                                .rotationEffect(.degrees(Double(offset.width / 20)))
+                                .gesture(DragGesture()
+                                    .onChanged { offset = $0.translation }
+                                    .onEnded {
+                                        if $0.translation.width > 100 { swipeRight() }
+                                        else if $0.translation.width < -100 { swipeLeft() }
+                                        else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
+                                    }
+                                )
                         }
-                        cardView(movie: movie)
-                            .offset(x: offset.width)
-                            .rotationEffect(.degrees(Double(offset.width / 20)))
-                            .gesture(DragGesture()
-                                .onChanged { offset = $0.translation }
-                                .onEnded {
-                                    if $0.translation.width > 100 { swipeRight() }
-                                    else if $0.translation.width < -100 { swipeLeft() }
-                                    else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
-                                }
-                            )
+                        
+                        HStack(spacing: 50) {
+                            Button { swipeLeft() } label: {
+                                Image(systemName: "xmark").font(.system(size: 20, weight: .bold)).foregroundColor(.red).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
+                            }
+                            Button { swipeRight() } label: {
+                                Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold)).foregroundColor(.green).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
+                            }
+                        }
                     }
-                    
-                    HStack(spacing: 50) {
-                        Button { swipeLeft() } label: {
-                            Image(systemName: "xmark").font(.system(size: 20, weight: .bold)).foregroundColor(.red).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
-                        }
-                        Button { swipeRight() } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold)).foregroundColor(.green).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
-                        }
-                    }
+                    .padding(.top, 120)
                 }
-                .padding(.top, 10)
+                Spacer()
             }
+            
             if isLoading { ProgressView().tint(.white) }
         }
         .task { await loadMovies() }
