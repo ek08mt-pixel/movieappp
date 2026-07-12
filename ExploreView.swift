@@ -5,17 +5,16 @@ struct ExploreView: View {
     @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
-        ("Oscar", 2959, .keyword), ("Cannes", 133278, .keyword), ("IMDb Top", 210024, .keyword),
-        ("Netflix", 213, .studio), ("Ghibli", 103538, .studio), ("Marvel", 420, .studio),
-        ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio), ("A24", 135334, .studio)
+        ("IMDb Top", 210024, .keyword),
+        ("Netflix", 213, .studio), ("Marvel", 420, .studio),
+        ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio)
     ]
     
     let posterMap: [String: String] = [
-        "Oscar": "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg", "Cannes": "/TU9NIjwzjoKPwQHoHshkFcQUCG.jpg",
         "IMDb Top": "/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg", "Netflix": "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
-        "Ghibli": "/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg", "Marvel": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+        "Marvel": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
         "DC": "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg", "Pixar": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-        "Disney": "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg", "A24": "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"
+        "Disney": "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg"
     ]
     
     var body: some View {
