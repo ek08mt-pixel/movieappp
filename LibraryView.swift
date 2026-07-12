@@ -48,38 +48,9 @@ struct LibraryView: View {
                         .frame(maxHeight: .infinity)
                     } else {
                         ScrollView {
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12)
-                                ],
-                                spacing: 16
-                            ) {
+                            LazyVStack(spacing: 12) {
                                 ForEach(currentMovies) { movie in
-                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            CachedAsyncImage(url: movie.posterURL)
-                                                .aspectRatio(2/3, contentMode: .fill)
-                                                .frame(height: 160)
-                                                .frame(maxWidth: .infinity)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                                            Text(movie.title)
-                                                .font(.system(size: 10, weight: .medium))
-                                                .foregroundColor(.white)
-                                                .lineLimit(2)
-                                                .frame(height: 30, alignment: .top)
-                                            HStack(spacing: 2) {
-                                                Image(systemName: "star.fill")
-                                                    .font(.system(size: 8))
-                                                    .foregroundColor(.yellow)
-                                                Text(movie.ratingText)
-                                                    .font(.system(size: 9))
-                                                    .foregroundColor(.gray)
-                                            }
-                                        }
-                                    }
+                                    watchHistoryRow(movie)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -114,10 +85,107 @@ struct LibraryView: View {
                     }
                 )
                 .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.white.opacity(0.2) : Color.clear, lineWidth: 0.5)
-                )
         }
+    }
+    
+    func watchHistoryRow(_ movie: Movie) -> some View {
+        let progress = appState.watchProgressList.first { $0.movieId == movie.id }
+        let hasProgress = (progress?.currentTime ?? 0) > 0 && (progress?.duration ?? 1) > 0
+        let progressValue = hasProgress ? (progress!.currentTime / progress!.duration) : 0
+        
+        return NavigationLink(destination: MovieDetailView(movie: movie)) {
+            HStack(spacing: 12) {
+                // Poster với nút play
+                ZStack(alignment: .center) {
+                    CachedAsyncImage(url: movie.posterURL)
+                        .aspectRatio(2/3, contentMode: .fill)
+                        .frame(width: 80, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                    
+                    // Nút play đen bo tròn
+                    Circle()
+                        .fill(.black.opacity(0.6))
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.white)
+                                .offset(x: 1)
+                        )
+                }
+                
+                // Info
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(movie.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    if let ep = progress?.episode, let s = progress?.season {
+                        Text("Season \(s) • Tập \(ep)")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    } else {
+                        Text(movie.yearText)
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if hasProgress {
+                        Text("Tiếp tục từ \(formatProgressTime(progress!.currentTime))")
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.6))
+                        
+                        // Thanh tiến trình
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(.white.opacity(0.1))
+                                    .frame(height: 4)
+                                Capsule()
+                                    .fill(.white.opacity(0.5))
+                                    .frame(width: max(4, geo.size.width * CGFloat(progressValue)), height: 4)
+                            }
+                        }
+                        .frame(height: 4)
+                        
+                        // Nút xem tiếp
+                        Text("Xem tiếp")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 6)
+                            .background(Capsule().fill(.ultraThinMaterial.opacity(0.6)))
+                            .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.gray)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(.ultraThinMaterial.opacity(0.25))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(.white.opacity(0.08), lineWidth: 0.5)
+                    )
+            )
+        }
+    }
+    
+    func formatProgressTime(_ seconds: Double) -> String {
+        let total = Int(max(0, seconds))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%02d:%02d", m, s)
     }
 }
