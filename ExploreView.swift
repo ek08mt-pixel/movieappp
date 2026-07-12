@@ -193,7 +193,7 @@ struct SwipePickOverlay: View {
                             }
                         }
                     }
-                    .offset(y: -200)
+                    .offset(y: -100)
                 }
                 Spacer()
             }
