@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - SwipePickView (Tinder Style)
 struct SwipePickView: View {
     @State private var movies: [Movie] = []
     @State private var currentIndex = 0
@@ -37,51 +36,61 @@ struct SwipePickView: View {
                 }
             } else if let movie = currentMovie {
                 VStack(spacing: 0) {
-                    // Header
+                    Spacer().frame(height: 4)
+                    
                     HStack {
                         Button { dismiss() } label: {
                             Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                         Spacer()
-                        Text("Movie Pick").font(.system(size: 15, weight: .bold)).foregroundColor(.white)
+                        Text("Movie Pick").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
                         Spacer()
                         Button { showLikedList = true } label: {
                             Image(systemName: "heart.fill").font(.system(size: 14)).foregroundColor(.pink).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                     }
-                    .padding(.horizontal, 16).padding(.top, 8)
+                    .padding(.horizontal, 16)
                     
-                    // Card
+                    Spacer()
+                    
                     ZStack(alignment: .bottom) {
-                        CachedAsyncImage(url: movie.posterURL, size: .detail)
-                            .aspectRatio(2/3, contentMode: .fill)
-                            .frame(width: UIScreen.main.bounds.width - 32, height: UIScreen.main.bounds.height * 0.58)
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                            .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                        if let url = movie.posterURL {
+                            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w342\(url.absoluteString.components(separatedBy: "/").last ?? "")")) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().aspectRatio(2/3, contentMode: .fill)
+                                default:
+                                    RoundedRectangle(cornerRadius: 24).fill(.ultraThinMaterial)
+                                }
+                            }
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32, height: UIScreen.main.bounds.height * 0.62)
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
+                        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                         
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Spacer()
-                            LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                                .frame(height: 180)
+                            LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
+                                .frame(height: 140)
                                 .overlay(alignment: .bottomLeading) {
-                                    VStack(alignment: .leading, spacing: 6) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         Text(movie.title)
-                                            .font(.system(size: 22, weight: .bold))
+                                            .font(.system(size: 18, weight: .bold))
                                             .foregroundColor(.white)
                                             .lineLimit(2)
-                                        HStack(spacing: 10) {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "star.fill").font(.system(size: 12)).foregroundColor(.yellow)
-                                                Text(movie.ratingText).font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                                        HStack(spacing: 8) {
+                                            HStack(spacing: 3) {
+                                                Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 12, weight: .bold)).foregroundColor(.white)
                                             }
-                                            Text(movie.yearText).font(.system(size: 13)).foregroundColor(.white.opacity(0.7))
+                                            Text(movie.yearText).font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
                                         }
                                         Text(movie.overview)
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.white.opacity(0.7))
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.6))
                                             .lineLimit(2)
                                     }
-                                    .padding(.horizontal, 16).padding(.bottom, 16)
+                                    .padding(.horizontal, 14).padding(.bottom, 14)
                                 }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -90,58 +99,36 @@ struct SwipePickView: View {
                     .rotationEffect(.degrees(Double(offset.width / 20)))
                     .gesture(
                         DragGesture()
-                            .onChanged { gesture in
-                                offset = gesture.translation
-                            }
+                            .onChanged { gesture in offset = gesture.translation }
                             .onEnded { gesture in
-                                let width = gesture.translation.width
-                                if width > 100 {
-                                    swipeRight()
-                                } else if width < -100 {
-                                    swipeLeft()
-                                } else {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        offset = .zero
-                                    }
-                                }
+                                if gesture.translation.width > 100 { swipeRight() }
+                                else if gesture.translation.width < -100 { swipeLeft() }
+                                else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
                             }
                     )
                     
                     Spacer()
                     
-                    // Buttons
                     HStack(spacing: 36) {
                         Button { swipeLeft() } label: {
-                            Image(systemName: "xmark").font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.red).padding(16)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
+                            Image(systemName: "xmark").font(.system(size: 20, weight: .bold)).foregroundColor(.red).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
                         }
-                        
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
-                            Image(systemName: "info.circle.fill").font(.system(size: 20))
-                                .foregroundColor(.blue).padding(16)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
+                            Image(systemName: "info.circle.fill").font(.system(size: 20)).foregroundColor(.blue).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
                         }
-                        
                         Button { swipeRight() } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.green).padding(16)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
+                            Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold)).foregroundColor(.green).padding(16).background(Circle().fill(.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
                         }
                     }
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 20)
                 }
             }
         }
+        .ignoresSafeArea()
         .navigationBarHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .task { await loadMovies() }
-        .fullScreenCover(isPresented: $showLikedList) {
-            LikedMoviesView(movies: likedMovies)
-        }
+        .fullScreenCover(isPresented: $showLikedList) { LikedMoviesView(movies: likedMovies) }
     }
     
     func loadMovies() async {
@@ -152,30 +139,17 @@ struct SwipePickView: View {
     }
     
     func swipeRight() {
-        if let movie = currentMovie {
-            likedMovies.append(movie)
-        }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            offset = CGSize(width: 500, height: 0)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            currentIndex += 1
-            offset = .zero
-        }
+        if let movie = currentMovie { likedMovies.append(movie) }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = CGSize(width: 500, height: 0) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero }
     }
     
     func swipeLeft() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            offset = CGSize(width: -500, height: 0)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            currentIndex += 1
-            offset = .zero
-        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = CGSize(width: -500, height: 0) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero }
     }
 }
 
-// MARK: - Liked Movies View
 struct LikedMoviesView: View {
     let movies: [Movie]
     @Environment(\.dismiss) var dismiss
@@ -208,13 +182,9 @@ struct LikedMoviesView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
-                    }
+                    Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white) }
                 }
-                ToolbarItem(placement: .principal) {
-                    Text("Đã thích (\(movies.count))").font(.headline).foregroundColor(.white)
-                }
+                ToolbarItem(placement: .principal) { Text("Đã thích (\(movies.count))").font(.headline).foregroundColor(.white) }
             }
         }
     }
