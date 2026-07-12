@@ -339,3 +339,13 @@ extension Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
     }
 }
+    func fetchAsiaMovies(language: String?) async throws -> [Movie] {
+    let langFilter = language != nil ? "&with_original_language=\(language!)" : "&with_original_language=ko|ja|zh|vi|th|cn"
+    return try await fetchMultiplePages { [self] page in
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)\(langFilter)&sort_by=popularity.desc&language=\(self.language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+    }
+}
