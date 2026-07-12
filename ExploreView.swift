@@ -19,7 +19,17 @@ struct ExploreView: View {
     "Marvel": "/lv3TXqhpaIxkclIHbhN2MRMOemQ.jpg",
     "DC": "/eGX66zonvc4bXg3rM08RUxdYSDx.jpg",
     "Pixar": "/u53UYu5XG2hNgWGvs3xGhAVzypl.jpg",
-    "Disney": "/qjTqY5coNiz6sVtPng40IzltsoN.jpg"
+    "Disney": "/qjTqY5coNiz6sVtPng40IzltsoN.jpg",
+    "HBO": "/577eXC8wFQT0eUrJcgznSiFPRmk.jpg",
+    "Apple TV+": "/yx0sfeYOoXol2fjT22SXo9YyviI.jpg",
+    "Amazon Prime": "/voKEhzb4ExOmR0WSvQgLTTqRUEu.jpg",
+    "Disney+": "/q3jHCb4dMfYF6ojikKuHd6LscxC.jpg",
+    "Hulu": "/a4doyPOabvQor0RGkWdhVENAR3G.jpg",
+    "Paramount+": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
+    "Peacock": "/xaiKpxuf9YGuTsqpdK5HSbD8M8f.jpg",
+    "Anime": "/gtKglOSEq3d4MgQE4VsrT1sRkd0.jpg",
+    "Châu Á": "/i3bMeXOGyT57owjlMPCuLiijhq5.jpg",
+    "Warner Bros": "/1stUIsjawROZxjiCMtqqXqgfZWC.jpg"
 ]
     
     var body: some View {
