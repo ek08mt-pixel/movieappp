@@ -192,7 +192,7 @@ struct SwipePickOverlay: View {
                         }
                     }
                 }
-                .padding(.top, 150)
+                .padding(.top, 200)
             }
             if isLoading { ProgressView().tint(.white) }
         }
