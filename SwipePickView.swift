@@ -15,125 +15,117 @@ struct SwipePickView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            
-            if isLoading {
-                ProgressView().tint(.white)
-            } else if currentMovie == nil {
-                VStack(spacing: 20) {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 60)).foregroundColor(.green)
-                    Text("Đã xem hết!").font(.title2.bold()).foregroundColor(.white)
-                    Text("Đã thích \(likedMovies.count) phim").foregroundColor(.gray)
-                    HStack(spacing: 20) {
-                        Button { currentIndex = 0; movies.shuffle() } label: {
-                            Text("Xem lại").font(.headline).foregroundColor(.white).padding(.horizontal, 30).padding(.vertical, 12).background(Capsule().fill(.ultraThinMaterial))
-                        }
-                        Button { showLikedList = true } label: {
-                            Text("Đã thích").font(.headline).foregroundColor(.pink).padding(.horizontal, 30).padding(.vertical, 12).background(Capsule().fill(.pink.opacity(0.2)))
-                        }
-                    }
-                }
-            } else if let movie = currentMovie {
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark").font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white).padding(10)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                        }
-                        Spacer()
-                        Text("Movie Pick").font(.system(size: 15, weight: .bold)).foregroundColor(.white)
-                        Spacer()
-                        Button { showLikedList = true } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 13))
-                                .foregroundColor(.pink).padding(10)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                        }
-                    }
-                    .padding(.horizontal, 20).padding(.top, 50)
-                    
-                    Spacer()
-                    
-                    // Card
-                    ZStack(alignment: .bottom) {
-                        CachedAsyncImage(url: movie.posterURL)
-                            .aspectRatio(2/3, contentMode: .fill)
-                            .frame(width: UIScreen.main.bounds.width - 40, height: UIScreen.main.bounds.height * 0.52)
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                            .shadow(color: .black.opacity(0.4), radius: 15, y: 8)
-                        
-                        VStack(alignment: .leading, spacing: 0) {
-                            Spacer()
-                            LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                                .frame(height: 130)
-                                .overlay(alignment: .bottomLeading) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(movie.title)
-                                            .font(.system(size: 18, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .lineLimit(2)
-                                        HStack(spacing: 8) {
-                                            HStack(spacing: 3) {
-                                                Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
-                                                Text(movie.ratingText).font(.system(size: 12, weight: .bold)).foregroundColor(.white)
-                                            }
-                                            Text(movie.yearText).font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
-                                        }
-                                        Text(movie.overview)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.6))
-                                            .lineLimit(2)
-                                    }
-                                    .padding(.horizontal, 16).padding(.bottom, 14)
-                                }
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                    }
-                    .offset(x: offset.width, y: offset.height * 0.4)
-                    .rotationEffect(.degrees(Double(offset.width / 20)))
-                    .gesture(
-                        DragGesture()
-                            .onChanged { offset = $0.translation }
-                            .onEnded {
-                                if $0.translation.width > 100 { swipeRight() }
-                                else if $0.translation.width < -100 { swipeLeft() }
-                                else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
+        GeometryReader { geo in
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                if isLoading {
+                    ProgressView().tint(.white)
+                } else if currentMovie == nil {
+                    VStack(spacing: 20) {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 60)).foregroundColor(.green)
+                        Text("Đã xem hết!").font(.title2.bold()).foregroundColor(.white)
+                        Text("Đã thích \(likedMovies.count) phim").foregroundColor(.gray)
+                        HStack(spacing: 20) {
+                            Button { currentIndex = 0; movies.shuffle() } label: {
+                                Text("Xem lại").font(.headline).foregroundColor(.white).padding(.horizontal, 30).padding(.vertical, 12).background(Capsule().fill(.ultraThinMaterial))
                             }
-                    )
-                    
-                    Spacer()
-                    
-                    // Buttons
-                    HStack(spacing: 40) {
-                        Button { swipeLeft() } label: {
-                            Image(systemName: "xmark").font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.red).padding(14)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
-                        }
-                        
-                        NavigationLink(destination: MovieDetailView(movie: movie)) {
-                            Image(systemName: "info.circle.fill").font(.system(size: 18))
-                                .foregroundColor(.blue).padding(14)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
-                        }
-                        
-                        Button { swipeRight() } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.green).padding(14)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
+                            Button { showLikedList = true } label: {
+                                Text("Đã thích").font(.headline).foregroundColor(.pink).padding(.horizontal, 30).padding(.vertical, 12).background(Capsule().fill(.pink.opacity(0.2)))
+                            }
                         }
                     }
-                    
-                    Spacer()
+                } else if let movie = currentMovie {
+                    VStack(spacing: 0) {
+                        // Header
+                        HStack {
+                            Button { dismiss() } label: {
+                                Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white).padding(10)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                            }
+                            Spacer()
+                            Text("Movie Pick").font(.system(size: 15, weight: .bold)).foregroundColor(.white)
+                            Spacer()
+                            Button { showLikedList = true } label: {
+                                Image(systemName: "heart.fill").font(.system(size: 14))
+                                    .foregroundColor(.pink).padding(10)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                            }
+                        }
+                        .padding(.horizontal, 20).padding(.top, 50)
+                        
+                        // Card
+                        ZStack(alignment: .bottom) {
+                            CachedAsyncImage(url: movie.posterURL)
+                                .aspectRatio(2/3, contentMode: .fill)
+                                .frame(width: geo.size.width - 40, height: geo.size.height * 0.52)
+                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .shadow(color: .black.opacity(0.4), radius: 15, y: 8)
+                            
+                            VStack(alignment: .leading, spacing: 0) {
+                                Spacer()
+                                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                                    .frame(height: 120)
+                                    .overlay(alignment: .bottomLeading) {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(movie.title).font(.system(size: 17, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                                            HStack(spacing: 6) {
+                                                HStack(spacing: 3) {
+                                                    Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
+                                                    Text(movie.ratingText).font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                                                }
+                                                Text(movie.yearText).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
+                                            }
+                                            Text(movie.overview).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)).lineLimit(2)
+                                        }
+                                        .padding(.horizontal, 16).padding(.bottom, 14)
+                                    }
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                        }
+                        .offset(x: offset.width, y: offset.height * 0.4)
+                        .rotationEffect(.degrees(Double(offset.width / 20)))
+                        .gesture(
+                            DragGesture()
+                                .onChanged { offset = $0.translation }
+                                .onEnded {
+                                    if $0.translation.width > 100 { swipeRight() }
+                                    else if $0.translation.width < -100 { swipeLeft() }
+                                    else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
+                                }
+                        )
+                        
+                        Spacer()
+                        
+                        // Buttons
+                        HStack(spacing: 40) {
+                            Button { swipeLeft() } label: {
+                                Image(systemName: "xmark").font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.red).padding(14)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                    .overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
+                            }
+                            NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                Image(systemName: "info.circle.fill").font(.system(size: 18))
+                                    .foregroundColor(.blue).padding(14)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                    .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
+                            }
+                            Button { swipeRight() } label: {
+                                Image(systemName: "heart.fill").font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.green).padding(14)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                                    .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
+                            }
+                        }
+                        
+                        Spacer()
+                    }
                 }
             }
         }
-        .ignoresSafeArea()
+        .navigationBarHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .task { await loadMovies() }
         .fullScreenCover(isPresented: $showLikedList) { LikedMoviesView(movies: likedMovies) }
