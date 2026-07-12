@@ -17,7 +17,7 @@ struct SwipePickView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            Color.black.ignoresSafeArea()
             
             if isLoading {
                 ProgressView().tint(.white)
@@ -40,55 +40,48 @@ struct SwipePickView: View {
                     // Header
                     HStack {
                         Button { dismiss() } label: {
-                            Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                            Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                         Spacer()
-                        Text("Movie Pick").font(.headline).foregroundColor(.white)
+                        Text("Movie Pick").font(.system(size: 15, weight: .bold)).foregroundColor(.white)
                         Spacer()
                         Button { showLikedList = true } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 16)).foregroundColor(.pink).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                            Image(systemName: "heart.fill").font(.system(size: 14)).foregroundColor(.pink).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                         }
                     }
-                    .padding(.horizontal, 20).padding(.top, 50)
-                    
-                    Spacer()
+                    .padding(.horizontal, 16).padding(.top, 8)
                     
                     // Card
                     ZStack(alignment: .bottom) {
-                        // Poster
-                        CachedAsyncImage(url: movie.posterURL)
+                        CachedAsyncImage(url: movie.posterURL, size: .detail)
                             .aspectRatio(2/3, contentMode: .fill)
-                            .frame(width: UIScreen.main.bounds.width - 40, height: UIScreen.main.bounds.height * 0.55)
+                            .frame(width: UIScreen.main.bounds.width - 32, height: UIScreen.main.bounds.height * 0.58)
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                             .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                         
-                        // Gradient + Info
                         VStack(alignment: .leading, spacing: 6) {
                             Spacer()
-                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
-                                .frame(height: 200)
+                            LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                                .frame(height: 180)
                                 .overlay(alignment: .bottomLeading) {
-                                    VStack(alignment: .leading, spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 6) {
                                         Text(movie.title)
-                                            .font(.system(size: 26, weight: .bold))
+                                            .font(.system(size: 22, weight: .bold))
                                             .foregroundColor(.white)
                                             .lineLimit(2)
-                                        HStack(spacing: 12) {
+                                        HStack(spacing: 10) {
                                             HStack(spacing: 4) {
-                                                Image(systemName: "star.fill").font(.system(size: 14)).foregroundColor(.yellow)
-                                                Text(movie.ratingText).font(.system(size: 16, weight: .bold)).foregroundColor(.white)
+                                                Image(systemName: "star.fill").font(.system(size: 12)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 14, weight: .bold)).foregroundColor(.white)
                                             }
-                                            Text(movie.yearText).font(.system(size: 14)).foregroundColor(.white.opacity(0.7))
-                                            if let lang = movie.originalLanguage {
-                                                Text(lang.uppercased()).font(.system(size: 12)).foregroundColor(.white.opacity(0.5)).padding(.horizontal, 8).padding(.vertical, 2).background(Capsule().fill(.white.opacity(0.1)))
-                                            }
+                                            Text(movie.yearText).font(.system(size: 13)).foregroundColor(.white.opacity(0.7))
                                         }
                                         Text(movie.overview)
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.white.opacity(0.8))
-                                            .lineLimit(3)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.white.opacity(0.7))
+                                            .lineLimit(2)
                                     }
-                                    .padding(.horizontal, 20).padding(.bottom, 20)
+                                    .padding(.horizontal, 16).padding(.bottom, 16)
                                 }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -117,39 +110,34 @@ struct SwipePickView: View {
                     Spacer()
                     
                     // Buttons
-                    HStack(spacing: 40) {
-                        Button {
-                            swipeLeft()
-                        } label: {
-                            Image(systemName: "xmark").font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.red).padding(18)
+                    HStack(spacing: 36) {
+                        Button { swipeLeft() } label: {
+                            Image(systemName: "xmark").font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.red).padding(16)
                                 .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                 .overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
                         }
                         
-                        Button {
-                            showLikedList = true
-                        } label: {
-                            Image(systemName: "list.bullet").font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.yellow).padding(16)
+                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                            Image(systemName: "info.circle.fill").font(.system(size: 20))
+                                .foregroundColor(.blue).padding(16)
                                 .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                                .overlay(Circle().stroke(.yellow.opacity(0.3), lineWidth: 1))
+                                .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 1))
                         }
                         
-                        Button {
-                            swipeRight()
-                        } label: {
-                            Image(systemName: "heart.fill").font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.green).padding(18)
+                        Button { swipeRight() } label: {
+                            Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.green).padding(16)
                                 .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                                 .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
                         }
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 30)
                 }
             }
         }
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .task { await loadMovies() }
         .fullScreenCover(isPresented: $showLikedList) {
             LikedMoviesView(movies: likedMovies)
@@ -196,7 +184,7 @@ struct LikedMoviesView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                Color.black.ignoresSafeArea()
                 if movies.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "heart.slash").font(.system(size: 50)).foregroundColor(.gray)
@@ -210,24 +198,18 @@ struct LikedMoviesView: View {
                                     VStack(spacing: 6) {
                                         CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                                         Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
-                                            Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
-                                        }
                                     }
-                                    .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.2)))
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 16).padding(.top, 90).padding(.bottom, 100)
+                        .padding(.horizontal, 16).padding(.top, 60).padding(.bottom, 100)
                     }
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
                     }
                 }
                 ToolbarItem(placement: .principal) {
