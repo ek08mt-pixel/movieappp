@@ -39,12 +39,49 @@ struct ExploreView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
-                        HStack(spacing: 10) {
-                            NavigationLink(destination: OSTView()) { VStack(spacing: 6) { Text("🎵").font(.system(size: 26)); Text("OST").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                            NavigationLink(destination: FilmHubView()) { VStack(spacing: 6) { Text("🎬").font(.system(size: 26)); Text("Góc phim").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                            NavigationLink(destination: TimelineView()) { VStack(spacing: 6) { Text("📅").font(.system(size: 26)); Text("Timeline").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                            NavigationLink(destination: SwipePickView()) { VStack(spacing: 6) { Text("💕").font(.system(size: 26)); Text("Pick").font(.system(size: 10)).foregroundColor(.white) }.frame(maxWidth: .infinity).padding(.vertical, 14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial)) }
-                        }.padding(.horizontal, 16)
+                        HStack(spacing: 12) {
+    NavigationLink(destination: OSTView()) {
+        VStack(spacing: 6) {
+            Image(systemName: "music.note").font(.system(size: 22))
+            Text("OST").font(.system(size: 10, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+    }
+    NavigationLink(destination: FilmHubView()) {
+        VStack(spacing: 6) {
+            Image(systemName: "film").font(.system(size: 22))
+            Text("Góc phim").font(.system(size: 10, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+    }
+    NavigationLink(destination: TimelineView()) {
+        VStack(spacing: 6) {
+            Image(systemName: "calendar").font(.system(size: 22))
+            Text("Timeline").font(.system(size: 10, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+    }
+    NavigationLink(destination: SwipePickView()) {
+        VStack(spacing: 6) {
+            Image(systemName: "heart.circle").font(.system(size: 22))
+            Text("Pick").font(.system(size: 10, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+    }
+}
+.padding(.horizontal, 16)
                         
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
