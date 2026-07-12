@@ -328,15 +328,19 @@ class APIService {
     }
     
     func fetchAsiaMovies(language: String?) async throws -> [Movie] {
-        let langFilter = language != nil ? "&with_original_language=\(language!)" : "&with_original_language=ko|ja|zh|vi|th|cn"
-        return try await fetchMultiplePages { [self] page in
-            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)\(langFilter)&sort_by=popularity.desc&language=\(self.language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
-            guard let url = URL(string: urlString) else { return [] }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-        }
+    let langFilter = language != nil ? "&with_original_language=\(language!)" : "&with_original_language=ko|ja|zh|vi|th|cn"
+    var all: [Movie] = []
+    for page in 1...10 {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)\(langFilter)&sort_by=primary_release_date.desc&language=\(self.language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
+        guard let url = URL(string: urlString) else { break }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        let results = response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        all.append(contentsOf: results)
+        if results.count < 20 { break }
     }
+    return all
+}
     
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
