@@ -11,11 +11,13 @@ struct ExploreView: View {
     ]
     
     let posterMap: [String: String] = [
-        "IMDb Top": "/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg", "Netflix": "/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
-        "Marvel": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
-        "DC": "/nMKdUUepR0i5zn0y1T4CsSB5ecy.jpg", "Pixar": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-        "Disney": "/qJ2tW6WMUDux911B6EMThhKzGYV.jpg"
-    ]
+    "IMDb Top": "/8Tfys3mDZVp4tNoH2ktm06a0Tau.jpg",
+    "Netflix": "/jLuGZc84MvPYCQomQg9DI72mstt.jpg",
+    "Marvel": "/lv3TXqhpaIxkclIHbhN2MRMOemQ.jpg",
+    "DC": "/eGX66zonvc4bXg3rM08RUxdYSDx.jpg",
+    "Pixar": "/u53UYu5XG2hNgWGvs3xGhAVzypl.jpg",
+    "Disney": "/qjTqY5coNiz6sVtPng40IzltsoN.jpg"
+]
     
     var body: some View {
         NavigationStack {
