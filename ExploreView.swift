@@ -450,7 +450,7 @@ struct CategoryFullView: View {
             if isLoading && movies.isEmpty {
                 ProgressView().tint(.white)
             } else if movies.isEmpty {
-                Text("Khôngtìmthấy").foregroundColor(.gray)
+                Text("Không tìm thấy").foregroundColor(.gray)
             } else {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
@@ -480,3 +480,4 @@ struct CategoryFullView: View {
             isLoading = false
         }
     }
+}
