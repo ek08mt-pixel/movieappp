@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Explore View
 struct ExploreView: View {
     @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
+    @State private var showSwipePick = false
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
     ("IMDb Top", 210024, .keyword),
@@ -40,48 +41,50 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
                         HStack(spacing: 12) {
-    NavigationLink(destination: OSTView()) {
-        VStack(spacing: 6) {
-            Image(systemName: "music.note").font(.system(size: 22))
-            Text("OST").font(.system(size: 10, weight: .medium))
-        }
-        .foregroundColor(.white)
-        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
-    }
-    NavigationLink(destination: FilmHubView()) {
-        VStack(spacing: 6) {
-            Image(systemName: "film").font(.system(size: 22))
-            Text("Góc phim").font(.system(size: 10, weight: .medium))
-        }
-        .foregroundColor(.white)
-        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
-    }
-    NavigationLink(destination: TimelineView()) {
-        VStack(spacing: 6) {
-            Image(systemName: "calendar").font(.system(size: 22))
-            Text("Timeline").font(.system(size: 10, weight: .medium))
-        }
-        .foregroundColor(.white)
-        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
-    }
-    NavigationLink(destination: SwipePickView()) {
-        VStack(spacing: 6) {
-            Image(systemName: "heart.circle").font(.system(size: 22))
-            Text("Pick").font(.system(size: 10, weight: .medium))
-        }
-        .foregroundColor(.white)
-        .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
-    }
-}
-.padding(.horizontal, 16)
+                            NavigationLink(destination: OSTView()) {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "music.note").font(.system(size: 22))
+                                    Text("OST").font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            }
+                            NavigationLink(destination: FilmHubView()) {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "film").font(.system(size: 22))
+                                    Text("Góc phim").font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            }
+                            NavigationLink(destination: TimelineView()) {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "calendar").font(.system(size: 22))
+                                    Text("Timeline").font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            }
+                            Button {
+                                showSwipePick = true
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "heart.circle").font(.system(size: 22))
+                                    Text("Pick").font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            }
+                        }
+                        .padding(.horizontal, 16)
                         
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
@@ -118,7 +121,13 @@ struct ExploreView: View {
                     }
                 }
             }
-        }.task { loadData() }
+        }
+        .overlay {
+            if showSwipePick {
+                SwipePickOverlay(show: $showSwipePick)
+            }
+        }
+        .task { loadData() }
     }
     
     func loadData() {
@@ -132,6 +141,82 @@ struct ExploreView: View {
     @ViewBuilder func movieRow(title: String, movies: [Movie]) -> some View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
+}
+
+// MARK: - SwipePickOverlay
+struct SwipePickOverlay: View {
+    @Binding var show: Bool
+    @State private var movies: [Movie] = []
+    @State private var currentIndex = 0
+    @State private var offset = CGSize.zero
+    @State private var isLoading = true
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { show = false }
+            
+            if let movie = currentMovie {
+                VStack(spacing: 20) {
+                    Spacer()
+                    ZStack(alignment: .bottom) {
+                        CachedAsyncImage(url: movie.posterURL)
+                            .aspectRatio(2/3, contentMode: .fill)
+                            .frame(width: UIScreen.main.bounds.width - 60, height: UIScreen.main.bounds.height * 0.5)
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .shadow(color: .black.opacity(0.6), radius: 25)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Spacer()
+                            LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom)
+                                .frame(height: 100)
+                                .overlay(alignment: .bottomLeading) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(movie.title).font(.system(size: 17, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                                        HStack(spacing: 6) {
+                                            HStack(spacing: 3) { Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 11, weight: .bold)).foregroundColor(.white) }
+                                            Text(movie.yearText).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
+                                        }
+                                    }
+                                    .padding(.horizontal, 16).padding(.bottom, 12)
+                                }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
+                    }
+                    .offset(x: offset.width)
+                    .rotationEffect(.degrees(Double(offset.width / 20)))
+                    .gesture(DragGesture()
+                        .onChanged { offset = $0.translation }
+                        .onEnded {
+                            if $0.translation.width > 100 { swipeRight() }
+                            else if $0.translation.width < -100 { swipeLeft() }
+                            else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
+                        }
+                    )
+                    HStack(spacing: 50) {
+                        Button { swipeLeft() } label: {
+                            Image(systemName: "xmark").font(.system(size: 20, weight: .bold)).foregroundColor(.red).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
+                        }
+                        Button { swipeRight() } label: {
+                            Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold)).foregroundColor(.green).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
+                        }
+                    }
+                    Spacer()
+                }
+            }
+            if isLoading { ProgressView().tint(.white) }
+        }
+        .task { await loadMovies() }
+    }
+    
+    var currentMovie: Movie? { guard currentIndex < movies.count else { return nil }; return movies[currentIndex] }
+    
+    func loadMovies() async {
+        isLoading = true
+        movies = (try? await APIService.shared.popular())?.filter { !($0.adult ?? false) }.shuffled() ?? []
+        isLoading = false
+    }
+    
+    func swipeRight() { withAnimation { offset = CGSize(width: 500, height: 0) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero } }
+    func swipeLeft() { withAnimation { offset = CGSize(width: -500, height: 0) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero } }
 }
 
 // MARK: - Asia Category View
@@ -219,11 +304,8 @@ struct AsiaCategoryView: View {
     }
     
     func filterMovies() {
-        if selectedCountry == "all" {
-            movies = allMovies
-        } else {
-            movies = allMovies.filter { $0.originalLanguage == selectedCountry }
-        }
+        if selectedCountry == "all" { movies = allMovies }
+        else { movies = allMovies.filter { $0.originalLanguage == selectedCountry } }
     }
 }
 
