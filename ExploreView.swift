@@ -437,7 +437,7 @@ struct CompareRow: View {
 }
 
 // MARK: - CategoryFullView
-struct CategoryFullView: View {
+struct CategoryFullview: View {.
     let category: CategoryConfig
     @State private var movies: [Movie] = []
     @State private var isLoading = true
