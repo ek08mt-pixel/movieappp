@@ -285,7 +285,7 @@ class APIService {
         case .keyword:
             if categoryID == 210024 {
                 return try await fetchMultiplePages { [self] page in
-                    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)&page=\(page)&without_genres=16"
+                    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=10&language=\(language)&page=\(page)&without_genres=16"
                     guard let url = URL(string: urlString) else { return [] }
                     let (data, _) = try await URLSession.shared.data(from: url)
                     let response = try decoder.decode(MovieResponse.self, from: data)
