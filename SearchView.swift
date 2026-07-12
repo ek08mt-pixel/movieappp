@@ -58,7 +58,7 @@ struct SearchView: View {
                                         recentSearches.removeAll()
                                         saveRecent()
                                     }
-                                    .font(.system(size: 11)).foregroundColor(.blue)
+                                    .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
                                 }
                                 .padding(.horizontal, 16)
                                 
