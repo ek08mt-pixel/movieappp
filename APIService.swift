@@ -257,9 +257,9 @@ class APIService {
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
     let urlString: String
     switch type {
-    case .studio: 
+    case .studio:
     if categoryID == 213 {
-        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_watch_providers=8&watch_region=US&sort_by=popularity.desc&language=\(language)"
+        urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=213&sort_by=popularity.desc&language=\(language)"
     } else {
         urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
     }
