@@ -93,21 +93,19 @@ struct LibraryView: View {
                 }
             }
             .fullScreenCover(isPresented: $showPlayer) {
-                if let movie = playMovie {
-                    MoviePlayerView(
-                        movieId: movie.id,
-                        movieTitle: movie.title,
-                        mediaType: playMediaType,
-                        seasonNumber: playSeason,
-                        episodeNumber: playEpisode,
-                        posterURL: movie.posterURL,
-                        resumeTime: playResumeTime
-                    )
-                    .environmentObject(appState)
-                }
-            }
-        }
+    if let movie = playMovie {
+        MoviePlayerView(
+            movieId: movie.id,
+            movieTitle: movie.originalTitle ?? movie.title,
+            mediaType: playMediaType ?? movie.mediaType,
+            seasonNumber: playSeason,
+            episodeNumber: playEpisode,
+            posterURL: movie.posterURL,
+            resumeTime: playResumeTime
+        )
+        .environmentObject(appState)
     }
+}
     
     func tabButton(_ tab: LibraryTab) -> some View {
         let isSelected = selectedTab == tab
