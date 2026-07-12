@@ -58,9 +58,7 @@ struct SwipePickView: View {
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                             }
                         }
-                        .padding(.horizontal, 20).padding(.top, 50)
-                        
-                        Spacer()
+                        .padding(.horizontal, 20).padding(.top, 44).padding(.bottom, 4)
                         
                         // Card stack
                         ZStack {
@@ -85,8 +83,6 @@ struct SwipePickView: View {
                                 )
                         }
                         
-                        Spacer()
-                        
                         // Buttons
                         HStack(spacing: 40) {
                             Button { swipeLeft() } label: {
@@ -108,6 +104,7 @@ struct SwipePickView: View {
                                     .overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
                             }
                         }
+                        .padding(.top, 16).padding(.bottom, 20)
                         
                         Spacer()
                     }
