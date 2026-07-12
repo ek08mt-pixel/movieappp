@@ -261,7 +261,7 @@ class APIService {
     case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
     case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)"
     }
-    return try await fetchMultiplePages { page in
+    return try await fetchMultiplePages { [self] page in
         guard let url = URL(string: "\(urlString)&page=\(page)") else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
