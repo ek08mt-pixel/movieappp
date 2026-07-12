@@ -297,23 +297,13 @@ class APIService {
                 let response = try decoder.decode(MovieResponse.self, from: data)
                 return response.results.map { $0.withPlaceholder() }
             }
-        case .genre:
-            return try await fetchMultiplePages { [self] page in
-                let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
-                guard let url = URL(string: urlString) else { return [] }
-                let (data, _) = try await URLSession.shared.data(from: url)
-                let response = try decoder.decode(MovieResponse.self, from: data)
-                return response.results.map { $0.withPlaceholder() }
-            }
         case .asia:
-            return try await fetchMultiplePages { [self] page in
-                let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko|ja|zh&sort_by=popularity.desc&language=\(language)&page=\(page)"
-                guard let url = URL(string: urlString) else { return [] }
-                let (data, _) = try await URLSession.shared.data(from: url)
-                let response = try decoder.decode(MovieResponse.self, from: data)
-                return response.results.map { $0.withPlaceholder() }
-            }
-        }
+    return try await fetchMultiplePages { [self] page in
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko|ja|zh&sort_by=popularity.desc&language=\(language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
     }
     
     private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
