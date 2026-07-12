@@ -55,7 +55,6 @@ struct LibraryView: View {
                         }
                         .frame(maxHeight: .infinity)
                     } else if selectedTab == .saved {
-                        // Grid 3 cột cho Đã lưu
                         ScrollView {
                             LazyVGrid(columns: savedColumns, spacing: 16) {
                                 ForEach(currentMovies) { movie in
@@ -71,11 +70,6 @@ struct LibraryView: View {
                                                 .font(.system(size: 10, weight: .medium))
                                                 .foregroundColor(.white)
                                                 .lineLimit(2)
-                                                .frame(height: 30, alignment: .top)
-                                            HStack(spacing: 2) {
-                                                Image(systemName: "star.fill").font(.system(size: 8)).foregroundColor(.yellow)
-                                                Text(movie.ratingText).font(.system(size: 9)).foregroundColor(.gray)
-                                            }
                                         }
                                     }
                                 }
@@ -85,7 +79,6 @@ struct LibraryView: View {
                             .padding(.bottom, 100)
                         }
                     } else {
-                        // List cho Từng xem
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(currentMovies) { movie in
@@ -146,22 +139,23 @@ struct LibraryView: View {
         let hasProgress = (progress?.currentTime ?? 0) > 0 && (progress?.duration ?? 1) > 0
         let progressValue = hasProgress ? (progress!.currentTime / progress!.duration) : 0
         
-        return Button {
-            playMovie = movie
-            playSeason = progress?.season
-            playEpisode = progress?.episode
-            playResumeTime = progress?.currentTime ?? 0
-            playMediaType = progress?.mediaType
-            showPlayer = true
-        } label: {
-            HStack(spacing: 12) {
-                ZStack(alignment: .center) {
-                    CachedAsyncImage(url: movie.posterURL)
-                        .aspectRatio(2/3, contentMode: .fill)
-                        .frame(width: 80, height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                    
+        return HStack(spacing: 12) {
+            // Poster + nút play riêng
+            ZStack(alignment: .center) {
+                CachedAsyncImage(url: movie.posterURL)
+                    .aspectRatio(2/3, contentMode: .fill)
+                    .frame(width: 80, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                
+                Button {
+                    playMovie = movie
+                    playSeason = progress?.season
+                    playEpisode = progress?.episode
+                    playResumeTime = progress?.currentTime ?? 0
+                    playMediaType = progress?.mediaType
+                    showPlayer = true
+                } label: {
                     Circle()
                         .fill(.black.opacity(0.6))
                         .frame(width: 36, height: 36)
@@ -172,40 +166,46 @@ struct LibraryView: View {
                                 .offset(x: 1)
                         )
                 }
+            }
+            
+            // Info
+            VStack(alignment: .leading, spacing: 6) {
+                Text(movie.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(movie.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                if let ep = progress?.episode, let s = progress?.season {
+                    Text("S\(s):E\(ep)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                }
+                
+                if hasProgress {
+                    Text("Tiếp tục từ \(formatProgressTime(progress!.currentTime))")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.6))
                     
-                    if let ep = progress?.episode, let s = progress?.season {
-                        Text("S\(s):E\(ep)")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
-                    } else if hasProgress {
-                        Text(movie.yearText)
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    if hasProgress {
-                        Text("Tiếp tục từ \(formatProgressTime(progress!.currentTime))")
-                            .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(.white.opacity(0.1))
-                                    .frame(height: 4)
-                                Capsule()
-                                    .fill(.white.opacity(0.5))
-                                    .frame(width: max(4, geo.size.width * CGFloat(progressValue)), height: 4)
-                            }
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(.white.opacity(0.1))
+                                .frame(height: 4)
+                            Capsule()
+                                .fill(.white.opacity(0.5))
+                                .frame(width: max(4, geo.size.width * CGFloat(progressValue)), height: 4)
                         }
-                        .frame(height: 4)
-                        
+                    }
+                    .frame(height: 4)
+                    
+                    Button {
+                        playMovie = movie
+                        playSeason = progress?.season
+                        playEpisode = progress?.episode
+                        playResumeTime = progress?.currentTime ?? 0
+                        playMediaType = progress?.mediaType
+                        showPlayer = true
+                    } label: {
                         Text("Xem tiếp")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
@@ -214,24 +214,19 @@ struct LibraryView: View {
                             .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
                     }
                 }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.gray)
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(.ultraThinMaterial.opacity(0.25))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(.white.opacity(0.08), lineWidth: 0.5)
-                    )
-            )
+            
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.ultraThinMaterial.opacity(0.25))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(.white.opacity(0.08), lineWidth: 0.5)
+                )
+        )
     }
     
     func formatProgressTime(_ seconds: Double) -> String {
