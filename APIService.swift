@@ -258,11 +258,14 @@ class APIService {
         let urlString: String
         switch type {
         case .studio:
-            if categoryID == 213 {
-                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
-            } else {
-                urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
-            }
+    let networkIDs = [49, 2552, 1024, 1429, 1583] // HBO, Apple TV+, Amazon, iQiyi, Viki
+    if networkIDs.contains(categoryID) {
+        urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+    } else if categoryID == 213 {
+        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
+    } else {
+        urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+    }
         case .keyword: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(categoryID)&sort_by=vote_average.desc&vote_count.gte=30&language=\(language)"
         case .genre: urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)"
         }
