@@ -260,7 +260,15 @@ class APIService {
         case .studio:
     let networkIDs = [49, 2552, 1024, 1429, 1583] // HBO, Apple TV+, Amazon, iQiyi, Viki
     if networkIDs.contains(categoryID) {
-        urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=\(categoryID)&sort_by=popularity.desc&language=\(language)"
+        return try await fetchMultiplePages { [self] page in
+            let urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.map { movie in
+                Movie(id: movie.id, title: movie.title, overview: movie.overview, posterPath: movie.posterPath, backdropPath: movie.backdropPath, voteAverage: movie.voteAverage, releaseDate: movie.releaseDate, genreIds: movie.genreIds, originalTitle: movie.originalTitle, popularity: movie.popularity, voteCount: movie.voteCount, adult: movie.adult, originalLanguage: movie.originalLanguage, mediaType: "tv")
+            }
+        }
     } else if categoryID == 213 {
         urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_companies=213&sort_by=popularity.desc&language=\(language)&watch_region=US&with_watch_providers=8"
     } else {
