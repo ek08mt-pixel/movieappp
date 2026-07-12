@@ -10,7 +10,7 @@ struct ExploreView: View {
     ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio),
     ("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
     ("Disney+", 2739, .studio), ("Hulu", 453, .studio), ("Paramount+", 4330, .studio),
-    ("Peacock", 3353, .studio), ("Anime", 210024, .keyword), ("Châu Á", 0, .asia)
+    ("Peacock", 3353, .studio), ("Anime", 16, .genre), ("Châu Á", 0, .asia)
 ]
     
     let posterMap: [String: String] = [
