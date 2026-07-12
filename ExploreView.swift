@@ -161,9 +161,10 @@ struct SwipePickOverlay: View {
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { show = false }
             
-            if let movie = currentMovie {
-                VStack(spacing: 20) {
-                    ZStack {
+            VStack {
+                if let movie = currentMovie {
+                    VStack(spacing: 20) {
+                        ZStack {
                         if let next = nextMovie {
                             cardView(movie: next)
                                 .scaleEffect(0.92)
