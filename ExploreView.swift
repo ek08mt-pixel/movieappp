@@ -6,7 +6,7 @@ struct ExploreView: View {
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
-        ("Netflix", 213, .studio), ("Marvel", 420, .studio),
+        ("Netflix", 175661, .keyword), ("Marvel", 420, .studio),
         ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio)
     ]
     
