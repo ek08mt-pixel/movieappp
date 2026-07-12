@@ -11,7 +11,7 @@ struct LibraryView: View {
     @State private var showPlayer = false
     
     enum LibraryTab: String, CaseIterable {
-        case watched = "Vừa xem"
+        case watched = "Từng xem"
         case saved = "Đã lưu"
     }
     
@@ -93,19 +93,21 @@ struct LibraryView: View {
                 }
             }
             .fullScreenCover(isPresented: $showPlayer) {
-    if let movie = playMovie {
-        MoviePlayerView(
-            movieId: movie.id,
-            movieTitle: movie.originalTitle ?? movie.title,
-            mediaType: playMediaType ?? movie.mediaType,
-            seasonNumber: playSeason,
-            episodeNumber: playEpisode,
-            posterURL: movie.posterURL,
-            resumeTime: playResumeTime
-        )
-        .environmentObject(appState)
+                if let movie = playMovie {
+                    MoviePlayerView(
+                        movieId: movie.id,
+                        movieTitle: movie.originalTitle ?? movie.title,
+                        mediaType: playMediaType ?? movie.mediaType,
+                        seasonNumber: playSeason,
+                        episodeNumber: playEpisode,
+                        posterURL: movie.posterURL,
+                        resumeTime: playResumeTime
+                    )
+                    .environmentObject(appState)
+                }
+            }
+        }
     }
-}
     
     func tabButton(_ tab: LibraryTab) -> some View {
         let isSelected = selectedTab == tab
@@ -138,7 +140,6 @@ struct LibraryView: View {
         let progressValue = hasProgress ? (progress!.currentTime / progress!.duration) : 0
         
         return HStack(spacing: 12) {
-            // Poster + nút play riêng
             ZStack(alignment: .center) {
                 CachedAsyncImage(url: movie.posterURL)
                     .aspectRatio(2/3, contentMode: .fill)
@@ -166,9 +167,7 @@ struct LibraryView: View {
                 }
             }
             
-            // Info
             VStack(alignment: .leading, spacing: 6) {
-                // Tên phim bấm vô trang chi tiết
                 NavigationLink(destination: MovieDetailView(movie: movie)) {
                     Text(movie.title)
                         .font(.system(size: 15, weight: .semibold))
@@ -189,12 +188,8 @@ struct LibraryView: View {
                     
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(.white.opacity(0.1))
-                                .frame(height: 4)
-                            Capsule()
-                                .fill(.white.opacity(0.5))
-                                .frame(width: max(4, geo.size.width * CGFloat(progressValue)), height: 4)
+                            Capsule().fill(.white.opacity(0.1)).frame(height: 4)
+                            Capsule().fill(.white.opacity(0.5)).frame(width: max(4, geo.size.width * CGFloat(progressValue)), height: 4)
                         }
                     }
                     .frame(height: 4)
@@ -223,21 +218,14 @@ struct LibraryView: View {
         .background(
             RoundedRectangle(cornerRadius: 18)
                 .fill(.ultraThinMaterial.opacity(0.25))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(.white.opacity(0.08), lineWidth: 0.5)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08), lineWidth: 0.5))
         )
     }
     
     func formatProgressTime(_ seconds: Double) -> String {
         let total = Int(max(0, seconds))
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        }
+        let h = total / 3600; let m = (total % 3600) / 60; let s = total % 60
+        if h > 0 { return String(format: "%d:%02d:%02d", h, m, s) }
         return String(format: "%02d:%02d", m, s)
     }
 }
