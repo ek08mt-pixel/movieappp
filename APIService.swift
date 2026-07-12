@@ -281,7 +281,6 @@ class APIService {
         for page in 1...5 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
         return all
     }
-}
 
 extension Movie {
     func withPlaceholder() -> Movie {
