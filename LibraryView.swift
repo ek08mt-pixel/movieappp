@@ -11,7 +11,7 @@ struct LibraryView: View {
     @State private var showPlayer = false
     
     enum LibraryTab: String, CaseIterable {
-        case watched = "Từng xem"
+        case watched = "Vừa xem"
         case saved = "Đã lưu"
     }
     
