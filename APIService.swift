@@ -256,33 +256,10 @@ class APIService {
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
         switch type {
         case .studio:
-            let networkIDs = [49, 2552, 1024, 1429, 1583]
-            if networkIDs.contains(categoryID) {
+            let networkIDs = [49, 2552, 1024, 2739, 453, 4330, 3353] // HBO, AppleTV+, Amazon, Disney+, Hulu, Paramount+, Peacock
+            if networkIDs.contains(categoryID) || categoryID == 213 {
                 return try await fetchMultiplePages { [self] page in
                     let urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
-                    guard let url = URL(string: urlString) else { return [] }
-                    let (data, _) = try await URLSession.shared.data(from: url)
-                    struct TVResp: Codable { let results: [TVRes] }
-                    struct TVRes: Codable {
-                        let id: Int; let name: String?; let overview: String
-                        let poster_path: String?; let backdrop_path: String?
-                        let vote_average: Double; let first_air_date: String?
-                        let genre_ids: [Int]?; let popularity: Double?
-                        let vote_count: Int?; let original_language: String?
-                    }
-                    let response = try JSONDecoder().decode(TVResp.self, from: data)
-                    return response.results.map { tv in
-                        Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
-                              posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
-                              voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
-                              genreIds: tv.genre_ids, originalTitle: tv.name,
-                              popularity: tv.popularity, voteCount: tv.vote_count,
-                              adult: false, originalLanguage: tv.original_language, mediaType: "tv")
-                    }
-                }
-            } else if categoryID == 213 {
-                return try await fetchMultiplePages { [self] page in
-                    let urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_networks=213&sort_by=popularity.desc&language=\(language)&page=\(page)"
                     guard let url = URL(string: urlString) else { return [] }
                     let (data, _) = try await URLSession.shared.data(from: url)
                     struct TVResp: Codable { let results: [TVRes] }
@@ -323,6 +300,14 @@ class APIService {
         case .genre:
             return try await fetchMultiplePages { [self] page in
                 let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=\(categoryID)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+                guard let url = URL(string: urlString) else { return [] }
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let response = try decoder.decode(MovieResponse.self, from: data)
+                return response.results.map { $0.withPlaceholder() }
+            }
+        case .asia:
+            return try await fetchMultiplePages { [self] page in
+                let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko|ja|zh&sort_by=popularity.desc&language=\(language)&page=\(page)"
                 guard let url = URL(string: urlString) else { return [] }
                 let (data, _) = try await URLSession.shared.data(from: url)
                 let response = try decoder.decode(MovieResponse.self, from: data)
