@@ -34,13 +34,6 @@ struct MoviePlayerView: View {
     @State private var isOrientationLocked = true
     @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
     
-    // SponsorBlock states
-    @State private var skipIntroSegment: SkipSegment?
-    @State private var skipSponsorSegments: [SkipSegment] = []
-    @State private var showSkipIntro = false
-    @State private var showSkipSponsor = false
-    @State private var currentSponsorSegment: SkipSegment?
-    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -54,63 +47,6 @@ struct MoviePlayerView: View {
             Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showBrightnessSlider{showBrightnessSlider=true}; brightness=min(max(brightness+(-v.translation.height/120),0.01),1); UIScreen.main.brightness=brightness; resetBrightnessTimer()}.onEnded{_ in resetBrightnessTimer()})
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
             if let err=errorMessage, !isLoading { VStack(spacing:16){Image(systemName:"wifi.slash").font(.system(size:40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing:10){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; HStack(spacing:16){Button("Thử lại"){loadStream()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại"){dismiss()}.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
-            
-            // Nút Skip Intro
-            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showSubtitlePopup && !showAudioPopup && showSkipIntro {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button {
-                            skipIntro()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "forward.end.fill")
-                                    .font(.system(size: 10))
-                                Text("Bỏ qua Intro")
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.3)))
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.top, 8)
-                    }
-                    Spacer()
-                }
-                .transition(.opacity)
-            }
-            
-            // Nút Skip Quảng cáo
-            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showSubtitlePopup && !showAudioPopup && showSkipSponsor {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button {
-                            skipSponsor()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "forward.end.fill")
-                                    .font(.system(size: 10))
-                                Text("Bỏ qua Quảng cáo")
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.3)))
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.top, showSkipIntro ? 52 : 8)
-                    }
-                    Spacer()
-                }
-                .transition(.opacity)
-            }
-            
             if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showSubtitlePopup && !showAudioPopup {
                 HStack(spacing:64){Button{seek(-10)}label:{Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}; Button{player.rate==0 ? player.play():player.pause()}label:{Image(systemName:player.rate==0 ? "play.fill":"pause.fill").font(.system(size:28,weight:.bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3))).overlay(Circle().stroke(Color.white.opacity(0.15),lineWidth:0.5))}; Button{seek(10)}label:{Image(systemName:"goforward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}}
                 VStack{Spacer(); VStack(spacing:8){Slider(value:$currentTime,in:0...max(duration,1)){e in isSeeking=e; if !e{player.seek(to:CMTime(seconds:currentTime,preferredTimescale:600))}}.accentColor(.white).padding(.horizontal,30); HStack{Text(formatTime(currentTime)).font(.caption2).foregroundColor(.white.opacity(0.7));Spacer();Text(formatTime(duration)).font(.caption2).foregroundColor(.white.opacity(0.7))}.padding(.horizontal,30)
@@ -139,39 +75,27 @@ struct MoviePlayerView: View {
             }
         }
         .statusBarHidden()
-        .gesture(DragGesture(minimumDistance:20).onChanged{v in if !showOverlay && v.translation.height < -40 && v.startLocation.y > UIScreen.main.bounds.height-250 { showOverlay=true; overlayOffset=300 }; if showOverlay && v.translation.height > 40 { overlayOffset=max(0,v.translation.height) }}.onEnded{v in if showOverlay && v.translation.height > 100 { closeOverlay() } else if showOverlay { withAnimation(.spring(response:0.3,dampingFraction:0.8)){overlayOffset=0} }})
+        .gesture(DragGesture(minimumDistance: 20).onChanged { v in
+            let screenHeight = UIScreen.main.bounds.height
+            let triggerZone = max(screenHeight * 0.6, screenHeight - 250)
+            
+            if !showOverlay && v.translation.height < -40 && v.startLocation.y > triggerZone {
+                showOverlay = true
+                overlayOffset = 300
+            }
+            if showOverlay && v.translation.height > 40 {
+                overlayOffset = max(0, v.translation.height)
+            }
+        }.onEnded { v in
+            if showOverlay && v.translation.height > 100 {
+                closeOverlay()
+            } else if showOverlay {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { overlayOffset = 0 }
+            }
+        })
         .task { loadStream() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
-    }
-    
-    // MARK: - Skip Functions
-    func skipIntro() {
-        guard let intro = skipIntroSegment else { return }
-        let endTime = intro.segment[1]
-        player.seek(to: CMTime(seconds: endTime, preferredTimescale: 600))
-        currentTime = endTime
-        showSkipIntro = false
-    }
-    
-    func skipSponsor() {
-        guard let sponsor = currentSponsorSegment else { return }
-        let endTime = sponsor.segment[1]
-        player.seek(to: CMTime(seconds: endTime, preferredTimescale: 600))
-        currentTime = endTime
-        showSkipSponsor = false
-        currentSponsorSegment = nil
-    }
-    
-    func fetchSponsorBlockData() {
-        guard let imdbID = imdbIDCache else { return }
-        Task {
-            let segments = await SponsorBlockService.shared.fetchSegments(imdbID: imdbID, duration: duration)
-            await MainActor.run {
-                skipIntroSegment = segments.intro
-                skipSponsorSegments = segments.sponsors
-            }
-        }
     }
     
     @ViewBuilder
@@ -262,8 +186,6 @@ struct MoviePlayerView: View {
         
         if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
-        showSkipIntro = false; showSkipSponsor = false; skipIntroSegment = nil; skipSponsorSegments = []
-        
         Task {
             do {
                 let imdbID = try await fetchIMDB()
@@ -278,7 +200,6 @@ struct MoviePlayerView: View {
                     let url = try await withCheckedThrowingContinuation { c in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
                     await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }; saveHistory()
                 }
-                await MainActor.run { fetchSponsorBlockData() }
             } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } }
         }
     }
@@ -305,34 +226,7 @@ struct MoviePlayerView: View {
     func unlockOrientation() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }
     func saveProgress() { guard hasStartedPlaying, currentTime > 0, duration > 0 else { return }; appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: currentTime, duration: duration, lastWatched: Date())) }
     func saveHistory() { let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType); appState.watchHistory.removeAll { $0.id == movieId }; appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
-    
-    func setupTimeObserver() {
-        player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in
-            if !isSeeking { currentTime = t.seconds }
-            if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }
-            
-            // Skip intro check
-            if let intro = skipIntroSegment,
-               currentTime >= intro.segment[0],
-               currentTime <= intro.segment[1] {
-                showSkipIntro = true
-            } else if showSkipIntro {
-                showSkipIntro = false
-            }
-            
-            // Skip sponsor check
-            if let sponsor = skipSponsorSegments.first(where: {
-                currentTime >= $0.segment[0] && currentTime <= $0.segment[1]
-            }) {
-                showSkipSponsor = true
-                currentSponsorSegment = sponsor
-            } else if showSkipSponsor {
-                showSkipSponsor = false
-                currentSponsorSegment = nil
-            }
-        }
-    }
-    
+    func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.5,preferredTimescale:600),queue:.main){t in if !isSeeking{currentTime=t.seconds}; if let d=player.currentItem?.duration,d.isNumeric{duration=d.seconds}} }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
     func resetControlsTimer(){controlsTimer?.invalidate();controlsTimer=Timer.scheduledTimer(withTimeInterval:4,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showControls=false}}}
