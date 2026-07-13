@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 struct YouTubeVideo: Identifiable, Codable {
-    let id: String { videoID }
+    var id: String { videoID }
     let videoID: String
     let title: String
     let thumbnailURL: String
