@@ -10,8 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="Emew 1", sofaflix="Emew 2", nguonc="Emew 3", vsmov="Emew 4", stravo="Emew 5" }
-
+enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3" }
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
