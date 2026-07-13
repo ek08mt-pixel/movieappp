@@ -154,10 +154,17 @@ struct YouTubeWebView: UIViewRepresentable {
     let wv = WKWebView(frame: .zero, configuration: config)
     wv.backgroundColor = .black
     wv.isOpaque = false
-    wv.scrollView.contentInsetAdjustmentBehavior = .never
-    if let url = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1&autoplay=1&rel=0") {
-        wv.load(URLRequest(url: url))
-    }
+    let embedHTML = """
+    <!DOCTYPE html>
+    <html>
+    <head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"></head>
+    <body style="background:black;margin:0;padding:0;">
+    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/\(videoID)?playsinline=1&autoplay=1" 
+    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </body>
+    </html>
+    """
+    wv.loadHTMLString(embedHTML, baseURL: nil)
     return wv
 }
     
