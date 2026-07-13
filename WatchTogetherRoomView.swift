@@ -139,7 +139,7 @@ struct WatchTogetherRoomView: View {
             }
         }
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
+        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }.sheet(isPresented: $showYouTubeSearch) { YouTubeSearchView() }
         .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
         .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
