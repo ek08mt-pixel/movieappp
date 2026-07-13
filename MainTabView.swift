@@ -38,8 +38,7 @@ struct MainTabView: View {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
                         LiquidTabIcon(icon: "star.fill", isSelected: selectedTab == 1) {
-    if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
-}
+                            if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
                         }
                         LiquidTabIcon(icon: "rectangle.stack.fill", isSelected: selectedTab == 2) {
                             if selectedTab == 2 { libraryID = UUID() } else { selectedTab = 2 }
@@ -58,7 +57,8 @@ struct MainTabView: View {
                             .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
                             .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                     }
-                }.padding(.bottom, 6)
+                }
+                .padding(.bottom, 6)
                 .transition(.move(edge: .bottom))
             }
         }
@@ -70,11 +70,10 @@ struct MainTabView: View {
             withAnimation { showWatchTogetherRoom = inRoom }
         }
         .onChange(of: selectedTab) { tab in
-            if tab == 3 && watchService.isInRoom {
-                showWatchTogetherRoom = true
-            }
+            if tab == 3 && watchService.isInRoom { showWatchTogetherRoom = true }
         }
     }
+}
 
 // MARK: - MiniPlayerView
 struct MiniPlayerView: View {
