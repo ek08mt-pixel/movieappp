@@ -17,7 +17,7 @@ struct YouTubeSearchView: View {
     @State private var selectedVideo: YouTubeVideo?
     @State private var showPlayer = false
     
-    let apiKey = "AIzaSyC2V7qNDrVdX6x1CgFdVpJ0CnMp7S8tHZw"
+    let apiKey = "AIzaSyDOquWjuicnF1J4MTi-EVjcWSerqy9h8j0"
     
     var body: some View {
         NavigationStack {
