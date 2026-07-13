@@ -148,17 +148,18 @@ struct YouTubeWebView: UIViewRepresentable {
     let videoID: String
     
     func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
-        let wv = WKWebView(frame: .zero, configuration: config)
-        wv.backgroundColor = .black
-        wv.isOpaque = false
-        if let url = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1&autoplay=1") {
-            wv.load(URLRequest(url: url))
-        }
-        return wv
+    let config = WKWebViewConfiguration()
+    config.allowsInlineMediaPlayback = true
+    config.mediaTypesRequiringUserActionForPlayback = []
+    let wv = WKWebView(frame: .zero, configuration: config)
+    wv.backgroundColor = .black
+    wv.isOpaque = false
+    wv.scrollView.contentInsetAdjustmentBehavior = .never
+    if let url = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1&autoplay=1&rel=0") {
+        wv.load(URLRequest(url: url))
     }
+    return wv
+}
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
