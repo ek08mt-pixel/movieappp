@@ -23,26 +23,27 @@ struct SplashView: View {
             GeometryReader { geo in
                 ZStack {
                     posterGridView(size: geo.size)
+                        .blur(radius: 3)
                     
                     // Dark overlay + vignette
                     RadialGradient(
                         gradient: Gradient(colors: [
-                            Color.black.opacity(0.5),
-                            Color.black.opacity(0.85)
+                            Color.black.opacity(0.15),
+                            Color.black.opacity(0.6)
                         ]),
                         center: .center,
                         startRadius: 0,
                         endRadius: max(geo.size.width, geo.size.height) * 0.8
                     )
                     
-                    Color.black.opacity(0.8)
+                    Color.black.opacity(0.55)
                 }
             }
             .ignoresSafeArea()
             
             if isLoading {
                 // Logo + brand name + slogan (centered)
-                VStack(spacing: 16) {
+                VStack(spacing: 8) {
                     // Cat silhouette logo with glow
                     catLogoView
                     
@@ -54,7 +55,7 @@ struct SplashView: View {
                     
                     // Slogan
                     Text("meow & chill .")
-                        .font(.system(size: 14, weight: .light, design: .default))
+                        .font(.system(size: 11, weight: .light, design: .default))
                         .foregroundColor(Color(red: 0.63, green: 0.63, blue: 0.63))
                         .tracking(2)
                 }
@@ -144,7 +145,7 @@ struct SplashView: View {
                         .overlay(
                             Text(posterNames[index].replacingOccurrences(of: "_", with: " ").capitalized)
                                 .font(.system(size: 8))
-                                .foregroundColor(.white.opacity(0.15))
+                                .foregroundColor(.white.opacity(0.2))
                                 .rotationEffect(.degrees(-5))
                         )
                         .rotationEffect(.degrees(-5))
@@ -161,12 +162,12 @@ struct SplashView: View {
     
     func randomDarkColor(seed: Int) -> Color {
         let colors: [Color] = [
-            Color(red: 0.04, green: 0.04, blue: 0.12),
-            Color(red: 0.08, green: 0.06, blue: 0.14),
-            Color(red: 0.05, green: 0.07, blue: 0.10),
-            Color(red: 0.10, green: 0.04, blue: 0.08),
-            Color(red: 0.03, green: 0.08, blue: 0.13),
-            Color(red: 0.07, green: 0.05, blue: 0.11),
+            Color(red: 0.10, green: 0.08, blue: 0.20),
+            Color(red: 0.15, green: 0.10, blue: 0.22),
+            Color(red: 0.08, green: 0.12, blue: 0.18),
+            Color(red: 0.18, green: 0.08, blue: 0.14),
+            Color(red: 0.06, green: 0.14, blue: 0.22),
+            Color(red: 0.14, green: 0.10, blue: 0.20),
         ]
         return colors[seed % colors.count]
     }
