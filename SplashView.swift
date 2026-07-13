@@ -23,41 +23,43 @@ struct SplashView: View {
             GeometryReader { geo in
                 ZStack {
                     posterGridView(size: geo.size)
-                        .blur(radius: 3)
+                        .blur(radius: 4)
                     
-                    // Dark overlay + vignette
+                    // Vignette nhẹ ở viền, không che mất poster trung tâm
                     RadialGradient(
                         gradient: Gradient(colors: [
-                            Color.black.opacity(0.15),
-                            Color.black.opacity(0.6)
+                            Color.black.opacity(0.0),
+                            Color.black.opacity(0.3),
+                            Color.black.opacity(0.75)
                         ]),
                         center: .center,
-                        startRadius: 0,
-                        endRadius: max(geo.size.width, geo.size.height) * 0.8
+                        startRadius: geo.size.width * 0.25,
+                        endRadius: max(geo.size.width, geo.size.height) * 0.75
                     )
                     
-                    Color.black.opacity(0.55)
+                    // Overlay tổng giảm xuống 0.7 để thấy rõ poster
+                    Color.black.opacity(0.7)
                 }
             }
             .ignoresSafeArea()
             
             if isLoading {
                 // Logo + brand name + slogan (centered)
-                VStack(spacing: 8) {
-                    // Cat silhouette logo with glow
+                VStack(spacing: 10) {
+                    // Cat silhouette logo - phóng to 1.5x
                     catLogoView
                     
-                    // Brand name
+                    // Brand name - font dày, letter-spacing rộng
                     Text("EMCC")
-                        .font(.system(size: 40, weight: .medium, design: .default))
+                        .font(.system(size: 42, weight: .bold, design: .default))
                         .foregroundColor(.white)
-                        .tracking(6)
+                        .tracking(8)
                     
-                    // Slogan
-                    Text("meow & chill .")
+                    // Slogan - viết hoa, không dấu chấm, tracking kéo dài bằng EMCC
+                    Text("MEOW & CHILL")
                         .font(.system(size: 11, weight: .light, design: .default))
                         .foregroundColor(Color(red: 0.63, green: 0.63, blue: 0.63))
-                        .tracking(2)
+                        .tracking(6)
                 }
             } else if isBlocked {
                 VStack(spacing: 24) {
@@ -97,33 +99,32 @@ struct SplashView: View {
         .task { await checkConfig() }
     }
     
-    // Cat silhouette with glow
+    // Cat silhouette with glow - 1.5x bigger, sharper lines
     var catLogoView: some View {
         ZStack {
-            // Glow effect
+            // Glow effect - to hơn
             Circle()
-                .fill(Color.white.opacity(0.15))
-                .frame(width: 80, height: 80)
-                .blur(radius: 20)
+                .fill(Color.white.opacity(0.12))
+                .frame(width: 120, height: 120)
+                .blur(radius: 25)
             
-            // Cat head shape
+            // Cat head shape - nét dày hơn, sắc sảo hơn
             catShape
-                .stroke(Color.white, lineWidth: 1.5)
-                .frame(width: 60, height: 55)
-                .shadow(color: .white.opacity(0.6), radius: 8)
+                .stroke(Color.white, lineWidth: 2.0)
+                .frame(width: 90, height: 82)
+                .shadow(color: .white.opacity(0.7), radius: 10)
         }
     }
     
-    // Simple cat silhouette path
     var catShape: some Shape {
         CatSilhouette()
     }
     
-    // Poster grid với góc nghiêng nhẹ
+    // Poster grid - perspective rõ ràng, màu sáng hơn
     func posterGridView(size: CGSize) -> some View {
         let columns = 4
         let rows = 6
-        let cellW = size.width / CGFloat(columns) * 1.3
+        let cellW = size.width / CGFloat(columns) * 1.4
         let cellH = cellW * 1.5
         
         return ZStack {
@@ -134,40 +135,54 @@ struct SplashView: View {
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [
-                                    randomDarkColor(seed: index),
-                                    randomDarkColor(seed: index + 7)
+                                    posterColor(seed: index),
+                                    posterColor(seed: index + 7)
                                 ]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
+                        .overlay(
+                            Rectangle()
+                                .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
+                        )
                         .frame(width: cellW, height: cellH)
                         .overlay(
-                            Text(posterNames[index].replacingOccurrences(of: "_", with: " ").capitalized)
-                                .font(.system(size: 8))
-                                .foregroundColor(.white.opacity(0.2))
-                                .rotationEffect(.degrees(-5))
+                            VStack {
+                                // Giả lập poster art với text placeholder
+                                Text(posterNames[index].replacingOccurrences(of: "_", with: " ").uppercased())
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.35))
+                                    .tracking(1)
+                                    .multilineTextAlignment(.center)
+                                    .padding(4)
+                                Spacer()
+                            }
                         )
-                        .rotationEffect(.degrees(-5))
+                        .rotationEffect(.degrees(-6))
                         .offset(
-                            x: CGFloat(col) * cellW * 0.85 - size.width * 0.25,
-                            y: CGFloat(row) * cellH * 0.85 - size.height * 0.15
+                            x: CGFloat(col) * cellW * 0.82 - size.width * 0.3,
+                            y: CGFloat(row) * cellH * 0.82 - size.height * 0.2
                         )
                 }
             }
         }
         .rotationEffect(.degrees(5))
-        .scaleEffect(1.2)
+        .rotation3DEffect(.degrees(3), axis: (x: 0.8, y: -0.2, z: 0), perspective: 0.3)
+        .scaleEffect(1.25)
     }
     
-    func randomDarkColor(seed: Int) -> Color {
+    // Màu poster sáng hơn, rõ ràng hơn
+    func posterColor(seed: Int) -> Color {
         let colors: [Color] = [
-            Color(red: 0.10, green: 0.08, blue: 0.20),
-            Color(red: 0.15, green: 0.10, blue: 0.22),
-            Color(red: 0.08, green: 0.12, blue: 0.18),
-            Color(red: 0.18, green: 0.08, blue: 0.14),
-            Color(red: 0.06, green: 0.14, blue: 0.22),
-            Color(red: 0.14, green: 0.10, blue: 0.20),
+            Color(red: 0.25, green: 0.18, blue: 0.35),
+            Color(red: 0.30, green: 0.22, blue: 0.40),
+            Color(red: 0.20, green: 0.28, blue: 0.38),
+            Color(red: 0.35, green: 0.20, blue: 0.28),
+            Color(red: 0.18, green: 0.30, blue: 0.42),
+            Color(red: 0.28, green: 0.24, blue: 0.38),
+            Color(red: 0.32, green: 0.26, blue: 0.32),
+            Color(red: 0.22, green: 0.32, blue: 0.40),
         ]
         return colors[seed % colors.count]
     }
@@ -206,7 +221,7 @@ struct SplashView: View {
     }
 }
 
-// Custom Cat Silhouette Shape
+// Custom Cat Silhouette Shape - nét sắc sảo hơn
 struct CatSilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -214,50 +229,50 @@ struct CatSilhouette: Shape {
         let h = rect.height
         let midX = w / 2
         
-        // Ears
-        path.move(to: CGPoint(x: midX * 0.45, y: h * 0.3))
-        path.addLine(to: CGPoint(x: midX * 0.6, y: h * 0.05))
-        path.addLine(to: CGPoint(x: midX * 0.9, y: h * 0.25))
+        // Left ear - sharp triangle
+        path.move(to: CGPoint(x: midX * 0.4, y: h * 0.32))
+        path.addLine(to: CGPoint(x: midX * 0.55, y: h * 0.02))
+        path.addLine(to: CGPoint(x: midX * 0.88, y: h * 0.26))
         
-        // Right ear
-        path.move(to: CGPoint(x: midX * 1.1, y: h * 0.25))
-        path.addLine(to: CGPoint(x: midX * 1.4, y: h * 0.05))
-        path.addLine(to: CGPoint(x: midX * 1.55, y: h * 0.3))
+        // Right ear - sharp triangle
+        path.move(to: CGPoint(x: midX * 1.12, y: h * 0.26))
+        path.addLine(to: CGPoint(x: midX * 1.45, y: h * 0.02))
+        path.addLine(to: CGPoint(x: midX * 1.6, y: h * 0.32))
         
-        // Head curve
-        path.move(to: CGPoint(x: midX * 0.35, y: h * 0.45))
+        // Head top curve (between ears)
+        path.move(to: CGPoint(x: midX * 0.38, y: h * 0.42))
         path.addCurve(
-            to: CGPoint(x: midX * 1.65, y: h * 0.45),
-            control1: CGPoint(x: midX * 0.2, y: h * 0.15),
-            control2: CGPoint(x: midX * 1.8, y: h * 0.15)
+            to: CGPoint(x: midX * 1.62, y: h * 0.42),
+            control1: CGPoint(x: midX * 0.22, y: h * 0.08),
+            control2: CGPoint(x: midX * 1.78, y: h * 0.08)
         )
         
-        // Bottom curve
+        // Bottom jaw curve
         path.addCurve(
-            to: CGPoint(x: midX * 0.35, y: h * 0.45),
-            control1: CGPoint(x: midX * 1.8, y: h * 0.85),
-            control2: CGPoint(x: midX * 0.2, y: h * 0.85)
+            to: CGPoint(x: midX * 0.38, y: h * 0.42),
+            control1: CGPoint(x: midX * 1.78, y: h * 0.90),
+            control2: CGPoint(x: midX * 0.22, y: h * 0.90)
         )
         
-        // Whiskers left
-        path.move(to: CGPoint(x: midX * 0.6, y: h * 0.55))
-        path.addLine(to: CGPoint(x: midX * 0.15, y: h * 0.5))
+        // Left whiskers - sắc nét
+        path.move(to: CGPoint(x: midX * 0.58, y: h * 0.52))
+        path.addLine(to: CGPoint(x: midX * 0.08, y: h * 0.46))
         
-        path.move(to: CGPoint(x: midX * 0.6, y: h * 0.6))
-        path.addLine(to: CGPoint(x: midX * 0.12, y: h * 0.62))
+        path.move(to: CGPoint(x: midX * 0.58, y: h * 0.58))
+        path.addLine(to: CGPoint(x: midX * 0.04, y: h * 0.60))
         
-        path.move(to: CGPoint(x: midX * 0.58, y: h * 0.65))
-        path.addLine(to: CGPoint(x: midX * 0.18, y: h * 0.72))
+        path.move(to: CGPoint(x: midX * 0.56, y: h * 0.64))
+        path.addLine(to: CGPoint(x: midX * 0.10, y: h * 0.74))
         
-        // Whiskers right
-        path.move(to: CGPoint(x: midX * 1.4, y: h * 0.55))
-        path.addLine(to: CGPoint(x: midX * 1.85, y: h * 0.5))
+        // Right whiskers - sắc nét
+        path.move(to: CGPoint(x: midX * 1.42, y: h * 0.52))
+        path.addLine(to: CGPoint(x: midX * 1.92, y: h * 0.46))
         
-        path.move(to: CGPoint(x: midX * 1.4, y: h * 0.6))
-        path.addLine(to: CGPoint(x: midX * 1.88, y: h * 0.62))
+        path.move(to: CGPoint(x: midX * 1.42, y: h * 0.58))
+        path.addLine(to: CGPoint(x: midX * 1.96, y: h * 0.60))
         
-        path.move(to: CGPoint(x: midX * 1.42, y: h * 0.65))
-        path.addLine(to: CGPoint(x: midX * 1.82, y: h * 0.72))
+        path.move(to: CGPoint(x: midX * 1.44, y: h * 0.64))
+        path.addLine(to: CGPoint(x: midX * 1.90, y: h * 0.74))
         
         return path
     }
