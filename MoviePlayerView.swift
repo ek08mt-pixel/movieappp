@@ -177,19 +177,12 @@ struct MoviePlayerView: View {
                 case .phimapi:
                     let url = try await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { c.resume(with: $0) } }
                     await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.phimapi] = true; isLoading = false; tryResume() }; saveHistory()
-                case .sofaflix:
-                    let url = try await withCheckedThrowingContinuation { c in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { c.resume(with: $0) } }
-                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.sofaflix] = true; isLoading = false; tryResume() }; saveHistory()
                 case .nguonc:
                     let url = try await withCheckedThrowingContinuation { c in NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
                     await MainActor.run { nguonCEmbedURL = url; nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }
                 case .vsmov:
                     let url = try await withCheckedThrowingContinuation { c in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }
                     await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }; saveHistory()
-                case .stravo:
-                    let url = try await withCheckedThrowingContinuation { c in StravoService.shared.fetchStream(imdbID: imdbID, season: s, episode: ep) { c.resume(with: $0) } }
-                    let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": ["Referer": "https://lok-lok.cc/", "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"]])
-                    await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(asset: asset)); player.play(); hasStartedPlaying = true; sourceStatus[.stravo] = true; isLoading = false; tryResume() }; saveHistory()
                 }
             } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } }
         }
