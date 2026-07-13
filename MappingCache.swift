@@ -122,7 +122,14 @@ final class NguonCService {
                             for server in episodes {
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
-                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed), (name.lowercased() == "full" || Int(name) == e) { completion(.success(embedURL)); return }
+                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed) {
+    let cleanName = name.trimmingCharacters(in: .whitespaces)
+    let epNum = Int(cleanName) ?? Int(cleanName.replacingOccurrences(of: "Tập ", with: "").replacingOccurrences(of: "Tập", with: ""))
+    if cleanName.lowercased() == "full" || epNum == e {
+        completion(.success(embedURL))
+        return
+    }
+}
                                     }
                                 }
                             }
