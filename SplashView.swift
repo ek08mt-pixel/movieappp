@@ -18,10 +18,11 @@ struct SplashView: View {
             Color.black.ignoresSafeArea()
             
             if isLoading {
-    Text("Emmew")
-        .font(.system(size: 42, weight: .bold, design: .serif))
-        .foregroundColor(.white)
-}
+                VStack(spacing: 20) {
+                    Text("Emmew")
+                        .font(.system(size: 42, weight: .bold, design: .serif))
+                        .foregroundColor(.white)
+                }
             } else if isBlocked {
                 VStack(spacing: 24) {
                     Spacer()
