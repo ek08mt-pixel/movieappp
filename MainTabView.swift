@@ -37,12 +37,14 @@ struct MainTabView: View {
                         LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
-                        LiquidTabIcon(icon: "sparkles", isSelected: selectedTab == 1)
+                        LiquidTabIcon(icon: "sparkles", isSelected: selectedTab == 1) {
+                            if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
                         }
                         LiquidTabIcon(icon: "rectangle.stack.fill", isSelected: selectedTab == 2) {
                             if selectedTab == 2 { libraryID = UUID() } else { selectedTab = 2 }
                         }
-                        LiquidTabIcon(icon: "shared.with.you", isSelected: selectedTab == 3)
+                        LiquidTabIcon(icon: "shared.with.you", isSelected: selectedTab == 3) {
+                            if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
                     .padding(.vertical, 14).padding(.horizontal, 28)
