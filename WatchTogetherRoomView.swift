@@ -62,6 +62,7 @@ struct WatchTogetherRoomView: View {
     @State private var seasonError: String?
     @State private var posterImage: UIImage?
     @State private var refreshTimer: Timer?
+    @State private var showYouTubeSearch = false
     
     @State private var fakeRooms: [FakeRoom] = [
         FakeRoom(roomName: "Deadpool nè", movieTitle: "Deadpool & Wolverine", viewerCount: 6, avatars: ["🐱","🐶","🐰","🐻","🐼","🐨"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "01:12:45"),
