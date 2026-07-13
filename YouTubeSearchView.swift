@@ -160,5 +160,5 @@ struct YouTubeWebView: UIViewRepresentable {
         return wv
     }
     
-    func updateUIViewController(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
