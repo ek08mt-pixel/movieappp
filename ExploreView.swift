@@ -41,8 +41,9 @@ struct ExploreView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
-                        HStack(spacing: 12) {
-                            NavigationLink(destination: OSTView()) {
+                        HStack(spacing: 0) {
+    Spacer()
+    NavigationLink(destination: OSTView()) {
                                 VStack(spacing: 6) {
                                     Image(systemName: "music.note").font(.system(size: 22))
                                     Text("OST").font(.system(size: 10, weight: .medium))
