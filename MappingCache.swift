@@ -122,25 +122,14 @@ final class NguonCService {
                             for server in episodes {
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
-                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed) {
-    let cleanName = name.trimmingCharacters(in: .whitespaces)
-    let epNum = Int(cleanName) ?? Int(cleanName.replacingOccurrences(of: "Tập ", with: "").replacingOccurrences(of: "Tập", with: ""))
-    if cleanName.lowercased() == "full" || epNum == e {
-        let m3u8String = embed.hasSuffix("/") ? "\(embed)master-b2.m3u8" : "\(embed)/master-b2.m3u8"
-if let m3u8URL = URL(string: m3u8String) { completion(.success(m3u8URL)) }
-else { completion(.success(embedURL)) }
-        return
-    }
-}
+                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed), (name.lowercased() == "full" || Int(name) == e) { completion(.success(embedURL)); return }
                                     }
                                 }
                             }
                         }
                         completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
                     } else {
-                        if let embed = movie["embed"] as? String, let embedURL = URL(string: embed) { let m3u8String = embed.hasSuffix("/") ? "\(embed)master-b2.m3u8" : "\(embed)/master-b2.m3u8"
-if let m3u8URL = URL(string: m3u8String) { completion(.success(m3u8URL)) }
-else { completion(.success(embedURL)) }
+                        if let embed = movie["embed"] as? String, let embedURL = URL(string: embed) { completion(.success(embedURL)) }
                         else { completion(.failure(StreamServiceError.noStreamURL)) }
                     }
                 } else { completion(.failure(StreamServiceError.noData)) }
