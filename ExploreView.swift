@@ -51,11 +51,7 @@ struct ExploreView: View {
                                 .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
-                            }
-                            NavigationLink(destination: FilmHubView()) {
-                                VStack(spacing: 6) {
-                                    Image(systemName: "film").font(.system(size: 22))
-                                    Text("Góc phim").font(.system(size: 10, weight: .medium))
+
                                 }
                                 .foregroundColor(.white)
                                 .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
