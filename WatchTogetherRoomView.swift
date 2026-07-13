@@ -1,6 +1,5 @@
 import SwiftUI
 import AVKit
-import Foundation
 
 // MARK: - Watch Player VC
 struct WatchPlayerVC: UIViewControllerRepresentable {
@@ -121,21 +120,26 @@ struct WatchTogetherRoomView: View {
             if isLandscape {
                 WatchPlayerVC(player: player, pipController: $pipController)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .overlay(videoControlsOverlay.allowsHitTesting(showControls))
+                    .overlay(
+                        videoControlsOverlay
+                            .allowsHitTesting(showControls)
+                    )
                     .onTapGesture { toggleControlsInRoom() }
             } else {
                 VStack(spacing: 0) {
                     WatchPlayerVC(player: player, pipController: $pipController)
                         .frame(height: geo.size.width * 9 / 16 - 45)
-                        .overlay(videoControlsOverlay.allowsHitTesting(showControls))
+                        .overlay(
+                            videoControlsOverlay
+                                .allowsHitTesting(showControls)
+                        )
                         .onTapGesture { toggleControlsInRoom() }
                     imessageChatPanel
                 }
             }
         }
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
-        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .sheet(isPresented: $showYouTubeSearch) { YouTubeSearchView() }
+        .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }.sheet(isPresented: $showYouTubeSearch) { YouTubeSearchView() }
         .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
         .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
@@ -180,7 +184,9 @@ struct WatchTogetherRoomView: View {
     // MARK: - Chat
     var imessageChatPanel: some View {
         VStack(spacing: 0) {
-            HStack { VStack(alignment: .leading, spacing: 2) { Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1); Text("\(service.currentRoomName) • Mã: \(service.currentRoomCode)").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Spacer(); HStack(spacing: 6) { Button { showSearchMovie = true } label: { Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Button { showViewerPanel = true } label: { HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) } }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))) } }; Button { showYouTubeSearch = true } label: { Image(systemName: "play.rectangle.fill").font(.system(size: 12)).foregroundColor(.red).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) } }
+            HStack { VStack(alignment: .leading, spacing: 2) { Text(displayTitle).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1); Text("\(service.currentRoomName) • Mã: \(service.currentRoomCode)").font(.system(size: 10)).foregroundColor(.white.opacity(0.6)) }; Spacer(); HStack(spacing: 6) { Button { showSearchMovie = true } label: { Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundColor(.white).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5))) }; Button { showViewerPanel = true } label: { HStack(spacing: -4) { ForEach(service.participants.prefix(2), id: \.userId) { p in Text(p.avatar).font(.system(size: 9)).frame(width: 16, height: 16).background(Circle().fill(.ultraThinMaterial.opacity(0.4))) } }.padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))) } } }; Button { showYouTubeSearch = true } label: {
+    Image(systemName: "play.rectangle.fill").font(.system(size: 12)).foregroundColor(.red).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+}
             .padding(.horizontal, 12).padding(.vertical, 6).background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.5)).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))).padding(.horizontal, 8).padding(.top, 4)
             if duration > 0 { VStack(spacing: 2) { HStack { Text(formatTime(currentTime)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 9, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }; GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 3); Capsule().fill(.white.opacity(0.6)).frame(width: max(3, g.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 3) } }.frame(height: 3) }.padding(.horizontal, 12).padding(.vertical, 4) }
             HStack(spacing: 20) { ForEach(["😭","🥹","🤡","😻","🫢","🤯"], id: \.self) { e in Button { sendReaction(e) } label: { Text(e).font(.system(size: 20)) } } }.padding(.horizontal, 12).padding(.vertical, 4)
@@ -200,46 +206,8 @@ struct WatchTogetherRoomView: View {
     func formatTime(_ s: Double) -> String { let ts = Int(max(0, s)); let h = ts / 3600; let m = (ts % 3600) / 60; let sec = ts % 60; if h > 0 { return String(format: "%d:%02d:%02d", h, m, sec) }; return String(format: "%02d:%02d", m, sec) }
     
     // MARK: - Load Movie
-    func loadMovieForRoom(_ movie: Movie) {
-        currentMovieTitle = movie.title; currentMovie = movie
-        selectedSeason = nil; episodes = []; selectedEpisode = nil
-        seasons = []; isLoadingSeasons = true; seasonError = nil
-        
-        Task {
-            do {
-                let fetched = try await APIService.shared.fetchTVSeasons(tvId: movie.id)
-                await MainActor.run { self.seasons = fetched; self.isLoadingSeasons = false }
-            } catch {
-                await MainActor.run { self.isLoadingSeasons = false; self.seasonError = error.localizedDescription }
-            }
-        }
-        
-        Task {
-            do {
-                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
-                let url = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
-                    PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: nil, episode: nil) { cont.resume(with: $0) }
-                }
-                await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); if service.isHost { service.sendPlaybackState(action: "play", time: 0) } }
-            } catch { print("Load error: \(error)") }
-        }
-    }
-    
-    func loadEpisode(_ ep: TVEpisode) {
-        guard let movie = currentMovie else { return }
-        selectedEpisode = ep; isLoadingEpisode = true
-        
-        Task {
-            do {
-                let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType)
-                let url = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
-                    PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: ep.seasonNumber, episode: ep.episodeNumber) { cont.resume(with: $0) }
-                }
-                await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); isLoadingEpisode = false; if service.isHost { service.sendPlaybackState(action: "play", time: 0) } }
-            } catch { await MainActor.run { isLoadingEpisode = false }; print("Load episode error: \(error)") }
-        }
-    }
-    
+    func loadMovieForRoom(_ movie: Movie) { currentMovieTitle = movie.title; currentMovie = movie; selectedSeason = nil; episodes = []; selectedEpisode = nil; seasons = []; isLoadingSeasons = true; seasonError = nil; if let posterURL = movie.posterURL { Task { if let (data, _) = try? await URLSession.shared.data(from: posterURL), let img = UIImage(data: data) { await MainActor.run { posterImage = img } } } }; Task { let urlString = "https://api.themoviedb.org/3/tv/\(movie.id)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"; guard let url = URL(string: urlString) else { await MainActor.run { isLoadingSeasons = false }; return }; do { let (data, _) = try await URLSession.shared.data(from: url); struct TVDetailResponse: Codable { let seasons: [TVSeason]? }; let response = try JSONDecoder().decode(TVDetailResponse.self, from: data); let fetched = response.seasons?.filter { $0.seasonNumber > 0 } ?? []; await MainActor.run { self.seasons = fetched; self.isLoadingSeasons = false } } catch { if let fetched = try? await APIService.shared.fetchTVSeasons(tvId: movie.id) { await MainActor.run { self.seasons = fetched; self.isLoadingSeasons = false } } else { await MainActor.run { self.isLoadingSeasons = false; self.seasonError = error.localizedDescription } } } }; Task { do { let isTV = movie.mediaType == "tv"; let imdbID = try await fetchIMDBID(for: movie.id, mediaType: isTV ? "tv" : nil); var streamURL: URL?; streamURL = try? await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: isTV ? "tv" : "movie", season: nil, episode: nil) { c.resume(with: $0) } }; if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { c in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: isTV ? "tv" : "movie", season: nil, episode: nil) { c.resume(with: $0) } } }; guard let url = streamURL else { return }; await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); if service.isHost { service.sendPlaybackState(action: "play", time: 0) } } } catch { print("Load error: \(error)") } } }
+    func loadEpisode(_ ep: TVEpisode) { guard let movie = currentMovie else { return }; selectedEpisode = ep; isLoadingEpisode = true; Task { do { let imdbID = try await fetchIMDBID(for: movie.id, mediaType: movie.mediaType); var streamURL: URL?; streamURL = try? await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: ep.seasonNumber, episode: ep.episodeNumber) { c.resume(with: $0) } }; if streamURL == nil { streamURL = try? await withCheckedThrowingContinuation { c in SofaflixService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: ep.seasonNumber, episode: ep.episodeNumber) { c.resume(with: $0) } } }; guard let url = streamURL else { await MainActor.run { isLoadingEpisode = false }; return }; await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); isLoadingEpisode = false; if service.isHost { service.sendPlaybackState(action: "play", time: 0) } } } catch { await MainActor.run { isLoadingEpisode = false } } } }
     func fetchIMDBID(for tmdbID: Int, mediaType: String?) async throws -> String { if mediaType == "tv", let id = try? await APIService.shared.fetchExternalIDs(tvId: tmdbID), !id.isEmpty { return id }; let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(tmdbID)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; guard let id = try JSONDecoder().decode(E.self, from: data).imdb_id, !id.isEmpty else { throw NSError(domain: "", code: -1) }; return id }
     
     // MARK: - Episode Popup
