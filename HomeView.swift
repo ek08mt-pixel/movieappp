@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var showMenu = false
     @State private var menuOffset: CGFloat = -280
     @State private var showGenrePopup = false
+    @State private var hideStatusBar = false
     
     @State private var showContinuePlayer = false
     @State private var continueMovieId: Int?
@@ -32,6 +33,18 @@ struct HomeView: View {
                 .overlay(.ultraThinMaterial.opacity(0.05))
                 
                 ScrollView {
+                    GeometryReader { geo in
+                        Color.clear
+                            .onChange(of: geo.frame(in: .global).minY) { offset in
+                                if offset < -50 {
+                                    withAnimation(.easeOut(duration: 0.25)) { hideStatusBar = true }
+                                } else {
+                                    withAnimation(.easeOut(duration: 0.25)) { hideStatusBar = false }
+                                }
+                            }
+                    }
+                    .frame(height: 0)
+                    
                     VStack(spacing: 0) {
                         // Banner Hero
                         TabView(selection: $currentIndex) {
@@ -363,6 +376,8 @@ struct HomeView: View {
                     }
                 }
             }
+            .statusBarHidden(hideStatusBar)
+            .animation(.easeOut(duration: 0.3), value: hideStatusBar)
             .ignoresSafeArea(edges: .top)
             .gesture(DragGesture().onChanged { v in
                 if v.translation.width > 50 && !showMenu {
