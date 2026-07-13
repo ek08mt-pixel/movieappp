@@ -75,7 +75,6 @@ struct MainTabView: View {
             }
         }
     }
-}
 
 // MARK: - MiniPlayerView
 struct MiniPlayerView: View {
