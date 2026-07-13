@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import Foundation
 
 // MARK: - Watch Player VC
 struct WatchPlayerVC: UIViewControllerRepresentable {
