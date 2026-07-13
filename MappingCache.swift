@@ -126,7 +126,9 @@ final class NguonCService {
     let cleanName = name.trimmingCharacters(in: .whitespaces)
     let epNum = Int(cleanName) ?? Int(cleanName.replacingOccurrences(of: "Tập ", with: "").replacingOccurrences(of: "Tập", with: ""))
     if cleanName.lowercased() == "full" || epNum == e {
-        completion(.success(embedURL))
+        let m3u8String = embed.hasSuffix("/") ? "\(embed)master-b2.m3u8" : "\(embed)/master-b2.m3u8"
+if let m3u8URL = URL(string: m3u8String) { completion(.success(m3u8URL)) }
+else { completion(.success(embedURL)) }
         return
     }
 }
