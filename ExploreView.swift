@@ -42,27 +42,29 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
                         HStack(spacing: 0) {
-    Spacer()
-    NavigationLink(destination: OSTView()) {
+                            Spacer()
+                            NavigationLink(destination: OSTView()) {
                                 VStack(spacing: 6) {
                                     Image(systemName: "music.note").font(.system(size: 22))
                                     Text("OST").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
+                            Spacer()
                             NavigationLink(destination: TimelineView()) {
                                 VStack(spacing: 6) {
                                     Image(systemName: "calendar").font(.system(size: 22))
                                     Text("Timeline").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
+                            Spacer()
                             Button {
                                 showSwipePick = true
                             } label: {
@@ -71,10 +73,11 @@ struct ExploreView: View {
                                     Text("Pick").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
+                            Spacer()
                         }
                         .padding(.horizontal, 16)
                         
