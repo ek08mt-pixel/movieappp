@@ -41,7 +41,6 @@ struct WatchTogetherRoomView: View {
     @State private var userName = ""
     @State private var roomName = ""
     @State private var joinCode = ""
-    @State private var showCreateRoom = false
     @State private var showSearchMovie = false
     @State private var showControls = true
     @State private var controlsTimer: Timer?
@@ -89,11 +88,11 @@ struct WatchTogetherRoomView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if service.isInRoom { inRoomView }
-            else if showCreateRoom { createRoomView }
             else { lobbyView }
             ForEach(flyingEmojis) { fe in Text(fe.emoji).font(.system(size: 32)).offset(y: fe.offsetY).offset(x: fe.xOffset).opacity(fe.opacity).allowsHitTesting(false) }
             if showEpisodePanel { episodePopupOverlay }
         }
+        .toolbar(.hidden, for: .tabBar)
         .onAppear { showControls = true; resetControlsTimer(); startFakeRoomRefresh()
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { n in if let frame = n.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect { keyboardHeight = frame.height } }
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in keyboardHeight = 0 }
@@ -108,154 +107,121 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Lobby
     var lobbyView: some View {
-    ZStack(alignment: .bottomTrailing) {
-        VStack(spacing: 0) {
-            // Header: nút back + chữ EMMEW
-            HStack {
-                Button {
-                    // Back - về Home (đổi tab)
-                    // Gửi notification hoặc dùng dismiss
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                }
-                Spacer()
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
                 Text("EMMEW")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(.system(size: 32, weight: .heavy))
                     .foregroundColor(.white)
-                Spacer()
-                Circle().fill(.clear).frame(width: 36)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 52)
-            .padding(.bottom, 12)
-            
-            // Search bar fake
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.5))
-                Text("Search")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.5))
-                Spacer()
-            }
-            .padding(.horizontal, 14).padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
-            
-            // Public
-            HStack(spacing: 6) {
-                Image(systemName: "globe.americas.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.8))
-                Text("Public")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
-            
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(fakeRooms) { room in
-                        fakeRoomCard(room)
-                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 56)
+                    .padding(.bottom, 16)
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.5))
+                    Text("Search")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.5))
+                    Spacer()
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 120)
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "globe.americas.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                    Text("Public")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+                
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(fakeRooms) { room in
+                            fakeRoomCard(room)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 140)
+                }
             }
+            
+            Button {
+                service.createRoom(roomName: "Phòng", userName: "User") { _ in }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 76, height: 76)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
+                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+            }
+            .padding(.trailing, 36)
+            .padding(.bottom, 120)
         }
-        
-        // Nút + lớn liquid glass bự bên dưới phải
-        Button {
-            showCreateRoom = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 64, height: 64)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
-                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
-        }
-        .padding(.trailing, 24)
-        .padding(.bottom, 100)
+        .ignoresSafeArea()
     }
-}
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                // Poster - không viền
-                if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-                    CachedAsyncImage(url: url)
-                        .aspectRatio(16/9, contentMode: .fill)
-                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 78)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial.opacity(0.35))
-                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 78)
-                        .overlay(Image(systemName: "play.circle.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)))
-                }
-                
-                // Tiêu đề + avatar
-                VStack(spacing: 0) {
-                    Text(room.movieTitle)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 2)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        ForEach(room.avatars.prefix(4), id: \.self) { av in
-                            Text(av)
-                                .font(.system(size: 14))
-                                .frame(width: 32, height: 32)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
-                        }
-                        Spacer()
-                    }
-                    .padding(.bottom, 2)
-                }
-                .frame(height: 78)
+        HStack(spacing: 0) {
+            if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(16/9, contentMode: .fill)
+                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial.opacity(0.35))
+                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
             
-            // Thanh tiến trình từ mép phải poster
-            HStack(spacing: 0) {
-                Color.clear.frame(width: UIScreen.main.bounds.width * 0.38 + 8)
+            VStack(spacing: 0) {
+                Text(room.movieTitle)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 10)
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    ForEach(room.avatars.prefix(4), id: \.self) { av in
+                        Text(av)
+                            .font(.system(size: 14))
+                            .frame(width: 32, height: 32)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                    }
+                    Spacer()
+                }
+                .padding(.bottom, 6)
+                .padding(.horizontal, 10)
+                
                 Rectangle()
                     .fill(.white.opacity(0.15))
                     .frame(height: 1.5)
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            .padding(.bottom, 10)
+            .frame(height: 84)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial.opacity(0.2))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(.white.opacity(0.06), lineWidth: 0.5)
+            )
         }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial.opacity(0.2))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.06), lineWidth: 0.5)
-        )
     }
-    
-    // MARK: - Create Room
-    var createRoomView: some View { VStack(spacing: 24) { HStack { Button { showCreateRoom = false } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(12).background(Circle().fill(Material.ultraThinMaterial.opacity(0.4))) }; Spacer(); Text("Tạo phòng").font(.title3.bold()).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 44) }.padding(.horizontal, 16).padding(.top, 50); VStack(spacing: 16) { HStack { Text("Avatar của bạn:").font(.system(size: 13)).foregroundColor(.white.opacity(0.7)); Spacer(); Text(WatchTogetherService.defaultAvatars[abs((userName.isEmpty ? "guest" : userName).hashValue) % WatchTogetherService.defaultAvatars.count]).font(.system(size: 28)).frame(width: 44, height: 44).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)) }.padding(.horizontal, 4); TextField("Tên của bạn", text: $userName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); TextField("Tên phòng (tuỳ chọn)", text: $roomName).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))); Button { guard !userName.isEmpty else { return }; service.createRoom(roomName: roomName.isEmpty ? "Phòng của \(userName)" : roomName, userName: userName) { _ in showCreateRoom = false } } label: { HStack { Image(systemName: "movieclapper.fill"); Text("Tạo phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) }; HStack(spacing: 12) { Rectangle().fill(.white.opacity(0.15)).frame(height: 1); Text("hoặc tham gia").font(.system(size: 11)).foregroundColor(.gray); Rectangle().fill(.white.opacity(0.15)).frame(height: 1) }; TextField("Nhập mã phòng 6 số", text: $joinCode).font(.system(size: 15)).foregroundColor(.white).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(0.25))).keyboardType(.numberPad); Button { guard !userName.isEmpty, joinCode.count == 6 else { return }; service.joinRoom(code: joinCode, userName: userName) { success, _ in if success { showCreateRoom = false } } } label: { HStack { Image(systemName: "arrow.right.circle.fill"); Text("Vào phòng").font(.headline) }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 16).background(Capsule().fill(Material.ultraThinMaterial.opacity(0.5))) } }.padding(.horizontal, 24); Spacer() }.background(Color.black.ignoresSafeArea()) }
     
     // MARK: - In Room
     var inRoomView: some View {
