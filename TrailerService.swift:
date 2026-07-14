@@ -1,0 +1,129 @@
+import Foundation
+
+struct TrailerVideo: Identifiable, Codable {
+    let id: String
+    let key: String
+    let name: String
+    let site: String
+    let type: String
+    let movieTitle: String
+    let movieId: Int
+    let posterPath: String?
+    let backdropPath: String?
+    let voteAverage: Double
+    let releaseDate: String?
+    let overview: String
+    
+    var streamURL: URL? { nil } // Sẽ được resolve qua Piped
+    var resolvedURL: URL?
+}
+
+class TrailerService {
+    static let shared = TrailerService()
+    private let tmdbAPI = "https://api.themoviedb.org/3"
+    private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
+    private let pipedAPI = "https://pipedapi.kavin.rocks"
+    
+    func fetchTrendingTrailers() async -> [TrailerVideo] {
+        // Lấy trending movies
+        guard let url = URL(string: "\(tmdbAPI)/trending/movie/week?api_key=\(apiKey)&language=en-US") else { return [] }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Response: Codable {
+                struct Movie: Codable {
+                    let id: Int; let title: String; let posterPath: String?
+                    let backdropPath: String?; let voteAverage: Double
+                    let releaseDate: String?; let overview: String
+                    enum CodingKeys: String, CodingKey {
+                        case id, title, overview
+                        case posterPath = "poster_path"
+                        case backdropPath = "backdrop_path"
+                        case voteAverage = "vote_average"
+                        case releaseDate = "release_date"
+                    }
+                }
+                let results: [Movie]
+            }
+            let response = try JSONDecoder().decode(Response.self, from: data)
+            
+            var trailers: [TrailerVideo] = []
+            for movie in response.results.prefix(15) {
+                if let trailer = await fetchTrailer(movieId: movie.id, movie: movie) {
+                    trailers.append(trailer)
+                }
+            }
+            return trailers
+        } catch {
+            return []
+        }
+    }
+    
+    private func fetchTrailer(movieId: Int, movie: Any) async -> TrailerVideo? {
+        guard let url = URL(string: "\(tmdbAPI)/movie/\(movieId)/videos?api_key=\(apiKey)&language=en-US") else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct VideoResponse: Codable {
+                struct Video: Codable {
+                    let id: String; let key: String; let name: String
+                    let site: String; let type: String
+                }
+                let results: [Video]
+            }
+            let response = try JSONDecoder().decode(VideoResponse.self, from: data)
+            let trailer = response.results.first { $0.type == "Trailer" && $0.site == "YouTube" }
+            guard let t = trailer else { return nil }
+            
+            return TrailerVideo(
+                id: t.id, key: t.key, name: t.name,
+                site: t.site, type: t.type,
+                movieTitle: (movie as? TMDBMovie)?.title ?? "",
+                movieId: movieId,
+                posterPath: (movie as? TMDBMovie)?.posterPath,
+                backdropPath: (movie as? TMDBMovie)?.backdropPath,
+                voteAverage: (movie as? TMDBMovie)?.voteAverage ?? 0,
+                releaseDate: (movie as? TMDBMovie)?.releaseDate,
+                overview: (movie as? TMDBMovie)?.overview ?? ""
+            )
+        } catch {
+            return nil
+        }
+    }
+    
+    func resolveStreamURL(youtubeKey: String) async -> URL? {
+        guard let url = URL(string: "\(pipedAPI)/streams/\(youtubeKey)") else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct PipedResponse: Codable {
+                struct Stream: Codable {
+                    let url: String
+                    let quality: String
+                }
+                let videoStreams: [Stream]
+            }
+            let response = try JSONDecoder().decode(PipedResponse.self, from: data)
+            // Lấy stream 720p hoặc cao nhất
+            let stream = response.videoStreams.first { $0.quality == "720p" }
+                ?? response.videoStreams.first
+            return stream.flatMap { URL(string: $0.url) }
+        } catch {
+            return nil
+        }
+    }
+}
+
+// Helper struct cho decode
+private struct TMDBMovie: Codable {
+    let id: Int; let title: String; let posterPath: String?
+    let backdropPath: String?; let voteAverage: Double
+    let releaseDate: String?; let overview: String
+    enum CodingKeys: String, CodingKey {
+        case id, title, overview
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case releaseDate = "release_date"
+    }
+}
