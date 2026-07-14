@@ -78,19 +78,19 @@ struct MoviePlayerView: View {
         }
         .statusBarHidden()
         .alert("Tải xuống", isPresented: $showDownloadAlert) {
-            Button("Tải") {
-                if let url = currentStreamURL {
-                    DownloadManager.shared.download(
-                        url: url, movieId: movieId, title: movieTitle,
-                        posterPath: posterURL?.absoluteString, mediaType: mediaType,
-                        season: seasonNumber, episode: episodeNumber
-                    )
-                }
-            }
-            Button("Huỷ", role: .cancel) {}
-        } message: {
-            Text("Tải \(movieTitle) về máy để xem offline?")
+    Button("Tải") {
+        if let url = currentStreamURL {
+            HLSDownloadManager.shared.startDownload(
+                url: url, movieId: movieId, title: movieTitle,
+                posterPath: posterURL?.absoluteString, mediaType: mediaType,
+                season: seasonNumber, episode: episodeNumber
+            )
         }
+    }
+    Button("Huỷ", role: .cancel) {}
+} message: {
+    Text("Tải \(movieTitle) về máy để xem offline?")
+}
         .gesture(DragGesture(minimumDistance: 20).onChanged { v in
             let screenHeight = UIScreen.main.bounds.height
             let triggerZone = max(screenHeight * 0.6, screenHeight - 250)
