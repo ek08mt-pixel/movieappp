@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 
 struct DownloadItem: Identifiable, Codable {
     let id: String
@@ -19,19 +20,18 @@ struct DownloadItem: Identifiable, Codable {
     }
 }
 
-class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
+class DownloadManager: NSObject, ObservableObject, AVAssetDownloadDelegate {
     static let shared = DownloadManager()
     @Published var downloads: [DownloadItem] = []
     @Published var progress: [String: Double] = [:]
     
-    private var session: URLSession!
-    private var tasks: [String: URLSessionDownloadTask] = [:]
-    private var resumeData: [String: Data] = [:]
+    private var session: AVAssetDownloadURLSession!
+    private var activeDownloads: [String: AVAssetDownloadTask] = [:]
     
     override init() {
         super.init()
-        let config = URLSessionConfiguration.background(withIdentifier: "com.emmew.downloads")
-        session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        let config = URLSessionConfiguration.background(withIdentifier: "com.emmew.hlsdownload")
+        session = AVAssetDownloadURLSession(configuration: config, assetDownloadDelegate: self, delegateQueue: .main)
         loadDownloads()
     }
     
@@ -60,33 +60,29 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         }
         save()
         
-        let task = session.downloadTask(with: url)
-        task.taskDescription = id
-        tasks[id] = task
-        task.resume()
-    }
-    
-    func pause(_ id: String) {
-        tasks[id]?.cancel { data in
-            if let data = data { self.resumeData[id] = data }
+        let asset = AVURLAsset(url: url)
+        let task = session.makeAssetDownloadTask(
+            asset: asset,
+            assetTitle: title,
+            assetArtworkData: nil,
+            options: nil
+        )
+        task?.taskDescription = id
+        task?.resume()
+        if let task = task {
+            activeDownloads[id] = task
         }
-        tasks[id] = nil
-        updateStatus(id, .paused)
     }
     
-    func resume(_ id: String) {
-        guard let data = resumeData[id], let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
-        let task = session.downloadTask(withResumeData: data)
-        task.taskDescription = id
-        tasks[id] = task
-        downloads[idx].status = .downloading
-        task.resume()
-        resumeData[id] = nil
+    func cancel(_ id: String) {
+        activeDownloads[id]?.cancel()
+        activeDownloads[id] = nil
+        updateStatus(id, .failed)
     }
     
     func delete(_ id: String) {
-        tasks[id]?.cancel()
-        tasks[id] = nil
+        activeDownloads[id]?.cancel()
+        activeDownloads[id] = nil
         if let item = downloads.first(where: { $0.id == id }),
            let url = item.fileURL {
             try? FileManager.default.removeItem(at: url)
@@ -105,12 +101,12 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     
     private func save() {
         if let data = try? JSONEncoder().encode(downloads) {
-            UserDefaults.standard.set(data, forKey: "downloaded_items_v1")
+            UserDefaults.standard.set(data, forKey: "downloaded_items_v2")
         }
     }
     
     private func loadDownloads() {
-        if let data = UserDefaults.standard.data(forKey: "downloaded_items_v1"),
+        if let data = UserDefaults.standard.data(forKey: "downloaded_items_v2"),
            let items = try? JSONDecoder().decode([DownloadItem].self, from: data) {
             downloads = items
             for i in 0..<downloads.count where downloads[i].status == .downloading {
@@ -119,16 +115,16 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         }
     }
     
-    // MARK: - Delegate
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        guard let id = downloadTask.taskDescription,
+    // MARK: - AVAssetDownloadDelegate
+    func urlSession(_ session: URLSession, assetDownloadTask: AVAssetDownloadTask, didFinishDownloadingTo location: URL) {
+        guard let id = assetDownloadTask.taskDescription,
               let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
         
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dlDir = docs.appendingPathComponent("Downloads", isDirectory: true)
         try? FileManager.default.createDirectory(at: dlDir, withIntermediateDirectories: true)
         
-        let dest = dlDir.appendingPathComponent("\(id).mp4")
+        let dest = dlDir.appendingPathComponent("\(id).movpkg")
         try? FileManager.default.removeItem(at: dest)
         
         do {
@@ -140,19 +136,19 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         } catch {
             downloads[idx].status = .failed
         }
-        tasks[id] = nil
+        activeDownloads[id] = nil
         save()
     }
     
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        guard let id = downloadTask.taskDescription,
+    func urlSession(_ session: URLSession, assetDownloadTask: AVAssetDownloadTask, didLoad timeRange: CMTimeRange, totalTimeRangesLoaded loadedTimeRanges: [NSValue], timeRangeExpectedToLoad: CMTimeRange) {
+        guard let id = assetDownloadTask.taskDescription,
               let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
         
-        let p = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-        downloads[idx].progress = p
-        downloads[idx].downloadedSize = totalBytesWritten
-        downloads[idx].fileSize = totalBytesExpectedToWrite
-        progress[id] = p
+        let duration = timeRangeExpectedToLoad.duration.seconds
+        let loaded = loadedTimeRanges.reduce(0.0) { $0 + $1.timeRangeValue.duration.seconds }
+        let p = duration > 0 ? loaded / duration : 0
+        downloads[idx].progress = min(p, 1.0)
+        progress[id] = min(p, 1.0)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
