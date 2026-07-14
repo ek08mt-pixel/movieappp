@@ -56,38 +56,24 @@ class HLSDownloadManager: NSObject, ObservableObject {
     }
     
     private func downloadPlaylist(id: String, url: URL) {
-    var req = URLRequest(url: url)
-    req.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
-    
-    session.dataTask(with: req) { [weak self] data, _, error in
-        guard let data, error == nil, let content = String(data: data, encoding: .utf8) else {
-            Task { @MainActor in self?.failDownload(id: id) }
-            return
-        }
-        let segs = HLSDownloadManager.parseSegmentsStatic(content, baseURL: url)
-        guard !segs.isEmpty else {
-            Task { @MainActor in self?.failDownload(id: id) }
-            return
-        }
-        Task { @MainActor in self?.downloadAllSegments(id: id, segments: segs) }
-    }.resume()
-}
-
-// Đổi parseSegments thành static
-private static func parseSegmentsStatic(_ content: String, baseURL: URL) -> [URL] {
-    var urls: [URL] = []
-    let baseDir = baseURL.deletingLastPathComponent()
-    for line in content.components(separatedBy: .newlines) {
-        let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        if t.isEmpty || t.hasPrefix("#") { continue }
-        if t.hasSuffix(".ts") || t.hasSuffix(".m4s") {
-            if let u = URL(string: t, relativeTo: t.hasPrefix("http") ? nil : baseDir) { urls.append(u) }
-        }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
+        
+        session.dataTask(with: req) { [weak self] data, _, error in
+            guard let data, error == nil, let content = String(data: data, encoding: .utf8) else {
+                Task { @MainActor [weak self] in self?.failDownload(id: id) }
+                return
+            }
+            let segs = Self.parseSegmentsStatic(content, baseURL: url)
+            guard !segs.isEmpty else {
+                Task { @MainActor [weak self] in self?.failDownload(id: id) }
+                return
+            }
+            Task { @MainActor [weak self] in self?.downloadAllSegments(id: id, segments: segs) }
+        }.resume()
     }
-    return urls
-}
     
-    private func parseSegments(_ content: String, baseURL: URL) -> [URL] {
+    private static func parseSegmentsStatic(_ content: String, baseURL: URL) -> [URL] {
         var urls: [URL] = []
         let baseDir = baseURL.deletingLastPathComponent()
         for line in content.components(separatedBy: .newlines) {
@@ -118,8 +104,9 @@ private static func parseSegmentsStatic(_ content: String, baseURL: URL) -> [URL
             var req = URLRequest(url: segURL)
             req.setValue("video/mp2t", forHTTPHeaderField: "Accept")
             
-            session.dataTask(with: req) { data, _, error in
+            session.dataTask(with: req) { [weak self] data, _, error in
                 defer { group.leave() }
+                guard let self else { return }
                 if let data, error == nil {
                     try? data.write(to: destDir.appendingPathComponent("segment_\(i).ts"))
                     let done = counter.increment()
@@ -163,11 +150,11 @@ private static func parseSegmentsStatic(_ content: String, baseURL: URL) -> [URL
     }
     
     private func saveDownloads() {
-        if let data = try? JSONEncoder().encode(downloads) { UserDefaults.standard.set(data, forKey: "hls_v5") }
+        if let data = try? JSONEncoder().encode(downloads) { UserDefaults.standard.set(data, forKey: "hls_v6") }
     }
     
     private func loadDownloads() {
-        if let data = UserDefaults.standard.data(forKey: "hls_v5"),
+        if let data = UserDefaults.standard.data(forKey: "hls_v6"),
            let items = try? JSONDecoder().decode([DownloadItem].self, from: data) {
             downloads = items
             for i in 0..<downloads.count where downloads[i].status == .downloading { downloads[i].status = .failed }
