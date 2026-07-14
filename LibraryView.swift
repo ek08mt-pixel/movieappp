@@ -2,12 +2,17 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var dm = DownloadManager.shared
     @State private var selectedTab: LibraryTab = .watched
     @State private var playMovie: Movie?
+    @State private var showOfflinePlayer = false
+    @State private var offlineURL: URL?
+    @State private var offlineTitle = ""
     
     enum LibraryTab: String, CaseIterable {
         case watched = "Từng xem"
         case saved = "Đã lưu"
+        case downloads = "Đã tải"
     }
     
     var currentMovies: [Movie] {
@@ -30,6 +35,7 @@ struct LibraryView: View {
                     HStack(spacing: 0) {
                         tabButton(.watched)
                         tabButton(.saved)
+                        tabButton(.downloads)
                     }
                     .padding(4)
                     .background(
@@ -37,10 +43,12 @@ struct LibraryView: View {
                             .fill(.ultraThinMaterial.opacity(0.2))
                             .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
                     )
-                    .padding(.horizontal, 30)
+                    .padding(.horizontal, 20)
                     .padding(.top, 8)
                     
-                    if currentMovies.isEmpty {
+                    if selectedTab == .downloads {
+                        downloadsView
+                    } else if currentMovies.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: selectedTab == .saved ? "bookmark.slash" : "eye.slash")
                                 .font(.system(size: 50))
@@ -100,7 +108,147 @@ struct LibraryView: View {
                 )
                 .environmentObject(appState)
             }
+            .fullScreenCover(isPresented: $showOfflinePlayer) {
+                if let url = offlineURL {
+                    DownloadedPlayerView(url: url, title: offlineTitle)
+                }
+            }
         }
+    }
+    
+    // MARK: - Downloads View
+    var downloadsView: some View {
+        Group {
+            if dm.downloads.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle").font(.system(size: 50)).foregroundColor(.gray)
+                    Text("Chưa có phim tải về").foregroundColor(.gray)
+                    Text("Bấm nút tải trong lúc xem phim").font(.system(size: 12)).foregroundColor(.gray.opacity(0.7))
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(dm.downloads) { item in
+                            downloadRow(item)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 100)
+                }
+            }
+        }
+    }
+    
+    func downloadRow(_ item: DownloadItem) -> some View {
+        HStack(spacing: 12) {
+            if let path = item.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w200\(path)") {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(2/3, contentMode: .fill)
+                    .frame(width: 60, height: 90)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.ultraThinMaterial.opacity(0.3))
+                    .frame(width: 60, height: 90)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.movieTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let ep = item.episodeNumber, let s = item.seasonNumber {
+                    Text("S\(s):E\(ep)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                }
+                
+                switch item.status {
+                case .downloading:
+                    VStack(spacing: 4) {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(.white.opacity(0.1)).frame(height: 3)
+                                Capsule().fill(.blue).frame(width: max(3, geo.size.width * CGFloat(item.progress)), height: 3)
+                            }
+                        }
+                        .frame(height: 3)
+                        Text("\(Int(item.progress * 100))%")
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                    }
+                case .paused:
+                    Text("Đã tạm dừng")
+                        .font(.system(size: 11))
+                        .foregroundColor(.yellow)
+                case .completed:
+                    Text("Đã tải xong")
+                        .font(.system(size: 11))
+                        .foregroundColor(.green)
+                case .failed:
+                    Text("Tải thất bại")
+                        .font(.system(size: 11))
+                        .foregroundColor(.red)
+                }
+            }
+            
+            Spacer()
+            
+            VStack(spacing: 10) {
+                if item.status == .downloading {
+                    Button {
+                        dm.pause(item.id)
+                    } label: {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                    }
+                } else if item.status == .paused {
+                    Button {
+                        dm.resume(item.id)
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                    }
+                } else if item.status == .completed {
+                    Button {
+                        offlineURL = item.fileURL
+                        offlineTitle = item.movieTitle
+                        showOfflinePlayer = true
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                    }
+                }
+                
+                Button {
+                    dm.delete(item.id)
+                } label: {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red.opacity(0.7))
+                        .padding(6)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.ultraThinMaterial.opacity(0.25))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08), lineWidth: 0.5))
+        )
     }
     
     func tabButton(_ tab: LibraryTab) -> some View {
@@ -111,7 +259,7 @@ struct LibraryView: View {
             }
         } label: {
             Text(tab.rawValue)
-                .font(.system(size: 14, weight: isSelected ? .bold : .regular))
+                .font(.system(size: 13, weight: isSelected ? .bold : .regular))
                 .foregroundColor(isSelected ? .white : .gray)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
