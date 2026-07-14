@@ -18,6 +18,27 @@ struct TrailerVideo: Identifiable {
     let overview: String
 }
 
+// MARK: - TMDB Movie (internal)
+private struct TMDBMovie: Codable {
+    let id: Int; let title: String; let poster_path: String?
+    let backdrop_path: String?; let vote_average: Double
+    let release_date: String?; let overview: String
+}
+
+private struct TMDBTrendingResponse: Codable {
+    let results: [TMDBMovie]
+}
+
+private struct TMDBVideoResponse: Codable {
+    struct Video: Codable { let id: String; let key: String; let name: String; let site: String; let type: String }
+    let results: [Video]
+}
+
+private struct InvidiousVideo: Codable {
+    struct FormatStream: Codable { let url: String; let quality: String; let container: String }
+    let formatStreams: [FormatStream]
+}
+
 // MARK: - TrailerService
 class TrailerService {
     static let shared = TrailerService()
@@ -29,20 +50,12 @@ class TrailerService {
         
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            struct Resp: Codable {
-                struct M: Codable {
-                    let id: Int; let title: String; let poster_path: String?
-                    let backdrop_path: String?; let vote_average: Double
-                    let release_date: String?; let overview: String
-                }
-                let results: [M]
-            }
-            let resp = try JSONDecoder().decode(Resp.self, from: data)
+            let resp = try JSONDecoder().decode(TMDBTrendingResponse.self, from: data)
             
             var trailers: [TrailerVideo] = []
-            for m in resp.results.prefix(15) {
-                if let t = await fetchTrailer(movieId: m.id, movie: m) {
-                    trailers.append(t)
+            for movie in resp.results.prefix(15) {
+                if let trailer = await fetchTrailer(for: movie) {
+                    trailers.append(trailer)
                 }
             }
             return trailers
@@ -51,24 +64,19 @@ class TrailerService {
         }
     }
     
-    private func fetchTrailer(movieId: Int, movie: Any) async -> TrailerVideo? {
-        guard let url = URL(string: "\(tmdbAPI)/movie/\(movieId)/videos?api_key=\(apiKey)&language=en-US") else { return nil }
+    private func fetchTrailer(for movie: TMDBMovie) async -> TrailerVideo? {
+        guard let url = URL(string: "\(tmdbAPI)/movie/\(movie.id)/videos?api_key=\(apiKey)&language=en-US") else { return nil }
         
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            struct VResp: Codable {
-                struct V: Codable { let id: String; let key: String; let name: String; let site: String; let type: String }
-                let results: [V]
-            }
-            let vResp = try JSONDecoder().decode(VResp.self, from: data)
+            let vResp = try JSONDecoder().decode(TMDBVideoResponse.self, from: data)
             guard let v = vResp.results.first(where: { $0.type == "Trailer" && $0.site == "YouTube" }) else { return nil }
-            let m = movie as! Resp.M
             
             return TrailerVideo(
                 id: v.id, key: v.key, name: v.name, site: v.site, type: v.type,
-                movieTitle: m.title, movieId: m.id,
-                posterPath: m.poster_path, backdropPath: m.backdrop_path,
-                voteAverage: m.vote_average, releaseDate: m.release_date, overview: m.overview
+                movieTitle: movie.title, movieId: movie.id,
+                posterPath: movie.poster_path, backdropPath: movie.backdrop_path,
+                voteAverage: movie.vote_average, releaseDate: movie.release_date, overview: movie.overview
             )
         } catch {
             return nil
@@ -84,11 +92,7 @@ class TrailerService {
             guard let url = URL(string: urlStr) else { continue }
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
-                struct IV: Codable {
-                    struct FS: Codable { let url: String; let quality: String; let container: String }
-                    let formatStreams: [FS]
-                }
-                let iv = try JSONDecoder().decode(IV.self, from: data)
+                let iv = try JSONDecoder().decode(InvidiousVideo.self, from: data)
                 let s = iv.formatStreams.filter { $0.container == "mp4" }.first { $0.quality == "720p" } ?? iv.formatStreams.first
                 if let u = s.flatMap({ URL(string: $0.url) }) { return u }
             } catch { continue }
