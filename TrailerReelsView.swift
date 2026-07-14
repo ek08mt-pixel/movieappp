@@ -89,21 +89,33 @@ class TrailerService {
     }
     
     func resolveStreamURL(youtubeKey: String) async -> URL? {
-        guard let url = URL(string: "\(pipedAPI)/streams/\(youtubeKey)") else { return nil }
-        
+    // Thử Invidious API
+    let invidiousURLs = [
+        "https://invidious.slipfox.xyz/api/v1/videos/\(youtubeKey)",
+        "https://inv.nadeko.net/api/v1/videos/\(youtubeKey)",
+        "https://invidious.privacyredirect.com/api/v1/videos/\(youtubeKey)"
+    ]
+    
+    for urlStr in invidiousURLs {
+        guard let url = URL(string: urlStr) else { continue }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            struct PipedResponse: Codable {
-                struct Stream: Codable { let url: String; let quality: String }
-                let videoStreams: [Stream]
+            struct IVideo: Codable {
+                struct FormatStream: Codable { let url: String; let quality: String; let container: String }
+                let formatStreams: [FormatStream]
             }
-            let response = try JSONDecoder().decode(PipedResponse.self, from: data)
-            let stream = response.videoStreams.first { $0.quality == "720p" } ?? response.videoStreams.first
-            return stream.flatMap { URL(string: $0.url) }
-        } catch {
-            return nil
-        }
+            let video = try JSONDecoder().decode(IVideo.self, from: data)
+            let stream = video.formatStreams
+                .filter { $0.container == "mp4" }
+                .first { $0.quality == "720p" } ?? video.formatStreams.first
+            if let url = stream.flatMap({ URL(string: $0.url) }) {
+                return url
+            }
+        } catch { continue }
     }
+    
+    // Fallback: YouTube embed direct
+    return URL(string: "https://www.youtube.com/watch?v=\(youtubeKey)")
 }
 
 private struct TMDBMovie: Codable {
