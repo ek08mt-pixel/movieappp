@@ -63,7 +63,7 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 14).padding(.horizontal, 22)
+                    .padding(.vertical, 18).padding(.horizontal, 28)
                     .background(
                         Capsule()
                             .fill(.ultraThinMaterial.opacity(0.5))
@@ -77,7 +77,7 @@ struct MainTabView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 22, weight: .medium))
                             .foregroundColor(.white.opacity(0.7))
-                            .padding(.vertical, 14).padding(.horizontal, 16)
+                            .padding(.vertical, 18).padding(.horizontal, 20)
                             .background(
                                 Capsule()
                                     .fill(.ultraThinMaterial.opacity(0.5))
@@ -88,7 +88,7 @@ struct MainTabView: View {
                             )
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 10)
                 .transition(.move(edge: .bottom))
             }
         }
