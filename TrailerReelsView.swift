@@ -1,6 +1,13 @@
 import SwiftUI
 import AVKit
 
+// MARK: - Models
+private struct TMDBMovieModel: Codable {
+    let id: Int; let title: String; let poster_path: String?
+    let backdrop_path: String?; let vote_average: Double
+    let release_date: String?; let overview: String
+}
+
 struct TrailerVideo: Identifiable {
     let id: String
     let name: String
@@ -14,6 +21,7 @@ struct TrailerVideo: Identifiable {
     let streamURL: URL
 }
 
+// MARK: - TrailerService
 @MainActor
 class TrailerService {
     static let shared = TrailerService()
@@ -21,15 +29,10 @@ class TrailerService {
     
     func fetchTrendingTrailers() async -> [TrailerVideo] {
         guard let url = URL(string: "https://api.themoviedb.org/3/trending/movie/week?api_key=\(apiKey)") else { return [] }
-        
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            struct Resp: Codable {
-                struct M: Codable { let id: Int; let title: String; let poster_path: String?; let backdrop_path: String?; let vote_average: Double; let release_date: String?; let overview: String }
-                let results: [M]
-            }
+            struct Resp: Codable { let results: [TMDBMovieModel] }
             let resp = try JSONDecoder().decode(Resp.self, from: data)
-            
             var trailers: [TrailerVideo] = []
             for m in resp.results.prefix(15) {
                 if let video = await fetchTrailer(movieId: m.id, movie: m) {
@@ -40,9 +43,8 @@ class TrailerService {
         } catch { return [] }
     }
     
-    private func fetchTrailer(movieId: Int, movie: Any) async -> TrailerVideo? {
+    private func fetchTrailer(movieId: Int, movie: TMDBMovieModel) async -> TrailerVideo? {
         guard let url = URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/videos?api_key=\(apiKey)") else { return nil }
-        
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct VResp: Codable {
@@ -51,41 +53,12 @@ class TrailerService {
             }
             let vResp = try JSONDecoder().decode(VResp.self, from: data)
             guard let v = vResp.results.first(where: { $0.type == "Trailer" }) else { return nil }
-            
-            // Lấy direct MP4 từ TMDB
-            guard let streamURL = await fetchTMDBDirectVideo(movieId: movieId, videoKey: v.key) else { return nil }
-            
-            let m = movie as! Resp.M
-            return TrailerVideo(id: v.id, name: v.name, movieTitle: m.title, movieId: m.id, posterPath: m.poster_path, backdropPath: m.backdrop_path, voteAverage: m.vote_average, releaseDate: m.release_date, overview: m.overview, streamURL: streamURL)
+            guard let streamURL = await resolveYouTubeURL(key: v.key) else { return nil }
+            return TrailerVideo(id: v.id, name: v.name, movieTitle: movie.title, movieId: movie.id,
+                                posterPath: movie.poster_path, backdropPath: movie.backdrop_path,
+                                voteAverage: movie.vote_average, releaseDate: movie.release_date,
+                                overview: movie.overview, streamURL: streamURL)
         } catch { return nil }
-    }
-    
-    private func fetchTMDBDirectVideo(movieId: Int, videoKey: String) async -> URL? {
-        // TMDB lưu video ở nhiều định dạng, thử lấy direct MP4
-        let urls = [
-            "https://api.themoviedb.org/3/movie/\(movieId)/videos?api_key=\(apiKey)&include_video_language=true",
-            "https://api.themoviedb.org/3/movie/\(movieId)?api_key=\(apiKey)&append_to_response=videos,images"
-        ]
-        
-        for urlStr in urls {
-            guard let url = URL(string: urlStr) else { continue }
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let videos = json["videos"] as? [String: Any],
-                   let results = videos["results"] as? [[String: Any]] {
-                    for result in results {
-                        if let site = result["site"] as? String, site == "YouTube",
-                           let key = result["key"] as? String, key == videoKey {
-                            // TMDB không host video trực tiếp, dùng youtube-nocookie qua WKWebView
-                            // Fallback: dùng piped/invidious
-                            return await resolveYouTubeURL(key: key)
-                        }
-                    }
-                }
-            } catch { continue }
-        }
-        return nil
     }
     
     private func resolveYouTubeURL(key: String) async -> URL? {
@@ -99,8 +72,7 @@ class TrailerService {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 struct StreamResp: Codable {
                     struct Stream: Codable { let url: String; let quality: String; let container: String? }
-                    let videoStreams: [Stream]?
-                    let formatStreams: [Stream]?
+                    let videoStreams: [Stream]?; let formatStreams: [Stream]?
                 }
                 let resp = try JSONDecoder().decode(StreamResp.self, from: data)
                 let streams = resp.videoStreams ?? resp.formatStreams ?? []
@@ -112,6 +84,7 @@ class TrailerService {
     }
 }
 
+// MARK: - TrailerReelsView
 struct TrailerReelsView: View {
     @State private var trailers: [TrailerVideo] = []
     @State private var currentIndex = 0
@@ -149,6 +122,7 @@ struct TrailerReelsView: View {
     }
 }
 
+// MARK: - TrailerCardView
 struct TrailerCardView: View {
     let trailer: TrailerVideo
     @State private var player: AVPlayer?
@@ -199,6 +173,7 @@ struct TrailerCardView: View {
     }
 }
 
+// MARK: - TrailerPlayerView
 struct TrailerPlayerView: UIViewRepresentable {
     let player: AVPlayer
     func makeUIView(context: Context) -> UIView {
