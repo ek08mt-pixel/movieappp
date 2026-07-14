@@ -48,12 +48,12 @@ class HLSDownloadManager: NSObject, ObservableObject {
         }
         saveDownloads()
         
-        // Tải trực tiếp file m3u8 về
         let task = session.downloadTask(with: url) { [weak self] localURL, response, error in
+            guard let self = self else { return }
+            let idx = self.downloads.firstIndex(where: { $0.id == id })
+            guard let idx = idx else { return }
+            
             Task { @MainActor in
-                let idx = downloads.firstIndex(where: { $0.id == id })
-guard let idx = idx else { return }
-                
                 if let localURL = localURL {
                     let destDir = self.docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
                     try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
