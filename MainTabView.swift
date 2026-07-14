@@ -77,7 +77,7 @@ struct MainTabView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 22, weight: .medium))
                             .foregroundColor(.white.opacity(0.7))
-                            .padding(.vertical, 20).padding(.horizontal, 18)
+                            .padding(.vertical, 21).padding(.horizontal, 19)
                             .background(
                                 Capsule()
                                     .fill(.ultraThinMaterial.opacity(0.35))
@@ -216,7 +216,7 @@ struct LiquidTabIcon: View {
                 if isSelected {
                     Capsule()
                         .fill(.white.opacity(0.2))
-                        .frame(width: 83, height: 55)
+                        .frame(width: 74, height: 54)
                         .overlay(
                             Capsule()
                                 .fill(.ultraThinMaterial.opacity(0.4))
