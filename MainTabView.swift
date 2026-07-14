@@ -66,7 +66,7 @@ struct MainTabView: View {
                     .padding(.vertical, 12).padding(.horizontal, 24)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial.opacity(0.5))
+                            .fill(.ultraThinMaterial.opacity(0.35))
                             .overlay(
                                 Capsule()
                                     .stroke(.white.opacity(0.1), lineWidth: 0.3)
@@ -80,7 +80,7 @@ struct MainTabView: View {
                             .padding(.vertical, 12).padding(.horizontal, 24)
                             .background(
                                 Capsule()
-                                    .fill(.ultraThinMaterial.opacity(0.5))
+                                    .fill(.ultraThinMaterial.opacity(0.35))
                                     .overlay(
                                         Capsule()
                                             .stroke(.white.opacity(0.1), lineWidth: 0.3)
