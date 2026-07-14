@@ -33,7 +33,7 @@ struct MainTabView: View {
             
             if !showWatchTogetherRoom {
                 HStack(spacing: 10) {
-                    HStack(spacing: 0) {
+                    HStack(spacing: 32) {
                         LiquidTabIcon(
                             icon: "house.fill",
                             label: "Home",
