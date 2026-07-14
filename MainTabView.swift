@@ -75,7 +75,7 @@ struct MainTabView: View {
                     
                     Button { showSearch = true } label: {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 22, weight: .medium))
+                            .font(.system(size: 24, weight: .medium))
                             .foregroundColor(.white.opacity(0.7))
                             .padding(.vertical, 12).padding(.horizontal, 20)
                             .background(
