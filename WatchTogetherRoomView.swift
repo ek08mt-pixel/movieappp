@@ -108,16 +108,15 @@ struct WatchTogetherRoomView: View {
     // MARK: - Lobby
 var lobbyView: some View {
     ZStack(alignment: .bottomTrailing) {
-        // Background xám đen blur mạnh
-        Color.gray.opacity(0.15)
+        // Background đen tối hơn
+        Color.black.opacity(0.85)
             .background(.ultraThinMaterial)
             .ignoresSafeArea()
         
         VStack(spacing: 0) {
-            // Nút back bên trái + EMMEW
             HStack {
                 Button {
-                    // Back về tab trước
+                    // Back
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
@@ -136,7 +135,7 @@ var lobbyView: some View {
             .padding(.top, 52)
             .padding(.bottom, 16)
             
-            // Search bar fake - bo tròn hơn, to hơn
+            // Search bar fake - blur mạnh
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16))
@@ -147,14 +146,13 @@ var lobbyView: some View {
                 Spacer()
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.35)))
+            .background(.ultraThinMaterial.opacity(0.7))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.12), lineWidth: 0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 16)
             
-            // Cắt màn hình ngay dưới search bar
             ScrollView {
                 VStack(spacing: 12) {
-                    // Public ngay dưới search bar
                     HStack(spacing: 6) {
                         Image(systemName: "globe.americas.fill")
                             .font(.system(size: 14))
@@ -177,39 +175,52 @@ var lobbyView: some View {
             }
         }
         
-        // Nút +
+        // Nút + trắng hoàn toàn, to hơn, dấu + mỏng trong suốt
         Button {
             service.createRoom(roomName: "Phòng", userName: "User") { _ in }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 76, height: 76)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
-                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                .font(.system(size: 36, weight: .thin))
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 80, height: 80)
+                .background(Circle().fill(.white))
+                .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 0.5))
         }
-        .padding(.trailing, 36)
-        .padding(.bottom, 120)
+        .padding(.trailing, 40)
+        .padding(.bottom, 130)
     }
     .ignoresSafeArea()
+    .toolbar(.hidden, for: .tabBar)
 }
 
 func fakeRoomCard(_ room: FakeRoom) -> some View {
     HStack(spacing: 0) {
-        // Poster bo tròn hơn
-        if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-            CachedAsyncImage(url: url)
-                .aspectRatio(16/9, contentMode: .fill)
-                .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        } else {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(.ultraThinMaterial.opacity(0.35))
-                .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
+        // Poster + icon hãng phim
+        ZStack(alignment: .topTrailing) {
+            if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(16/9, contentMode: .fill)
+                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(.ultraThinMaterial.opacity(0.35))
+                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
+            }
+            
+            // Icon hãng phim blur nhỏ góc phải
+            let icons = ["play.rectangle.fill", "play.tv.fill", "play.display", "play.square.fill"]
+            Image(systemName: icons.randomElement() ?? "play.rectangle.fill")
+                .font(.system(size: 10))
+                .foregroundColor(.white.opacity(0.5))
+                .padding(4)
+                .background(.ultraThinMaterial.opacity(0.5))
+                .clipShape(Circle())
+                .padding(4)
         }
         
-        // Khung dính liền poster, ngắn lại 1 xíu
+        // Khung blur mạnh dính liền poster
         VStack(spacing: 0) {
             Text(room.movieTitle)
                 .font(.system(size: 13, weight: .light))
@@ -233,15 +244,19 @@ func fakeRoomCard(_ room: FakeRoom) -> some View {
             .padding(.bottom, 4)
             .padding(.horizontal, 8)
             
-            Rectangle()
-                .fill(.white.opacity(0.15))
-                .frame(height: 1.5)
+            // Thanh tiến trình có đoạn trắng đậm
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(.white.opacity(0.1))
+                    .frame(height: 1.5)
+                Rectangle()
+                    .fill(.white.opacity(0.5))
+                    .frame(width: UIScreen.main.bounds.width * 0.25, height: 1.5)
+            }
         }
         .frame(height: 84)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial.opacity(0.2))
-        )
+        .background(.ultraThinMaterial.opacity(0.7))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
     
