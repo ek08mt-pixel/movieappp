@@ -1,6 +1,124 @@
 import SwiftUI
 import AVKit
 
+// MARK: - Models & Service
+struct TrailerVideo: Identifiable, Codable {
+    let id: String
+    let key: String
+    let name: String
+    let site: String
+    let type: String
+    let movieTitle: String
+    let movieId: Int
+    let posterPath: String?
+    let backdropPath: String?
+    let voteAverage: Double
+    let releaseDate: String?
+    let overview: String
+    var resolvedURL: URL?
+}
+
+class TrailerService {
+    static let shared = TrailerService()
+    private let tmdbAPI = "https://api.themoviedb.org/3"
+    private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
+    private let pipedAPI = "https://pipedapi.kavin.rocks"
+    
+    func fetchTrendingTrailers() async -> [TrailerVideo] {
+        guard let url = URL(string: "\(tmdbAPI)/trending/movie/week?api_key=\(apiKey)&language=en-US") else { return [] }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Response: Codable {
+                struct Movie: Codable {
+                    let id: Int; let title: String; let posterPath: String?
+                    let backdropPath: String?; let voteAverage: Double
+                    let releaseDate: String?; let overview: String
+                    enum CodingKeys: String, CodingKey {
+                        case id, title, overview
+                        case posterPath = "poster_path"
+                        case backdropPath = "backdrop_path"
+                        case voteAverage = "vote_average"
+                        case releaseDate = "release_date"
+                    }
+                }
+                let results: [Movie]
+            }
+            let response = try JSONDecoder().decode(Response.self, from: data)
+            
+            var trailers: [TrailerVideo] = []
+            for movie in response.results.prefix(15) {
+                if let trailer = await fetchTrailer(movieId: movie.id, movie: movie) {
+                    trailers.append(trailer)
+                }
+            }
+            return trailers
+        } catch {
+            return []
+        }
+    }
+    
+    private func fetchTrailer(movieId: Int, movie: Any) async -> TrailerVideo? {
+        guard let url = URL(string: "\(tmdbAPI)/movie/\(movieId)/videos?api_key=\(apiKey)&language=en-US") else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct VideoResponse: Codable {
+                struct Video: Codable {
+                    let id: String; let key: String; let name: String
+                    let site: String; let type: String
+                }
+                let results: [Video]
+            }
+            let response = try JSONDecoder().decode(VideoResponse.self, from: data)
+            guard let t = response.results.first(where: { $0.type == "Trailer" && $0.site == "YouTube" }) else { return nil }
+            
+            return TrailerVideo(
+                id: t.id, key: t.key, name: t.name, site: t.site, type: t.type,
+                movieTitle: (movie as? TMDBMovie)?.title ?? "",
+                movieId: movieId,
+                posterPath: (movie as? TMDBMovie)?.posterPath,
+                backdropPath: (movie as? TMDBMovie)?.backdropPath,
+                voteAverage: (movie as? TMDBMovie)?.voteAverage ?? 0,
+                releaseDate: (movie as? TMDBMovie)?.releaseDate,
+                overview: (movie as? TMDBMovie)?.overview ?? ""
+            )
+        } catch {
+            return nil
+        }
+    }
+    
+    func resolveStreamURL(youtubeKey: String) async -> URL? {
+        guard let url = URL(string: "\(pipedAPI)/streams/\(youtubeKey)") else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct PipedResponse: Codable {
+                struct Stream: Codable { let url: String; let quality: String }
+                let videoStreams: [Stream]
+            }
+            let response = try JSONDecoder().decode(PipedResponse.self, from: data)
+            let stream = response.videoStreams.first { $0.quality == "720p" } ?? response.videoStreams.first
+            return stream.flatMap { URL(string: $0.url) }
+        } catch {
+            return nil
+        }
+    }
+}
+
+private struct TMDBMovie: Codable {
+    let id: Int; let title: String; let posterPath: String?
+    let backdropPath: String?; let voteAverage: Double
+    let releaseDate: String?; let overview: String
+    enum CodingKeys: String, CodingKey {
+        case id, title, overview
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case releaseDate = "release_date"
+    }
+}
+
 // MARK: - TrailerReelsView
 struct TrailerReelsView: View {
     @State private var trailers: [TrailerVideo] = []
@@ -32,7 +150,6 @@ struct TrailerReelsView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
             
-            // Header
             VStack {
                 HStack {
                     Button {
@@ -54,7 +171,6 @@ struct TrailerReelsView: View {
                     
                     Spacer()
                     
-                    // Placeholder để giữ layout
                     Circle()
                         .fill(.clear)
                         .frame(width: 36, height: 36)
@@ -85,20 +201,12 @@ struct TrailerCardView: View {
     
     var body: some View {
         ZStack {
-            // Video Player
             if let player = player {
                 TrailerPlayerView(player: player)
                     .ignoresSafeArea()
-                    .onAppear {
-                        if isActive {
-                            player.play()
-                        }
-                    }
-                    .onDisappear {
-                        player.pause()
-                    }
+                    .onAppear { if isActive { player.play() } }
+                    .onDisappear { player.pause() }
             } else {
-                // Loading placeholder
                 ZStack {
                     if let posterPath = trailer.backdropPath ?? trailer.posterPath,
                        let url = URL(string: "https://image.tmdb.org/t/p/w780\(posterPath)") {
@@ -121,7 +229,6 @@ struct TrailerCardView: View {
                 .ignoresSafeArea()
             }
             
-            // Overlay gradient bottom
             VStack {
                 Spacer()
                 LinearGradient(
@@ -133,12 +240,10 @@ struct TrailerCardView: View {
                 .allowsHitTesting(false)
             }
             
-            // Movie info + action buttons
             VStack {
                 Spacer()
                 
                 HStack(alignment: .bottom, spacing: 16) {
-                    // Movie info - bên trái
                     VStack(alignment: .leading, spacing: 6) {
                         Text(trailer.movieTitle)
                             .font(.system(size: 20, weight: .bold))
@@ -180,37 +285,7 @@ struct TrailerCardView: View {
                     
                     Spacer()
                     
-                    // Action buttons - bên phải
                     VStack(spacing: 20) {
-                        // Like button
-                        Button {
-                            // TODO: Add to favorites
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(systemName: "heart")
-                                    .font(.system(size: 26))
-                                    .foregroundColor(.white)
-                                Text("Like")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        
-                        // Share button
-                        Button {
-                            // TODO: Share
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 26))
-                                    .foregroundColor(.white)
-                                Text("Share")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        
-                        // Xem phim button
                         Button {
                             let movie = Movie(
                                 id: trailer.movieId,
@@ -220,13 +295,8 @@ struct TrailerCardView: View {
                                 backdropPath: trailer.backdropPath,
                                 voteAverage: trailer.voteAverage,
                                 releaseDate: trailer.releaseDate,
-                                genreIds: nil,
-                                originalTitle: nil,
-                                popularity: nil,
-                                voteCount: nil,
-                                adult: false,
-                                originalLanguage: nil,
-                                mediaType: "movie"
+                                genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil,
+                                adult: false, originalLanguage: nil, mediaType: "movie"
                             )
                             selectedMovie = movie
                             showMovieDetail = true
@@ -242,7 +312,6 @@ struct TrailerCardView: View {
                             }
                         }
                         
-                        // Mute/unmute
                         Button {
                             isMuted.toggle()
                             player?.isMuted = isMuted
@@ -268,9 +337,7 @@ struct TrailerCardView: View {
             }
         }
         .onAppear {
-            if isActive {
-                loadStreamIfNeeded()
-            }
+            if isActive { loadStreamIfNeeded() }
         }
         .fullScreenCover(isPresented: $showMovieDetail) {
             if let movie = selectedMovie {
@@ -295,7 +362,7 @@ struct TrailerCardView: View {
     }
 }
 
-// MARK: - TrailerPlayerView (UIViewRepresentable cho AVPlayer)
+// MARK: - TrailerPlayerView
 struct TrailerPlayerView: UIViewRepresentable {
     let player: AVPlayer
     
@@ -306,7 +373,6 @@ struct TrailerPlayerView: UIViewRepresentable {
         playerLayer.frame = UIScreen.main.bounds
         view.layer.addSublayer(playerLayer)
         
-        // Loop
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: player.currentItem,
