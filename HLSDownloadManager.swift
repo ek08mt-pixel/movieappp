@@ -30,9 +30,9 @@ class HLSDownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate
     private var completedSegments: [String: Int] = [:]
     private var totalSegments: [String: Int] = [:]
     private lazy var session: URLSession = {
-        let config = URLSessionConfiguration.default
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
-    }()
+    let config = URLSessionConfiguration.default
+    return URLSession(configuration: config, delegate: self, delegateQueue: OperationQueue.main)
+}()
     
     override init() {
         super.init()
