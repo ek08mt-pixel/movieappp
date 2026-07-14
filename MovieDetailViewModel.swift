@@ -8,6 +8,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var images: [URL] = []
     @Published var seasons: [TVSeason] = []
     @Published var selectedSeason: TVSeasonDetail?
+    @Published var seasonDetails: [Int: TVSeasonDetail] = [:]
     @Published var collectionMovies: [Movie] = []
     @Published var isLoading = false
     
@@ -48,6 +49,9 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
-        selectedSeason = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber)
+        if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
+            selectedSeason = detail
+            seasonDetails[seasonNumber] = detail
+        }
     }
 }
