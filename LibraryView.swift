@@ -143,7 +143,7 @@ struct LibraryView: View {
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selectedTab = tab }
         } label: {
-            Text(tab.rawValue).font(.system(size: 13, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .gray).frame(maxWidth: .infinity).padding(.vertical, 10).background(isSelected ? Capsule().fill(.ultraThinMaterial.opacity(0.5)) : Capsule().fill(Color.clear)).clipShape(Capsule())
+            Text(tab.rawValue).font(.system(size: 13, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .gray).frame(maxWidth: .infinity).padding(.vertical, 10).background(isSelected ? AnyShapeStyle(Capsule().fill(.ultraThinMaterial.opacity(0.5))) : AnyShapeStyle(Capsule().fill(Color.clear)))
         }
     }
     
