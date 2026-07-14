@@ -51,7 +51,8 @@ class HLSDownloadManager: NSObject, ObservableObject {
         // Tải trực tiếp file m3u8 về
         let task = session.downloadTask(with: url) { [weak self] localURL, response, error in
             Task { @MainActor in
-                guard let self, let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
+                let idx = downloads.firstIndex(where: { $0.id == id })
+guard let idx = idx else { return }
                 
                 if let localURL = localURL {
                     let destDir = self.docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
