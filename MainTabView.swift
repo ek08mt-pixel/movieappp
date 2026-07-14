@@ -63,7 +63,7 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 12).padding(.horizontal, 28)
+                    .padding(.vertical, 12).padding(.horizontal, 24)
                     .background(
                         Capsule()
                             .fill(.ultraThinMaterial.opacity(0.5))
