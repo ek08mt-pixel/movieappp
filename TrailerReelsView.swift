@@ -5,10 +5,19 @@ import WebKit
 
 // MARK: - TrailerVideo Model
 struct TrailerVideo: Identifiable {
-    let id: String; let key: String; let name: String
-    let site: String; let type: String; let movieTitle: String
-    let movieId: Int; let posterPath: String?; let backdropPath: String?
-    let voteAverage: Double; let releaseDate: String?; let overview: String
+    let id: String
+    let key: String
+    let name: String
+    let site: String
+    let type: String
+    let movieTitle: String
+    let movieId: Int
+    let posterPath: String?
+    let backdropPath: String?
+    let voteAverage: Double
+    let releaseDate: String?
+    let overview: String
+    let imdbID: String?
 }
 
 // MARK: - Internal Models
@@ -22,6 +31,7 @@ private struct TMDBVideoResp: Codable {
     struct V: Codable { let id: String; let key: String; let name: String; let site: String; let type: String }
     let results: [V]
 }
+private struct TMDBExternalIDResp: Codable { let imdb_id: String? }
 private struct InvidiousVideo: Codable {
     struct FS: Codable { let url: String; let quality: String; let container: String }
     let formatStreams: [FS]
@@ -30,10 +40,10 @@ private struct InvidiousVideo: Codable {
 // MARK: - TrailerService
 class TrailerService {
     static let shared = TrailerService()
-    private let key = "b6be36c1c5788565fec6a24811e7cc9b"
+    private let apiKey = "b6be36c1c5788565fec6a24811e7cc9b"
     
     func fetchTrendingTrailers() async -> [TrailerVideo] {
-        guard let url = URL(string: "https://api.themoviedb.org/3/trending/movie/week?api_key=\(key)") else { return [] }
+        guard let url = URL(string: "https://api.themoviedb.org/3/trending/movie/week?api_key=\(apiKey)&language=en-US") else { return [] }
         do {
             let (d, _) = try await URLSession.shared.data(from: url)
             let r = try JSONDecoder().decode(TMDBTrendingResp.self, from: d)
@@ -46,22 +56,93 @@ class TrailerService {
     }
     
     private func fetchTrailer(for m: TMDBMovie) async -> TrailerVideo? {
-        guard let url = URL(string: "https://api.themoviedb.org/3/movie/\(m.id)/videos?api_key=\(key)") else { return nil }
+        guard let url = URL(string: "https://api.themoviedb.org/3/movie/\(m.id)/videos?api_key=\(apiKey)&language=en-US") else { return nil }
         do {
             let (d, _) = try await URLSession.shared.data(from: url)
             let v = try JSONDecoder().decode(TMDBVideoResp.self, from: d)
             guard let t = v.results.first(where: { $0.type == "Trailer" && $0.site == "YouTube" }) else { return nil }
+            
+            // Fetch IMDB ID
+            var imdbID: String? = nil
+            if let extURL = URL(string: "https://api.themoviedb.org/3/movie/\(m.id)/external_ids?api_key=\(apiKey)") {
+                if let (ed, _) = try? await URLSession.shared.data(from: extURL),
+                   let ext = try? JSONDecoder().decode(TMDBExternalIDResp.self, from: ed) {
+                    imdbID = ext.imdb_id
+                }
+            }
+            
             return TrailerVideo(id: t.id, key: t.key, name: t.name, site: t.site, type: t.type,
                                 movieTitle: m.title, movieId: m.id, posterPath: m.poster_path,
                                 backdropPath: m.backdrop_path, voteAverage: m.vote_average,
-                                releaseDate: m.release_date, overview: m.overview)
+                                releaseDate: m.release_date, overview: m.overview, imdbID: imdbID)
         } catch { return nil }
     }
     
-    func resolveStreamURL(youtubeKey: String) async -> URL? {
+    func resolveStreamURL(trailer: TrailerVideo) async -> URL? {
+        // Cách 1: IMDb direct MP4
+        if let imdbID = trailer.imdbID, let url = await fetchIMDbTrailer(imdbID: imdbID) {
+            return url
+        }
+        
+        // Cách 2: Invidious
+        if let url = await resolveInvidious(youtubeKey: trailer.key) {
+            return url
+        }
+        
+        // Cách 3: Piped fallback
+        if let url = await resolvePiped(youtubeKey: trailer.key) {
+            return url
+        }
+        
+        return nil
+    }
+    
+    private func fetchIMDbTrailer(imdbID: String) async -> URL? {
+        guard let url = URL(string: "https://www.imdb.com/title/\(imdbID)/videogallery") else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let html = String(data: data, encoding: .utf8) ?? ""
+            
+            // Tìm pattern video trong JSON-LD hoặc script
+            let patterns = [
+                "videoUrl\":\"",
+                "\"contentUrl\":\"",
+                "src=\"https://imdb-video"
+            ]
+            
+            for pattern in patterns {
+                if let range = html.range(of: pattern) {
+                    let start = range.upperBound
+                    if let endRange = html[start...].range(of: "\"") {
+                        var videoPath = String(html[start..<endRange.lowerBound])
+                            .replacingOccurrences(of: "\\u0026", with: "&")
+                            .replacingOccurrences(of: "\\/", with: "/")
+                        
+                        if videoPath.hasPrefix("http") {
+                            return URL(string: videoPath)
+                        } else if videoPath.contains("imdb-video") {
+                            return URL(string: "https://imdb-video.media-imdb.com/\(videoPath)")
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: tìm .mp4 trực tiếp
+            if let mp4Range = html.range(of: "https://imdb-video.media-imdb.com/"),
+               let endRange = html[mp4Range.upperBound...].range(of: ".mp4") {
+                let videoPath = String(html[mp4Range.lowerBound..<endRange.upperBound])
+                return URL(string: videoPath)
+            }
+        } catch {}
+        return nil
+    }
+    
+    private func resolveInvidious(youtubeKey: String) async -> URL? {
         let urls = [
             "https://invidious.slipfox.xyz/api/v1/videos/\(youtubeKey)",
-            "https://inv.nadeko.net/api/v1/videos/\(youtubeKey)"
+            "https://inv.nadeko.net/api/v1/videos/\(youtubeKey)",
+            "https://invidious.privacyredirect.com/api/v1/videos/\(youtubeKey)"
         ]
         for urlStr in urls {
             guard let url = URL(string: urlStr) else { continue }
@@ -73,6 +154,20 @@ class TrailerService {
             } catch { continue }
         }
         return nil
+    }
+    
+    private func resolvePiped(youtubeKey: String) async -> URL? {
+        guard let url = URL(string: "https://pipedapi.kavin.rocks/streams/\(youtubeKey)") else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct PipedResp: Codable {
+                struct Stream: Codable { let url: String; let quality: String }
+                let videoStreams: [Stream]
+            }
+            let resp = try JSONDecoder().decode(PipedResp.self, from: data)
+            let s = resp.videoStreams.first { $0.quality == "720p" } ?? resp.videoStreams.first
+            return s.flatMap { URL(string: $0.url) }
+        } catch { return nil }
     }
 }
 
@@ -89,7 +184,10 @@ struct TrailerReelsView: View {
             if isLoading {
                 ProgressView().tint(.white).scaleEffect(1.5)
             } else if trailers.isEmpty {
-                VStack { Image(systemName: "film.slash").font(.system(size: 50)).foregroundColor(.gray); Text("Không có trailer").foregroundColor(.gray) }
+                VStack {
+                    Image(systemName: "film.slash").font(.system(size: 50)).foregroundColor(.gray)
+                    Text("Không có trailer").foregroundColor(.gray)
+                }
             } else {
                 TabView(selection: $currentIndex) {
                     ForEach(Array(trailers.enumerated()), id: \.element.id) { i, t in
@@ -104,7 +202,8 @@ struct TrailerReelsView: View {
                     }
                     Spacer()
                     Text("🎬 Trailers").font(.system(size: 16, weight: .bold)).foregroundColor(.white)
-                    Spacer(); Circle().fill(.clear).frame(width: 36, height: 36)
+                    Spacer()
+                    Circle().fill(.clear).frame(width: 36, height: 36)
                 }.padding(.horizontal, 20).padding(.top, 50)
                 Spacer()
             }
@@ -116,15 +215,16 @@ struct TrailerReelsView: View {
 // MARK: - TrailerCardView
 struct TrailerCardView: View {
     let trailer: TrailerVideo
-    @State private var streamURL: URL?
     @State private var player: AVPlayer?
     @State private var loadFailed = false
     @State private var showDetail = false
+    @State private var isLoadingStream = true
     
     var body: some View {
         ZStack {
             if let player = player {
                 TrailerPlayerView(player: player).ignoresSafeArea()
+                    .onAppear { player.play() }
             } else if loadFailed {
                 ZStack {
                     if let path = trailer.backdropPath ?? trailer.posterPath {
@@ -133,8 +233,9 @@ struct TrailerCardView: View {
                     }
                     Color.black.opacity(0.6)
                     VStack(spacing: 16) {
-                        Image(systemName: "play.circle").font(.system(size: 60)).foregroundColor(.white)
-                        Text("Xem trailer trên YouTube").font(.headline).foregroundColor(.white)
+                        Image(systemName: "play.slash").font(.system(size: 50)).foregroundColor(.gray)
+                        Text("Không thể tải trailer").font(.headline).foregroundColor(.white)
+                        Text("Thử lại sau hoặc mở YouTube").font(.caption).foregroundColor(.gray)
                         Button {
                             if let url = URL(string: "youtube://watch?v=\(trailer.key)") {
                                 UIApplication.shared.open(url)
@@ -142,9 +243,13 @@ struct TrailerCardView: View {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            Text("Mở YouTube").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                                .padding(.horizontal, 24).padding(.vertical, 10)
-                                .background(Capsule().fill(.red))
+                            HStack {
+                                Image(systemName: "play.rectangle.fill")
+                                Text("Mở YouTube")
+                            }
+                            .font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                            .padding(.horizontal, 24).padding(.vertical, 10)
+                            .background(Capsule().fill(.red))
                         }
                     }
                 }.ignoresSafeArea()
@@ -155,7 +260,10 @@ struct TrailerCardView: View {
                             .aspectRatio(contentMode: .fill).frame(maxWidth: .infinity, maxHeight: .infinity).blur(radius: 20)
                     }
                     Color.black.opacity(0.4)
-                    ProgressView().tint(.white).scaleEffect(1.2)
+                    VStack(spacing: 12) {
+                        ProgressView().tint(.white).scaleEffect(1.2)
+                        Text("Đang tải trailer...").font(.caption).foregroundColor(.white.opacity(0.7))
+                    }
                 }.ignoresSafeArea()
             }
             
@@ -173,12 +281,14 @@ struct TrailerCardView: View {
                                 Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
                                 Text(String(format: "%.1f", trailer.voteAverage)).font(.system(size: 12, weight: .bold)).foregroundColor(.white)
                             }
-                            Text("Trailer").font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.9)).padding(.horizontal, 8).padding(.vertical, 3).background(Capsule().fill(.red.opacity(0.7)))
+                            Text("Trailer").font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.9))
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(Capsule().fill(.red.opacity(0.7)))
                         }
                     }
                     Spacer()
                     VStack(spacing: 20) {
-                        Button { showDetail = true } label: {
+                        Button { showDetail = true; player?.pause() } label: {
                             VStack(spacing: 3) {
                                 Image(systemName: "play.rectangle.fill").font(.system(size: 28)).foregroundColor(.white)
                                 Text("Xem").font(.system(size: 9, weight: .bold)).foregroundColor(.white)
@@ -190,22 +300,32 @@ struct TrailerCardView: View {
         }
         .onAppear { loadStream() }
         .sheet(isPresented: $showDetail) {
-            NavigationStack { MovieDetailView(movie: Movie(id: trailer.movieId, title: trailer.movieTitle, overview: trailer.overview, posterPath: trailer.posterPath, backdropPath: trailer.backdropPath, voteAverage: trailer.voteAverage, releaseDate: trailer.releaseDate, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: "movie")) }
+            NavigationStack {
+                MovieDetailView(movie: Movie(
+                    id: trailer.movieId, title: trailer.movieTitle, overview: trailer.overview,
+                    posterPath: trailer.posterPath, backdropPath: trailer.backdropPath,
+                    voteAverage: trailer.voteAverage, releaseDate: trailer.releaseDate,
+                    genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil,
+                    adult: false, originalLanguage: nil, mediaType: "movie"
+                ))
+            }
         }
     }
     
     private func loadStream() {
         guard player == nil else { return }
         Task {
-            if let url = await TrailerService.shared.resolveStreamURL(youtubeKey: trailer.key) {
+            if let url = await TrailerService.shared.resolveStreamURL(trailer: trailer) {
                 await MainActor.run {
-                    streamURL = url
                     let p = AVPlayer(url: url)
-                    p.play()
                     self.player = p
+                    isLoadingStream = false
                 }
             } else {
-                await MainActor.run { loadFailed = true }
+                await MainActor.run {
+                    loadFailed = true
+                    isLoadingStream = false
+                }
             }
         }
     }
