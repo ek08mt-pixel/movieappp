@@ -77,7 +77,7 @@ struct MainTabView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.white.opacity(0.7))
-                            .padding(.vertical, 12).padding(.horizontal, 24)
+                            .padding(.vertical, 12).padding(.horizontal, 20)
                             .background(
                                 Capsule()
                                     .fill(.ultraThinMaterial.opacity(0.35))
