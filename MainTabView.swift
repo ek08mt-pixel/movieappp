@@ -33,7 +33,7 @@ struct MainTabView: View {
             
             if !showWatchTogetherRoom {
                 HStack(spacing: 10) {
-                    HStack(spacing: 32) {
+                    HStack(spacing: 36) {
                         LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
@@ -47,44 +47,25 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 14).padding(.horizontal, 24)
+                    .padding(.vertical, 14).padding(.horizontal, 26)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial.opacity(0.25))
-                            .background(
+                            .fill(.black.opacity(0.35))
+                            .overlay(
                                 Capsule()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.15), .clear, .white.opacity(0.05), .clear],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
+                                    .fill(.ultraThinMaterial.opacity(0.5))
                             )
                             .overlay(
                                 Capsule()
                                     .stroke(
                                         LinearGradient(
-                                            colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.2), .white.opacity(0.05)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
+                                            colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
                                         ),
-                                        lineWidth: 0.4
+                                        lineWidth: 0.3
                                     )
                             )
-                            .overlay(
-                                Capsule()
-                                    .fill(
-                                        RadialGradient(
-                                            colors: [.white.opacity(0.1), .clear, .clear],
-                                            center: .top,
-                                            startRadius: 0,
-                                            endRadius: 60
-                                        )
-                                    )
-                            )
-                            .shadow(color: .white.opacity(0.05), radius: 3, y: -2)
-                            .shadow(color: .black.opacity(0.04), radius: 5, y: 2)
                     )
                     
                     Button { showSearch = true } label: {
@@ -94,41 +75,22 @@ struct MainTabView: View {
                             .padding(.vertical, 14).padding(.horizontal, 18)
                             .background(
                                 Capsule()
-                                    .fill(.ultraThinMaterial.opacity(0.25))
-                                    .background(
+                                    .fill(.black.opacity(0.35))
+                                    .overlay(
                                         Capsule()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [.white.opacity(0.15), .clear, .white.opacity(0.05), .clear],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                )
-                                            )
+                                            .fill(.ultraThinMaterial.opacity(0.5))
                                     )
                                     .overlay(
                                         Capsule()
                                             .stroke(
                                                 LinearGradient(
-                                                    colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.2)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
+                                                    colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
                                                 ),
-                                                lineWidth: 0.4
+                                                lineWidth: 0.3
                                             )
                                     )
-                                    .overlay(
-                                        Capsule()
-                                            .fill(
-                                                RadialGradient(
-                                                    colors: [.white.opacity(0.1), .clear, .clear],
-                                                    center: .top,
-                                                    startRadius: 0,
-                                                    endRadius: 60
-                                                )
-                                            )
-                                    )
-                                    .shadow(color: .white.opacity(0.05), radius: 3, y: -2)
-                                    .shadow(color: .black.opacity(0.04), radius: 5, y: 2)
                             )
                     }
                 }
@@ -256,46 +218,27 @@ struct LiquidTabIcon: View {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(.ultraThinMaterial.opacity(0.35))
-                        .frame(width: 64, height: 44)
-                        .background(
+                        .fill(.white.opacity(0.18))
+                        .frame(width: 72, height: 46)
+                        .overlay(
                             Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.2), .clear, .white.opacity(0.08), .clear],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .fill(.ultraThinMaterial.opacity(0.6))
                         )
                         .overlay(
                             Capsule()
                                 .stroke(
                                     LinearGradient(
-                                        colors: [.white.opacity(0.5), .white.opacity(0.15), .clear, .white.opacity(0.3), .white.opacity(0.08)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                                        colors: [.white.opacity(0.3), .white.opacity(0.08), .clear, .white.opacity(0.15)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
                                     ),
-                                    lineWidth: 0.5
+                                    lineWidth: 0.3
                                 )
                         )
-                        .overlay(
-                            Capsule()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [.white.opacity(0.15), .clear, .clear],
-                                        center: .top,
-                                        startRadius: 0,
-                                        endRadius: 50
-                                    )
-                                )
-                        )
-                        .shadow(color: .white.opacity(0.12), radius: 4, y: -2)
-                        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: 24, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 26, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.4))
                     .scaleEffect(isPressed ? 0.85 : (isSelected ? 1.1 : 1.0))
                     .animation(.interpolatingSpring(stiffness: 500, damping: 8), value: isPressed)
