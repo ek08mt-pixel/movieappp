@@ -32,8 +32,8 @@ struct MainTabView: View {
             }
             
             if !showWatchTogetherRoom {
-                HStack(spacing: 14) {
-                    HStack(spacing: 40) {
+                HStack(spacing: 12) {
+                    HStack(spacing: 36) {
                         LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
@@ -47,41 +47,41 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 16).padding(.horizontal, 30)
+                    .padding(.vertical, 14).padding(.horizontal, 28)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial.opacity(0.45))
-                            .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
                     )
                     .overlay(
                         Capsule()
                             .stroke(
                                 LinearGradient(
-                                    colors: [.white.opacity(0.25), .white.opacity(0.08), .clear, .white.opacity(0.15)],
+                                    colors: [.white.opacity(0.3), .white.opacity(0.1), .clear, .white.opacity(0.2)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 0.8
+                                lineWidth: 0.6
                             )
                     )
                     
                     Button { showSearch = true } label: {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 28, weight: .bold))
+                            .font(.system(size: 26, weight: .bold))
                             .foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 16).padding(.horizontal, 22)
+                            .padding(.vertical, 14).padding(.horizontal, 20)
                             .background(
                                 Capsule()
-                                    .fill(.ultraThinMaterial.opacity(0.45))
-                                    .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                                    .fill(.ultraThinMaterial.opacity(0.7))
+                                    .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
                             )
                             .overlay(
                                 Capsule()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 0.6)
                             )
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 6)
                 .transition(.move(edge: .bottom))
             }
         }
@@ -203,27 +203,27 @@ struct LiquidTabIcon: View {
             action()
         } label: {
             ZStack {
-                // Khung sáng to hơn khi selected
+                // Khung to hơn, vuông bo tròn, sáng hơn
                 if isSelected {
-                    Capsule()
-                        .fill(.ultraThinMaterial.opacity(0.5))
-                        .frame(width: 62, height: 42)
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(.ultraThinMaterial.opacity(0.55))
+                        .frame(width: 60, height: 44)
                         .overlay(
-                            Capsule()
+                            RoundedRectangle(cornerRadius: 14)
                                 .stroke(
                                     LinearGradient(
-                                        colors: [.white.opacity(0.35), .white.opacity(0.1), .clear, .white.opacity(0.2)],
+                                        colors: [.white.opacity(0.45), .white.opacity(0.15), .clear, .white.opacity(0.25)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
-                                    lineWidth: 0.6
+                                    lineWidth: 0.7
                                 )
                         )
-                        .shadow(color: .white.opacity(0.1), radius: 4, y: 0)
+                        .shadow(color: .white.opacity(0.12), radius: 6, y: 0)
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: 28, weight: isSelected ? .bold : .regular))
+                    .font(.system(size: 26, weight: isSelected ? .bold : .regular))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.45))
                     .scaleEffect(isPressed ? 0.85 : (isSelected ? 1.1 : 1.0))
                     .animation(.interpolatingSpring(stiffness: 500, damping: 8), value: isPressed)
