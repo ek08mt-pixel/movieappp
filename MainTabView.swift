@@ -47,70 +47,70 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 10).padding(.horizontal, 24)
+                    .padding(.vertical, 14).padding(.horizontal, 24)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                Capsule()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.25), .white.opacity(0.05)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 0.5
-                                    )
-                            )
+                            .fill(.ultraThinMaterial.opacity(0.35))
                             .overlay(
                                 Capsule()
                                     .fill(
                                         LinearGradient(
-                                            colors: [.white.opacity(0.15), .clear, .white.opacity(0.05)],
+                                            colors: [.white.opacity(0.12), .clear, .white.opacity(0.05)],
                                             startPoint: .top,
                                             endPoint: .bottom
                                         )
                                     )
                             )
-                            .shadow(color: .white.opacity(0.06), radius: 2, y: -1)
-                            .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                            .overlay(
+                                Capsule()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.35), .white.opacity(0.08), .clear, .white.opacity(0.2)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 0.4
+                                    )
+                            )
+                            .shadow(color: .white.opacity(0.04), radius: 2, y: -1)
+                            .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
                     )
                     
                     Button { showSearch = true } label: {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 10).padding(.horizontal, 18)
+                            .padding(.vertical, 14).padding(.horizontal, 18)
                             .background(
                                 Capsule()
-                                    .fill(.ultraThinMaterial)
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.25)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 0.5
-                                            )
-                                    )
+                                    .fill(.ultraThinMaterial.opacity(0.35))
                                     .overlay(
                                         Capsule()
                                             .fill(
                                                 LinearGradient(
-                                                    colors: [.white.opacity(0.15), .clear, .white.opacity(0.05)],
+                                                    colors: [.white.opacity(0.12), .clear, .white.opacity(0.05)],
                                                     startPoint: .top,
                                                     endPoint: .bottom
                                                 )
                                             )
                                     )
-                                    .shadow(color: .white.opacity(0.06), radius: 2, y: -1)
-                                    .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.white.opacity(0.35), .white.opacity(0.08), .clear, .white.opacity(0.2)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 0.4
+                                            )
+                                    )
+                                    .shadow(color: .white.opacity(0.04), radius: 2, y: -1)
+                                    .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
                             )
                     }
                 }
-                .padding(.bottom, 6)
+                .padding(.bottom, 8)
                 .transition(.move(edge: .bottom))
             }
         }
@@ -232,39 +232,38 @@ struct LiquidTabIcon: View {
             action()
         } label: {
             ZStack {
-                // Khung bo tròn, trong suốt óng ánh
                 if isSelected {
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(.ultraThinMaterial)
+                        .fill(.ultraThinMaterial.opacity(0.4))
                         .frame(width: 56, height: 40)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.5), .white.opacity(0.15), .clear, .white.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 0.6
-                                )
-                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(
                                     LinearGradient(
-                                        colors: [.white.opacity(0.2), .clear, .white.opacity(0.08)],
+                                        colors: [.white.opacity(0.18), .clear, .white.opacity(0.06)],
                                         startPoint: .top,
                                         endPoint: .bottom
                                     )
                                 )
                         )
-                        .shadow(color: .white.opacity(0.1), radius: 3, y: -1)
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.25)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
+                        )
+                        .shadow(color: .white.opacity(0.08), radius: 3, y: -1)
+                        .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
                 }
                 
                 Image(systemName: icon)
                     .font(.system(size: 24, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.4))
                     .scaleEffect(isPressed ? 0.85 : (isSelected ? 1.1 : 1.0))
                     .animation(.interpolatingSpring(stiffness: 500, damping: 8), value: isPressed)
                     .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: isSelected)
