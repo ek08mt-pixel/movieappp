@@ -14,6 +14,9 @@ struct MovieDetailView: View {
     @State private var playSeason: Int? = nil
     @State private var playEpisode: Int? = nil
     @State private var expandedSeason: Int? = nil
+    @State private var showDownloadSheet = false
+    @State private var downloadSeason: Int? = nil
+    @State private var downloadEpisode: Int? = nil
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -65,7 +68,13 @@ struct MovieDetailView: View {
                                 playSeason = nil
                                 playEpisode = nil
                                 showPlayer = true
-                            } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                            } label: {
+                                Label("Xem", systemImage: "play.fill")
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            }
                             Button {
                                 if appState.favorites.contains(where: { $0.id == movie.id }) {
                                     appState.favorites.removeAll { $0.id == movie.id }
@@ -76,11 +85,22 @@ struct MovieDetailView: View {
                             } label: {
                                 Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu",
                                       systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus")
-                                    .frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial)
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            }
+                            Button {
+                                showDownloadSheet = true
+                            } label: {
+                                Label("Tải", systemImage: "arrow.down.circle")
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
                                     .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
                         }
+                        
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
                         
@@ -136,7 +156,6 @@ struct MovieDetailView: View {
                                                 LazyVStack(spacing: 6) {
                                                     ForEach(detail.episodes) { ep in
                                                         Button {
-                                                            // SỬA LỖI 2: Dùng seasonNumber từ chính episode thay vì từ season
                                                             playSeason = ep.seasonNumber
                                                             playEpisode = ep.episodeNumber
                                                             showPlayer = true
@@ -206,6 +225,105 @@ struct MovieDetailView: View {
                     .ignoresSafeArea()
                     .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } }
             }
+        }
+        .sheet(isPresented: $showDownloadSheet) {
+            downloadPickerView
+        }
+    }
+    
+    var downloadPickerView: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        Text("Chọn tập để tải").font(.title3.bold()).foregroundColor(.white).padding(.top, 20)
+                        
+                        if vm.seasons.isEmpty {
+                            VStack(spacing: 12) {
+                                if let posterURL = movie.posterURL {
+                                    CachedAsyncImage(url: posterURL, size: .detail)
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: 120, height: 180)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                Text(movie.title).font(.headline).foregroundColor(.white)
+                                Button {
+                                    downloadEpisode = nil; downloadSeason = nil
+                                    showDownloadSheet = false
+                                    triggerDownload()
+                                } label: {
+                                    Text("Tải phim này").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 12)
+                                        .background(Capsule().fill(.blue))
+                                }
+                            }.padding(20).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.3)))
+                        } else {
+                            ForEach(vm.seasons) { season in
+                                VStack(spacing: 8) {
+                                    Text(season.name).font(.headline).foregroundColor(.white)
+                                    if let detail = vm.seasonDetails[season.seasonNumber] {
+                                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                                            ForEach(detail.episodes) { ep in
+                                                Button {
+                                                    downloadSeason = ep.seasonNumber
+                                                    downloadEpisode = ep.episodeNumber
+                                                    showDownloadSheet = false
+                                                    triggerDownload()
+                                                } label: {
+                                                    Text("\(ep.episodeNumber)").font(.system(size: 13, weight: .medium))
+                                                        .foregroundColor(.white).frame(height: 36).frame(maxWidth: .infinity)
+                                                        .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.4)))
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        ProgressView().tint(.white).onAppear {
+                                            Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
+                                        }
+                                    }
+                                }
+                                .padding(16).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)))
+                            }
+                        }
+                    }.padding(20)
+                }
+            }
+        }
+    }
+    
+    func triggerDownload() {
+        Task {
+            let imdbID: String
+            if let mt = movie.mediaType, mt == "tv" {
+                imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? ""
+            } else {
+                let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+                struct E: Codable { let imdb_id: String? }
+                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+            }
+            
+            guard !imdbID.isEmpty else { return }
+            
+            let url = try? await withCheckedThrowingContinuation { c in
+                PhimAPIService.shared.fetchStream(
+                    imdbID: imdbID, tmdbID: movie.id, title: movie.title,
+                    mediaType: movie.mediaType,
+                    season: downloadSeason, episode: downloadEpisode
+                ) { c.resume(with: $0) }
+            }
+            
+            guard let streamURL = url else { return }
+            
+            DownloadManager.shared.download(
+                url: streamURL,
+                movieId: movie.id,
+                title: movie.title,
+                posterPath: movie.posterPath,
+                mediaType: movie.mediaType,
+                season: downloadSeason,
+                episode: downloadEpisode
+            )
         }
     }
 }
