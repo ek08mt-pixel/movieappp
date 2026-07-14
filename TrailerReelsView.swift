@@ -351,12 +351,13 @@ struct TrailerCardView: View {
         .onAppear {
             if isActive { loadStreamIfNeeded() }
         }
-        .fullScreenCover(isPresented: $showMovieDetail) {
-            if let movie = selectedMovie {
-                MovieDetailView(movie: movie)
-            }
+        .sheet(isPresented: $showMovieDetail) {
+    if let movie = selectedMovie {
+        NavigationStack {
+            MovieDetailView(movie: movie)
         }
     }
+}
     
     private func loadStreamIfNeeded() {
         guard resolvedURL == nil else { return }
