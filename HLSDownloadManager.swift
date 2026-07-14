@@ -37,25 +37,64 @@ class HLSDownloadManager: NSObject, ObservableObject, AVAssetDownloadDelegate {
     }
     
     func startDownload(url: URL, movieId: Int, title: String, posterPath: String?, mediaType: String? = nil, season: Int? = nil, episode: Int? = nil) {
-        let id = "\(movieId)_\(season ?? 0)_\(episode ?? 0)"
-        guard !downloads.contains(where: { $0.id == id && $0.status == .completed }) else { return }
-        
-        let item = DownloadItem(id: id, movieId: movieId, movieTitle: title, posterPath: posterPath, mediaType: mediaType, seasonNumber: season, episodeNumber: episode, streamURL: url)
-        
-        if let idx = downloads.firstIndex(where: { $0.id == id }) {
-            downloads[idx] = item
-        } else {
-            downloads.append(item)
-        }
-        saveDownloads()
-        
-        let asset = AVURLAsset(url: url)
-        if let task = session.makeAssetDownloadTask(asset: asset, assetTitle: title, assetArtworkData: nil, options: nil) {
-            task.taskDescription = id
-            activeTasks[id] = task
-            task.resume()
+    let id = "\(movieId)_\(season ?? 0)_\(episode ?? 0)"
+    guard !downloads.contains(where: { $0.id == id && $0.status == .completed }) else { return }
+    
+    let item = DownloadItem(id: id, movieId: movieId, movieTitle: title, posterPath: posterPath, mediaType: mediaType, seasonNumber: season, episodeNumber: episode, streamURL: url)
+    
+    if let idx = downloads.firstIndex(where: { $0.id == id }) {
+        downloads[idx] = item
+    } else {
+        downloads.append(item)
+    }
+    saveDownloads()
+    
+    // Thử AVAssetDownloadTask trước
+    let asset = AVURLAsset(url: url)
+    asset.loadValuesAsynchronously(forKeys: ["playable"]) { [weak self] in
+        var error: NSError?
+        let status = asset.statusOfValue(forKey: "playable", error: &error)
+        DispatchQueue.main.async {
+            if status == .loaded {
+                // HLS hợp lệ, dùng AVAssetDownloadTask
+                if let task = self?.session.makeAssetDownloadTask(asset: asset, assetTitle: title, assetArtworkData: nil, options: nil) {
+                    task.taskDescription = id
+                    self?.activeTasks[id] = task
+                    task.resume()
+                }
+            } else {
+                // Fallback: dùng URLSessionDownloadTask thường
+                self?.downloadDirect(url: url, id: id)
+            }
         }
     }
+}
+
+private func downloadDirect(url: URL, id: String) {
+    let task = URLSession.shared.downloadTask(with: url) { [weak self] localURL, response, error in
+        DispatchQueue.main.async {
+            guard let self = self, let idx = self.downloads.firstIndex(where: { $0.id == id }) else { return }
+            if let localURL = localURL {
+                let destDir = self.docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
+                try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+                let dest = destDir.appendingPathComponent("video.mp4")
+                try? FileManager.default.removeItem(at: dest)
+                do {
+                    try FileManager.default.moveItem(at: localURL, to: dest)
+                    self.downloads[idx].localURL = dest
+                    self.downloads[idx].status = .completed
+                    self.downloads[idx].progress = 1.0
+                } catch {
+                    self.downloads[idx].status = .failed
+                }
+            } else {
+                self.downloads[idx].status = .failed
+            }
+            self.saveDownloads()
+        }
+    }
+    task.resume()
+}
     
     func cancel(_ id: String) {
         activeTasks[id]?.cancel()
