@@ -56,7 +56,6 @@ struct WatchTogetherRoomView: View {
     @State private var episodes: [TVEpisode] = []
     @State private var selectedEpisode: TVEpisode?
     @State private var flyingEmojis: [FlyingEmoji] = []
-    @State private var dominantColor: Color = Color(red: 0.05, green: 0.02, blue: 0.12)
     @State private var isLoadingEpisode = false
     @State private var isLoadingSeasons = false
     @State private var seasonError: String?
@@ -78,13 +77,6 @@ struct WatchTogetherRoomView: View {
         FakeRoom(roomName: "🔥 Hot Hòn Họt", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false, posterPath: "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg", currentTime: "00:15:30"),
         FakeRoom(roomName: "Romcom", movieTitle: "How to Lose a Guy", viewerCount: 3, avatars: ["🐮","🐷","🐹"], isPrivate: false, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:38:55"),
     ]
-    
-    var displayTitle: String {
-        if currentMovieTitle.isEmpty { return "Chọn phim" }
-        var title = currentMovieTitle
-        if let ep = selectedEpisode { title += " - S\(ep.seasonNumber):E\(ep.episodeNumber)" }
-        return title
-    }
     
     var body: some View {
         ZStack {
@@ -110,17 +102,31 @@ struct WatchTogetherRoomView: View {
     // MARK: - Lobby
     var lobbyView: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Xem chung").font(.title2.bold()).foregroundColor(.white)
+            // Tiêu đề EMMEW ở giữa
+            Text("EMMEW")
+                .font(.system(size: 28, weight: .heavy))
+                .foregroundColor(.white)
+                .padding(.top, 50)
+                .padding(.bottom, 4)
+            
+            // Public + icon trái đất
+            HStack(spacing: 6) {
+                Image(systemName: "globe.americas.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+                Text("Public")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
                 Spacer()
                 Button { showCreateRoom = true } label: {
                     Image(systemName: "plus.circle.fill").font(.system(size: 26)).foregroundColor(.white)
                 }
             }
-            .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 16)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
             
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(fakeRooms) { room in
                         fakeRoomCard(room)
                     }
@@ -132,51 +138,59 @@ struct WatchTogetherRoomView: View {
     }
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
-        HStack(spacing: 0) {
-            if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-                CachedAsyncImage(url: url)
-                    .aspectRatio(16/9, contentMode: .fill)
-                    .frame(width: UIScreen.main.bounds.width * 0.38, height: 90)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            } else {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(.ultraThinMaterial.opacity(0.35))
-                    .frame(width: UIScreen.main.bounds.width * 0.38, height: 90)
-                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
-            }
-            
-            VStack(alignment: .leading, spacing: 0) {
-                Text(room.movieTitle)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                // Poster 16:9 bên trái - không khung riêng
+                if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
+                    CachedAsyncImage(url: url)
+                        .aspectRatio(16/9, contentMode: .fill)
+                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial.opacity(0.35))
+                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 80)
+                        .overlay(Image(systemName: "play.circle.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)))
+                }
                 
-                Spacer()
-                
-                HStack(spacing: 6) {
-                    ForEach(room.avatars.prefix(4), id: \.self) { av in
-                        Text(av)
-                            .font(.system(size: 11))
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
-                            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                // Bên phải: Tiêu đề + Avatar sát poster
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(room.movieTitle)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                    
+                    HStack(spacing: 8) {
+                        ForEach(room.avatars.prefix(4), id: \.self) { av in
+                            Text(av)
+                                .font(.system(size: 13))
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.leading, 10)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity)
+            
+            // Thanh tiến trình mỏng dưới mép
+            Rectangle()
+                .fill(.white.opacity(0.2))
+                .frame(height: 1.5)
+                .padding(.top, 8)
         }
-        .padding(8)
+        .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(.ultraThinMaterial.opacity(0.25))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial.opacity(0.2))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.08), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.06), lineWidth: 0.5)
         )
     }
+    
+    
+}
     
     // MARK: - Create Room
     var createRoomView: some View {
