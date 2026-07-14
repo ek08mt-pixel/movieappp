@@ -32,33 +32,56 @@ struct MainTabView: View {
             }
             
             if !showWatchTogetherRoom {
-                HStack(spacing: 12) {
-                    HStack(spacing: 36) {
+                HStack(spacing: 14) {
+                    HStack(spacing: 40) {
                         LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
-                        LiquidTabIcon(icon: "star.fill", isSelected: selectedTab == 1) {
+                        LiquidTabIcon(icon: "safari.fill", isSelected: selectedTab == 1) {
                             if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
                         }
                         LiquidTabIcon(icon: "rectangle.stack.fill", isSelected: selectedTab == 2) {
                             if selectedTab == 2 { libraryID = UUID() } else { selectedTab = 2 }
                         }
-                        LiquidTabIcon(icon: "shared.with.you", isSelected: selectedTab == 3) {
+                        LiquidTabIcon(icon: "person.3.fill", isSelected: selectedTab == 3) {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 14).padding(.horizontal, 28)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                    .padding(.vertical, 16).padding(.horizontal, 30)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial.opacity(0.45))
+                            .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.25), .white.opacity(0.08), .clear, .white.opacity(0.15)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.8
+                            )
+                    )
                     
                     Button { showSearch = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 26, weight: .bold)).foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 14).padding(.horizontal, 20)
-                            .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).shadow(color: .black.opacity(0.08), radius: 4, y: 1))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.vertical, 16).padding(.horizontal, 22)
+                            .background(
+                                Capsule()
+                                    .fill(.ultraThinMaterial.opacity(0.45))
+                                    .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
+                            )
                     }
                 }
-                .padding(.bottom, 6)
+                .padding(.bottom, 8)
                 .transition(.move(edge: .bottom))
             }
         }
@@ -170,15 +193,41 @@ struct MiniPlayerView: View {
 struct LiquidTabIcon: View {
     let icon: String; let isSelected: Bool; let action: () -> Void
     @State private var isPressed = false
+    
     var body: some View {
         Button {
-            withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) { isPressed = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { withAnimation(.interpolatingSpring(stiffness: 400, damping: 12)) { isPressed = false } }
+            withAnimation(.interpolatingSpring(stiffness: 500, damping: 8)) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.interpolatingSpring(stiffness: 500, damping: 8)) { isPressed = false }
+            }
             action()
         } label: {
             ZStack {
-                if isSelected { Capsule().fill(.ultraThinMaterial.opacity(0.35)).frame(width: 56, height: 38) }
-                Image(systemName: icon).font(.system(size: 26, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .white.opacity(0.45)).scaleEffect(isPressed ? 0.8 : 1.0)
+                // Khung sáng to hơn khi selected
+                if isSelected {
+                    Capsule()
+                        .fill(.ultraThinMaterial.opacity(0.5))
+                        .frame(width: 62, height: 42)
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.35), .white.opacity(0.1), .clear, .white.opacity(0.2)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.6
+                                )
+                        )
+                        .shadow(color: .white.opacity(0.1), radius: 4, y: 0)
+                }
+                
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: isSelected ? .bold : .regular))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+                    .scaleEffect(isPressed ? 0.85 : (isSelected ? 1.1 : 1.0))
+                    .animation(.interpolatingSpring(stiffness: 500, damping: 8), value: isPressed)
+                    .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: isSelected)
             }
         }
     }
