@@ -108,12 +108,30 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Lobby
     var lobbyView: some View {
+    ZStack(alignment: .bottomTrailing) {
         VStack(spacing: 0) {
-            Text("EMMEW")
-                .font(.system(size: 28, weight: .heavy))
-                .foregroundColor(.white)
-                .padding(.top, 52)
-                .padding(.bottom, 12)
+            // Header: nút back + chữ EMMEW
+            HStack {
+                Button {
+                    // Back - về Home (đổi tab)
+                    // Gửi notification hoặc dùng dismiss
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                }
+                Spacer()
+                Text("EMMEW")
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundColor(.white)
+                Spacer()
+                Circle().fill(.clear).frame(width: 36)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 52)
+            .padding(.bottom, 12)
             
             // Search bar fake
             HStack(spacing: 8) {
@@ -131,20 +149,15 @@ struct WatchTogetherRoomView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
             
-            // Public + nút tạo phòng
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "globe.americas.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.8))
-                    Text("Public")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                }
+            // Public
+            HStack(spacing: 6) {
+                Image(systemName: "globe.americas.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+                Text("Public")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
                 Spacer()
-                Button { showCreateRoom = true } label: {
-                    Image(systemName: "plus.circle.fill").font(.system(size: 26)).foregroundColor(.white)
-                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
@@ -159,7 +172,23 @@ struct WatchTogetherRoomView: View {
                 .padding(.bottom, 120)
             }
         }
+        
+        // Nút + lớn liquid glass bự bên dưới phải
+        Button {
+            showCreateRoom = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 64, height: 64)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
+                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+        }
+        .padding(.trailing, 24)
+        .padding(.bottom, 100)
     }
+}
     
     func fakeRoomCard(_ room: FakeRoom) -> some View {
         VStack(spacing: 0) {
