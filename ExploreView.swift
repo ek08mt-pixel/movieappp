@@ -5,6 +5,7 @@ struct ExploreView: View {
     @EnvironmentObject var appState: AppState
     @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
     @State private var showSwipePick = false
+    @State private var showTrailers = false
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
     ("IMDb Top", 210024, .keyword),
@@ -49,7 +50,7 @@ struct ExploreView: View {
                                     Text("OST").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
@@ -60,7 +61,7 @@ struct ExploreView: View {
                                     Text("Timeline").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
@@ -73,7 +74,20 @@ struct ExploreView: View {
                                     Text("Pick").font(.system(size: 10, weight: .medium))
                                 }
                                 .foregroundColor(.white)
-                                .frame(width: (UIScreen.main.bounds.width - 64) / 3, height: (UIScreen.main.bounds.width - 64) / 3)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
+                                .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                            }
+                            Spacer()
+                            Button {
+                                showTrailers = true
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "play.rectangle.fill").font(.system(size: 22))
+                                    Text("Trailers").font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(width: (UIScreen.main.bounds.width - 64) / 4, height: (UIScreen.main.bounds.width - 64) / 4)
                                 .background(RoundedRectangle(cornerRadius: 20).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 0.5))
                             }
@@ -123,6 +137,10 @@ struct ExploreView: View {
                     .environmentObject(appState)
             }
         }
+        .fullScreenCover(isPresented: $showTrailers) {
+            TrailerReelsView()
+                .environmentObject(appState)
+        }
         .task { loadData() }
     }
     
@@ -138,6 +156,7 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
 }
+
 
 // MARK: - SwipePickOverlay
 struct SwipePickOverlay: View {
