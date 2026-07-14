@@ -32,8 +32,8 @@ struct MainTabView: View {
             }
             
             if !showWatchTogetherRoom {
-                HStack(spacing: 10) {
-                    HStack(spacing: 36) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 28) {
                         LiquidTabIcon(icon: "house.fill", isSelected: selectedTab == 0) {
                             if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                         }
@@ -47,54 +47,32 @@ struct MainTabView: View {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 14).padding(.horizontal, 26)
+                    .padding(.vertical, 8).padding(.horizontal, 20)
                     .background(
                         Capsule()
-                            .fill(.black.opacity(0.35))
+                            .fill(.ultraThinMaterial)
                             .overlay(
                                 Capsule()
-                                    .fill(.ultraThinMaterial.opacity(0.5))
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 0.3
-                                    )
+                                    .stroke(.white.opacity(0.15), lineWidth: 0.3)
                             )
                     )
                     
                     Button { showSearch = true } label: {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 14).padding(.horizontal, 18)
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.vertical, 8).padding(.horizontal, 14)
                             .background(
                                 Capsule()
-                                    .fill(.black.opacity(0.35))
+                                    .fill(.ultraThinMaterial)
                                     .overlay(
                                         Capsule()
-                                            .fill(.ultraThinMaterial.opacity(0.5))
-                                    )
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [.white.opacity(0.2), .white.opacity(0.05), .clear, .white.opacity(0.1)],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                ),
-                                                lineWidth: 0.3
-                                            )
+                                            .stroke(.white.opacity(0.15), lineWidth: 0.3)
                                     )
                             )
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 10)
                 .transition(.move(edge: .bottom))
             }
         }
@@ -209,40 +187,32 @@ struct LiquidTabIcon: View {
     
     var body: some View {
         Button {
-            withAnimation(.interpolatingSpring(stiffness: 500, damping: 8)) { isPressed = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.interpolatingSpring(stiffness: 500, damping: 8)) { isPressed = false }
+            withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = false }
             }
             action()
         } label: {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(.white.opacity(0.18))
-                        .frame(width: 72, height: 46)
+                        .fill(.white.opacity(0.15))
+                        .frame(width: 58, height: 36)
                         .overlay(
                             Capsule()
-                                .fill(.ultraThinMaterial.opacity(0.6))
+                                .fill(.ultraThinMaterial)
                         )
                         .overlay(
                             Capsule()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.3), .white.opacity(0.08), .clear, .white.opacity(0.15)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.3
-                                )
+                                .stroke(.white.opacity(0.2), lineWidth: 0.3)
                         )
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: 26, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.4))
-                    .scaleEffect(isPressed ? 0.85 : (isSelected ? 1.1 : 1.0))
-                    .animation(.interpolatingSpring(stiffness: 500, damping: 8), value: isPressed)
-                    .animation(.interpolatingSpring(stiffness: 300, damping: 15), value: isSelected)
+                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+                    .scaleEffect(isPressed ? 0.88 : 1.0)
+                    .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
             }
         }
     }
