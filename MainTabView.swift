@@ -216,7 +216,7 @@ struct LiquidTabIcon: View {
                 if isSelected {
                     Capsule()
                         .fill(.white.opacity(0.2))
-                        .frame(width: 76, height: 50)
+                        .frame(width: 83, height: 55)
                         .overlay(
                             Capsule()
                                 .fill(.ultraThinMaterial.opacity(0.4))
