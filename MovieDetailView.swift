@@ -292,39 +292,25 @@ struct MovieDetailView: View {
         }
     }
     
-    func triggerDownload() {
-        Task {
-            let imdbID: String
-            if let mt = movie.mediaType, mt == "tv" {
-                imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? ""
-            } else {
-                let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
-                struct E: Codable { let imdb_id: String? }
-                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-            }
-            
-            guard !imdbID.isEmpty else { return }
-            
-            let url = try? await withCheckedThrowingContinuation { c in
-                PhimAPIService.shared.fetchStream(
-                    imdbID: imdbID, tmdbID: movie.id, title: movie.title,
-                    mediaType: movie.mediaType,
-                    season: downloadSeason, episode: downloadEpisode
-                ) { c.resume(with: $0) }
-            }
-            
-            guard let streamURL = url else { return }
-            
-            DownloadManager.shared.download(
-                url: streamURL,
-                movieId: movie.id,
-                title: movie.title,
-                posterPath: movie.posterPath,
-                mediaType: movie.mediaType,
-                season: downloadSeason,
-                episode: downloadEpisode
-            )
+    // Chỉ sửa function triggerDownload, phần còn lại giữ nguyên
+func triggerDownload() {
+    Task {
+        let imdbID: String
+        if let mt = movie.mediaType, mt == "tv" {
+            imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? ""
+        } else {
+            let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+            struct E: Codable { let imdb_id: String? }
+            imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
         }
+        guard !imdbID.isEmpty else { return }
+        
+        let url = try? await withCheckedThrowingContinuation { c in
+            PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movie.id, title: movie.title, mediaType: movie.mediaType, season: downloadSeason, episode: downloadEpisode) { c.resume(with: $0) }
+        }
+        guard let streamURL = url else { return }
+        
+        HLSDownloadManager.shared.startDownload(url: streamURL, movieId: movie.id, title: movie.title, posterPath: movie.posterPath, mediaType: movie.mediaType, season: downloadSeason, episode: downloadEpisode)
     }
 }
 
