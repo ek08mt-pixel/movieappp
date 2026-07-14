@@ -67,7 +67,7 @@ class HLSDownloadManager: NSObject, ObservableObject {
             
             let segments = self.parseSegments(from: content, baseURL: url)
             guard !segments.isEmpty else {
-                Task { @MainActor in self?.failDownload(id: id) }
+                Task { @MainActor in self.failDownload(id: id) }
                 return
             }
             
@@ -102,44 +102,75 @@ class HLSDownloadManager: NSObject, ObservableObject {
     }
     
     private func downloadAllSegments(id: String, segments: [String], baseURL: URL) {
-        let destDir = docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
-        try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+    let destDir = docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
+    try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+    
+    var playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
+    for i in 0..<segments.count {
+        playlist += "#EXTINF:10.0,\nsegment_\(i).ts\n"
+    }
+    playlist += "#EXT-X-ENDLIST\n"
+    try? playlist.write(to: destDir.appendingPathComponent("playlist.m3u8"), atomically: true, encoding: .utf8)
+    
+    let total = segments.count
+    let completedCount = AtomicInteger()
+    let group = DispatchGroup()
+    
+    for (index, segURLStr) in segments.enumerated() {
+        guard let segURL = URL(string: segURLStr) else { continue }
         
-        // Tạo playlist local
-        var playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
-        for i in 0..<segments.count {
-            playlist += "#EXTINF:10.0,\nsegment_\(i).ts\n"
-        }
-        playlist += "#EXT-X-ENDLIST\n"
-        try? playlist.write(to: destDir.appendingPathComponent("playlist.m3u8"), atomically: true, encoding: .utf8)
+        group.enter()
+        var request = URLRequest(url: segURL)
+        request.setValue("video/mp2t", forHTTPHeaderField: "Accept")
         
-        let total = segments.count
-        var completed = 0
-        let group = DispatchGroup()
-        
-        for (index, segURLStr) in segments.enumerated() {
-            guard let segURL = URL(string: segURLStr) else { continue }
+        session.dataTask(with: request) { data, response, error in
+            defer { group.leave() }
             
-            group.enter()
-            var request = URLRequest(url: segURL)
-            request.setValue("video/mp2t", forHTTPHeaderField: "Accept")
-            
-            session.dataTask(with: request) { data, response, error in
-                defer { group.leave() }
+            if let data = data, error == nil {
+                let destFile = destDir.appendingPathComponent("segment_\(index).ts")
+                try? data.write(to: destFile)
+                let done = completedCount.increment()
                 
-                if let data = data, error == nil {
-                    let destFile = destDir.appendingPathComponent("segment_\(index).ts")
-                    try? data.write(to: destFile)
-                    completed += 1
-                    
-                    Task { @MainActor in
-                        if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
-                            self.downloads[idx].progress = Double(completed) / Double(total)
-                        }
+                Task { @MainActor in
+                    if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
+                        self.downloads[idx].progress = Double(done) / Double(total)
                     }
                 }
-            }.resume()
+            }
+        }.resume()
+    }
+    
+    group.notify(queue: .main) { [weak self] in
+        guard let self = self else { return }
+        Task { @MainActor in
+            if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
+                if completedCount.value == total {
+                    self.downloads[idx].status = .completed
+                    self.downloads[idx].progress = 1.0
+                    self.downloads[idx].localURL = destDir.appendingPathComponent("playlist.m3u8")
+                } else {
+                    self.downloads[idx].status = .failed
+                }
+                self.saveDownloads()
+            }
+            self.activeTasks[id] = nil
         }
+    }
+}
+
+// Thêm class helper này ngoài struct
+final class AtomicInteger {
+    private var value: Int = 0
+    private let lock = NSLock()
+    
+    func increment() -> Int {
+        lock.lock()
+        value += 1
+        let v = value
+        lock.unlock()
+        return v
+    }
+}
         
         group.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
