@@ -116,7 +116,6 @@ struct LibraryView: View {
         }
     }
     
-    // MARK: - Downloads View
     var downloadsView: some View {
         Group {
             if dm.downloads.isEmpty {
@@ -180,10 +179,6 @@ struct LibraryView: View {
                             .font(.system(size: 10))
                             .foregroundColor(.gray)
                     }
-                case .paused:
-                    Text("Đã tạm dừng")
-                        .font(.system(size: 11))
-                        .foregroundColor(.yellow)
                 case .completed:
                     Text("Đã tải xong")
                         .font(.system(size: 11))
@@ -198,7 +193,7 @@ struct LibraryView: View {
             Spacer()
             
             VStack(spacing: 10) {
-                if item.status == .downloading || item.status == .paused {
+                if item.status == .downloading {
                     Button {
                         dm.cancel(item.id)
                     } label: {
