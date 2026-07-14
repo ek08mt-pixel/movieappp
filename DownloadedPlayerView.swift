@@ -29,6 +29,12 @@ struct DownloadedPlayerView: View {
                 Spacer()
             }
         }
-        .onAppear { player = AVPlayer(url: url) }
+        .onAppear {
+            let assetURL = URL(string: "hls-custom://playlist/master.m3u8")!
+            let asset = AVURLAsset(url: assetURL)
+            let loader = HLSResourceLoader(playlistURL: url)
+            asset.resourceLoader.setDelegate(loader, queue: .main)
+            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        }
     }
 }
