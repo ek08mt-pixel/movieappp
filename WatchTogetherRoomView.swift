@@ -106,122 +106,144 @@ struct WatchTogetherRoomView: View {
     func startFakeRoomRefresh() { refreshTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { _ in withAnimation(.easeInOut(duration: 0.5)) { for _ in 0..<3 { let idx = Int.random(in: 0..<fakeRooms.count); fakeRooms[idx].roomName = ["ai đoá ai đóa","gigi ngungục","ziku","Music & Movie","📺 Series Addict","bò cinema","newjeans neverdie","🔥 Trending Now","Hidden Gems","hanpham","🌴 Tropical Night","siu anh hùng"].randomElement() ?? fakeRooms[idx].roomName; fakeRooms[idx].movieTitle = ["Barbie","The Batman","Spider-Man","Joker","Inception","Tenet","Dunkirk","Memento","La La Land","Whiplash","Get Out","Us"].randomElement() ?? fakeRooms[idx].movieTitle; fakeRooms[idx].viewerCount = Int.random(in: 2...6); let m = Int.random(in: 0...120); let s = Int.random(in: 0...59); fakeRooms[idx].currentTime = String(format: "%02d:%02d:%02d", m/60, m, s) } } } }
     
     // MARK: - Lobby
-    var lobbyView: some View {
-        ZStack(alignment: .bottomTrailing) {
-            VStack(spacing: 0) {
+var lobbyView: some View {
+    ZStack(alignment: .bottomTrailing) {
+        // Background xám đen blur mạnh
+        Color.gray.opacity(0.15)
+            .background(.ultraThinMaterial)
+            .ignoresSafeArea()
+        
+        VStack(spacing: 0) {
+            // Nút back bên trái + EMMEW
+            HStack {
+                Button {
+                    // Back về tab trước
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                }
+                Spacer()
                 Text("EMMEW")
                     .font(.system(size: 32, weight: .heavy))
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 56)
-                    .padding(.bottom, 16)
-                
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.5))
-                    Text("Search")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.5))
-                    Spacer()
-                }
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
-                HStack(spacing: 6) {
-                    Image(systemName: "globe.americas.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.8))
-                    Text("Public")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-                
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(fakeRooms) { room in
-                            fakeRoomCard(room)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 140)
-                }
-            }
-            
-            Button {
-                service.createRoom(roomName: "Phòng", userName: "User") { _ in }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 76, height: 76)
-                    .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
-                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
-            }
-            .padding(.trailing, 36)
-            .padding(.bottom, 120)
-        }
-        .ignoresSafeArea()
-    }
-    
-    func fakeRoomCard(_ room: FakeRoom) -> some View {
-        HStack(spacing: 0) {
-            if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-                CachedAsyncImage(url: url)
-                    .aspectRatio(16/9, contentMode: .fill)
-                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial.opacity(0.35))
-                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
-            }
-            
-            VStack(spacing: 0) {
-                Text(room.movieTitle)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 6)
-                    .padding(.horizontal, 10)
-                
                 Spacer()
-                
-                HStack(spacing: 8) {
-                    ForEach(room.avatars.prefix(4), id: \.self) { av in
-                        Text(av)
-                            .font(.system(size: 14))
-                            .frame(width: 32, height: 32)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
-                    }
-                    Spacer()
-                }
-                .padding(.bottom, 6)
-                .padding(.horizontal, 10)
-                
-                Rectangle()
-                    .fill(.white.opacity(0.15))
-                    .frame(height: 1.5)
+                Circle().fill(.clear).frame(width: 36)
             }
-            .frame(height: 84)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial.opacity(0.2))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(.white.opacity(0.06), lineWidth: 0.5)
-            )
+            .padding(.horizontal, 20)
+            .padding(.top, 52)
+            .padding(.bottom, 16)
+            
+            // Search bar fake - bo tròn hơn, to hơn
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.5))
+                Text("Search")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.5))
+                Spacer()
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.35)))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.12), lineWidth: 0.5))
+            .padding(.horizontal, 16)
+            
+            // Cắt màn hình ngay dưới search bar
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Public ngay dưới search bar
+                    HStack(spacing: 6) {
+                        Image(systemName: "globe.americas.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.8))
+                        Text("Public")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+                    
+                    ForEach(fakeRooms) { room in
+                        fakeRoomCard(room)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 140)
+            }
         }
+        
+        // Nút +
+        Button {
+            service.createRoom(roomName: "Phòng", userName: "User") { _ in }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 76, height: 76)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.7)))
+                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+        }
+        .padding(.trailing, 36)
+        .padding(.bottom, 120)
     }
+    .ignoresSafeArea()
+}
+
+func fakeRoomCard(_ room: FakeRoom) -> some View {
+    HStack(spacing: 0) {
+        // Poster bo tròn hơn
+        if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
+            CachedAsyncImage(url: url)
+                .aspectRatio(16/9, contentMode: .fill)
+                .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+        } else {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.ultraThinMaterial.opacity(0.35))
+                .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
+                .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
+        }
+        
+        // Khung dính liền poster, ngắn lại 1 xíu
+        VStack(spacing: 0) {
+            Text(room.movieTitle)
+                .font(.system(size: 13, weight: .light))
+                .foregroundColor(.white)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 4)
+                .padding(.horizontal, 8)
+            
+            Spacer()
+            
+            HStack(spacing: 6) {
+                ForEach(room.avatars.prefix(4), id: \.self) { av in
+                    Text(av)
+                        .font(.system(size: 14))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
+                }
+                Spacer()
+            }
+            .padding(.bottom, 4)
+            .padding(.horizontal, 8)
+            
+            Rectangle()
+                .fill(.white.opacity(0.15))
+                .frame(height: 1.5)
+        }
+        .frame(height: 84)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.ultraThinMaterial.opacity(0.2))
+        )
+    }
+}
     
     // MARK: - In Room
     var inRoomView: some View {
