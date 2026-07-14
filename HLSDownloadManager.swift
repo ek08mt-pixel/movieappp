@@ -224,6 +224,3 @@ final class AtomicInteger {
             for i in 0..<downloads.count where downloads[i].status == .downloading {
                 downloads[i].status = .failed
             }
-        }
-    }
-}
