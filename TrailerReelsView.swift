@@ -22,6 +22,10 @@ private struct TMDBVideoResp: Codable {
     struct V: Codable { let id: String; let key: String; let name: String; let site: String; let type: String }
     let results: [V]
 }
+private struct InvidiousVideo: Codable {
+    struct FS: Codable { let url: String; let quality: String; let container: String }
+    let formatStreams: [FS]
+}
 
 // MARK: - TrailerService
 class TrailerService {
@@ -52,6 +56,23 @@ class TrailerService {
                                 backdropPath: m.backdrop_path, voteAverage: m.vote_average,
                                 releaseDate: m.release_date, overview: m.overview)
         } catch { return nil }
+    }
+    
+    func resolveStreamURL(youtubeKey: String) async -> URL? {
+        let urls = [
+            "https://invidious.slipfox.xyz/api/v1/videos/\(youtubeKey)",
+            "https://inv.nadeko.net/api/v1/videos/\(youtubeKey)"
+        ]
+        for urlStr in urls {
+            guard let url = URL(string: urlStr) else { continue }
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let iv = try JSONDecoder().decode(InvidiousVideo.self, from: data)
+                let s = iv.formatStreams.filter { $0.container == "mp4" }.first { $0.quality == "720p" } ?? iv.formatStreams.first
+                if let u = s.flatMap({ URL(string: $0.url) }) { return u }
+            } catch { continue }
+        }
+        return nil
     }
 }
 
@@ -95,11 +116,49 @@ struct TrailerReelsView: View {
 // MARK: - TrailerCardView
 struct TrailerCardView: View {
     let trailer: TrailerVideo
+    @State private var streamURL: URL?
+    @State private var player: AVPlayer?
+    @State private var loadFailed = false
     @State private var showDetail = false
     
     var body: some View {
         ZStack {
-            YouTubeEmbedView(videoID: trailer.key).ignoresSafeArea().allowsHitTesting(false)
+            if let player = player {
+                TrailerPlayerView(player: player).ignoresSafeArea()
+            } else if loadFailed {
+                ZStack {
+                    if let path = trailer.backdropPath ?? trailer.posterPath {
+                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w780\(path)"))
+                            .aspectRatio(contentMode: .fill).frame(maxWidth: .infinity, maxHeight: .infinity).blur(radius: 20)
+                    }
+                    Color.black.opacity(0.6)
+                    VStack(spacing: 16) {
+                        Image(systemName: "play.circle").font(.system(size: 60)).foregroundColor(.white)
+                        Text("Xem trailer trên YouTube").font(.headline).foregroundColor(.white)
+                        Button {
+                            if let url = URL(string: "youtube://watch?v=\(trailer.key)") {
+                                UIApplication.shared.open(url)
+                            } else if let url = URL(string: "https://youtube.com/watch?v=\(trailer.key)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Mở YouTube").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                                .padding(.horizontal, 24).padding(.vertical, 10)
+                                .background(Capsule().fill(.red))
+                        }
+                    }
+                }.ignoresSafeArea()
+            } else {
+                ZStack {
+                    if let path = trailer.backdropPath ?? trailer.posterPath {
+                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w780\(path)"))
+                            .aspectRatio(contentMode: .fill).frame(maxWidth: .infinity, maxHeight: .infinity).blur(radius: 20)
+                    }
+                    Color.black.opacity(0.4)
+                    ProgressView().tint(.white).scaleEffect(1.2)
+                }.ignoresSafeArea()
+            }
+            
             VStack {
                 Spacer()
                 LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .top, endPoint: .bottom).frame(height: 300)
@@ -119,9 +178,7 @@ struct TrailerCardView: View {
                     }
                     Spacer()
                     VStack(spacing: 20) {
-                        Button {
-                            showDetail = true
-                        } label: {
+                        Button { showDetail = true } label: {
                             VStack(spacing: 3) {
                                 Image(systemName: "play.rectangle.fill").font(.system(size: 28)).foregroundColor(.white)
                                 Text("Xem").font(.system(size: 9, weight: .bold)).foregroundColor(.white)
@@ -131,37 +188,46 @@ struct TrailerCardView: View {
                 }.padding(.horizontal, 20).padding(.bottom, 40)
             }
         }
+        .onAppear { loadStream() }
         .sheet(isPresented: $showDetail) {
-            NavigationStack {
-                MovieDetailView(movie: Movie(id: trailer.movieId, title: trailer.movieTitle, overview: trailer.overview, posterPath: trailer.posterPath, backdropPath: trailer.backdropPath, voteAverage: trailer.voteAverage, releaseDate: trailer.releaseDate, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: "movie"))
+            NavigationStack { MovieDetailView(movie: Movie(id: trailer.movieId, title: trailer.movieTitle, overview: trailer.overview, posterPath: trailer.posterPath, backdropPath: trailer.backdropPath, voteAverage: trailer.voteAverage, releaseDate: trailer.releaseDate, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: "movie")) }
+        }
+    }
+    
+    private func loadStream() {
+        guard player == nil else { return }
+        Task {
+            if let url = await TrailerService.shared.resolveStreamURL(youtubeKey: trailer.key) {
+                await MainActor.run {
+                    streamURL = url
+                    let p = AVPlayer(url: url)
+                    p.play()
+                    self.player = p
+                }
+            } else {
+                await MainActor.run { loadFailed = true }
             }
         }
     }
 }
 
-// MARK: - YouTubeEmbedView
-struct YouTubeEmbedView: UIViewRepresentable {
-    let videoID: String
+// MARK: - TrailerPlayerView
+struct TrailerPlayerView: UIViewRepresentable {
+    let player: AVPlayer
     
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView()
+        let layer = AVPlayerLayer(player: player)
+        layer.videoGravity = .resizeAspectFill
+        layer.frame = UIScreen.main.bounds
+        v.layer.addSublayer(layer)
         
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.scrollView.isScrollEnabled = false
-        webView.backgroundColor = .black
-        webView.isOpaque = false
-        
-        let html = """
-        <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>body{margin:0;background:black;overflow:hidden}iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}</style></head>
-        <body><iframe src="https://www.youtube.com/embed/\(videoID)?autoplay=1&playsinline=1&controls=0&showinfo=0&rel=0&modestbranding=1&loop=1&playlist=\(videoID)" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe></body></html>
-        """
-        
-        webView.loadHTMLString(html, baseURL: nil)
-        return webView
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
+            player.seek(to: .zero)
+            player.play()
+        }
+        return v
     }
     
-    func updateUIView(_ webView: WKWebView, context: Context) {}
+    func updateUIView(_ v: UIView, context: Context) {}
 }
