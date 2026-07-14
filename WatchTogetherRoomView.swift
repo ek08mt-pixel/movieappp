@@ -78,6 +78,13 @@ struct WatchTogetherRoomView: View {
         FakeRoom(roomName: "Romcom", movieTitle: "How to Lose a Guy", viewerCount: 3, avatars: ["🐮","🐷","🐹"], isPrivate: false, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:38:55"),
     ]
     
+    var displayTitle: String {
+        if currentMovieTitle.isEmpty { return "Chọn phim" }
+        var title = currentMovieTitle
+        if let ep = selectedEpisode { title += " - S\(ep.seasonNumber):E\(ep.episodeNumber)" }
+        return title
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -105,23 +112,42 @@ struct WatchTogetherRoomView: View {
             Text("EMMEW")
                 .font(.system(size: 28, weight: .heavy))
                 .foregroundColor(.white)
-                .padding(.top, 50)
-                .padding(.bottom, 4)
+                .padding(.top, 52)
+                .padding(.bottom, 12)
             
-            HStack(spacing: 6) {
-                Image(systemName: "globe.americas.fill")
+            // Search bar fake
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
                     .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.8))
-                Text("Public")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.white.opacity(0.5))
+                Text("Search")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.5))
+                Spacer()
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+            
+            // Public + nút tạo phòng
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe.americas.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                    Text("Public")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
                 Spacer()
                 Button { showCreateRoom = true } label: {
                     Image(systemName: "plus.circle.fill").font(.system(size: 26)).foregroundColor(.white)
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 16)
+            .padding(.bottom, 12)
             
             ScrollView {
                 VStack(spacing: 10) {
@@ -138,42 +164,57 @@ struct WatchTogetherRoomView: View {
     func fakeRoomCard(_ room: FakeRoom) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
+                // Poster - không viền
                 if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
                     CachedAsyncImage(url: url)
                         .aspectRatio(16/9, contentMode: .fill)
-                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 80)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 78)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(.ultraThinMaterial.opacity(0.35))
-                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 80)
+                        .frame(width: UIScreen.main.bounds.width * 0.38, height: 78)
                         .overlay(Image(systemName: "play.circle.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)))
                 }
                 
-                VStack(alignment: .leading, spacing: 6) {
+                // Tiêu đề + avatar
+                VStack(spacing: 0) {
                     Text(room.movieTitle)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                    
+                    Spacer()
                     
                     HStack(spacing: 8) {
                         ForEach(room.avatars.prefix(4), id: \.self) { av in
                             Text(av)
-                                .font(.system(size: 13))
-                                .frame(width: 30, height: 30)
+                                .font(.system(size: 14))
+                                .frame(width: 32, height: 32)
                                 .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
                         }
+                        Spacer()
                     }
+                    .padding(.bottom, 2)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 78)
             }
+            .padding(.horizontal, 10)
+            .padding(.top, 10)
             
-            Rectangle()
-                .fill(.white.opacity(0.2))
-                .frame(height: 1.5)
-                .padding(.top, 8)
+            // Thanh tiến trình từ mép phải poster
+            HStack(spacing: 0) {
+                Color.clear.frame(width: UIScreen.main.bounds.width * 0.38 + 8)
+                Rectangle()
+                    .fill(.white.opacity(0.15))
+                    .frame(height: 1.5)
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
         }
-        .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(.ultraThinMaterial.opacity(0.2))
@@ -182,13 +223,6 @@ struct WatchTogetherRoomView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.06), lineWidth: 0.5)
         )
-    }
-    
-    var displayTitle: String {
-        if currentMovieTitle.isEmpty { return "Chọn phim" }
-        var title = currentMovieTitle
-        if let ep = selectedEpisode { title += " - S\(ep.seasonNumber):E\(ep.episodeNumber)" }
-        return title
     }
     
     // MARK: - Create Room
