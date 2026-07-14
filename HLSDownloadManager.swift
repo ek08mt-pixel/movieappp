@@ -56,22 +56,36 @@ class HLSDownloadManager: NSObject, ObservableObject {
     }
     
     private func downloadPlaylist(id: String, url: URL) {
-        var req = URLRequest(url: url)
-        req.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
-        
-        session.dataTask(with: req) { [weak self] data, _, error in
-            guard let self, let data, error == nil, let content = String(data: data, encoding: .utf8) else {
-                Task { @MainActor in self?.failDownload(id: id) }
-                return
-            }
-            let segs = self.parseSegments(content, baseURL: url)
-            guard !segs.isEmpty else {
-                Task { @MainActor in self.failDownload(id: id) }
-                return
-            }
-            Task { @MainActor in self.downloadAllSegments(id: id, segments: segs) }
-        }.resume()
+    var req = URLRequest(url: url)
+    req.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
+    
+    session.dataTask(with: req) { [weak self] data, _, error in
+        guard let data, error == nil, let content = String(data: data, encoding: .utf8) else {
+            Task { @MainActor in self?.failDownload(id: id) }
+            return
+        }
+        let segs = HLSDownloadManager.parseSegmentsStatic(content, baseURL: url)
+        guard !segs.isEmpty else {
+            Task { @MainActor in self?.failDownload(id: id) }
+            return
+        }
+        Task { @MainActor in self?.downloadAllSegments(id: id, segments: segs) }
+    }.resume()
+}
+
+// Đổi parseSegments thành static
+private static func parseSegmentsStatic(_ content: String, baseURL: URL) -> [URL] {
+    var urls: [URL] = []
+    let baseDir = baseURL.deletingLastPathComponent()
+    for line in content.components(separatedBy: .newlines) {
+        let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty || t.hasPrefix("#") { continue }
+        if t.hasSuffix(".ts") || t.hasSuffix(".m4s") {
+            if let u = URL(string: t, relativeTo: t.hasPrefix("http") ? nil : baseDir) { urls.append(u) }
+        }
     }
+    return urls
+}
     
     private func parseSegments(_ content: String, baseURL: URL) -> [URL] {
         var urls: [URL] = []
