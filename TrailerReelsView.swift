@@ -151,27 +151,13 @@ struct TrailerReelsView: View {
 struct TrailerCardView: View {
     let trailer: TrailerVideo
     let isActive: Bool
-    @State private var player: AVPlayer?
-    @State private var loadedURL: URL?
-    @State private var isMuted = false
     @State private var showDetail = false
     
     var body: some View {
         ZStack {
-            if let player = player {
-                TrailerPlayerView(player: player).ignoresSafeArea()
-                    .onAppear { if isActive { player.play() } }
-                    .onDisappear { player.pause() }
-            } else {
-                ZStack {
-                    if let path = trailer.backdropPath ?? trailer.posterPath {
-                        CachedAsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w780\(path)"))
-                            .aspectRatio(contentMode: .fill).frame(maxWidth: .infinity, maxHeight: .infinity).blur(radius: 20)
-                    }
-                    Color.black.opacity(0.4)
-                    ProgressView().tint(.white).scaleEffect(1.2)
-                }.ignoresSafeArea()
-            }
+            YouTubeEmbedView(videoID: trailer.key)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             
             VStack {
                 Spacer()
@@ -196,27 +182,17 @@ struct TrailerCardView: View {
                     VStack(spacing: 20) {
                         Button {
                             showDetail = true
-                            player?.pause()
                         } label: {
                             VStack(spacing: 3) {
                                 Image(systemName: "play.rectangle.fill").font(.system(size: 28)).foregroundColor(.white)
                                 Text("Xem").font(.system(size: 9, weight: .bold)).foregroundColor(.white)
                             }
                         }
-                        Button {
-                            isMuted.toggle()
-                            player?.isMuted = isMuted
-                        } label: {
-                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                .font(.system(size: 22)).foregroundColor(.white)
-                        }
                     }
                 }
                 .padding(.horizontal, 20).padding(.bottom, 40)
             }
         }
-        .onChange(of: isActive) { a in if a { player?.play(); loadIfNeeded() } else { player?.pause() } }
-        .onAppear { if isActive { loadIfNeeded() } }
         .sheet(isPresented: $showDetail) {
             NavigationStack {
                 MovieDetailView(movie: Movie(
@@ -226,20 +202,6 @@ struct TrailerCardView: View {
                     genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil,
                     adult: false, originalLanguage: nil, mediaType: "movie"
                 ))
-            }
-        }
-    }
-    
-    private func loadIfNeeded() {
-        guard loadedURL == nil else { return }
-        Task {
-            if let url = await TrailerService.shared.resolveStreamURL(youtubeKey: trailer.key) {
-                await MainActor.run {
-                    loadedURL = url
-                    let p = AVPlayer(url: url)
-                    p.isMuted = isMuted
-                    self.player = p
-                }
             }
         }
     }
