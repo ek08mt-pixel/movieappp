@@ -198,23 +198,13 @@ struct LibraryView: View {
             Spacer()
             
             VStack(spacing: 10) {
-                if item.status == .downloading {
+                if item.status == .downloading || item.status == .paused {
                     Button {
-                        dm.pause(item.id)
+                        dm.cancel(item.id)
                     } label: {
-                        Image(systemName: "pause.fill")
+                        Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(.white)
-                            .padding(8)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                    }
-                } else if item.status == .paused {
-                    Button {
-                        dm.resume(item.id)
-                    } label: {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white)
+                            .foregroundColor(.red.opacity(0.7))
                             .padding(8)
                             .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                     }
