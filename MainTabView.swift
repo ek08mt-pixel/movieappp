@@ -32,7 +32,7 @@ struct MainTabView: View {
             }
             
             if !showWatchTogetherRoom {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     HStack(spacing: 0) {
                         LiquidTabIcon(
                             icon: "house.fill",
@@ -43,33 +43,33 @@ struct MainTabView: View {
                         }
                         LiquidTabIcon(
                             icon: "safari.fill",
-                            label: "Khám phá",
+                            label: "Explore",
                             isSelected: selectedTab == 1
                         ) {
                             if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
                         }
                         LiquidTabIcon(
                             icon: "rectangle.stack.fill",
-                            label: "Thư viện",
+                            label: "Library",
                             isSelected: selectedTab == 2
                         ) {
                             if selectedTab == 2 { libraryID = UUID() } else { selectedTab = 2 }
                         }
                         LiquidTabIcon(
                             icon: "person.3.fill",
-                            label: "Cùng xem",
+                            label: "Watch",
                             isSelected: selectedTab == 3
                         ) {
                             if selectedTab == 3 { watchTogetherID = UUID() } else { selectedTab = 3 }
                         }
                     }
-                    .padding(.vertical, 10).padding(.horizontal, 16)
+                    .padding(.vertical, 14).padding(.horizontal, 22)
                     .background(
                         Capsule()
-                            .fill(.ultraThinMaterial.opacity(0.6))
+                            .fill(.ultraThinMaterial.opacity(0.5))
                             .overlay(
                                 Capsule()
-                                    .stroke(.white.opacity(0.12), lineWidth: 0.3)
+                                    .stroke(.white.opacity(0.1), lineWidth: 0.3)
                             )
                     )
                     
@@ -77,13 +77,13 @@ struct MainTabView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 22, weight: .medium))
                             .foregroundColor(.white.opacity(0.7))
-                            .padding(.vertical, 10).padding(.horizontal, 14)
+                            .padding(.vertical, 14).padding(.horizontal, 16)
                             .background(
                                 Capsule()
-                                    .fill(.ultraThinMaterial.opacity(0.6))
+                                    .fill(.ultraThinMaterial.opacity(0.5))
                                     .overlay(
                                         Capsule()
-                                            .stroke(.white.opacity(0.12), lineWidth: 0.3)
+                                            .stroke(.white.opacity(0.1), lineWidth: 0.3)
                                     )
                             )
                     }
@@ -215,35 +215,25 @@ struct LiquidTabIcon: View {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(.white.opacity(0.18))
-                        .frame(width: 80, height: 44)
+                        .fill(.white.opacity(0.2))
+                        .frame(width: 76, height: 50)
                         .overlay(
                             Capsule()
-                                .fill(.ultraThinMaterial.opacity(0.5))
+                                .fill(.ultraThinMaterial.opacity(0.4))
                         )
                         .overlay(
                             Capsule()
-                                .stroke(.white.opacity(0.2), lineWidth: 0.3)
+                                .stroke(.white.opacity(0.25), lineWidth: 0.3)
                         )
                 }
                 
-                if isSelected {
-                    HStack(spacing: 6) {
-                        Image(systemName: icon)
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(label)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(.white)
-                } else {
-                    VStack(spacing: 2) {
-                        Image(systemName: icon)
-                            .font(.system(size: 18, weight: .regular))
-                        Text(label)
-                            .font(.system(size: 9, weight: .regular))
-                    }
-                    .foregroundColor(.white.opacity(0.45))
+                VStack(spacing: 2) {
+                    Image(systemName: icon)
+                        .font(.system(size: isSelected ? 16 : 18, weight: isSelected ? .semibold : .regular))
+                    Text(label)
+                        .font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .medium : .regular))
                 }
+                .foregroundColor(isSelected ? .white : .white.opacity(0.45))
             }
             .scaleEffect(isPressed ? 0.92 : 1.0)
             .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
