@@ -10,7 +10,7 @@ struct LibraryView: View {
     @State private var offlineTitle = ""
     
     enum LibraryTab: String, CaseIterable {
-        case watched = "Từng xem"
+        case watched = "Vừa xem"
         case saved = "Đã lưu"
         case downloads = "Đã tải"
     }
