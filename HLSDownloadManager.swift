@@ -1,5 +1,6 @@
+import Foundation
 import AVFoundation
-import SwiftUI
+import WebKit
 
 struct DownloadItem: Identifiable, Codable {
     let id: String
@@ -20,21 +21,19 @@ struct DownloadItem: Identifiable, Codable {
 }
 
 @MainActor
-class HLSDownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
+class HLSDownloadManager: NSObject, ObservableObject {
     static let shared = HLSDownloadManager()
     @Published var downloads: [DownloadItem] = []
     
     private let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private var activeTasks: [String: URLSessionDownloadTask] = [:]
-    private var pendingSegments: [String: [URL]] = [:]
-    private var completedSegments: [String: Int] = [:]
-    private var totalSegments: [String: Int] = [:]
-    private lazy var session: URLSession = {
-    let config = URLSessionConfiguration.default
-    return URLSession(configuration: config, delegate: self, delegateQueue: OperationQueue.main)
-}()
+    private let session: URLSession
+    private var activeTasks: [String: (task: URLSessionDataTask, segments: [String], completed: Int)] = [:]
     
     override init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 600
+        session = URLSession(configuration: config)
         super.init()
         loadDownloads()
     }
@@ -52,85 +51,112 @@ class HLSDownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate
         }
         saveDownloads()
         
-        // Tải playlist m3u8 trước
-        let task = session.downloadTask(with: url)
-        task.taskDescription = "playlist_\(id)"
-        activeTasks[id] = task
+        downloadPlaylist(id: id, url: url)
+    }
+    
+    private func downloadPlaylist(id: String, url: URL) {
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
+        
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self, let data = data, error == nil,
+                  let content = String(data: data, encoding: .utf8) else {
+                Task { @MainActor in self?.failDownload(id: id) }
+                return
+            }
+            
+            let segments = self.parseSegments(from: content, baseURL: url)
+            guard !segments.isEmpty else {
+                Task { @MainActor in self?.failDownload(id: id) }
+                return
+            }
+            
+            Task { @MainActor in
+                self.activeTasks[id] = (task: task, segments: segments, completed: 0)
+                self.downloadAllSegments(id: id, segments: segments, baseURL: url)
+            }
+        }
         task.resume()
     }
     
-    private func downloadSegments(from playlistData: Data, baseURL: URL, id: String) {
-        guard let content = String(data: playlistData, encoding: .utf8) else {
-            failDownload(id: id)
-            return
-        }
-        
-        var segmentURLs: [URL] = []
+    private func parseSegments(from content: String, baseURL: URL) -> [String] {
+        var segments: [String] = []
         let lines = content.components(separatedBy: .newlines)
+        let baseDir = baseURL.deletingLastPathComponent()
+        
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") && trimmed.hasSuffix(".ts") {
-                let segmentURL: URL
-                if trimmed.hasPrefix("http") {
-                    segmentURL = URL(string: trimmed)!
-                } else {
-                    segmentURL = baseURL.deletingLastPathComponent().appendingPathComponent(trimmed)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                if trimmed.hasSuffix(".ts") || trimmed.hasSuffix(".m4s") {
+                    if trimmed.hasPrefix("http") {
+                        segments.append(trimmed)
+                    } else if trimmed.hasPrefix("/") {
+                        segments.append("\(baseURL.scheme ?? "https")://\(baseURL.host ?? "")\(trimmed)")
+                    } else {
+                        segments.append(baseDir.appendingPathComponent(trimmed).absoluteString)
+                    }
                 }
-                segmentURLs.append(segmentURL)
             }
         }
-        
-        guard !segmentURLs.isEmpty else {
-            failDownload(id: id)
-            return
-        }
-        
-        pendingSegments[id] = segmentURLs
-        totalSegments[id] = segmentURLs.count
-        completedSegments[id] = 0
-        
-        // Tải từng segment
-        for (index, segURL) in segmentURLs.enumerated() {
-            let task = session.downloadTask(with: segURL)
-            task.taskDescription = "segment_\(id)_\(index)"
-            task.resume()
-        }
+        return segments
     }
     
-    private func checkAllSegmentsDone(id: String) {
-        let completed = completedSegments[id] ?? 0
-        let total = totalSegments[id] ?? 0
-        
-        if let idx = downloads.firstIndex(where: { $0.id == id }) {
-            downloads[idx].progress = total > 0 ? Double(completed) / Double(total) : 0
-        }
-        
-        if completed >= total && total > 0 {
-            completeDownload(id: id)
-        }
-    }
-    
-    private func completeDownload(id: String) {
-        guard let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
-        
-        // Tạo local m3u8 playlist với relative paths
+    private func downloadAllSegments(id: String, segments: [String], baseURL: URL) {
         let destDir = docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
-        let localPlaylist = destDir.appendingPathComponent("playlist.m3u8")
+        try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
         
-        var playlistContent = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
-        let total = totalSegments[id] ?? 0
-        for i in 0..<total {
-            playlistContent += "#EXTINF:10.0,\n"
-            playlistContent += "segment_\(i).ts\n"
+        // Tạo playlist local
+        var playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
+        for i in 0..<segments.count {
+            playlist += "#EXTINF:10.0,\nsegment_\(i).ts\n"
         }
-        playlistContent += "#EXT-X-ENDLIST\n"
+        playlist += "#EXT-X-ENDLIST\n"
+        try? playlist.write(to: destDir.appendingPathComponent("playlist.m3u8"), atomically: true, encoding: .utf8)
         
-        try? playlistContent.write(to: localPlaylist, atomically: true, encoding: .utf8)
+        let total = segments.count
+        var completed = 0
+        let group = DispatchGroup()
         
-        downloads[idx].localURL = localPlaylist
-        downloads[idx].status = .completed
-        downloads[idx].progress = 1.0
-        saveDownloads()
+        for (index, segURLStr) in segments.enumerated() {
+            guard let segURL = URL(string: segURLStr) else { continue }
+            
+            group.enter()
+            var request = URLRequest(url: segURL)
+            request.setValue("video/mp2t", forHTTPHeaderField: "Accept")
+            
+            session.dataTask(with: request) { data, response, error in
+                defer { group.leave() }
+                
+                if let data = data, error == nil {
+                    let destFile = destDir.appendingPathComponent("segment_\(index).ts")
+                    try? data.write(to: destFile)
+                    completed += 1
+                    
+                    Task { @MainActor in
+                        if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
+                            self.downloads[idx].progress = Double(completed) / Double(total)
+                        }
+                    }
+                }
+            }.resume()
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            Task { @MainActor in
+                if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
+                    if completed == total {
+                        self.downloads[idx].status = .completed
+                        self.downloads[idx].progress = 1.0
+                        self.downloads[idx].localURL = destDir.appendingPathComponent("playlist.m3u8")
+                    } else {
+                        self.downloads[idx].status = .failed
+                    }
+                    self.saveDownloads()
+                }
+                self.activeTasks[id] = nil
+            }
+        }
     }
     
     private func failDownload(id: String) {
@@ -140,85 +166,28 @@ class HLSDownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate
         saveDownloads()
     }
     
-    // MARK: - URLSessionDownloadDelegate
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        guard let desc = downloadTask.taskDescription else { return }
-        
-        if desc.hasPrefix("playlist_") {
-            let id = String(desc.dropFirst("playlist_".count))
-            guard let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
-            
-            let destDir = docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
-            try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
-            
-            if let data = try? Data(contentsOf: location) {
-                downloadSegments(from: data, baseURL: downloads[idx].streamURL, id: id)
-            } else {
-                failDownload(id: id)
-            }
-        } else if desc.hasPrefix("segment_") {
-            let parts = desc.components(separatedBy: "_")
-            guard parts.count >= 3 else { return }
-            let id = parts[1]
-            let segIndex = parts[2]
-            
-            let destDir = docsDir.appendingPathComponent("Downloads/\(id)", isDirectory: true)
-            let destFile = destDir.appendingPathComponent("segment_\(segIndex).ts")
-            try? FileManager.default.removeItem(at: destFile)
-            try? FileManager.default.moveItem(at: location, to: destFile)
-            
-            completedSegments[id] = (completedSegments[id] ?? 0) + 1
-            checkAllSegmentsDone(id: id)
-        }
-    }
-    
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error, let desc = task.taskDescription {
-            if desc.hasPrefix("segment_") {
-                let parts = desc.components(separatedBy: "_")
-                if parts.count >= 3 {
-                    let id = parts[1]
-                    if (error as NSError).code != NSURLErrorCancelled {
-                        failDownload(id: id)
-                    }
-                }
-            } else if desc.hasPrefix("playlist_") {
-                let id = String(desc.dropFirst("playlist_".count))
-                if (error as NSError).code != NSURLErrorCancelled {
-                    failDownload(id: id)
-                }
-            }
-        }
-    }
-    
     func cancel(_ id: String) {
-        activeTasks[id]?.cancel()
         activeTasks[id] = nil
-        pendingSegments[id] = nil
         failDownload(id: id)
     }
     
     func delete(_ id: String) {
-        activeTasks[id]?.cancel()
         activeTasks[id] = nil
-        pendingSegments[id] = nil
-        if let idx = downloads.firstIndex(where: { $0.id == id }), let url = downloads[idx].localURL {
+        if let item = downloads.first(where: { $0.id == id }), let url = item.localURL {
             try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
         }
         downloads.removeAll { $0.id == id }
-        completedSegments[id] = nil
-        totalSegments[id] = nil
         saveDownloads()
     }
     
     private func saveDownloads() {
         if let data = try? JSONEncoder().encode(downloads) {
-            UserDefaults.standard.set(data, forKey: "hls_downloads_v4")
+            UserDefaults.standard.set(data, forKey: "hls_downloads_v5")
         }
     }
     
     private func loadDownloads() {
-        if let data = UserDefaults.standard.data(forKey: "hls_downloads_v4"),
+        if let data = UserDefaults.standard.data(forKey: "hls_downloads_v5"),
            let items = try? JSONDecoder().decode([DownloadItem].self, from: data) {
             downloads = items
             for i in 0..<downloads.count where downloads[i].status == .downloading {
