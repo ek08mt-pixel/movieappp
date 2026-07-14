@@ -227,3 +227,40 @@ struct TrailerPlayerView: UIViewRepresentable {
     
     func updateUIView(_ v: UIView, context: Context) {}
 }
+
+// MARK: - YouTubeEmbedView
+struct YouTubeEmbedView: UIViewRepresentable {
+    let videoID: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.scrollView.isScrollEnabled = false
+        webView.backgroundColor = .black
+        webView.isOpaque = false
+        
+        let html = """
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        body { margin:0; background:black; overflow:hidden; }
+        iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+        </style>
+        </head>
+        <body>
+        <iframe src="https://www.youtube.com/embed/\(videoID)?autoplay=1&playsinline=1&controls=0&showinfo=0&rel=0&modestbranding=1&loop=1&playlist=\(videoID)"
+        allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        </body>
+        </html>
+        """
+        
+        webView.loadHTMLString(html, baseURL: nil)
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {}
+}
