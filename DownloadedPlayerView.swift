@@ -16,22 +16,16 @@ struct DownloadedPlayerView: View {
                     .onAppear { player.play() }
                     .onDisappear { player.pause() }
             }
-            
             VStack {
                 HStack {
                     Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(10)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                     }
                     Spacer()
                     Text(title).font(.caption).foregroundColor(.white).lineLimit(1)
                     Spacer()
                     Circle().fill(.clear).frame(width: 36)
-                }
-                .padding(.horizontal, 16).padding(.top, 50)
+                }.padding(.horizontal, 16).padding(.top, 50)
                 Spacer()
             }
         }
