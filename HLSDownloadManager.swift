@@ -143,14 +143,14 @@ class HLSDownloadManager: NSObject, ObservableObject {
         group.notify(queue: .main) { [weak self] in
             guard let self else { return }
             
-            // Tạo local playlist dùng scheme localhls://
-            var playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n"
-            for i in 0..<total {
-                let segPath = destDir.appendingPathComponent("segment_\(i).ts").path
-                playlist += "#EXTINF:10.0,\n"
-                playlist += "\(LocalHLSProtocol.scheme)://localhost\(segPath)\n"
-            }
-            playlist += "#EXT-X-ENDLIST\n"
+            // Tạo local playlist dùng custom scheme
+var playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n"
+for i in 0..<total {
+    let segName = "segment_\(i).ts"
+    playlist += "#EXTINF:10.0,\n"
+    playlist += "hls-custom://segment/\(segName)\n"
+}
+playlist += "#EXT-X-ENDLIST\n"
             
             let playlistURL = destDir.appendingPathComponent("playlist.m3u8")
             try? playlist.write(to: playlistURL, atomically: true, encoding: .utf8)
