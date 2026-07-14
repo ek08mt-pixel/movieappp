@@ -20,7 +20,7 @@ struct DownloadItem: Identifiable, Codable {
 }
 
 final class AtomicInteger {
-    private var value: Int = 0
+    private(set) var value: Int = 0
     private let lock = NSLock()
     func increment() -> Int { lock.lock(); value += 1; let v = value; lock.unlock(); return v }
 }
@@ -66,7 +66,7 @@ class HLSDownloadManager: NSObject, ObservableObject {
             }
             let segs = self.parseSegments(content, baseURL: url)
             guard !segs.isEmpty else {
-                Task { @MainActor in self?.failDownload(id: id) }
+                Task { @MainActor in self.failDownload(id: id) }
                 return
             }
             Task { @MainActor in self.downloadAllSegments(id: id, segments: segs) }
