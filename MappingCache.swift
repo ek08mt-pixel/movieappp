@@ -35,10 +35,8 @@ final class MappingCache {
     func getSofaflixURL(tmdbID: Int, season: Int, episode: Int) -> String? { dict(for: sofaflixKey)["\(tmdbID)_S\(season)E\(episode)"] }
     func setSofaflixURL(tmdbID: Int, season: Int, episode: Int, url: String) { var d = dict(for: sofaflixKey); d["\(tmdbID)_S\(season)E\(episode)"] = url; save(d, for: sofaflixKey) }
     func getHardcodedSlug(tmdbID: Int, season: Int) -> String? { hardcodedSlugs["\(tmdbID)_\(season)"] }
-    private func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
-    private func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
     func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
-func saveDict(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
+    func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
     func clearAll() { defaults.removeObject(forKey: nguonCKey); defaults.removeObject(forKey: vsmovKey); defaults.removeObject(forKey: stravoKey); defaults.removeObject(forKey: phimapiKey); defaults.removeObject(forKey: sofaflixKey) }
 }
 
@@ -294,7 +292,7 @@ final class PhimAPIService {
                     let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
                     let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: nil, episode: nil, serverIndex: serverIndex)
                     if let streamURL = result.url {
-                        self.cache.saveDict(["\(cacheKey)": streamURL.absoluteString], for: "phimapi_stream_cache")
+                        self.cache.save(["\(cacheKey)": streamURL.absoluteString], for: "phimapi_stream_cache")
                         completion(.success((streamURL, result.servers)))
                         return
                     }
@@ -381,7 +379,6 @@ final class PhimAPIService {
                 }
                 let effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 
-                // Chọn server theo index
                 let targetServers: [[String: Any]]
                 if serverIndex < episodes.count {
                     targetServers = [episodes[serverIndex]]
@@ -401,7 +398,6 @@ final class PhimAPIService {
                         }
                     }
                 }
-                // Fallback tất cả server
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
@@ -439,7 +435,6 @@ final class PhimAPIService {
         return (nil, serverNames)
     }
     
-    // Giữ nguyên các function còn lại: findBestMatch, extractStreamURL cũ...
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
