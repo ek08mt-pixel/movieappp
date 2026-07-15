@@ -207,10 +207,18 @@ if showNextEpisodePopup {
     showNextEpisodePopup = false
     autoNextTriggered = true
     loadStream(season: seasonNumber, episode: ep + 1)
+    // Reset autoNextTriggered sau 5 giây
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        autoNextTriggered = false
+    }
 }
-    func skipNextEpisode() {
+
+func skipNextEpisode() {
     showNextEpisodePopup = false
     autoNextTriggered = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        autoNextTriggered = false
+    }
 }
     func toggleOrientationLock() { isOrientationLocked.toggle(); if isOrientationLocked { lockToLandscape() } }
     
