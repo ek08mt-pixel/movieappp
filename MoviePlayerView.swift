@@ -225,17 +225,24 @@ struct MoviePlayerView: View {
     func fetchIMDB() async throws -> String {
     if let cached = imdbIDCache { return cached }
     
-    // Dùng function mới có validation
+    // Lấy năm từ movie info
+    var releaseYear: String? = nil
+    if let detail = try? await APIService.shared.movieDetail(movieId: movieId),
+       let date = detail.releaseDate {
+        releaseYear = String(date.prefix(4))
+    }
+    
     if let validatedID = try? await APIService.shared.fetchExternalIDsWithValidation(
         tmdbId: movieId,
         mediaType: mediaType,
-        expectedTitle: movieTitle
+        expectedTitle: movieTitle,
+        expectedYear: releaseYear
     ), !validatedID.isEmpty {
         imdbIDCache = validatedID
         return validatedID
     }
     
-    // Fallback về cách cũ
+    // Fallback
     var id: String?
     if mediaType == "tv" || seasonNumber != nil {
         id = try? await APIService.shared.fetchExternalIDs(tvId: movieId)
