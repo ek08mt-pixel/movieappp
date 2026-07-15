@@ -37,6 +37,8 @@ final class MappingCache {
     func getHardcodedSlug(tmdbID: Int, season: Int) -> String? { hardcodedSlugs["\(tmdbID)_\(season)"] }
     private func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
     private func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
+    func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
+func saveDict(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
     func clearAll() { defaults.removeObject(forKey: nguonCKey); defaults.removeObject(forKey: vsmovKey); defaults.removeObject(forKey: stravoKey); defaults.removeObject(forKey: phimapiKey); defaults.removeObject(forKey: sofaflixKey) }
 }
 
