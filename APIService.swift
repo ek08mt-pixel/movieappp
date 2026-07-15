@@ -231,47 +231,6 @@ class APIService {
         return try decoder.decode(E.self, from: data).imdb_id
     }
     
-    func fetchExternalIDsWithValidation(tmdbId: Int, mediaType: String?, expectedTitle: String, expectedYear: String? = nil) async throws -> String? {
-    let imdbID: String?
-    if mediaType == "tv" {
-        imdbID = try await fetchExternalIDs(tvId: tmdbId)
-    } else {
-        let urlString = "\(baseURL)/movie/\(tmdbId)/external_ids?api_key=\(apiKey)"
-        guard let url = URL(string: urlString) else { return nil }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        struct E: Codable { let imdb_id: String? }
-        imdbID = try decoder.decode(E.self, from: data).imdb_id
-    }
-    
-    guard let imdbID = imdbID, !imdbID.isEmpty else { return nil }
-    
-    let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=8b2f8c0"
-    guard let url = URL(string: omdbURL) else { return imdbID }
-    
-    do {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let title = json["Title"] as? String {
-            
-            // Check năm nếu có
-            if let expectedYear = expectedYear,
-               let year = json["Year"] as? String {
-                if !year.contains(expectedYear) {
-                    print("⚠️ Year mismatch: expected \(expectedYear), got \(year)")
-                    return nil
-                }
-            }
-            
-            // Check title
-            let similarity = title.lowercased().components(separatedBy: " ").filter { expectedTitle.lowercased().contains($0.lowercased()) }.count
-            if similarity >= 2 || title.lowercased().contains(expectedTitle.lowercased()) {
-                return imdbID
-            }
-        }
-    } catch {}
-    
-    return imdbID
-}
     func collectionDetail(collectionId: Int) async throws -> CollectionDetail? {
         let urlString = "\(baseURL)/collection/\(collectionId)?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return nil }
