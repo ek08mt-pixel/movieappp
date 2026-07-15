@@ -256,31 +256,34 @@ final class PhimAPIService {
     private init() {}
     
     func fetchStream(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let s = season ?? 1; let ep = episode ?? 1
-        let isSeries = (mediaType == "tv") || (season != nil)
-        
-        if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
-        
+    let s = season ?? 1; let ep = episode ?? 1
+    let isSeries = (mediaType == "tv") || (season != nil)
     
-        
-        let path = isSeries ? "tv" : "movie"
-guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true, let movie = json["movie"] as? [String: Any] {
-                    let phimType = movie["type"] as? String ?? "single"
-                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: nil, episode: nil) {
-                        self.cache.setPhimAPIURL(tmdbID: tmdbID, season: 0, episode: 0, url: streamURL.absoluteString)
-                        completion(.success(streamURL)); return
-                    }
+    if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
+    
+    let path = isSeries ? "tv" : "movie"
+    guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
+    
+    URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
+        guard let self = self else { return }
+        if let error = error { completion(.failure(error)); return }
+        guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true {
+                let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
+                if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
+                    self.cache.setPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep, url: streamURL.absoluteString)
+                    completion(.success(streamURL)); return
                 }
+                completion(.failure(StreamServiceError.noStreamURL))
+            } else {
                 self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
-            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion) }
-        }.resume()
-    }
+            }
+        } catch {
+            self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
+        }
+    }.resume()
+}
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
@@ -323,59 +326,67 @@ guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { comp
     }
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
-        let isSeries = (mediaType == "tv") || (season != nil)
-        let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-        let targetSeason = season ?? 1
-        // ƯU TIÊN CAO NHẤT: khớp TMDB ID
-if let exact = items.first(where: {
-    ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
-}) { return exact }
-        
-        if let exact = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
-            extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
-        }) { return exact }
-        
-        if let seasonMatch = items.first(where: {
+    let isSeries = (mediaType == "tv") || (season != nil)
+    let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+    let targetSeason = season ?? 1
+    
+    // 1. Ưu tiên khớp TMDB ID
+    if let exact = items.first(where: {
+        ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+    }) { return exact }
+    
+    // 2. Khớp TMDB ID + season
+    if let exact = items.first(where: {
+        ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
+        extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
+    }) { return exact }
+    
+    // 3. Khớp origin_name chứa title + season
+    if let seasonMatch = items.first(where: {
+        guard isSeriesType($0["type"] as? String ?? "") else { return false }
+        let origin = ($0["origin_name"] as? String ?? "").lowercased()
+        let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
+        return s == targetSeason && origin.contains(normalizedTitle)
+    }) { return seasonMatch }
+    
+    // 4. Khớp TMDB ID + season trong tmdb object
+    if let exact = items.first(where: {
+        ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
+        ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
+    }) { return exact }
+    
+    // 5. Series: khớp origin_name chứa title
+    if isSeries {
+        let fallbackMatch = items.first(where: {
             guard isSeriesType($0["type"] as? String ?? "") else { return false }
             let origin = ($0["origin_name"] as? String ?? "").lowercased()
-            let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
-            return s == targetSeason && origin.contains(normalizedTitle)
-        }) { return seasonMatch }
-        
-        if let exact = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
-            ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
-        }) { return exact }
-        
-        if isSeries {
-            let fallbackMatch = items.first(where: {
-                guard isSeriesType($0["type"] as? String ?? "") else { return false }
-                let origin = ($0["origin_name"] as? String ?? "").lowercased()
-                let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
-                return (s == 1 || s == nil) && origin.contains(normalizedTitle)
-            })
-            if let match = fallbackMatch { return match }
-        }
-        
-        if let sameTMDB = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
-        }) { return sameTMDB }
-        
-        if isSeries {
-            let matched = items.filter { item in
-                guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                let origin = (item["origin_name"] as? String ?? "").lowercased()
-                return origin.contains(normalizedTitle)
-            }
-            if !matched.isEmpty { return matched.first }
-        }
-        
-        if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
-        
-        if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
-        return items.first(where: { isSingleType($0["type"] as? String ?? "") })
+            return origin.contains(normalizedTitle)
+        })
+        if let match = fallbackMatch { return match }
     }
+    
+    // 6. Khớp TMDB ID (bất kể season)
+    if let sameTMDB = items.first(where: {
+        ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+    }) { return sameTMDB }
+    
+    // 7. Series: khớp origin_name
+    if isSeries {
+        let matched = items.filter { item in
+            guard isSeriesType(item["type"] as? String ?? "") else { return false }
+            let origin = (item["origin_name"] as? String ?? "").lowercased()
+            return origin.contains(normalizedTitle)
+        }
+        if !matched.isEmpty { return matched.first }
+    }
+    
+    // 8. Khớp exact origin_name
+    if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
+    
+    // 9. Fallback: first series hoặc first movie
+    if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
+    return items.first(where: { isSingleType($0["type"] as? String ?? "") })
+}
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
