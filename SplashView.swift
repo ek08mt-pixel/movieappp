@@ -97,7 +97,7 @@ struct SplashView: View {
     }
     
     func proceedToApp() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeInOut(duration: 0.5)) { showMain = true; isLoading = false }
         }
     }
