@@ -261,10 +261,7 @@ final class PhimAPIService {
         
         if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
         
-        if isSeries {
-            fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
-            return
-        }
+    
         
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
