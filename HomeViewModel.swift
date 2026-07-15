@@ -20,7 +20,6 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     
     init() {
-        // Preload ngay khi init để có data sớm nhất
         Task { await loadAll() }
     }
     
@@ -28,8 +27,8 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Ưu tiên 1: Load trending + genres trước (hiển thị banner + thể loại ngay)
-        async let trendingTask = APIService.shared.trending24h()
+        // Chỉ tải 2 page trending + genres trước
+        async let trendingTask = APIService.shared.trending24hFast()
         async let genresTask = APIService.shared.genres()
         
         if let trending = try? await trendingTask {
@@ -38,56 +37,38 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        // Ưu tiên 2: Trending TV (section dưới banner)
-        Task { [weak self] in
-            guard let self = self else { return }
-            let tv = await self.loadTrendingTVPages()
+        // UI hiện ngay sau dòng này vì trending24h + genres đã có
+        
+        // Load các section còn lại trong background, không block UI
+        Task {
+            let tv = await loadTrendingTVPages()
             await MainActor.run { self.trendingTV = tv }
         }
         
-        // Ưu tiên 3: Các section còn lại - load song song nhưng không block UI
         Task {
-            async let nowPlayingTask = APIService.shared.nowPlaying()
-            async let topRatedTask = APIService.shared.topRated()
-            async let koreanTask = APIService.shared.koreanMovies()
-            async let usukTask = APIService.shared.usukMovies()
+            async let np = APIService.shared.nowPlaying()
+            async let tr = APIService.shared.topRated()
+            async let ko = APIService.shared.koreanMovies()
+            async let us = APIService.shared.usukMovies()
+            async let up = APIService.shared.upcoming()
+            async let ja = APIService.shared.japaneseMovies()
+            async let vi = APIService.shared.vietnameseMovies()
+            async let an = APIService.shared.animeMovies()
             
-            let np = try? await nowPlayingTask
-            let tr = try? await topRatedTask
-            let ko = try? await koreanTask
-            let us = try? await usukTask
-            
+            let (now, top, k, u, upc, j, v, a) = await (try? np, try? tr, try? ko, try? us, try? up, try? ja, try? vi, try? an)
             await MainActor.run {
-                if let np = np { self.nowPlaying = np }
-                if let tr = tr { self.topRated = tr }
-                if let ko = ko { self.korean = ko }
-                if let us = us { self.usuk = us }
+                if let now = now { self.nowPlaying = now }
+                if let top = top { self.topRated = top }
+                if let k = k { self.korean = k }
+                if let u = u { self.usuk = u }
+                if let upc = upc { self.upcoming = upc }
+                if let j = j { self.japanese = j }
+                if let v = v { self.vietnamese = v }
+                if let a = a { self.anime = a }
             }
         }
         
-        // Ưu tiên 4: Các section phụ
-        Task {
-            async let upcomingTask = APIService.shared.upcoming()
-            async let japaneseTask = APIService.shared.japaneseMovies()
-            async let vietnameseTask = APIService.shared.vietnameseMovies()
-            async let animeTask = APIService.shared.animeMovies()
-            
-            let up = try? await upcomingTask
-            let ja = try? await japaneseTask
-            let vi = try? await vietnameseTask
-            let an = try? await animeTask
-            
-            await MainActor.run {
-                if let up = up { self.upcoming = up }
-                if let ja = ja { self.japanese = ja }
-                if let vi = vi { self.vietnamese = vi }
-                if let an = an { self.anime = an }
-            }
-        }
-        
-        // OnThisDay - nhẹ, load cuối
         onThisDayMovie = await loadOnThisDay()
-        
         isLoading = false
     }
     
@@ -139,10 +120,8 @@ class HomeViewModel: ObservableObject {
     }
     
     private func loadTrendingTVPages() async -> [Movie] {
-        var allTV: [Movie] = []
-        // Giảm xuống 1 page, mỗi page 20 item là đủ hiển thị
         let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=1"
-        guard let url = URL(string: urlString) else { return allTV }
+        guard let url = URL(string: urlString) else { return [] }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct TVResponse: Codable { let results: [TVResult] }
@@ -154,7 +133,7 @@ class HomeViewModel: ObservableObject {
                 let vote_count: Int?; let original_language: String?
             }
             let response = try JSONDecoder().decode(TVResponse.self, from: data)
-            let tvShows = response.results.map { tv in
+            return response.results.map { tv in
                 Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
                       posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
                       voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
@@ -162,8 +141,6 @@ class HomeViewModel: ObservableObject {
                       popularity: tv.popularity, voteCount: tv.vote_count,
                       adult: false, originalLanguage: tv.original_language, mediaType: "tv")
             }
-            allTV.append(contentsOf: tvShows)
-        } catch {}
-        return allTV
+        } catch { return [] }
     }
 }
