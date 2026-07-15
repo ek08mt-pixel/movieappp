@@ -286,7 +286,7 @@ func skipNextEpisode() {
             if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup {
     showNextEpisodePopup = true
 }
-    
+ }
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
     func resetControlsTimer(){controlsTimer?.invalidate();controlsTimer=Timer.scheduledTimer(withTimeInterval:4,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showControls=false}}}
