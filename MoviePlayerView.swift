@@ -45,7 +45,14 @@ struct MoviePlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
-                .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape() }
+                .onAppear {
+                    player.play()
+                    player.volume = volume
+                    setupTimeObserver()
+                    resetControlsTimer()
+                    loadOverlayData()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { lockToLandscape() }
+                }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation() }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             if showVolumeSlider { HStack { Spacer(); TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill").padding(.trailing, 14) } }
@@ -80,7 +87,14 @@ struct MoviePlayerView: View {
                         }
                         Spacer()
                         HStack(spacing:6){
-                            Button{pipController?.startPictureInPicture()}label:{Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
+                            Button {
+                                if let pip = pipController {
+                                    if pip.isPictureInPictureActive { pip.stopPictureInPicture() }
+                                    else { pip.startPictureInPicture() }
+                                }
+                            } label: {
+                                Image(systemName:"pip.enter").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))
+                            }
                             Button{showSettings=true}label:{Image(systemName:"gearshape.fill").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
                             Button{showSourceMenu=true}label:{Image(systemName:"antenna.radiowaves.left.and.right").font(.system(size:14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
                         }
@@ -198,7 +212,7 @@ struct MoviePlayerView: View {
 
 struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
     func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil { pipController = ui.pictureInPictureController } } }
 }
 
 struct TinySlider: View { let value: CGFloat; let icon: String
