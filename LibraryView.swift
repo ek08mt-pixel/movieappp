@@ -2,12 +2,8 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var dm = HLSDownloadManager.shared
     @State private var selectedTab: LibraryTab = .watched
     @State private var playMovie: Movie?
-    @State private var showOfflinePlayer = false
-    @State private var offlineURL: URL?
-    @State private var offlineTitle = ""
     
     enum LibraryTab: String, CaseIterable {
         case watched = "Vừa xem"
@@ -51,20 +47,18 @@ struct LibraryView: View {
                                 Button("Xóa tất cả") {
                                     withAnimation {
                                         switch selectedTab {
-                                        case .watched: appState.watchHistory.removeAll(); appState.save()
+                                        case .watched: appState.watchHistory.removeAll(); appState.watchProgressList.removeAll(); appState.save()
                                         case .saved: appState.favorites.removeAll(); appState.save()
                                         case .watched2: appState.watchedMovies.removeAll(); appState.save()
                                         }
                                     }
                                 }
-                                .font(.system(size: 12)).foregroundColor(.red.opacity(0.7))
+                                .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
                             }
                             .padding(.horizontal, 20).padding(.top, 8)
                             
                             if selectedTab == .saved {
                                 savedGridView
-                            } else if selectedTab == .watched {
-                                watchedListView
                             } else {
                                 watchedListView
                             }
@@ -96,13 +90,17 @@ struct LibraryView: View {
     
     var savedGridView: some View {
         ScrollView {
-            LazyVGrid(columns: savedColumns, spacing: 16) {
+            LazyVGrid(columns: savedColumns, spacing: 12) {
                 ForEach(currentMovies) { movie in
                     ZStack(alignment: .topTrailing) {
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack(spacing: 6) {
-                                CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(height: 160).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                                Text(movie.title).font(.system(size: 10, weight: .medium)).foregroundColor(.white).lineLimit(2)
+                                CachedAsyncImage(url: movie.posterURL)
+                                    .aspectRatio(2/3, contentMode: .fill)
+                                    .frame(height: 160)
+                                    .frame(maxWidth: .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                Text(movie.title).font(.system(size: 10, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(height: 28)
                             }
                         }
                         Button {
@@ -117,55 +115,51 @@ struct LibraryView: View {
     }
     
     var watchedListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(currentMovies) { movie in
-                    let p = appState.watchProgressList.first { $0.movieId == movie.id }
-                    let has = (p?.currentTime ?? 0) > 0 && (p?.duration ?? 1) > 0
-                    ZStack(alignment: .trailing) {
-                        HStack(spacing: 12) {
-                            ZStack(alignment: .center) {
-                                CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 12)).shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                                Button { playMovie = movie } label: { Circle().fill(.black.opacity(0.6)).frame(width: 36, height: 36).overlay(Image(systemName: "play.fill").font(.system(size: 14)).foregroundColor(.white).offset(x: 1)) }
-                            }
-                            VStack(alignment: .leading, spacing: 6) {
-                                NavigationLink(destination: MovieDetailView(movie: movie)) { Text(movie.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white).lineLimit(1) }
-                                if let ep = p?.episode, let s = p?.season { Text("S\(s):E\(ep)").font(.system(size: 11)).foregroundColor(.gray) }
-                                if has {
-                                    Text("Tiếp tục từ \(formatProgressTime(p!.currentTime))").font(.system(size: 11)).foregroundColor(.white.opacity(0.6))
-                                    GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 4); Capsule().fill(.white.opacity(0.5)).frame(width: max(4, g.size.width * CGFloat(min(p!.currentTime / p!.duration, 1))), height: 4) } }.frame(height: 4)
-                                    Button { playMovie = movie } label: { Text("Xem tiếp").font(.system(size: 12, weight: .medium)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.6))).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5)) }
-                                }
-                            }
-                            Spacer()
-                        }
-                        .padding(12).background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.25)).overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08), lineWidth: 0.5)))
-                        
-                        // Swipe to delete
-                        if selectedTab == .watched {
-                            Button {
-                                withAnimation {
-                                    appState.watchHistory.removeAll { $0.id == movie.id }
-                                    appState.watchProgressList.removeAll { $0.movieId == movie.id }
-                                    appState.save()
-                                }
-                            } label: {
-                                Image(systemName: "trash.fill").font(.system(size: 16)).foregroundColor(.red).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                            }
-                            .offset(x: 60)
-                        }
-                        if selectedTab == .watched2 {
-                            Button {
-                                withAnimation { appState.watchedMovies.removeAll { $0.id == movie.id }; appState.save() }
-                            } label: {
-                                Image(systemName: "trash.fill").font(.system(size: 16)).foregroundColor(.red).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                            }
-                            .offset(x: 60)
+        List {
+            ForEach(currentMovies) { movie in
+                let p = appState.watchProgressList.first { $0.movieId == movie.id }
+                let has = (p?.currentTime ?? 0) > 0 && (p?.duration ?? 1) > 0
+                
+                HStack(spacing: 12) {
+                    ZStack(alignment: .center) {
+                        CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 12))
+                        Button { playMovie = movie } label: { Circle().fill(.black.opacity(0.6)).frame(width: 36, height: 36).overlay(Image(systemName: "play.fill").font(.system(size: 14)).foregroundColor(.white).offset(x: 1)) }
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        NavigationLink(destination: MovieDetailView(movie: movie)) { Text(movie.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white).lineLimit(1) }
+                        if let ep = p?.episode, let s = p?.season { Text("S\(s):E\(ep)").font(.system(size: 11)).foregroundColor(.gray) }
+                        if has {
+                            Text("Tiếp tục từ \(formatProgressTime(p!.currentTime))").font(.system(size: 11)).foregroundColor(.white.opacity(0.6))
+                            GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 4); Capsule().fill(.white.opacity(0.5)).frame(width: max(4, g.size.width * CGFloat(min(p!.currentTime / p!.duration, 1))), height: 4) } }.frame(height: 4)
+                            Button { playMovie = movie } label: { Text("Xem tiếp").font(.system(size: 12, weight: .medium)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.6))).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5)) }
                         }
                     }
                 }
-            }.padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 100)
+                .padding(.vertical, 4)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            switch selectedTab {
+                            case .watched:
+                                appState.watchHistory.removeAll { $0.id == movie.id }
+                                appState.watchProgressList.removeAll { $0.movieId == movie.id }
+                            case .watched2:
+                                appState.watchedMovies.removeAll { $0.id == movie.id }
+                            default: break
+                            }
+                            appState.save()
+                        }
+                    } label: {
+                        Label("Xóa", systemImage: "trash")
+                    }
+                    .tint(.white.opacity(0.3))
+                }
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
     
     func tabButton(_ tab: LibraryTab) -> some View {
