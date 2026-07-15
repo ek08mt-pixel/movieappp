@@ -257,33 +257,62 @@ final class PhimAPIService {
     private init() {}
     
     func fetchStream(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let s = season ?? 1; let ep = episode ?? 1
-        let isSeries = (mediaType == "tv") || (season != nil)
-        
-        if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
-        
-        if isSeries {
+    let s = season ?? 1; let ep = episode ?? 1
+    let isSeries = (mediaType == "tv") || (season != nil)
+    
+    if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
+    
+    // Thử API IMDB trước
+    let imdbURLString = "\(baseURL)/imdb/title/\(imdbID)"
+    if let imdbURL = URL(string: imdbURLString) {
+        URLSession.shared.dataTask(with: imdbURL) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let data = data,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               json["status"] as? Bool == true {
+                let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
+                if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
+                    self.cache.setPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep, url: streamURL.absoluteString)
+                    completion(.success(streamURL))
+                    return
+                }
+            }
+            // IMDB API fail -> thử TMDB hoặc fallback search
+            self.tryTMDBOrFallback(imdbID: imdbID, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season, episode: episode, completion: completion)
+        }.resume()
+        return
+    }
+    
+    tryTMDBOrFallback(imdbID: imdbID, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season, episode: episode, completion: completion)
+}
+
+private func tryTMDBOrFallback(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+    let s = season ?? 1; let ep = episode ?? 1
+    let isSeries = (mediaType == "tv") || (season != nil)
+    
+    if !isSeries {
+        guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else {
             fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
             return
         }
-        
-        guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true, let movie = json["movie"] as? [String: Any] {
-                    let phimType = movie["type"] as? String ?? "single"
-                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: nil, episode: nil) {
-                        self.cache.setPhimAPIURL(tmdbID: tmdbID, season: 0, episode: 0, url: streamURL.absoluteString)
-                        completion(.success(streamURL)); return
-                    }
+            if let data = data,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               json["status"] as? Bool == true {
+                let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
+                if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: nil, episode: nil) {
+                    self.cache.setPhimAPIURL(tmdbID: tmdbID, season: 0, episode: 0, url: streamURL.absoluteString)
+                    completion(.success(streamURL))
+                    return
                 }
-                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
-            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion) }
+            }
+            self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
         }.resume()
+    } else {
+        fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
     }
+}
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
