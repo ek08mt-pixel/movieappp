@@ -1,72 +1,58 @@
 import Foundation
+import WebKit
 
-final class CobePhimService {
+final class CobePhimService: NSObject {
     static let shared = CobePhimService()
     private let baseURL = "https://cobephim.sbs"
+    private var webView: WKWebView?
+    private var completion: ((Result<URL, Error>) -> Void)?
     
     func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+        self.completion = completion
+        
         let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        guard let searchURL = URL(string: "\(baseURL)/tim-kiem?q=\(searchQuery)") else {
-            completion(.failure(StreamServiceError.invalidURL))
-            return
+        let urlString = "\(baseURL)/tim-kiem?q=\(searchQuery)"
+        
+        DispatchQueue.main.async {
+            let config = WKWebViewConfiguration()
+            self.webView = WKWebView(frame: .zero, configuration: config)
+            self.webView?.navigationDelegate = self
+            self.webView?.load(URLRequest(url: URL(string: urlString)!))
         }
         
-        URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(StreamServiceError.noData))
-                return
+        // Timeout sau 10 giây
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            if let comp = self.completion {
+                self.completion = nil
+                comp(.failure(StreamServiceError.noData))
             }
-            
-            var slug: String?
-            if let range = html.range(of: "href=\"/xem-phim/") {
-                let start = range.upperBound
-                if let end = html[start...].firstIndex(of: "\"") {
-                    slug = String(html[start..<end])
-                }
-            }
-            if slug == nil, let range = html.range(of: "href=\"/phim/") {
-                let start = range.upperBound
-                if let end = html[start...].firstIndex(of: "\"") {
-                    slug = String(html[start..<end])
-                }
-            }
-            
-            guard let foundSlug = slug else {
-                completion(.failure(StreamServiceError.noMatchFound(id: title)))
-                return
-            }
-            
-            self.fetchStreamBySlug(slug: foundSlug, season: season, episode: episode, completion: completion)
-        }.resume()
+        }
     }
-    
-    private func fetchStreamBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/xem-phim/\(slug)") else {
-            completion(.failure(StreamServiceError.invalidURL))
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(StreamServiceError.noData))
-                return
-            }
-            
-            if let range = html.range(of: "\"link\":\"") {
-                let start = range.upperBound
-                if let end = html[start...].firstIndex(of: "\"") {
-                    var link = String(html[start..<end])
-                    link = link.replacingOccurrences(of: "\\/", with: "/")
-                    if let streamURL = URL(string: link) {
-                        completion(.success(streamURL))
-                        return
+}
+
+extension CobePhimService: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Đợi JS render xong rồi lấy HTML
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, _ in
+                guard let self = self, let comp = self.completion else { return }
+                self.completion = nil
+                
+                if let html = result as? String {
+                    // Parse HTML tìm link stream giống như trước
+                    if let range = html.range(of: "\"link\":\""),
+                       let end = html[range.upperBound...].firstIndex(of: "\"") {
+                        var link = String(html[range.upperBound..<end])
+                        link = link.replacingOccurrences(of: "\\/", with: "/")
+                        if let url = URL(string: link) {
+                            comp(.success(url))
+                            return
+                        }
                     }
                 }
+                comp(.failure(StreamServiceError.noStreamURL))
             }
-            completion(.failure(StreamServiceError.noStreamURL))
-        }.resume()
+            self.webView = nil
+        }
     }
 }
