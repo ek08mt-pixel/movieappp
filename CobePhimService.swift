@@ -1,58 +1,29 @@
-import Foundation
-import WebKit
-
-final class CobePhimService: NSObject {
-    static let shared = CobePhimService()
-    private let baseURL = "https://cobephim.sbs"
-    private var webView: WKWebView?
-    private var completion: ((Result<URL, Error>) -> Void)?
+func fetchStream(title: String, completion: @escaping (Result<URL, Error>) -> Void) {
+    let slug = title.lowercased()
+        .replacingOccurrences(of: " ", with: "-")
+        .folding(options: .diacriticInsensitive, locale: .current)
     
-    func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        self.completion = completion
+    let urlString = "\(baseURL)/xem-phim/\(slug)"
+    guard let url = URL(string: urlString) else { return }
+    
+    URLSession.shared.dataTask(with: url) { data, _, error in
+        guard let data = data, let html = String(data: data, encoding: .utf8) else { return }
         
-        let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        let urlString = "\(baseURL)/tim-kiem?q=\(searchQuery)"
-        
-        DispatchQueue.main.async {
-            let config = WKWebViewConfiguration()
-            self.webView = WKWebView(frame: .zero, configuration: config)
-            self.webView?.navigationDelegate = self
-            self.webView?.load(URLRequest(url: URL(string: urlString)!))
-        }
-        
-        // Timeout sau 10 giây
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-            if let comp = self.completion {
-                self.completion = nil
-                comp(.failure(StreamServiceError.noData))
+        // Parse self.__next_f.push data để lấy JSON
+        // Tìm pattern: "link\":\"...m3u8\"
+        let pattern = "\"link\":\"[^\"]*\\.m3u8[^\"]*\""
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)) {
+            let matchStr = (html as NSString).substring(with: match.range)
+            let link = matchStr
+                .replacingOccurrences(of: "\"link\":\"", with: "")
+                .replacingOccurrences(of: "\"", with: "")
+                .replacingOccurrences(of: "\\/", with: "/")
+            if let streamURL = URL(string: link) {
+                completion(.success(streamURL))
+                return
             }
         }
-    }
-}
-
-extension CobePhimService: WKNavigationDelegate {
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Đợi JS render xong rồi lấy HTML
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, _ in
-                guard let self = self, let comp = self.completion else { return }
-                self.completion = nil
-                
-                if let html = result as? String {
-                    // Parse HTML tìm link stream giống như trước
-                    if let range = html.range(of: "\"link\":\""),
-                       let end = html[range.upperBound...].firstIndex(of: "\"") {
-                        var link = String(html[range.upperBound..<end])
-                        link = link.replacingOccurrences(of: "\\/", with: "/")
-                        if let url = URL(string: link) {
-                            comp(.success(url))
-                            return
-                        }
-                    }
-                }
-                comp(.failure(StreamServiceError.noStreamURL))
-            }
-            self.webView = nil
-        }
-    }
+        completion(.failure(StreamServiceError.noStreamURL))
+    }.resume()
 }
