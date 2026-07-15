@@ -325,6 +325,10 @@ private func tryTMDBOrFallback(imdbID: String, tmdbID: Int, title: String, media
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
         
         func fetchPage(_ page: Int, accumulatedItems: [[String: Any]], done: @escaping ([[String: Any]]) -> Void) {
+            if let slug = cache.getHardcodedSlug(tmdbID: tmdbID) {
+        fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+        return
+    }
             guard let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20&page=\(page)") else {
                 done(accumulatedItems)
                 return
