@@ -209,9 +209,9 @@ if showNextEpisodePopup {
     loadStream(season: seasonNumber, episode: ep + 1)
 }
     func skipNextEpisode() {
-        showNextEpisodePopup = false
-        autoNextTriggered = true
-    }
+    showNextEpisodePopup = false
+    autoNextTriggered = true
+}
     func toggleOrientationLock() { isOrientationLocked.toggle(); if isOrientationLocked { lockToLandscape() } }
     
     func loadOverlayData() { Task { 
