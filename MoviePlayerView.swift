@@ -223,20 +223,32 @@ struct MoviePlayerView: View {
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
     
     func fetchIMDB() async throws -> String {
-        if let cached = imdbIDCache { return cached }
-        var id: String?
-        if mediaType == "tv" || seasonNumber != nil {
-            id = try? await APIService.shared.fetchExternalIDs(tvId: movieId)
-        }
-        if id == nil || id?.isEmpty == true {
-            let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
-            struct E: Codable { let imdb_id: String? }
-            id = try? JSONDecoder().decode(E.self, from: data).imdb_id
-        }
-        guard let finalID = id, !finalID.isEmpty else { throw StreamError.noStreamAvailable }
-        imdbIDCache = finalID
-        return finalID
+    if let cached = imdbIDCache { return cached }
+    
+    // Dùng function mới có validation
+    if let validatedID = try? await APIService.shared.fetchExternalIDsWithValidation(
+        tmdbId: movieId,
+        mediaType: mediaType,
+        expectedTitle: movieTitle
+    ), !validatedID.isEmpty {
+        imdbIDCache = validatedID
+        return validatedID
     }
+    
+    // Fallback về cách cũ
+    var id: String?
+    if mediaType == "tv" || seasonNumber != nil {
+        id = try? await APIService.shared.fetchExternalIDs(tvId: movieId)
+    }
+    if id == nil || id?.isEmpty == true {
+        let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+        struct E: Codable { let imdb_id: String? }
+        id = try? JSONDecoder().decode(E.self, from: data).imdb_id
+    }
+    guard let finalID = id, !finalID.isEmpty else { throw StreamError.noStreamAvailable }
+    imdbIDCache = finalID
+    return finalID
+}
     
     func lockToLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
     func unlockOrientation() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }
