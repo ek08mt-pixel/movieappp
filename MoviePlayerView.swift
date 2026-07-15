@@ -276,10 +276,8 @@ if showNextEpisodePopup {
             
             // Hiện popup Netflix-style khi còn 60 giây
             if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup {
-                showNextEpisodePopup = true
-            }
-        }
-    }
+    showNextEpisodePopup = true
+}
     
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
