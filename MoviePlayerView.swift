@@ -176,7 +176,20 @@ struct MoviePlayerView: View {
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
         Task { do { let imdbID = try await fetchIMDB()
                 switch selectedSource {
-                case .phimapi: let url = try await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.phimapi] = true; isLoading = false; tryResume() }; saveHistory()
+                case .phimapi: 
+    let result = try await withCheckedThrowingContinuation { c in 
+        PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep, serverIndex: selectedServerIndex) { c.resume(with: $0) } 
+    }
+    await MainActor.run { 
+        phimapiServers = result.1
+        player.replaceCurrentItem(with: AVPlayerItem(url: result.0))
+        player.play()
+        hasStartedPlaying = true
+        sourceStatus[.phimapi] = true
+        isLoading = false
+        tryResume()
+    }
+    saveHistory()
                 case .nguonc: let url = try await withCheckedThrowingContinuation { c in NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { nguonCEmbedURL = url; nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }
                 case .vsmov: let url = try await withCheckedThrowingContinuation { c in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }; saveHistory()
                 }
