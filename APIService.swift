@@ -231,6 +231,45 @@ class APIService {
         return try decoder.decode(E.self, from: data).imdb_id
     }
     
+    func fetchExternalIDsWithValidation(tmdbId: Int, mediaType: String?, expectedTitle: String) async throws -> String? {
+    // Lấy IMDB ID
+    let imdbID: String?
+    if mediaType == "tv" {
+        imdbID = try await fetchExternalIDs(tvId: tmdbId)
+    } else {
+        let urlString = "\(baseURL)/movie/\(tmdbId)/external_ids?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct E: Codable { let imdb_id: String? }
+        imdbID = try decoder.decode(E.self, from: data).imdb_id
+    }
+    
+    guard let imdbID = imdbID, !imdbID.isEmpty else { return nil }
+    
+    // Validate IMDB ID bằng OMDb API (miễn phí)
+    let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=8b2f8c0"
+    guard let url = URL(string: omdbURL) else { return imdbID }
+    
+    do {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let title = json["Title"] as? String {
+            // So sánh title, nếu khác quá xa thì reject
+            let similarity = title.lowercased().components(separatedBy: " ").filter { expectedTitle.lowercased().contains($0.lowercased()) }.count
+            if similarity >= 2 || title.lowercased().contains(expectedTitle.lowercased()) {
+                return imdbID
+            } else {
+                print("⚠️ Title mismatch: expected \(expectedTitle), got \(title)")
+                return nil
+            }
+        }
+    } catch {
+        // Nếu OMDb fail, vẫn trả về IMDB ID (fallback)
+        return imdbID
+    }
+    
+    return imdbID
+}
     func collectionDetail(collectionId: Int) async throws -> CollectionDetail? {
         let urlString = "\(baseURL)/collection/\(collectionId)?api_key=\(apiKey)&language=\(language)"
         guard let url = URL(string: urlString) else { return nil }
