@@ -225,7 +225,8 @@ if showNextEpisodePopup {
         if let s = season { seasonNumber = s }
         if let e = episode { episodeNumber = e }
         let ep = episodeNumber ?? 1; let s = seasonNumber
-        imdbIDCache = nil; autoNextTriggered = false; showNextEpisodePopup = false
+        imdbIDCache = nil; autoNextTriggered = false; showNextEpisodePopup = false 
+        
         
         if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
