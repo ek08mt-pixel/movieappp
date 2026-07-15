@@ -34,11 +34,10 @@ struct MoviePlayerView: View {
     @State private var isOrientationLocked = true
     @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
     @State private var autoNextTriggered = false
+    @State private var showNextEpisodePopup = false
     
     var episodeInfo: String {
-        if let s = seasonNumber, let e = episodeNumber {
-            return "S\(s):E\(e)"
-        }
+        if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }
         return ""
     }
     
@@ -76,10 +75,8 @@ struct MoviePlayerView: View {
                         Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
                         Spacer()
                         VStack(spacing: 2) {
-                            Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
-                            if !episodeInfo.isEmpty {
-                                Text(episodeInfo).font(.caption2).foregroundColor(.white.opacity(0.6))
-                            }
+                            Text(movieTitle).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1).frame(maxWidth: .infinity, alignment: .center)
+                            if !episodeInfo.isEmpty { Text(episodeInfo).font(.caption2).foregroundColor(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .center) }
                         }
                         Spacer()
                         HStack(spacing:6){
@@ -89,6 +86,38 @@ struct MoviePlayerView: View {
                         }
                     }.padding(.horizontal,8).padding(.top,50)
                     Spacer()
+                }
+            }
+            // Netflix-style next episode popup
+            if showNextEpisodePopup && showControls {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 0) {
+                            Button { skipNextEpisode() } label: {
+                                Text("Bỏ qua")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .padding(.horizontal, 16).padding(.vertical, 9)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.1)))
+                            }
+                            Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
+                            Button { nextEpisode() } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "forward.end.fill").font(.system(size: 10))
+                                    Text("Tập tiếp theo").font(.system(size: 12, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16).padding(.vertical, 9)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.25)))
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    }
+                    .padding(.trailing, 30)
+                    .padding(.bottom, 90)
                 }
             }
             if showOverlay { youtubeOverlay }
@@ -172,11 +201,16 @@ struct MoviePlayerView: View {
     
     func closeOverlay() { withAnimation(.spring(response:0.25,dampingFraction:0.8)){overlayOffset=UIScreen.main.bounds.height}; DispatchQueue.main.asyncAfter(deadline:.now()+0.25){showOverlay=false} }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
-    func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; loadStream(season: seasonNumber, episode: ep - 1) }
-    func nextEpisode() { 
+    func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; autoNextTriggered = false; showNextEpisodePopup = false; loadStream(season: seasonNumber, episode: ep - 1) }
+    func nextEpisode() {
         guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
+        showNextEpisodePopup = false
+        autoNextTriggered = true
         loadStream(season: seasonNumber, episode: ep + 1)
-        autoNextTriggered = false
+    }
+    func skipNextEpisode() {
+        showNextEpisodePopup = false
+        autoNextTriggered = true
     }
     func toggleOrientationLock() { isOrientationLocked.toggle(); if isOrientationLocked { lockToLandscape() } }
     
@@ -191,7 +225,7 @@ struct MoviePlayerView: View {
         if let s = season { seasonNumber = s }
         if let e = episode { episodeNumber = e }
         let ep = episodeNumber ?? 1; let s = seasonNumber
-        imdbIDCache = nil; autoNextTriggered = false
+        imdbIDCache = nil; autoNextTriggered = false; showNextEpisodePopup = false
         
         if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }
         isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil
@@ -239,10 +273,9 @@ struct MoviePlayerView: View {
             if !isSeeking { currentTime = t.seconds }
             if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }
             
-            // Auto-next-episode khi còn 3 giây
-            if duration > 10 && currentTime >= duration - 3 && !autoNextTriggered {
-                autoNextTriggered = true
-                nextEpisode()
+            // Hiện popup Netflix-style khi còn 60 giây
+            if duration > 120 && currentTime >= duration - 60 && !autoNextTriggered && !showNextEpisodePopup {
+                showNextEpisodePopup = true
             }
         }
     }
