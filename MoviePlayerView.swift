@@ -203,11 +203,11 @@ if showNextEpisodePopup {
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
     func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; autoNextTriggered = false; showNextEpisodePopup = false; loadStream(season: seasonNumber, episode: ep - 1) }
     func nextEpisode() {
-        guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
-        showNextEpisodePopup = false
-        autoNextTriggered = true
-        loadStream(season: seasonNumber, episode: ep + 1)
-    }
+    guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
+    showNextEpisodePopup = false
+    autoNextTriggered = true
+    loadStream(season: seasonNumber, episode: ep + 1)
+}
     func skipNextEpisode() {
         showNextEpisodePopup = false
         autoNextTriggered = true
