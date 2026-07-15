@@ -10,6 +10,13 @@ final class MappingCache {
     private let stravoKey = "cache_stravo_mapping"
     private let phimapiKey = "cache_phimapi_mapping"
     private let sofaflixKey = "cache_sofaflix_mapping"
+    private let hardcodedSlugs: [Int: String] = [
+    76669: "uu-tu-phan-1"
+]
+
+func getHardcodedSlug(tmdbID: Int) -> String? {
+    return hardcodedSlugs[tmdbID]
+}
     
     private init() {}
     
