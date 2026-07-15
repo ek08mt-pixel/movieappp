@@ -5,7 +5,6 @@ final class CobePhimService {
     private let baseURL = "https://cobephim.sbs"
     
     func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        // Bước 1: Search phim để lấy slug
         let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
         guard let searchURL = URL(string: "\(baseURL)/tim-kiem?q=\(searchQuery)") else {
             completion(.failure(StreamServiceError.invalidURL))
@@ -21,17 +20,25 @@ final class CobePhimService {
             }
             
             // Tìm slug từ kết quả search
-            // Pattern: href="/phim/{slug}"
-            guard let range = html.range(of: "href=\"/phim/"),
-                  let endRange = html[range.upperBound...].range(of: "\"") else {
-                completion(.failure(StreamServiceError.noMatchFound(id: title)))
+            var slug: String?
+            
+            // Pattern 1: href="/xem-phim/{slug}"
+            if let range = html.range(of: "href=\"/xem-phim/"),
+               let endRange = html[range.upperBound...].range(of: "\"") {
+                slug = String(html[range.upperBound..<endRange.lowerBound])
+            }
+            // Pattern 2: href="/phim/{slug}"
+            else if let range = html.range(of: "href=\"/phim/"),
+                    let endRange = html[range.upperBound...].                completionrange(of:(. "\"") {
+                slug = String(htmlfailure[range.upperBound..<endRange.lowerBound])
+            }
+            
+            guard let foundSlug = slug else {
+(StreamServiceError.noMatchFound(id: title)))
                 return
             }
             
-            let slug = String(html[range.upperBound..<endRange.lowerBound])
-            
-            // Bước 2: Dùng slug để lấy stream
-            self.fetchStreamBySlug(slug: slug, season: season, episode: episode, completion: completion)
+            self.fetchStreamBySlug(slug: foundSlug, season: season, episode: episode, completion: completion)
         }.resume()
     }
     
