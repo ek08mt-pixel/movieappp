@@ -267,14 +267,18 @@ final class PhimAPIService {
     private let baseURL = "https://phimapi.com"
     private init() {}
     
-    func fetchStream(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+    func fetchStream(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int? = nil, episode: Int? = nil, serverIndex: Int = 0, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
         let s = season ?? 1; let ep = episode ?? 1
         let isSeries = (mediaType == "tv") || (season != nil)
+        let cacheKey = "\(tmdbID)_S\(s)E\(ep)_server\(serverIndex)"
         
-        if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
+        if let cached = cache.dict(for: "phimapi_stream_cache")[cacheKey], let url = URL(string: cached) {
+            completion(.success((url, [])))
+            return
+        }
         
         if isSeries {
-            fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
+            fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
             return
         }
         
@@ -284,62 +288,156 @@ final class PhimAPIService {
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true, let movie = json["movie"] as? [String: Any] {
-                    let phimType = movie["type"] as? String ?? "single"
-                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: nil, episode: nil) {
-                        self.cache.setPhimAPIURL(tmdbID: tmdbID, season: 0, episode: 0, url: streamURL.absoluteString)
-                        completion(.success(streamURL)); return
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true {
+                    let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
+                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: nil, episode: nil, serverIndex: serverIndex)
+                    if let streamURL = result.url {
+                        self.cache.saveDict(["\(cacheKey)": streamURL.absoluteString], for: "phimapi_stream_cache")
+                        completion(.success((streamURL, result.servers)))
+                        return
                     }
                 }
-                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion)
-            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, completion: completion) }
+                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
+            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion) }
         }.resume()
     }
     
-    private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+    private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
         if let slug = cache.getHardcodedSlug(tmdbID: tmdbID, season: season ?? 1) {
-            fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+            fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
             return
         }
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
         
         func fetchPage(_ page: Int, accumulatedItems: [[String: Any]], done: @escaping ([[String: Any]]) -> Void) {
-            guard let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20&page=\(page)") else {
-                done(accumulatedItems)
-                return
-            }
+            guard let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20&page=\(page)") else { done(accumulatedItems); return }
             URLSession.shared.dataTask(with: url) { data, _, error in
                 guard let data = data,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       json["status"] as? String == "success",
                       let dataObj = json["data"] as? [String: Any],
-                      let items = dataObj["items"] as? [[String: Any]] else {
-                    done(accumulatedItems)
-                    return
-                }
-                let allItems = accumulatedItems + items
+                      let items = dataObj["items"] as? [[String: Any]] else { done(accumulatedItems); return }
+                let all = accumulatedItems + items
                 let pagination = dataObj["params"] as? [String: Any] ?? dataObj["pagination"] as? [String: Any] ?? [:]
                 let totalPages = pagination["totalPages"] as? Int ?? 1
-                if page < totalPages {
-                    fetchPage(page + 1, accumulatedItems: allItems, done: done)
-                } else {
-                    done(allItems)
-                }
+                if page < totalPages { fetchPage(page + 1, accumulatedItems: all, done: done) }
+                else { done(all) }
             }.resume()
         }
         
         fetchPage(1, accumulatedItems: []) { [weak self] allItems in
             guard let self = self else { completion(.failure(StreamServiceError.noData)); return }
-            let filteredItems = allItems.filter { !isSpinoff($0) }
-            let bestMatch = self.findBestMatch(items: filteredItems, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
+            let filtered = allItems.filter { !isSpinoff($0) }
+            let bestMatch = self.findBestMatch(items: filtered, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
             if let match = bestMatch, let slug = match["slug"] as? String {
-                self.fetchBySlug(slug: slug, season: season, episode: episode, completion: completion)
+                self.fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
             } else {
                 completion(.failure(StreamServiceError.noMatchFound(id: title)))
             }
         }
     }
     
+    private func fetchBySlug(slug: String, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let phimType: String = (json["item"] as? [String: Any])?["type"] as? String ?? (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
+                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: season, episode: episode, serverIndex: serverIndex)
+                    if let streamURL = result.url {
+                        completion(.success((streamURL, result.servers)))
+                    } else {
+                        completion(.failure(StreamServiceError.noStreamURL))
+                    }
+                } else { completion(.failure(StreamServiceError.noData)) }
+            } catch { completion(.failure(error)) }
+        }.resume()
+    }
+    
+    private func extractStreamURLWithServers(from json: [String: Any], phimType: String, season: Int?, episode: Int?, serverIndex: Int) -> (url: URL?, servers: [String]) {
+        var serverNames: [String] = []
+        
+        if let episodes = json["episodes"] as? [[String: Any]] {
+            for server in episodes {
+                if let name = server["server_name"] as? String {
+                    serverNames.append(name)
+                }
+            }
+        }
+        
+        if isSeriesType(phimType) {
+            let targetSeason = season ?? 1
+            let ep = episode ?? 1
+            if let episodes = json["episodes"] as? [[String: Any]] {
+                var totalEpsInFirstServer = 0
+                if let firstServer = episodes.first,
+                   let serverData = firstServer["server_data"] as? [[String: Any]] {
+                    totalEpsInFirstServer = serverData.count
+                }
+                let effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
+                
+                // Chọn server theo index
+                let targetServers: [[String: Any]]
+                if serverIndex < episodes.count {
+                    targetServers = [episodes[serverIndex]]
+                } else {
+                    targetServers = episodes
+                }
+                
+                for server in targetServers {
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: effectiveEp) {
+                                return (streamURL, serverNames)
+                            }
+                        }
+                    }
+                }
+                // Fallback tất cả server
+                for server in episodes {
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String,
+                               let linkM3u8 = epItem["link_m3u8"] as? String,
+                               let streamURL = URL(string: linkM3u8),
+                               matchEpisode(name: name, target: effectiveEp) {
+                                return (streamURL, serverNames)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if serverIndex < (json["episodes"] as? [[String: Any]])?.count ?? 0,
+               let episodes = json["episodes"] as? [[String: Any]],
+               let serverData = episodes[serverIndex]["server_data"] as? [[String: Any]],
+               let firstEp = serverData.first,
+               let linkM3u8 = firstEp["link_m3u8"] as? String,
+               let streamURL = URL(string: linkM3u8) {
+                return (streamURL, serverNames)
+            }
+            if let episodes = json["episodes"] as? [[String: Any]],
+               let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first,
+               let linkM3u8 = firstEp["link_m3u8"] as? String,
+               let streamURL = URL(string: linkM3u8) {
+                return (streamURL, serverNames)
+            }
+            let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
+            if let m = movie {
+                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
+            }
+        }
+        return (nil, serverNames)
+    }
+    
+    // Giữ nguyên các function còn lại: findBestMatch, extractStreamURL cũ...
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
@@ -372,9 +470,7 @@ final class PhimAPIService {
             if let match = fallbackMatch { return match }
         }
         
-        if let sameTMDB = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
-        }) { return sameTMDB }
+        if let sameTMDB = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) { return sameTMDB }
         
         if isSeries {
             let matched = items.filter { item in
@@ -386,75 +482,8 @@ final class PhimAPIService {
         }
         
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
-        
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
-    }
-    
-    private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    let phimType: String = (json["item"] as? [String: Any])?["type"] as? String ?? (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
-                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) { completion(.success(streamURL)); return }
-                    completion(.failure(StreamServiceError.noStreamURL))
-                } else { completion(.failure(StreamServiceError.noData)) }
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
-    
-    private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
-        if isSeriesType(phimType) {
-            let targetSeason = season ?? 1
-            let ep = episode ?? 1
-            if let episodes = json["episodes"] as? [[String: Any]] {
-                var totalEpsInFirstServer = 0
-                if let firstServer = episodes.first,
-                   let serverData = firstServer["server_data"] as? [[String: Any]] {
-                    totalEpsInFirstServer = serverData.count
-                }
-                let effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
-                
-                for (serverIndex, server) in episodes.enumerated() {
-                    let serverSeason = server["season"] as? Int ?? (serverIndex + 1)
-                    if serverSeason != targetSeason && totalEpsInFirstServer <= 100 { continue }
-                    if let serverData = server["server_data"] as? [[String: Any]] {
-                        for epItem in serverData {
-                            if let name = epItem["name"] as? String,
-                               let linkM3u8 = epItem["link_m3u8"] as? String,
-                               let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: effectiveEp) {
-                                return streamURL
-                            }
-                        }
-                    }
-                }
-                for server in episodes {
-                    if let serverData = server["server_data"] as? [[String: Any]] {
-                        for epItem in serverData {
-                            if let name = epItem["name"] as? String,
-                               let linkM3u8 = epItem["link_m3u8"] as? String,
-                               let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: effectiveEp) {
-                                return streamURL
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return streamURL }
-            let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
-            if let m = movie {
-                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return streamURL }
-                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return streamURL }
-            }
-        }
-        return nil
     }
 }
 
