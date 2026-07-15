@@ -212,9 +212,11 @@ struct MoviePlayerView: View {
 
 struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
     func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil { pipController = ui.pictureInPictureController } } }
-}
-
-struct TinySlider: View { let value: CGFloat; let icon: String
-    var body: some View { VStack(spacing:4){Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5));ZStack(alignment:.bottom){Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60);Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y:-value*52)} } }
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
+        DispatchQueue.main.async {
+            if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
+                pipController = AVPictureInPictureController(playerLayer: layer)
+            }
+        }
+    }
 }
