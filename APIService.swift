@@ -17,7 +17,13 @@ class APIService {
             return response.results.map { $0.withPlaceholder() }
         }
     }
-    
+    func trending24hFast() async throws -> [Movie] {
+    let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=1"
+    guard let url = URL(string: urlString) else { return [] }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    let response = try decoder.decode(MovieResponse.self, from: data)
+    return response.results.map { $0.withPlaceholder() }
+}
     func trendingTV() async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/trending/tv/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
