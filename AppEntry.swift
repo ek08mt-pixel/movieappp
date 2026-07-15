@@ -46,7 +46,7 @@ class AppState: ObservableObject {
     @Published var selectedAvatar = "person.circle.fill"
     @Published var avatarImageData: Data?
     @Published var telegramAvatarURL: String? = nil
-    
+    @Published var watchedMovies: [Movie] = []
     init() { load() }
     
     func register(email: String, password: String) {
