@@ -264,7 +264,7 @@ final class PhimAPIService {
     
         
         let path = isSeries ? "tv" : "movie"
-guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { ... }
+guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
