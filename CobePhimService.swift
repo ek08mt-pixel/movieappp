@@ -29,7 +29,7 @@ final class CobePhimService {
             }
             // Pattern 2: href="/phim/{slug}"
             else if let range = html.range(of: "href=\"/phim/"),
-                    let endRange = html[range.upperBound...].                completionrange(of:(. "\"") {
+                    let endRange = html[range.upperBound...].completionrange(of:(. "\"") {
                 slug = String(htmlfailure[range.upperBound..<endRange.lowerBound])
             }
             
