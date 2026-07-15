@@ -35,6 +35,8 @@ struct MoviePlayerView: View {
     @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
     @State private var autoNextTriggered = false
     @State private var showNextEpisodePopup = false
+    @State private var phimapiServers: [String] = []
+@State private var selectedServerIndex = 0
     
     var episodeInfo: String {
         if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }
