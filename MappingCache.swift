@@ -326,6 +326,10 @@ guard let tmdbURL = URL(string: "\(baseURL)/tmdb/\(path)/\(tmdbID)") else { comp
         let isSeries = (mediaType == "tv") || (season != nil)
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
+        // ƯU TIÊN CAO NHẤT: khớp TMDB ID
+if let exact = items.first(where: {
+    ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID
+}) { return exact }
         
         if let exact = items.first(where: {
             ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
