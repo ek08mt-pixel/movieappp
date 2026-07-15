@@ -18,10 +18,16 @@ struct SplashView: View {
             Color.black.ignoresSafeArea()
             
             if isLoading {
-                VStack(spacing: 20) {
+                VStack(spacing: 0) {
+                    Spacer()
                     Text("Emmew")
                         .font(.system(size: 42, weight: .bold, design: .serif))
                         .foregroundColor(.white)
+                    Spacer()
+                    Text("© 2026 @Emmew All rights reserved")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray.opacity(0.4))
+                        .padding(.bottom, 40)
                 }
             } else if isBlocked {
                 VStack(spacing: 24) {
@@ -52,7 +58,7 @@ struct SplashView: View {
                     }
                     
                     Spacer()
-                    Text("Emmew © 2026").font(.caption).foregroundColor(.gray.opacity(0.5))
+                    Text("emew © 2026").font(.caption).foregroundColor(.gray.opacity(0.5))
                 }
             } else {
                 MainTabView().environmentObject(appState)
@@ -91,6 +97,8 @@ struct SplashView: View {
     }
     
     func proceedToApp() {
-        withAnimation { showMain = true; isLoading = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.easeInOut(duration: 0.5)) { showMain = true; isLoading = false }
+        }
     }
 }
