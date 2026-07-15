@@ -231,8 +231,7 @@ class APIService {
         return try decoder.decode(E.self, from: data).imdb_id
     }
     
-    func fetchExternalIDsWithValidation(tmdbId: Int, mediaType: String?, expectedTitle: String) async throws -> String? {
-    // Lấy IMDB ID
+    func fetchExternalIDsWithValidation(tmdbId: Int, mediaType: String?, expectedTitle: String, expectedYear: String? = nil) async throws -> String? {
     let imdbID: String?
     if mediaType == "tv" {
         imdbID = try await fetchExternalIDs(tvId: tmdbId)
@@ -246,7 +245,6 @@ class APIService {
     
     guard let imdbID = imdbID, !imdbID.isEmpty else { return nil }
     
-    // Validate IMDB ID bằng OMDb API (miễn phí)
     let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=8b2f8c0"
     guard let url = URL(string: omdbURL) else { return imdbID }
     
@@ -254,19 +252,23 @@ class APIService {
         let (data, _) = try await URLSession.shared.data(from: url)
         if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
            let title = json["Title"] as? String {
-            // So sánh title, nếu khác quá xa thì reject
+            
+            // Check năm nếu có
+            if let expectedYear = expectedYear,
+               let year = json["Year"] as? String {
+                if !year.contains(expectedYear) {
+                    print("⚠️ Year mismatch: expected \(expectedYear), got \(year)")
+                    return nil
+                }
+            }
+            
+            // Check title
             let similarity = title.lowercased().components(separatedBy: " ").filter { expectedTitle.lowercased().contains($0.lowercased()) }.count
             if similarity >= 2 || title.lowercased().contains(expectedTitle.lowercased()) {
                 return imdbID
-            } else {
-                print("⚠️ Title mismatch: expected \(expectedTitle), got \(title)")
-                return nil
             }
         }
-    } catch {
-        // Nếu OMDb fail, vẫn trả về IMDB ID (fallback)
-        return imdbID
-    }
+    } catch {}
     
     return imdbID
 }
