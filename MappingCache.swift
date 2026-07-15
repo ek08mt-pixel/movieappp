@@ -384,7 +384,7 @@ if !titleFiltered.isEmpty {
 
 if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
 return items.first(where: { isSingleType($0["type"] as? String ?? "") })
-    
+}
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
