@@ -1,16 +1,30 @@
-// CobePhimService.swift
-class CobePhimService {
+import Foundation
+
+final class CobePhimService {
     static let shared = CobePhimService()
     private let baseURL = "https://cobephim.sbs"
     
-    func fetchStream(slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+    func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+        // Chuyển title sang slug (cơ bản)
+        let slug = title
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .folding(options: .diacriticInsensitive, locale: .current)
+        
         let urlString = "\(baseURL)/xem-phim/\(slug)"
-        guard let url = URL(string: urlString) else { return }
+        guard let url = URL(string: urlString) else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
         
         URLSession.shared.dataTask(with: url) { data, _, error in
-            guard let data = data, let html = String(data: data, encoding: .utf8) else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(.failure(StreamServiceError.noData))
+                return
+            }
             
-            // Tìm JSON chứa link m3u8
+            // Tìm link m3u8 trong HTML
             if let range = html.range(of: "\"link\":\""),
                let endRange = html[range.upperBound...].range(of: "\"") {
                 var link = String(html[range.upperBound..<endRange.lowerBound])
@@ -20,7 +34,7 @@ class CobePhimService {
                     return
                 }
             }
-            completion(.failure(NSError(domain: "Not found", code: -1)))
+            completion(.failure(StreamServiceError.noStreamURL))
         }.resume()
     }
 }
