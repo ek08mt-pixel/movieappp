@@ -370,10 +370,19 @@ final class PhimAPIService {
         }
         
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
-        
-        if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
-        return items.first(where: { isSingleType($0["type"] as? String ?? "") })
-    }
+
+// Lọc theo origin_name chứa title trước khi fallback
+let titleFiltered = items.filter {
+    let origin = ($0["origin_name"] as? String ?? "").lowercased()
+    return origin.contains(normalizedTitle) || normalizedTitle.contains(origin)
+}
+if !titleFiltered.isEmpty {
+    if isSeries { return titleFiltered.first(where: { isSeriesType($0["type"] as? String ?? "") }) ?? titleFiltered.first }
+    return titleFiltered.first(where: { isSingleType($0["type"] as? String ?? "") }) ?? titleFiltered.first
+}
+
+if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
+return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
