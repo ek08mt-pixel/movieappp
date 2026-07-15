@@ -87,7 +87,7 @@ struct MovieDetailView: View {
     .frame(maxWidth: .infinity).padding(.vertical, 10)
     .background(.ultraThinMaterial)
     .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
 }
                         
                         if showBooking { Button { showBookingSheet = true } label: { Label("Đặt vé", systemImage: "ticket.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) } }
