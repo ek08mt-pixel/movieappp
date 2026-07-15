@@ -96,10 +96,9 @@ struct LibraryView: View {
                         NavigationLink(destination: MovieDetailView(movie: movie)) {
                             VStack(spacing: 6) {
                                 CachedAsyncImage(url: movie.posterURL)
-                                    .aspectRatio(2/3, contentMode: .fill)
-                                    .frame(height: 160)
-                                    .frame(maxWidth: .infinity)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .aspectRatio(2/3, contentMode: .fill)
+    .frame(width: (UIScreen.main.bounds.width - 56) / 3, height: ((UIScreen.main.bounds.width - 56) / 3) * 1.5)
+    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 Text(movie.title).font(.system(size: 10, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(height: 28)
                             }
                         }
