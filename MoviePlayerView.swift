@@ -274,7 +274,7 @@ if showNextEpisodePopup {
             if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }
             
             // Hiện popup Netflix-style khi còn 60 giây
-            if duration > 120 && currentTime >= duration - 60 && !autoNextTriggered && !showNextEpisodePopup {
+            if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup {
                 showNextEpisodePopup = true
             }
         }
