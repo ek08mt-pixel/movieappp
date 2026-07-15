@@ -260,7 +260,7 @@ final class PhimAPIService {
     let s = season ?? 1; let ep = episode ?? 1
     let isSeries = (mediaType == "tv") || (season != nil)
     
-    if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
+    // if let cached = cache.getPhimAPIURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
     
     // Thử API IMDB trước
     let imdbURLString = "\(baseURL)/imdb/title/\(imdbID)"
