@@ -89,37 +89,37 @@ struct MoviePlayerView: View {
                 }
             }
             // Netflix-style next episode popup
-            if showNextEpisodePopup && showControls {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        HStack(spacing: 0) {
-                            Button { skipNextEpisode() } label: {
-                                Text("Bỏ qua")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.8))
-                                    .padding(.horizontal, 16).padding(.vertical, 9)
-                                    .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.1)))
-                            }
-                            Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
-                            Button { nextEpisode() } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "forward.end.fill").font(.system(size: 10))
-                                    Text("Tập tiếp theo").font(.system(size: 12, weight: .semibold))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16).padding(.vertical, 9)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.25)))
-                            }
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.1), lineWidth: 0.5))
+if showNextEpisodePopup {
+    VStack {
+        Spacer()
+        HStack {
+            Spacer()
+            HStack(spacing: 0) {
+                Button { skipNextEpisode() } label: {
+                    Text("Bỏ qua")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.horizontal, 18).padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.1)))
+                }
+                Rectangle().fill(.white.opacity(0.12)).frame(width: 1, height: 26)
+                Button { nextEpisode() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "forward.end.fill").font(.system(size: 11))
+                        Text("Tập tiếp theo").font(.system(size: 13, weight: .semibold))
                     }
-                    .padding(.trailing, 30)
-                    .padding(.bottom, 90)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18).padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.25)))
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        }
+        .padding(.trailing, 24)
+        .padding(.bottom, 110)
+    }
+}
             if showOverlay { youtubeOverlay }
             if showSourceMenu || showSettings || showSubtitlePopup || showAudioPopup {
                 Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showSubtitlePopup = false; showAudioPopup = false }
