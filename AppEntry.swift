@@ -146,26 +146,7 @@ class AppState: ObservableObject {
     }
 }
 
-// MARK: - Onboarding Manager
-class OnboardingManager: ObservableObject {
-    static let shared = OnboardingManager()
-    @Published var currentStep = 0
-    @Published var selectedReason: String?
-    @Published var selectedMovies: [Movie] = []
-    @Published var email = ""
-    @Published var profiles: [String] = ["😎", "🦊", "🐱"]
-    
-    func completeOnboarding() {
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-    }
-    
-    func resetOnboarding() {
-        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-        currentStep = 0
-        selectedMovies = []
-        email = ""
-    }
-}
+
 
 @main
 struct AppEntry: App {
