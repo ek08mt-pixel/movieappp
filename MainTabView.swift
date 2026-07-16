@@ -1,5 +1,4 @@
 import SwiftUI
-import AVKit
 
 // MARK: - MainTabView
 struct MainTabView: View {
@@ -12,7 +11,6 @@ struct MainTabView: View {
     @State private var showWatchTogetherRoom = false
     @StateObject private var ostManager = OSTManager.shared
     @StateObject private var watchService = WatchTogetherService.shared
-    @StateObject private var pipManager = PiPManager.shared
     
     init() { UITabBar.appearance().isHidden = true }
     
@@ -25,12 +23,7 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            // Mini Player cho video
-            if pipManager.isActive {
-                videoMiniPlayer
-            }
-            
-            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom && !pipManager.isActive {
+            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom {
                 VStack {
                     MiniPlayerView().padding(.top, 8)
                     Spacer()
@@ -62,191 +55,20 @@ struct MainTabView: View {
                             .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
                     }
                 }
-                .padding(.bottom, pipManager.isActive ? 80 : 10)
+                .padding(.bottom, 10)
                 .transition(.move(edge: .bottom))
             }
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
-        .animation(.spring(response: 0.4), value: pipManager.isActive)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
-        .fullScreenCover(isPresented: $pipManager.showFullScreen) {
-            if let movieId = pipManager.movieId {
-                MoviePlayerView(
-                    movieId: movieId,
-                    movieTitle: pipManager.movieTitle,
-                    mediaType: pipManager.mediaType,
-                    seasonNumber: pipManager.seasonNumber,
-                    episodeNumber: pipManager.episodeNumber,
-                    posterURL: pipManager.posterURL,
-                    resumeTime: pipManager.currentTime
-                )
-                .environmentObject(AppState())
-            }
-        }
         .onChange(of: watchService.isInRoom) { inRoom in
             withAnimation { showWatchTogetherRoom = inRoom }
         }
         .onChange(of: selectedTab) { tab in
             if tab == 2 && watchService.isInRoom { showWatchTogetherRoom = true }
         }
-    }
-    
-    // MARK: - Video Mini Player
-    var videoMiniPlayer: some View {
-        VStack {
-            Spacer()
-            Button {
-                pipManager.restoreFullScreen()
-            } label: {
-                HStack(spacing: 10) {
-                    if let poster = pipManager.posterURL {
-                        CachedAsyncImage(url: poster)
-                            .aspectRatio(16/9, contentMode: .fill)
-                            .frame(width: 56, height: 32)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.ultraThinMaterial.opacity(0.5))
-                            .frame(width: 56, height: 32)
-                            .overlay(Image(systemName: "play.rectangle.fill").foregroundColor(.white.opacity(0.6)))
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(pipManager.movieTitle)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                        if let ep = pipManager.episodeInfo {
-                            Text(ep)
-                                .font(.system(size: 10))
-                                .foregroundColor(.white.opacity(0.5))
-                        }
-                        Text("Đang phát")
-                            .font(.system(size: 9))
-                            .foregroundColor(.green.opacity(0.8))
-                    }
-                    
-                    Spacer()
-                    
-                    // Nút play/pause
-                    Button {
-                        pipManager.togglePlayPause()
-                    } label: {
-                        Image(systemName: pipManager.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                    }
-                    
-                    // Nút tắt
-                    Button {
-                        pipManager.stopPiP()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white.opacity(0.6))
-                            .frame(width: 20, height: 20)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-                    }
-                }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.black.opacity(0.95))
-                        .overlay(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)))
-                )
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.5), radius: 10, y: 5)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 70)
-            }
-            .buttonStyle(.plain)
-            .gesture(
-                DragGesture()
-                    .onChanged { v in
-                        pipManager.dragOffset = v.translation
-                    }
-                    .onEnded { v in
-                        if v.translation.width > 100 {
-                            pipManager.stopPiP()
-                        }
-                        pipManager.dragOffset = .zero
-                    }
-            )
-        }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
-}
-
-// MARK: - PiP Manager
-class PiPManager: ObservableObject {
-    static let shared = PiPManager()
-    
-    @Published var isActive = false
-    @Published var isPlaying = true
-    @Published var showFullScreen = false
-    @Published var dragOffset: CGSize = .zero
-    
-    var player: AVPlayer?
-    var movieId: Int?
-    var movieTitle = ""
-    var mediaType: String?
-    var seasonNumber: Int?
-    var episodeNumber: Int?
-    var posterURL: URL?
-    var currentTime: Double = 0
-    var duration: Double = 0
-    
-    var episodeInfo: String? {
-        if let s = seasonNumber, let e = episodeNumber {
-            return "S\(s):E\(e)"
-        }
-        return nil
-    }
-    
-    func startPiP(from player: AVPlayer, movieId: Int, movieTitle: String, mediaType: String?, seasonNumber: Int?, episodeNumber: Int?, posterURL: URL?, currentTime: Double, duration: Double) {
-    self.player = player
-    self.movieId = movieId
-    self.movieTitle = movieTitle
-    self.mediaType = mediaType
-    self.seasonNumber = seasonNumber
-    self.episodeNumber = episodeNumber
-    self.posterURL = posterURL
-    self.currentTime = currentTime
-    self.duration = duration
-    isPlaying = player.rate > 0
-    isActive = true
-}
-    
-    func restoreFullScreen() {
-        showFullScreen = true
-    }
-    
-    func togglePlayPause() {
-        guard let player = player else { return }
-        if player.rate == 0 {
-            player.play()
-            isPlaying = true
-        } else {
-            player.pause()
-            isPlaying = false
-        }
-    }
-    
-    func stopPiP() {
-        player?.pause()
-        player?.replaceCurrentItem(with: nil)
-        player = nil
-        isActive = false
-        isPlaying = false
-        movieId = nil
-        movieTitle = ""
-        posterURL = nil
-        seasonNumber = nil
-        episodeNumber = nil
     }
 }
 
