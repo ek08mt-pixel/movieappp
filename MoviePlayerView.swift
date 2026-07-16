@@ -107,8 +107,14 @@ struct MoviePlayerView: View {
                     }
                 }
                 .onDisappear {
-    saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
-    controlsTimer?.invalidate(); unlockOrientation(); stopCasting()
+    if !PiPWindowManager.shared.isActive {
+        saveProgress()
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+    }
+    controlsTimer?.invalidate()
+    unlockOrientation()
+    stopCasting()
 }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
@@ -156,10 +162,22 @@ struct MoviePlayerView: View {
                 VStack{
                     HStack(spacing: 8){
                         Button{
+    saveProgress()
     if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{
         ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))
     }
-    DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}
+    PiPWindowManager.shared.startPiP(
+        player: player,
+        movieId: movieId,
+        movieTitle: movieTitle,
+        mediaType: mediaType,
+        seasonNumber: seasonNumber,
+        episodeNumber: episodeNumber,
+        posterURL: posterURL,
+        currentTime: currentTime,
+        duration: duration
+    )
+    dismiss()
 }label:{
                             Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))
                         }
