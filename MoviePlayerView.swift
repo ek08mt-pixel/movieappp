@@ -107,11 +107,9 @@ struct MoviePlayerView: View {
                     }
                 }
                 .onDisappear {
-                    if !PiPManager.shared.isActive {
-                        saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
-                    }
-                    controlsTimer?.invalidate(); unlockOrientation(); stopCasting()
-                }
+    saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
+    controlsTimer?.invalidate(); unlockOrientation(); stopCasting()
+}
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
