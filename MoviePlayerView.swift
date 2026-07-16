@@ -428,5 +428,23 @@ extension VideoGravityMode {
 }
 
 struct TinySlider: View { let value: CGFloat; let icon: String
-    var body: some View { VStack(spacing:4){Image(systemName:icon).font(.system(size:9)).foregroundColor(.white.opacity(0.5));ZStack(alignment:.bottom){Capsule().fill(.ultraThinMaterial.opacity(0.1)).overlay(Capsule().stroke(Color.white.opacity(0.04),lineWidth:0.5)).frame(width:6,height:60);Circle().fill(.white.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.6),lineWidth:1)).frame(width:16,height:16).shadow(color:.white.opacity(0.15),radius:4).offset(y:-value*52)} } }
-}
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.8))
+            ZStack(alignment: .bottom) {
+                Capsule()
+                    .fill(.white.opacity(0.15))
+                    .frame(width: 4, height: 100)
+                Capsule()
+                    .fill(.white.opacity(0.5))
+                    .frame(width: 4, height: max(4, 100 * value))
+            }
+            .clipShape(Capsule())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.3)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+    }
