@@ -82,7 +82,7 @@ struct MoviePlayerView: View {
             CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear {
                     player.play(); player.volume = volume
-                    setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape()
+                    setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
@@ -105,7 +105,6 @@ struct MoviePlayerView: View {
                 }
                 VStack { Spacer();
                     VStack(spacing: 0) {
-                        // Thanh tiến trình thủy tinh
                         VStack(spacing: 4) {
                             ZStack(alignment: .leading) {
                                 Capsule().fill(.white.opacity(0.08)).frame(height: 6)
@@ -135,7 +134,7 @@ struct MoviePlayerView: View {
                             Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)) }
                             Button { toggleOrientationLock() } label: { Image(systemName: isOrientationLocked ? "lock.rotation" : "lock.open.rotation").font(.system(size: 26)).foregroundColor(isOrientationLocked ? .white : .white.opacity(0.4)) }
                             Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 26)).foregroundColor(.white.opacity(0.9)) }
-                            Button { isAmbientMode.toggle() } label: { Image(systemName: isAmbientMode ? "sparkles.rectangle.stack.fill" : "sparkles.rectangle.stack").font(.system(size: 26)).foregroundColor(isAmbientMode ? .white : .white.opacity(0.5)) }
+                            Button { isAmbientMode.toggle() } label: { Image(systemName: isAmbientMode ? "rectangle.fill.on.rectangle.fill" : "rectangle.on.rectangle").font(.system(size: 26)).foregroundColor(isAmbientMode ? .white : .white.opacity(0.5)) }
                             Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)) }
                             Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)) }
                         }; Spacer()
