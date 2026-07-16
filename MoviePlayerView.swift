@@ -34,6 +34,12 @@ enum CastMode: String, CaseIterable {
     case dualScreen = "Dual Screen"
 }
 
+enum VideoGravityMode: String, CaseIterable {
+    case fit = "Vừa khung"
+    case fill = "Lấp đầy"
+    case stretch = "Căng hết"
+}
+
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
@@ -54,12 +60,13 @@ struct MoviePlayerView: View {
     @State private var imdbIDCache: String?
     @State private var hasStartedPlaying = false; @State private var didResume = false
     @State private var isOrientationLocked = true
-    @State private var showSubtitlePopup = false; @State private var showAudioPopup = false
+    @State private var showAspectPopup = false; @State private var showAudioPopup = false
     @State private var autoNextTriggered = false
     @State private var showNextEpisodePopup = false
     @State private var phimapiServers: [String] = []
     @State private var selectedServerIndex = 0
     @State private var selectedAudioLabel: String = "Original"
+    @State private var selectedVideoGravity: VideoGravityMode = .fit
     
     // Chất lượng
     @State private var selectedQuality: String = "Auto"
@@ -80,36 +87,36 @@ struct MoviePlayerView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            CustomPlayerVC(player: player, pipController: $pipController).ignoresSafeArea()
+            CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear { player.play(); player.volume = volume; setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape() }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
+            // Volume bên phải
             if showVolumeSlider {
-                VStack {
+                HStack {
                     Spacer()
-                    HStack(spacing: 10) {
-                        Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
-                            .font(.system(size: 14)).foregroundColor(.white.opacity(0.6)).frame(width: 20)
-                        Slider(value: Binding(get: { Double(volume) }, set: { volume = Float($0); player.volume = Float($0); resetVolumeTimer() }), in: 0...1)
-                            .accentColor(.white.opacity(0.5))
-                        Image(systemName: "speaker.wave.3.fill")
-                            .font(.system(size: 14)).foregroundColor(.white.opacity(0.6)).frame(width: 20)
-                    }
-                    .padding(.horizontal, 20).padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.2)))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
-                    .padding(.horizontal, 40).padding(.bottom, 130)
+                    TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
+                        .padding(.trailing, 14)
+                        .transition(.opacity)
+                }
+            }
+            
+            // Brightness bên trái
+            if showBrightnessSlider {
+                HStack {
+                    TinySlider(value: brightness, icon: "sun.max.fill")
+                        .padding(.leading, 14)
+                    Spacer()
                 }
                 .transition(.opacity)
             }
             
-            if showBrightnessSlider { HStack { TinySlider(value: brightness, icon: "sun.max.fill").padding(.leading, 14); Spacer() } }
             Color.clear.frame(width: 60).position(x: UIScreen.main.bounds.width-30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showVolumeSlider{showVolumeSlider=true}; volume=min(max(volume+Float(-v.translation.height/120),0),1); player.volume=volume; resetVolumeTimer()}.onEnded{_ in resetVolumeTimer()})
             Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2).gesture(DragGesture(minimumDistance:0).onChanged{v in if !showBrightnessSlider{showBrightnessSlider=true}; brightness=min(max(brightness+(-v.translation.height/120),0.01),1); UIScreen.main.brightness=brightness; resetBrightnessTimer()}.onEnded{_ in resetBrightnessTimer()})
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
             if let err=errorMessage, !isLoading { VStack(spacing:16){Image(systemName:"wifi.slash").font(.system(size:40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing:10){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; HStack(spacing:16){Button("Thử lại"){loadStream()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại"){dismiss()}.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
-            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showSubtitlePopup && !showAudioPopup {
+            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAspectPopup && !showAudioPopup {
                 if !isCasting {
                     HStack(spacing:64){
                         Button{seek(-10)}label:{Image(systemName:"gobackward.10").font(.system(size:20,weight:.light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1),lineWidth:0.5))}
@@ -136,8 +143,8 @@ struct MoviePlayerView: View {
                             Spacer()
                             HStack(spacing:40){
                                 Button{prevEpisode()}label:{Image(systemName:"backward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
-                                Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation":"lock.open.rotation").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
-                                Button{showSubtitlePopup=true}label:{Image(systemName:"captions.bubble").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
+                                Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation" : "lock.open.rotation").font(.system(size:26)).foregroundColor(isOrientationLocked ? .white : .white.opacity(0.4))}
+                                Button{showAspectPopup=true}label:{Image(systemName:"rectangle.arrowtriangle.2.inward").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                                 Button{showAudioPopup=true}label:{Image(systemName:"waveform").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                                 Button{nextEpisode()}label:{Image(systemName:"forward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                             }
@@ -204,11 +211,11 @@ struct MoviePlayerView: View {
                 }
             }
             if showOverlay { youtubeOverlay }
-            if showSourceMenu || showSettings || showSubtitlePopup || showAudioPopup {
-                Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showSubtitlePopup = false; showAudioPopup = false }
+            if showSourceMenu || showSettings || showAspectPopup || showAudioPopup {
+                Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAspectPopup = false; showAudioPopup = false }
                 if showSourceMenu { sourcePopup }
                 if showSettings { settingsPopup }
-                if showSubtitlePopup { subtitlePopup }
+                if showAspectPopup { aspectPopup }
                 if showAudioPopup { audioPopup }
             }
         }
@@ -368,7 +375,37 @@ ForEach(MovieSource.allCases,id:\.self){ src in Button{selectedSource=src;showSo
         .frame(width: 260)
     }
     
-    var subtitlePopup: some View { VStack(spacing:10){Text("Phụ đề").font(.system(size:14,weight:.bold)).foregroundColor(.white); ForEach(["Tắt","Vietsub","English","Tiếng Việt (AI)"],id:\.self){sub in Button{showSubtitlePopup=false}label:{Text(sub).font(.system(size:13)).foregroundColor(.white).frame(maxWidth:.infinity).padding(.vertical,10).background(RoundedRectangle(cornerRadius:8).fill(.white.opacity(0.08)))} } }.padding(18).background(RoundedRectangle(cornerRadius:16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius:16).stroke(.white.opacity(0.2),lineWidth:0.5)).frame(width:240) }
+    var aspectPopup: some View {
+        VStack(spacing: 10) {
+            Text("Khung hình").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+            ForEach(VideoGravityMode.allCases, id: \.self) { mode in
+                Button {
+                    selectedVideoGravity = mode
+                    showAspectPopup = false
+                } label: {
+                    HStack {
+                        Image(systemName: mode == .fit ? "arrow.up.left.and.arrow.down.right" : mode == .fill ? "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left" : "rectangle.portrait.arrowtriangle.2.inward")
+                            .font(.system(size: 13))
+                        Text(mode.rawValue)
+                            .font(.system(size: 13))
+                        Spacer()
+                        if selectedVideoGravity == mode {
+                            Circle().fill(Color.green).frame(width: 6, height: 6)
+                        }
+                    }
+                    .foregroundColor(selectedVideoGravity == mode ? .white : .white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(selectedVideoGravity == mode ? Color.white.opacity(0.15) : Color.white.opacity(0.05)))
+                }
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5))
+        .frame(width: 240)
+    }
+    
     var audioPopup: some View { VStack(spacing:10){Text("Âm thanh").font(.system(size:14,weight:.bold)).foregroundColor(.white); ForEach(audioOptions(), id:\.self){aud in Button{selectAudio(aud)}label:{Text(aud).font(.system(size:13)).foregroundColor(aud == selectedAudioLabel ? .black : .white).frame(maxWidth:.infinity).padding(.vertical,10).background(RoundedRectangle(cornerRadius:8).fill(aud == selectedAudioLabel ? .white : Color.white.opacity(0.08)))} } }.padding(18).background(RoundedRectangle(cornerRadius:16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius:16).stroke(.white.opacity(0.2),lineWidth:0.5)).frame(width:240) }
     
     func audioOptions() -> [String] {
@@ -632,9 +669,19 @@ struct CastRemoteView: View {
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
-struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?
-    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = .resizeAspect; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
+struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?; var gravity: VideoGravityMode = .fit
+    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = gravity.avGravity; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
+    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { ui.videoGravity = gravity.avGravity; DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
+}
+
+extension VideoGravityMode {
+    var avGravity: AVLayerVideoGravity {
+        switch self {
+        case .fit: return .resizeAspect
+        case .fill: return .resizeAspectFill
+        case .stretch: return .resize
+        }
+    }
 }
 
 struct TinySlider: View { let value: CGFloat; let icon: String
