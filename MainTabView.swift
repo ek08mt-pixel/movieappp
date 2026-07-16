@@ -207,21 +207,19 @@ class PiPManager: ObservableObject {
         return nil
     }
     
-    func startPiP(from moviePlayer: MoviePlayerView) {
-        // Lưu thông tin từ player hiện tại
-        self.player = moviePlayer.player
-        self.movieId = moviePlayer.movieId
-        self.movieTitle = moviePlayer.movieTitle
-        self.mediaType = moviePlayer.mediaType
-        self.seasonNumber = moviePlayer.seasonNumber
-        self.episodeNumber = moviePlayer.episodeNumber
-        self.posterURL = moviePlayer.posterURL
-        self.currentTime = moviePlayer.currentTime
-        self.duration = moviePlayer.duration
-        
-        isPlaying = player?.rate ?? 0 > 0
-        isActive = true
-    }
+    func startPiP(from player: AVPlayer, movieId: Int, movieTitle: String, mediaType: String?, seasonNumber: Int?, episodeNumber: Int?, posterURL: URL?, currentTime: Double, duration: Double) {
+    self.player = player
+    self.movieId = movieId
+    self.movieTitle = movieTitle
+    self.mediaType = mediaType
+    self.seasonNumber = seasonNumber
+    self.episodeNumber = episodeNumber
+    self.posterURL = posterURL
+    self.currentTime = currentTime
+    self.duration = duration
+    isPlaying = player.rate > 0
+    isActive = true
+}
     
     func restoreFullScreen() {
         showFullScreen = true
