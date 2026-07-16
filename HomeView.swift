@@ -21,6 +21,9 @@ struct HomeView: View {
     @State private var continuePosterURL: URL?
     @State private var continueCurrentTime: Double = 0
     
+    @State private var showContinueDetail = false
+    @State private var detailMovie: Movie?
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -153,72 +156,7 @@ struct HomeView: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 12) {
                                         ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
-                                            Button {
-                                                continueMovieId = prog.movieId
-                                                continueMovieTitle = prog.movieTitle
-                                                continueMediaType = prog.mediaType
-                                                continueSeason = prog.season
-                                                continueEpisode = prog.episode
-                                                continuePosterURL = URL(string: prog.posterPath ?? "")
-                                                continueCurrentTime = prog.currentTime
-                                                showContinuePlayer = true
-                                            } label: {
-                                                VStack(alignment: .leading, spacing: 0) {
-                                                    ZStack(alignment: .center) {
-                                                        CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
-                                                            .aspectRatio(16/9, contentMode: .fill)
-                                                            .frame(width: 200, height: 112)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                        
-                                                        Image(systemName: "play.circle.fill")
-                                                            .font(.system(size: 32))
-                                                            .foregroundColor(.white.opacity(0.9))
-                                                            .shadow(color: .black.opacity(0.5), radius: 4)
-                                                        
-                                                        VStack {
-                                                            Spacer()
-                                                            HStack {
-                                                                if let ep = prog.episode {
-                                                                    Text("S\(prog.season ?? 1):E\(ep)")
-                                                                        .font(.system(size: 8, weight: .bold))
-                                                                        .foregroundColor(.white)
-                                                                        .padding(.horizontal, 5)
-                                                                        .padding(.vertical, 2)
-                                                                        .background(Capsule().fill(.black.opacity(0.6)))
-                                                                }
-                                                                Spacer()
-                                                                Text(formatRemaining(prog))
-                                                                    .font(.system(size: 8, weight: .medium))
-                                                                    .foregroundColor(.white)
-                                                                    .padding(.horizontal, 5)
-                                                                    .padding(.vertical, 2)
-                                                                    .background(Capsule().fill(.black.opacity(0.6)))
-                                                            }
-                                                            .padding(6)
-                                                            
-                                                            GeometryReader { geo in
-                                                                RoundedRectangle(cornerRadius: 1)
-                                                                    .fill(.white.opacity(0.3))
-                                                                    .frame(height: 2)
-                                                                    .overlay(alignment: .leading) {
-                                                                        RoundedRectangle(cornerRadius: 1)
-                                                                            .fill(.blue)
-                                                                            .frame(width: geo.size.width * CGFloat(prog.progress), height: 2)
-                                                                    }
-                                                            }
-                                                            .frame(height: 2)
-                                                        }
-                                                    }
-                                                    .frame(width: 200, height: 112)
-                                                    
-                                                    Text(prog.movieTitle)
-                                                        .font(.system(size: 11, weight: .semibold))
-                                                        .foregroundColor(.white)
-                                                        .lineLimit(1)
-                                                        .frame(width: 200, alignment: .leading)
-                                                        .padding(.top, 4)
-                                                }
-                                            }
+                                            continueWatchingCard(prog)
                                         }
                                     }.padding(.horizontal, 20)
                                 }
@@ -387,6 +325,11 @@ struct HomeView: View {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = false; menuOffset = -280 }
                 }
             })
+            .navigationDestination(isPresented: $showContinueDetail) {
+                if let movie = detailMovie {
+                    MovieDetailView(movie: movie)
+                }
+            }
         }
         .task { await vm.loadAll() }
         .sheet(isPresented: $showRandom) {
@@ -407,6 +350,110 @@ struct HomeView: View {
                     resumeTime: continueCurrentTime
                 )
                 .environmentObject(appState)
+            }
+        }
+    }
+    
+    // MARK: - Continue Watching Card with Context Menu
+    func continueWatchingCard(_ prog: WatchProgress) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .center) {
+                CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
+                    .aspectRatio(16/9, contentMode: .fill)
+                    .frame(width: 200, height: 112)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.white.opacity(0.9))
+                    .shadow(color: .black.opacity(0.5), radius: 4)
+                
+                VStack {
+                    Spacer()
+                    HStack {
+                        if let ep = prog.episode {
+                            Text("S\(prog.season ?? 1):E\(ep)")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(.black.opacity(0.6)))
+                        }
+                        Spacer()
+                        Text(formatRemaining(prog))
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(.black.opacity(0.6)))
+                    }
+                    .padding(6)
+                    
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(.white.opacity(0.3))
+                            .frame(height: 2)
+                            .overlay(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(.blue)
+                                    .frame(width: geo.size.width * CGFloat(prog.progress), height: 2)
+                            }
+                    }
+                    .frame(height: 2)
+                }
+            }
+            .frame(width: 200, height: 112)
+            
+            Text(prog.movieTitle)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .frame(width: 200, alignment: .leading)
+                .padding(.top, 4)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture {
+            // Nhấn 1 lần: xem tiếp
+            continueMovieId = prog.movieId
+            continueMovieTitle = prog.movieTitle
+            continueMediaType = prog.mediaType
+            continueSeason = prog.season
+            continueEpisode = prog.episode
+            continuePosterURL = URL(string: prog.posterPath ?? "")
+            continueCurrentTime = prog.currentTime
+            showContinuePlayer = true
+        }
+        .contextMenu {
+            Button {
+                // Đi đến trang chi tiết phim
+                let movie = Movie(
+                    id: prog.movieId,
+                    title: prog.movieTitle,
+                    overview: "",
+                    posterPath: prog.posterPath,
+                    backdropPath: nil,
+                    voteAverage: 0,
+                    releaseDate: nil,
+                    genreIds: nil,
+                    originalTitle: nil,
+                    popularity: nil,
+                    voteCount: nil,
+                    adult: false,
+                    originalLanguage: nil,
+                    mediaType: prog.mediaType
+                )
+                detailMovie = movie
+                showContinueDetail = true
+            } label: {
+                Label("Thông tin", systemImage: "info.circle")
+            }
+            
+            Button {
+                // Xóa khỏi danh sách tiếp tục xem
+                appState.watchProgressList.removeAll { $0.movieId == prog.movieId }
+                appState.save()
+            } label: {
+                Label("Xóa", systemImage: "trash")
             }
         }
     }
