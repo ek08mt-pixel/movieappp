@@ -239,12 +239,12 @@ struct MovieDetailView: View {
         guard !imdbID.isEmpty else { return }
         
         // Lấy ratings từ TMDb
-        let tmdbScore: String? = {
-            if let rating = movie.voteAverage, rating > 0 {
-                return String(format: "%.1f/10", rating)
-            }
-            return nil
-        }()
+let tmdbScore: String? = {
+    if movie.voteAverage > 0 {
+        return String(format: "%.1f/10", movie.voteAverage)
+    }
+    return nil
+}()
         
         // IMDb rating từ OMDb API
         var imdbRating: String? = nil
