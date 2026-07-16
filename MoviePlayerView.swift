@@ -106,7 +106,12 @@ struct MoviePlayerView: View {
                         selectedAudioLabel = savedLabel
                     }
                 }
-                .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
+                .onDisappear {
+                    if !PiPManager.shared.isActive {
+                        saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
+                    }
+                    controlsTimer?.invalidate(); unlockOrientation(); stopCasting()
+                }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
@@ -152,7 +157,11 @@ struct MoviePlayerView: View {
                 }
                 VStack{
                     HStack(spacing: 8){
-                        Button{if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))}; DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}}label:{Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))}
+                        Button{
+                            minimizeToPiP()
+                        }label:{
+                            Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))
+                        }
                         VStack(alignment: .leading, spacing: 0) {
                             Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1)
                             if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) }
@@ -187,64 +196,35 @@ struct MoviePlayerView: View {
                 if showAudioPopup { audioPopup }
             }
             
-            // Volume slider - bên phải
             if showVolumeSlider {
-                HStack {
-                    Spacer()
+                HStack { Spacer()
                     TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
                         .padding(.trailing, 20)
-                }
-                .transition(.opacity)
-                .allowsHitTesting(true)
+                }.transition(.opacity).allowsHitTesting(true)
             }
             
-            // Brightness slider - bên trái
             if showBrightnessSlider {
                 HStack {
-                    TinySlider(value: brightness, icon: "sun.max.fill")
-                        .padding(.leading, 20)
+                    TinySlider(value: brightness, icon: "sun.max.fill").padding(.leading, 20)
                     Spacer()
-                }
-                .transition(.opacity)
-                .allowsHitTesting(true)
+                }.transition(.opacity).allowsHitTesting(true)
             }
             
-            // GESTURE AREAS - PHẢI ĐẶT SAU CÙNG ĐỂ KHÔNG BỊ ĐÈ
-            // Volume gesture (nửa phải màn hình)
-            Color.clear
-                .frame(width: UIScreen.main.bounds.width / 2)
+            Color.clear.frame(width: UIScreen.main.bounds.width / 2)
                 .position(x: UIScreen.main.bounds.width * 0.75, y: UIScreen.main.bounds.height / 2)
-                .gesture(
-                    DragGesture(minimumDistance: 10)
-                        .onChanged { v in
-                            if !showVolumeSlider {
-                                withAnimation(.easeInOut(duration: 0.2)) { showVolumeSlider = true }
-                            }
-                            let newVol = min(max(volume + Float(-v.translation.height / 150), 0), 1)
-                            volume = newVol
-                            player.volume = newVol
-                            resetVolumeTimer()
-                        }
-                        .onEnded { _ in resetVolumeTimer() }
-                )
+                .gesture(DragGesture(minimumDistance: 10).onChanged { v in
+                    if !showVolumeSlider { withAnimation(.easeInOut(duration: 0.2)) { showVolumeSlider = true } }
+                    let newVol = min(max(volume + Float(-v.translation.height / 150), 0), 1)
+                    volume = newVol; player.volume = newVol; resetVolumeTimer()
+                }.onEnded { _ in resetVolumeTimer() })
             
-            // Brightness gesture (nửa trái màn hình)
-            Color.clear
-                .frame(width: UIScreen.main.bounds.width / 2)
+            Color.clear.frame(width: UIScreen.main.bounds.width / 2)
                 .position(x: UIScreen.main.bounds.width * 0.25, y: UIScreen.main.bounds.height / 2)
-                .gesture(
-                    DragGesture(minimumDistance: 10)
-                        .onChanged { v in
-                            if !showBrightnessSlider {
-                                withAnimation(.easeInOut(duration: 0.2)) { showBrightnessSlider = true }
-                            }
-                            let newBright = min(max(brightness + (-v.translation.height / 150), 0.01), 1)
-                            brightness = newBright
-                            UIScreen.main.brightness = newBright
-                            resetBrightnessTimer()
-                        }
-                        .onEnded { _ in resetBrightnessTimer() }
-                )
+                .gesture(DragGesture(minimumDistance: 10).onChanged { v in
+                    if !showBrightnessSlider { withAnimation(.easeInOut(duration: 0.2)) { showBrightnessSlider = true } }
+                    let newBright = min(max(brightness + (-v.translation.height / 150), 0.01), 1)
+                    brightness = newBright; UIScreen.main.brightness = newBright; resetBrightnessTimer()
+                }.onEnded { _ in resetBrightnessTimer() })
         }
         .statusBarHidden()
         .gesture(DragGesture(minimumDistance: 20).onChanged { v in
@@ -266,6 +246,29 @@ struct MoviePlayerView: View {
             CastSheetView(showRemote: $showRemoteControl, castDeviceName: $castDeviceName, isCasting: $isCasting, player: player)
                 .presentationDetents([.medium, .large]).presentationDragIndicator(.hidden)
         }
+    }
+    
+    // MARK: - PiP
+    func minimizeToPiP() {
+        saveProgress()
+        // Đổi orientation về portrait trước khi minimize
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+        // Lưu thông tin vào PiPManager
+        PiPManager.shared.player = player
+        PiPManager.shared.movieId = movieId
+        PiPManager.shared.movieTitle = movieTitle
+        PiPManager.shared.mediaType = mediaType
+        PiPManager.shared.seasonNumber = seasonNumber
+        PiPManager.shared.episodeNumber = episodeNumber
+        PiPManager.shared.posterURL = posterURL
+        PiPManager.shared.currentTime = currentTime
+        PiPManager.shared.duration = duration
+        PiPManager.shared.isPlaying = player.rate > 0
+        PiPManager.shared.isActive = true
+        
+        dismiss()
     }
     
     func cycleAspect() { selectedVideoGravity.next() }
@@ -353,13 +356,8 @@ struct MoviePlayerView: View {
     
     func toggleOrientationLock() {
         isOrientationLocked.toggle()
-        if isOrientationLocked {
-            lockToLandscape()
-        } else {
-            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .all))
-            }
-        }
+        if isOrientationLocked { lockToLandscape() }
+        else { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .all)) } }
     }
     
     func loadOverlayData() { Task { similarMovies=(try? await APIService.shared.similar(movieId:movieId,mediaType:mediaType)) ?? []; if mediaType=="tv"{ seasons=(try? await APIService.shared.fetchTVSeasons(tvId:movieId)) ?? []; if let s = seasonNumber { selectedSeasonNumber = s; selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s) } }; if let detail=try? await APIService.shared.movieDetail(movieId:movieId),let cid=detail.belongsToCollection?.id,let col=try? await APIService.shared.collectionDetail(collectionId:cid){collectionMovies=col.parts}; currentMovie=Movie(id:movieId,title:movieTitle,overview:"",posterPath:posterURL?.absoluteString ?? "",backdropPath:nil,voteAverage:0,releaseDate:nil,genreIds:nil,originalTitle:nil,popularity:nil,voteCount:nil,adult:false,originalLanguage:nil,mediaType:mediaType) } }
