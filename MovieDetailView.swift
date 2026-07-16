@@ -14,6 +14,7 @@ struct MovieDetailView: View {
     @State private var playSeason: Int? = nil
     @State private var playEpisode: Int? = nil
     @State private var expandedSeason: Int? = nil
+    @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -59,6 +60,9 @@ struct MovieDetailView: View {
                                 Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
                             }
                         }
+                        
+                        // Ratings Bar
+                        ratingsBar
                         
                         HStack(spacing: 10) {
                             Button { playSeason = nil; playEpisode = nil; showPlayer = true } label: {
@@ -161,10 +165,116 @@ struct MovieDetailView: View {
             }.ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
-        .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType) }
+        .task {
+            await vm.load(movieId: movie.id, mediaType: movie.mediaType)
+            await fetchRatings()
+        }
         .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState) }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
+    }
+    
+    // MARK: - Ratings Bar
+    var ratingsBar: some View {
+        let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
+        guard hasAnyRating else { return AnyView(EmptyView()) }
+        
+        return AnyView(
+            HStack(spacing: 0) {
+                // TMDb
+                if let tmdb = ratings.tmdb {
+                    ratingItem(icon: "t.square.fill", color: .yellow, label: "TMDb", value: tmdb)
+                }
+                
+                if ratings.tmdb != nil && (ratings.imdb != nil || ratings.rottenTomatoes != nil) {
+                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
+                }
+                
+                // IMDb (Amazon)
+                if let imdb = ratings.imdb {
+                    ratingItem(icon: "i.square.fill", color: .orange, label: "IMDb", value: imdb)
+                }
+                
+                if ratings.imdb != nil && ratings.rottenTomatoes != nil {
+                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
+                }
+                
+                // Rotten Tomatoes
+                if let rt = ratings.rottenTomatoes {
+                    ratingItem(icon: "r.square.fill", color: .red, label: "RT", value: rt)
+                }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        )
+    }
+    
+    func ratingItem(icon: String, color: Color, label: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(color)
+            Text(value)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Fetch Ratings
+    func fetchRatings() async {
+        let imdbID: String
+        if movie.mediaType == "tv" {
+            imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? ""
+        } else {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+                struct E: Codable { let imdb_id: String? }
+                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+            } catch { return }
+        }
+        
+        guard !imdbID.isEmpty else { return }
+        
+        // Lấy ratings từ TMDb
+        let tmdbScore: String? = {
+            if let rating = movie.voteAverage, rating > 0 {
+                return String(format: "%.1f/10", rating)
+            }
+            return nil
+        }()
+        
+        // IMDb rating từ OMDb API
+        var imdbRating: String? = nil
+        var rtRating: String? = nil
+        
+        if !imdbID.isEmpty {
+            let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=3c3cfb9e"
+            if let url = URL(string: omdbURL),
+               let (data, _) = try? await URLSession.shared.data(from: url),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                
+                if let imdbScore = json["imdbRating"] as? String, imdbScore != "N/A" {
+                    imdbRating = "\(imdbScore)/10"
+                }
+                
+                // Rotten Tomatoes từ Ratings array
+                if let ratings = json["Ratings"] as? [[String: Any]] {
+                    for rating in ratings {
+                        if let source = rating["Source"] as? String, source == "Rotten Tomatoes",
+                           let value = rating["Value"] as? String {
+                            rtRating = value
+                        }
+                    }
+                }
+            }
+        }
+        
+        await MainActor.run {
+            ratings = (tmdbScore, imdbRating, rtRating)
+        }
     }
 }
 
