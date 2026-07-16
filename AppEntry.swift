@@ -47,7 +47,15 @@ class AppState: ObservableObject {
     @Published var avatarImageData: Data?
     @Published var telegramAvatarURL: String? = nil
     @Published var watchedMovies: [Movie] = []
-    init() { load() }
+    @Published var hasCompletedOnboarding: Bool {
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
+    }
+    @Published var showOnboarding: Bool = false
+    
+    init() {
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        load()
+    }
     
     func register(email: String, password: String) {
         var accounts = getAllAccounts(); accounts[email] = password; saveAllAccounts(accounts)
@@ -99,6 +107,7 @@ class AppState: ObservableObject {
     func logout() {
         isLoggedIn = false; email = ""; nickname = ""; selectedAvatar = "person.circle.fill"
         avatarImageData = nil; telegramAvatarURL = nil; favorites = []; watchHistory = []; watchProgressList = []
+        hasCompletedOnboarding = false
         save()
     }
     
@@ -137,8 +146,40 @@ class AppState: ObservableObject {
     }
 }
 
+// MARK: - Onboarding Manager
+class OnboardingManager: ObservableObject {
+    static let shared = OnboardingManager()
+    @Published var currentStep = 0
+    @Published var selectedReason: String?
+    @Published var selectedMovies: [Movie] = []
+    @Published var email = ""
+    @Published var profiles: [String] = ["😎", "🦊", "🐱"]
+    
+    func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+    }
+    
+    func resetOnboarding() {
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        currentStep = 0
+        selectedMovies = []
+        email = ""
+    }
+}
+
 @main
 struct AppEntry: App {
     @StateObject var appState = AppState()
-    var body: some Scene { WindowGroup { SplashView().environmentObject(appState) } }
+    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
+    
+    var body: some Scene {
+        WindowGroup {
+            if hasCompletedOnboarding {
+                MainTabView().environmentObject(appState)
+            } else {
+                OnboardingView()
+                    .environmentObject(appState)
+            }
+        }
+    }
 }
