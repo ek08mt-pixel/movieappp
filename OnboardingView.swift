@@ -1,25 +1,25 @@
 import SwiftUI
-import AuthenticationServices
+import PhotosUI
 
 // MARK: - Onboarding Manager
 class OnboardingManager: ObservableObject {
     static let shared = OnboardingManager()
-    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @Published var currentStep = 0
     @Published var selectedReason: String?
     @Published var selectedMovies: [Movie] = []
     @Published var email = ""
-    @Published var profiles: [String] = ["😎", "🦊", "🐱"]
+    @Published var profiles: [UIImage?] = [nil, nil, nil]
     
     func completeOnboarding() {
-        hasCompletedOnboarding = true
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
     }
     
     func resetOnboarding() {
-        hasCompletedOnboarding = false
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
         currentStep = 0
         selectedMovies = []
         email = ""
+        profiles = [nil, nil, nil]
     }
 }
 
@@ -60,7 +60,7 @@ struct OnboardingProgressBar: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            HStack {
+            HStack(spacing: 6) {
                 ForEach(0..<totalSteps, id: \.self) { i in
                     Capsule()
                         .fill(i <= currentStep - 1 ? Color.white : Color.white.opacity(0.2))
@@ -84,6 +84,27 @@ struct OnboardingProgressBar: View {
     }
 }
 
+// MARK: - Glass Card Modifier
+struct GlassCardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial.opacity(0.3))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(.white.opacity(0.2), lineWidth: 0.5)
+                    )
+            )
+    }
+}
+
+extension View {
+    func glassCard() -> some View {
+        modifier(GlassCardModifier())
+    }
+}
+
 // MARK: - Step 0: Welcome
 struct WelcomeStep: View {
     @ObservedObject var om: OnboardingManager
@@ -94,9 +115,37 @@ struct WelcomeStep: View {
             Spacer()
             
             // Logo & Welcome
-            VStack(spacing: 12) {
-                Text("👋")
-                    .font(.system(size: 60))
+            VStack(spacing: 16) {
+                // Speech bubble anime style
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.white.opacity(0.1))
+                        .frame(width: 80, height: 60)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(.white.opacity(0.3), lineWidth: 1)
+                        )
+                    // Tail
+                    Path { path in
+                        path.move(to: CGPoint(x: 40, y: 60))
+                        path.addLine(to: CGPoint(x: 35, y: 72))
+                        path.addLine(to: CGPoint(x: 48, y: 60))
+                    }
+                    .fill(.white.opacity(0.1))
+                    .overlay(
+                        Path { path in
+                            path.move(to: CGPoint(x: 40, y: 60))
+                            path.addLine(to: CGPoint(x: 35, y: 72))
+                            path.addLine(to: CGPoint(x: 48, y: 60))
+                        }
+                        .stroke(.white.opacity(0.3), lineWidth: 1)
+                    )
+                    
+                    Text("!?")
+                        .font(.system(size: 28, weight: .heavy))
+                        .foregroundColor(.white)
+                }
+                
                 Text("Welcome to Emmew")
                     .font(.system(size: 32, weight: .bold, design: .serif))
                     .foregroundColor(.white)
@@ -115,9 +164,9 @@ struct WelcomeStep: View {
                 TextField("Email address", text: $om.email)
                     .font(.system(size: 16))
                     .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
                     .padding(.horizontal, 16).padding(.vertical, 14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.1)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    .glassCard()
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
                 
@@ -134,17 +183,16 @@ struct WelcomeStep: View {
                 }
                 
                 // Or
-                HStack(spacing: 12) {
-                    Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
-                    Text("or").font(.system(size: 12)).foregroundColor(.white.opacity(0.5))
-                    Rectangle().fill(.white.opacity(0.2)).frame(height: 1)
-                }
+                Text("or")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
                 
                 // Continue with Google
                 Button {
                     withAnimation { om.currentStep = 1 }
                 } label: {
                     HStack(spacing: 10) {
+                        Spacer()
                         Image(systemName: "g.circle.fill")
                             .font(.system(size: 20))
                             .foregroundColor(.red)
@@ -153,10 +201,8 @@ struct WelcomeStep: View {
                             .foregroundColor(.white)
                         Spacer()
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.1)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    .padding(.vertical, 14)
+                    .glassCard()
                 }
                 
                 // Continue with Apple
@@ -164,6 +210,7 @@ struct WelcomeStep: View {
                     withAnimation { om.currentStep = 1 }
                 } label: {
                     HStack(spacing: 10) {
+                        Spacer()
                         Image(systemName: "apple.logo")
                             .font(.system(size: 20))
                             .foregroundColor(.white)
@@ -172,10 +219,8 @@ struct WelcomeStep: View {
                             .foregroundColor(.white)
                         Spacer()
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.1)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    .padding(.vertical, 14)
+                    .glassCard()
                 }
             }
             .padding(.horizontal, 24)
@@ -226,14 +271,7 @@ struct ReasonStep: View {
                                 }
                             }
                             .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(selectedReason == text ? .white.opacity(0.12) : .white.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(selectedReason == text ? .white.opacity(0.3) : .white.opacity(0.08), lineWidth: 0.5)
-                                    )
-                            )
+                            .glassCard()
                         }
                     }
                 }
@@ -242,7 +280,6 @@ struct ReasonStep: View {
             
             Spacer()
             
-            // Next button
             Button {
                 om.selectedReason = selectedReason
                 withAnimation { om.currentStep = 2 }
@@ -278,10 +315,12 @@ struct MoviePickerStep: View {
         VStack(spacing: 0) {
             OnboardingProgressBar(currentStep: om.currentStep)
             
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 16) {
                 Text("Choose 3 or more\nmovies you like")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
                 
@@ -295,8 +334,7 @@ struct MoviePickerStep: View {
                         }
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.1)))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.12), lineWidth: 0.5))
+                .glassCard()
                 .padding(.horizontal, 24)
                 
                 // Movie grid
@@ -337,6 +375,7 @@ struct MoviePickerStep: View {
                                         }
                                     }
                                 }
+                                .frame(height: 160)
                             }
                         }
                     }
@@ -347,7 +386,6 @@ struct MoviePickerStep: View {
             
             Spacer()
             
-            // Next button
             Button {
                 withAnimation { om.currentStep = 3 }
             } label: {
@@ -384,13 +422,13 @@ struct GoodChoiceStep: View {
         VStack(spacing: 0) {
             Spacer()
             
-            Text("Good choice! 👏")
+            Text("Good choice!")
                 .font(.system(size: 30, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.bottom, 30)
             
             // Selected movies
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 ForEach(Array(om.selectedMovies.prefix(3))) { movie in
                     CachedAsyncImage(url: movie.posterURL)
                         .aspectRatio(2/3, contentMode: .fill)
@@ -403,16 +441,19 @@ struct GoodChoiceStep: View {
             Text("We'll recommend movies based on your taste")
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
                 .padding(.top, 20)
+                .padding(.horizontal, 40)
             
-            // Stars
-            HStack(spacing: 6) {
+            // Stars - tam giác màu trắng
+            HStack(spacing: 12) {
                 ForEach(0..<3) { i in
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 20))
-                        .foregroundColor(.yellow)
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
                         .opacity(showStars ? 1 : 0.3)
                         .scaleEffect(showStars ? 1 : 0.5)
+                        .rotationEffect(.degrees(180))
                         .animation(.easeInOut(duration: 0.6).delay(Double(i) * 0.2).repeatForever(autoreverses: true), value: showStars)
                 }
             }
@@ -442,7 +483,8 @@ struct GoodChoiceStep: View {
 // MARK: - Step 4: Profile
 struct ProfileStep: View {
     @ObservedObject var om: OnboardingManager
-    @State private var showImagePicker = false
+    @State private var selectedProfileIndex: Int = 0
+    @State private var showPhotoPicker = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -451,12 +493,12 @@ struct ProfileStep: View {
             Text("Select Profile")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.bottom, 40)
+                .padding(.bottom, 50)
             
             // 3 avatar slots (2 trên, 1 dưới)
-            VStack(spacing: 20) {
+            VStack(spacing: 30) {
                 // 2 trên
-                HStack(spacing: 20) {
+                HStack(spacing: 30) {
                     profileCircle(index: 0)
                     profileCircle(index: 1)
                 }
@@ -467,12 +509,12 @@ struct ProfileStep: View {
             Text("Add Profile")
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.5))
-                .padding(.top, 12)
+                .padding(.top, 16)
             
             Spacer()
             
             // Don't ask again
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "checkmark.square.fill")
                     .font(.system(size: 16))
                     .foregroundColor(.white.opacity(0.6))
@@ -488,7 +530,7 @@ struct ProfileStep: View {
             Button {
                 om.completeOnboarding()
             } label: {
-                Text("Let's go! 🚀")
+                Text("Let's go!")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -498,29 +540,72 @@ struct ProfileStep: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 50)
         }
+        .sheet(isPresented: $showPhotoPicker) {
+            PhotoPickerView { image in
+                om.profiles[selectedProfileIndex] = image
+            }
+        }
     }
     
     func profileCircle(index: Int) -> some View {
-        ZStack {
-            if index < om.profiles.count {
-                Circle()
-                    .fill(.ultraThinMaterial.opacity(0.4))
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        Text(om.profiles[index])
-                            .font(.system(size: 36))
-                    )
-                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
-            } else {
-                Circle()
-                    .fill(.white.opacity(0.08))
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        Image(systemName: "plus")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white.opacity(0.5))
-                    )
-                    .overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 1))
+        Button {
+            selectedProfileIndex = index
+            showPhotoPicker = true
+        } label: {
+            ZStack {
+                if let image = om.profiles[index] {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 90, height: 90)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 2))
+                } else {
+                    Circle()
+                        .fill(.white.opacity(0.08))
+                        .frame(width: 90, height: 90)
+                        .overlay(
+                            Image(systemName: "plus")
+                                .font(.system(size: 30))
+                                .foregroundColor(.white.opacity(0.5))
+                        )
+                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Photo Picker
+struct PhotoPickerView: UIViewControllerRepresentable {
+    var onPick: (UIImage) -> Void
+    
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+    
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPick: (UIImage) -> Void
+        init(onPick: @escaping (UIImage) -> Void) { self.onPick = onPick }
+        
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let result = results.first else { return }
+            result.itemProvider.loadObject(ofClass: UIImage.self) { image, _ in
+                if let image = image as? UIImage {
+                    DispatchQueue.main.async { self.onPick(image) }
+                }
             }
         }
     }
