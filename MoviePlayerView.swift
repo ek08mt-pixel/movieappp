@@ -250,26 +250,23 @@ struct MoviePlayerView: View {
     
     // MARK: - PiP
     func minimizeToPiP() {
-        saveProgress()
-        // Đổi orientation về portrait trước khi minimize
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-        }
-        // Lưu thông tin vào PiPManager
-        PiPManager.shared.player = player
-        PiPManager.shared.movieId = movieId
-        PiPManager.shared.movieTitle = movieTitle
-        PiPManager.shared.mediaType = mediaType
-        PiPManager.shared.seasonNumber = seasonNumber
-        PiPManager.shared.episodeNumber = episodeNumber
-        PiPManager.shared.posterURL = posterURL
-        PiPManager.shared.currentTime = currentTime
-        PiPManager.shared.duration = duration
-        PiPManager.shared.isPlaying = player.rate > 0
-        PiPManager.shared.isActive = true
-        
-        dismiss()
+    saveProgress()
+    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
     }
+    PiPManager.shared.startPiP(
+        from: player,
+        movieId: movieId,
+        movieTitle: movieTitle,
+        mediaType: mediaType,
+        seasonNumber: seasonNumber,
+        episodeNumber: episodeNumber,
+        posterURL: posterURL,
+        currentTime: currentTime,
+        duration: duration
+    )
+    dismiss()
+}
     
     func cycleAspect() { selectedVideoGravity.next() }
     
