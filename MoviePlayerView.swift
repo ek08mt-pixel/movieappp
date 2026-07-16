@@ -278,12 +278,58 @@ struct CastSheetView: View {
     @State private var isScanning = true
     
     let dummyDevices: [CastDevice] = [
-        CastDevice(name: "Apple TV - Phòng khách", icon: "appletv.fill", type: .airplay, signalStrength: 4),
-        CastDevice(name: "Samsung Smart TV", icon: "tv.fill", type: .smartTV, signalStrength: 3),
-        CastDevice(name: "Chromecast - Phòng ngủ", icon: "rectangle.connected.to.line.below", type: .chromecast, signalStrength: 4),
-        CastDevice(name: "MacBook Pro", icon: "laptopcomputer", type: .webReceiver, signalStrength: 3),
-        CastDevice(name: "Máy chiếu LG", icon: "rectangle.fill.badge.person.crop", type: .smartTV, signalStrength: 2),
-    ]
+    // AirPlay
+    CastDevice(name: "Apple TV 4K", icon: "appletv.fill", type: .airplay, signalStrength: 4),
+    CastDevice(name: "Apple TV HD", icon: "appletv.fill", type: .airplay, signalStrength: 4),
+    
+    // Smart TV
+    CastDevice(name: "Samsung Smart TV", icon: "tv.fill", type: .smartTV, signalStrength: 4),
+    CastDevice(name: "LG Smart TV", icon: "tv.fill", type: .smartTV, signalStrength: 3),
+    CastDevice(name: "Sony Bravia", icon: "tv.fill", type: .smartTV, signalStrength: 3),
+    CastDevice(name: "TCL Smart TV", icon: "tv.fill", type: .smartTV, signalStrength: 3),
+    CastDevice(name: "Panasonic TV", icon: "tv.fill", type: .smartTV, signalStrength: 3),
+    CastDevice(name: "Philips Smart TV", icon: "tv.fill", type: .smartTV, signalStrength: 2),
+    CastDevice(name: "Skyworth TV", icon: "tv.fill", type: .smartTV, signalStrength: 2),
+    CastDevice(name: "Coocaa TV", icon: "tv.fill", type: .smartTV, signalStrength: 2),
+    
+    // Chromecast
+    CastDevice(name: "Chromecast Ultra", icon: "rectangle.connected.to.line.below", type: .chromecast, signalStrength: 4),
+    CastDevice(name: "Chromecast 4K", icon: "rectangle.connected.to.line.below", type: .chromecast, signalStrength: 4),
+    CastDevice(name: "Chromecast HD", icon: "rectangle.connected.to.line.below", type: .chromecast, signalStrength: 3),
+    
+    // Android TV / TV Box
+    CastDevice(name: "NVIDIA Shield TV", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 5),
+    CastDevice(name: "Xiaomi Mi Box S", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 4),
+    CastDevice(name: "Xiaomi TV Stick", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 4),
+    CastDevice(name: "Tanix TV Box", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 3),
+    CastDevice(name: "HK1 Box", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 3),
+    CastDevice(name: "TX9 TV Box", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 3),
+    CastDevice(name: "Rocktek G2", icon: "tv.and.hifispeaker.fill", type: .chromecast, signalStrength: 4),
+    
+    // Game Console
+    CastDevice(name: "Xbox Series X", icon: "gamecontroller.fill", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "PlayStation 5", icon: "playstation.logo", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "PlayStation 4", icon: "playstation.logo", type: .webReceiver, signalStrength: 3),
+    
+    // Laptop / PC
+    CastDevice(name: "MacBook Pro", icon: "laptopcomputer", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "MacBook Air", icon: "laptopcomputer", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "iMac", icon: "desktopcomputer", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "Windows PC", icon: "desktopcomputer", type: .webReceiver, signalStrength: 3),
+    CastDevice(name: "Windows Laptop", icon: "laptopcomputer", type: .webReceiver, signalStrength: 3),
+    CastDevice(name: "Linux PC", icon: "desktopcomputer", type: .webReceiver, signalStrength: 3),
+    
+    // Máy chiếu
+    CastDevice(name: "Máy chiếu Epson", icon: "rectangle.fill.badge.person.crop", type: .smartTV, signalStrength: 2),
+    CastDevice(name: "Máy chiếu BenQ", icon: "rectangle.fill.badge.person.crop", type: .smartTV, signalStrength: 2),
+    CastDevice(name: "Máy chiếu Optoma", icon: "rectangle.fill.badge.person.crop", type: .smartTV, signalStrength: 2),
+    
+    // Tablet / Phone
+    CastDevice(name: "iPad", icon: "ipad", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "Android Tablet", icon: "ipad.landscape", type: .webReceiver, signalStrength: 3),
+    CastDevice(name: "iPhone khác", icon: "iphone", type: .webReceiver, signalStrength: 4),
+    CastDevice(name: "Android Phone", icon: "smartphone", type: .webReceiver, signalStrength: 3),
+]
     
     var body: some View {
         ZStack(alignment: .bottom) {
