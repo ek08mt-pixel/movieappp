@@ -19,11 +19,6 @@ class PiPWindowManager: ObservableObject {
     var currentTime: Double = 0
     var duration: Double = 0
     
-    var episodeInfo: String? {
-        if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }
-        return nil
-    }
-    
     func startPiP(player: AVPlayer, movieId: Int, movieTitle: String, mediaType: String?, seasonNumber: Int?, episodeNumber: Int?, posterURL: URL?, currentTime: Double, duration: Double) {
         self.player = player
         self.movieId = movieId
@@ -55,104 +50,6 @@ class PiPWindowManager: ObservableObject {
     }
 }
 
-// MARK: - PiP Window View
-struct PiPWindowView: View {
-    @StateObject private var pip = PiPWindowManager.shared
-    @GestureState private var dragOffset = CGSize.zero
-    @State private var windowOffset = CGSize.zero
-    
-    var body: some View {
-        if pip.isActive {
-            GeometryReader { geo in
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            pip.restoreFullScreen()
-                        } label: {
-                            ZStack {
-                                if let player = pip.player {
-                                    PiPVideoPlayer(player: player)
-                                        .frame(width: 140, height: 80)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(.black.opacity(0.8))
-                                        .frame(width: 140, height: 80)
-                                }
-                                
-                                // Nút đóng
-                                VStack {
-                                    HStack {
-                                        Spacer()
-                                        Button {
-                                            pip.stopPiP()
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.system(size: 18))
-                                                .foregroundColor(.white)
-                                                .shadow(radius: 2)
-                                        }
-                                    }
-                                    Spacer()
-                                }
-                                .padding(4)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .offset(x: windowOffset.width + dragOffset.width, y: windowOffset.height + dragOffset.height)
-                        .gesture(
-                            DragGesture()
-                                .updating($dragOffset) { value, state, _ in
-                                    state = value.translation
-                                }
-                                .onEnded { value in
-                                    windowOffset.width += value.translation.width
-                                    windowOffset.height += value.translation.height
-                                    // Giới hạn trong màn hình
-                                    let maxX = geo.size.width - 140
-                                    let maxY = geo.size.height - 200
-                                    windowOffset.width = min(max(windowOffset.width, -geo.size.width/2 + 70), maxX - geo.size.width/2 + 70)
-                                    windowOffset.height = min(max(windowOffset.height, -geo.size.height/2 + 100), maxY - geo.size.height/2 + 100)
-                                }
-                        )
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 90)
-                    }
-                }
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(true)
-        }
-    }
-}
-
-// MARK: - PiP Video Player (dùng UIViewRepresentable)
-struct PiPVideoPlayer: UIViewRepresentable {
-    let player: AVPlayer
-    
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .black
-        let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(layer)
-        context.coordinator.layer = layer
-        return view
-    }
-    
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.layer?.frame = uiView.bounds
-    }
-    
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    
-    class Coordinator {
-        var layer: AVPlayerLayer?
-    }
-}
-
 // MARK: - MainTabView
 struct MainTabView: View {
     @State private var selectedTab = 0
@@ -177,7 +74,7 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom {
+            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom && !pipManager.isActive {
                 VStack {
                     MiniPlayerView().padding(.top, 8)
                     Spacer()
@@ -212,12 +109,10 @@ struct MainTabView: View {
                 .padding(.bottom, 10)
                 .transition(.move(edge: .bottom))
             }
-            
-            // PiP Window trong app
-            PiPWindowView()
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
+        .animation(.spring(response: 0.4), value: pipManager.isActive)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
         .fullScreenCover(isPresented: $pipManager.showFullScreen) {
