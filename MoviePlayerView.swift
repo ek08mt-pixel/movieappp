@@ -18,7 +18,7 @@ struct CastDevice: Identifiable {
 }
 
 enum CastDeviceType: String { case airplay="AirPlay", chromecast="Chromecast", smartTV="Smart TV", webReceiver="Web Receiver" }
-enum CastMode: String, CaseIterable { case remote="Remote Mode", case dualScreen="Dual Screen" }
+enum CastMode: String, CaseIterable { case remote="Remote Mode", dualScreen="Dual Screen" }
 
 enum VideoGravityMode: CaseIterable {
     case fit, fill, stretch
