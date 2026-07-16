@@ -109,38 +109,9 @@ struct MoviePlayerView: View {
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
                 .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
             
-            if showVolumeSlider {
-                HStack {
-                    Spacer()
-                    TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
-                        .padding(.trailing, 20).transition(.opacity)
-                }
-            }
-            
-            if showBrightnessSlider {
-                HStack {
-                    TinySlider(value: brightness, icon: "sun.max.fill")
-                        .padding(.leading, 20)
-                    Spacer()
-                }.transition(.opacity)
-            }
-            
-            // Gesture areas
-            Color.clear.frame(width: 60).position(x: UIScreen.main.bounds.width-30, y: UIScreen.main.bounds.height/2)
-                .gesture(DragGesture(minimumDistance:0).onChanged{v in
-                    if !showVolumeSlider { withAnimation(.easeInOut(duration: 0.2)) { showVolumeSlider = true } }
-                    volume = min(max(volume + Float(-v.translation.height/120), 0), 1)
-                    player.volume = volume; resetVolumeTimer()
-                }.onEnded{_ in resetVolumeTimer()})
-            Color.clear.frame(width: 60).position(x: 30, y: UIScreen.main.bounds.height/2)
-                .gesture(DragGesture(minimumDistance:0).onChanged{v in
-                    if !showBrightnessSlider { withAnimation(.easeInOut(duration: 0.2)) { showBrightnessSlider = true } }
-                    brightness = min(max(brightness + (-v.translation.height/120), 0.01), 1)
-                    UIScreen.main.brightness = brightness; resetBrightnessTimer()
-                }.onEnded{_ in resetBrightnessTimer()})
-            
             if isLoading { VStack(spacing:16){ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button{dismiss()}label:{Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
             if let err=errorMessage, !isLoading { VStack(spacing:16){Image(systemName:"wifi.slash").font(.system(size:40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing:10){ForEach(MovieSource.allCases,id:\.self){s in Button{selectedSource=s;loadStream()}label:{Text(s.rawValue).font(.caption2).foregroundColor(selectedSource==s ? .white:.gray).padding(.horizontal,10).padding(.vertical,6).background(Capsule().fill(selectedSource==s ? AnyShapeStyle(.ultraThinMaterial):AnyShapeStyle(Color.clear)))}}}; HStack(spacing:16){Button("Thử lại"){loadStream()}.font(.caption).foregroundColor(.white).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại"){dismiss()}.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal,16).padding(.vertical,8).background(Capsule().fill(.ultraThinMaterial))}} }
+            
             if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup {
                 if !isCasting {
                     HStack(spacing:64){
@@ -215,6 +186,65 @@ struct MoviePlayerView: View {
                 if showSettings { settingsPopup }
                 if showAudioPopup { audioPopup }
             }
+            
+            // Volume slider - bên phải
+            if showVolumeSlider {
+                HStack {
+                    Spacer()
+                    TinySlider(value: CGFloat(volume), icon: volume == 0 ? "speaker.slash.fill" : "speaker.wave.1.fill")
+                        .padding(.trailing, 20)
+                }
+                .transition(.opacity)
+                .allowsHitTesting(true)
+            }
+            
+            // Brightness slider - bên trái
+            if showBrightnessSlider {
+                HStack {
+                    TinySlider(value: brightness, icon: "sun.max.fill")
+                        .padding(.leading, 20)
+                    Spacer()
+                }
+                .transition(.opacity)
+                .allowsHitTesting(true)
+            }
+            
+            // GESTURE AREAS - PHẢI ĐẶT SAU CÙNG ĐỂ KHÔNG BỊ ĐÈ
+            // Volume gesture (nửa phải màn hình)
+            Color.clear
+                .frame(width: UIScreen.main.bounds.width / 2)
+                .position(x: UIScreen.main.bounds.width * 0.75, y: UIScreen.main.bounds.height / 2)
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { v in
+                            if !showVolumeSlider {
+                                withAnimation(.easeInOut(duration: 0.2)) { showVolumeSlider = true }
+                            }
+                            let newVol = min(max(volume + Float(-v.translation.height / 150), 0), 1)
+                            volume = newVol
+                            player.volume = newVol
+                            resetVolumeTimer()
+                        }
+                        .onEnded { _ in resetVolumeTimer() }
+                )
+            
+            // Brightness gesture (nửa trái màn hình)
+            Color.clear
+                .frame(width: UIScreen.main.bounds.width / 2)
+                .position(x: UIScreen.main.bounds.width * 0.25, y: UIScreen.main.bounds.height / 2)
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { v in
+                            if !showBrightnessSlider {
+                                withAnimation(.easeInOut(duration: 0.2)) { showBrightnessSlider = true }
+                            }
+                            let newBright = min(max(brightness + (-v.translation.height / 150), 0.01), 1)
+                            brightness = newBright
+                            UIScreen.main.brightness = newBright
+                            resetBrightnessTimer()
+                        }
+                        .onEnded { _ in resetBrightnessTimer() }
+                )
         }
         .statusBarHidden()
         .gesture(DragGesture(minimumDistance: 20).onChanged { v in
@@ -363,8 +393,8 @@ struct MoviePlayerView: View {
     func seek(_ s:Double){let t=max(0,min(currentTime+s,duration));player.seek(to:CMTime(seconds:t,preferredTimescale:600));currentTime=t}
     func toggleControls(){withAnimation(.easeInOut(duration:0.2)){showControls.toggle()};if showControls{resetControlsTimer()}}
     func resetControlsTimer(){controlsTimer?.invalidate();controlsTimer=Timer.scheduledTimer(withTimeInterval:4,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showControls=false}}}
-    func resetVolumeTimer(){volumeTimer?.invalidate();volumeTimer=Timer.scheduledTimer(withTimeInterval:1.0,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showVolumeSlider=false}}}
-    func resetBrightnessTimer(){brightnessTimer?.invalidate();brightnessTimer=Timer.scheduledTimer(withTimeInterval:1.0,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showBrightnessSlider=false}}}
+    func resetVolumeTimer(){volumeTimer?.invalidate();volumeTimer=Timer.scheduledTimer(withTimeInterval:1.5,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showVolumeSlider=false}}}
+    func resetBrightnessTimer(){brightnessTimer?.invalidate();brightnessTimer=Timer.scheduledTimer(withTimeInterval:1.5,repeats:false){_ in withAnimation(.easeInOut(duration:0.3)){showBrightnessSlider=false}}}
     func toggleOrientation(){guard let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene else{return};ws.requestGeometryUpdate(.iOS(interfaceOrientations:ws.interfaceOrientation.isLandscape ? .portrait:.landscapeRight))}
     func formatTime(_ s:Double)->String{let m=Int(s)/60;let sec=Int(s)%60;return String(format:"%d:%02d",m,sec)}
 }
