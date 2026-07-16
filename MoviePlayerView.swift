@@ -158,8 +158,11 @@ struct MoviePlayerView: View {
                 VStack{
                     HStack(spacing: 8){
                         Button{
-                            minimizeToPiP()
-                        }label:{
+    if let ws=UIApplication.shared.connectedScenes.first as? UIWindowScene{
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations:.portrait))
+    }
+    DispatchQueue.main.asyncAfter(deadline:.now()+0.3){dismiss()}
+}label:{
                             Image(systemName:"chevron.left").font(.system(size:16,weight:.semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12),lineWidth:0.5))
                         }
                         VStack(alignment: .leading, spacing: 0) {
