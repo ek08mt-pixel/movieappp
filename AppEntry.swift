@@ -48,7 +48,7 @@ class AppState: ObservableObject {
     @Published var telegramAvatarURL: String? = nil
     @Published var watchedMovies: [Movie] = []
     @Published var hasCompletedOnboarding: Bool {
-        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
+        didSet { UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding") }
     }
     @Published var showOnboarding: Bool = false
     
