@@ -251,25 +251,6 @@ struct MoviePlayerView: View {
         }
     }
     
-    // MARK: - PiP
-    func minimizeToPiP() {
-    saveProgress()
-    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-    }
-    PiPManager.shared.startPiP(
-        from: player,
-        movieId: movieId,
-        movieTitle: movieTitle,
-        mediaType: mediaType,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
-        posterURL: posterURL,
-        currentTime: currentTime,
-        duration: duration
-    )
-    dismiss()
-}
     
     func cycleAspect() { selectedVideoGravity.next() }
     
