@@ -448,3 +448,4 @@ struct TinySlider: View { let value: CGFloat; let icon: String
         .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.3)))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
     }
+}
