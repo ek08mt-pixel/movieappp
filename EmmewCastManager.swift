@@ -1,232 +1,137 @@
 import Foundation
-import GoogleCast
+import AVKit
 
+// MARK: - Emmew Cast Manager
 final class EmmewCastManager: NSObject, ObservableObject {
     static let shared = EmmewCastManager()
     
-    @Published var devices: [CastDevice] = []
-    @Published var isScanning = false
-    @Published var connectedDevice: CastDevice?
     @Published var isConnected = false
+    @Published var connectedDeviceName = ""
     @Published var isPlaying = false
     @Published var streamDuration: Double = 0
+    @Published var currentTime: Double = 0
     
-    private var sessionManager: GCKSessionManager
-    private var discoveryManager: GCKDiscoveryManager
-    private var castSession: GCKCastSession?
-    private var remoteMediaClient: GCKRemoteMediaClient?
-    private var mediaInfo: GCKMediaInformation?
+    private var player: AVPlayer?
+    private var timeObserver: Any?
     
-    override init() {
-        // Khởi tạo Cast Context
-        let options = GCKCastOptions(receiverApplicationID: kDefaultCastReceiverApplicationID)
-        GCKCastContext.setSharedInstanceWith(options)
-        
-        sessionManager = GCKCastContext.sharedInstance().sessionManager
-        discoveryManager = GCKCastContext.sharedInstance().discoveryManager
-        
+    private override init() {
         super.init()
+    }
+    
+    // MARK: - AirPlay
+    func showAirPlayPicker() -> AVRoutePickerView {
+        let view = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 44, height: 44))
+        view.activeTintColor = .white
+        view.tintColor = .white
+        view.prioritizesVideoDevices = true
+        return view
+    }
+    
+    // MARK: - Cast Control
+    func startCasting(with player: AVPlayer?, deviceName: String) {
+        self.player = player
+        self.connectedDeviceName = deviceName
+        self.isConnected = true
+        self.isPlaying = true
         
-        // Cấu hình logging
-        GCKLogger.sharedInstance().delegate = self
-        
-        // Listener
-        sessionManager.add(self)
-        discoveryManager.add(self)
-        discoveryManager.passiveScan = true
-        discoveryManager.startDiscovery()
-    }
-    
-    func startScanning() {
-        isScanning = true
-        devices.removeAll()
-        discoveryManager.startDiscovery()
-    }
-    
-    func stopScanning() {
-        isScanning = false
-        discoveryManager.stopDiscovery()
-    }
-    
-    func connect(to device: GCKDevice) {
-        sessionManager.startSession(with: device)
-    }
-    
-    func disconnect() {
-        sessionManager.endSession()
-    }
-    
-    func castVideo(url: URL, title: String, imageURL: String?, duration: TimeInterval = 0) {
-        guard let remoteMediaClient = sessionManager.currentCastSession?.remoteMediaClient else { return }
-        
-        let metadata = GCKMediaMetadata(metadataType: .movie)
-        metadata.setString(title, forKey: kGCKMetadataKeyTitle)
-        if let imageURL = imageURL {
-            metadata.addImage(GCKImage(url: URL(string: imageURL)!, width: 480, height: 720))
+        if let player = player {
+            player.allowsExternalPlayback = true
+            player.usesExternalPlaybackWhileExternalScreenIsActive = true
         }
         
-        let mediaInfoBuilder = GCKMediaInformationBuilder(contentURL: url)
-        mediaInfoBuilder.streamType = .buffered
-        mediaInfoBuilder.contentType = "video/mp4"
-        mediaInfoBuilder.metadata = metadata
-        if duration > 0 {
-            mediaInfoBuilder.streamDuration = duration
-        }
-        
-        mediaInfo = mediaInfoBuilder.build()
-        
-        let options = GCKMediaLoadOptions()
-        options.autoplay = true
-        options.playPosition = 0
-        
-        remoteMediaClient.loadMedia(mediaInfo!, with: options)
-        
-        DispatchQueue.main.async {
-            self.isConnected = true
-            self.isPlaying = true
-            self.streamDuration = duration
-        }
+        startTimeObserver()
+    }
+    
+    func stopCasting() {
+        self.isConnected = false
+        self.isPlaying = false
+        self.connectedDeviceName = ""
+        self.streamDuration = 0
+        self.currentTime = 0
+        stopTimeObserver()
     }
     
     func play() {
-        remoteMediaClient?.play()
+        player?.play()
         isPlaying = true
     }
     
     func pause() {
-        remoteMediaClient?.pause()
+        player?.pause()
         isPlaying = false
     }
     
-    func seek(to time: TimeInterval) {
-        let options = GCKMediaSeekOptions()
-        options.interval = time
-        options.resumeState = .play
-        remoteMediaClient?.seek(with: options)
+    func seek(to time: Double) {
+        player?.seek(to: CMTime(seconds: time, preferredTimescale: 600))
+        currentTime = time
     }
     
-    func stop() {
-        remoteMediaClient?.stop()
-        isPlaying = false
+    func skipForward(_ seconds: Double = 10) {
+        let newTime = min(currentTime + seconds, streamDuration)
+        seek(to: newTime)
     }
     
-    func setVolume(_ volume: Float) {
-        remoteMediaClient?.setStreamVolume(volume)
+    func skipBackward(_ seconds: Double = 10) {
+        let newTime = max(currentTime - seconds, 0)
+        seek(to: newTime)
     }
     
-    deinit {
-        discoveryManager.remove(self)
-        sessionManager.remove(self)
-    }
-}
-
-// MARK: - GCKDiscoveryManagerListener
-extension EmmewCastManager: GCKDiscoveryManagerListener {
-    func didStartDiscoveryForDeviceCategory(_ deviceCategory: String) {
-        isScanning = true
-    }
-    
-    func didUpdateDeviceList() {
-        let gckDevices = discoveryManager.devices()
-        DispatchQueue.main.async {
-            self.devices = gckDevices.map { gckDevice in
-                CastDevice(
-                    id: UUID(),
-                    name: gckDevice.friendlyName ?? "Unknown",
-                    icon: self.iconForDevice(gckDevice),
-                    type: self.typeForDevice(gckDevice),
-                    isConnected: gckDevice.isConnected,
-                    signalStrength: gckDevice.signalStrength ?? 3
-                )
+    // MARK: - Time Observer
+    private func startTimeObserver() {
+        guard let player = player else { return }
+        
+        timeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            guard let self = self else { return }
+            self.currentTime = time.seconds
+            
+            if let duration = player.currentItem?.duration, duration.isNumeric {
+                self.streamDuration = duration.seconds
             }
         }
     }
     
-    func didInsert(_ device: GCKDevice, at index: UInt) {
-        DispatchQueue.main.async {
-            self.devices.insert(
-                CastDevice(
-                    id: UUID(),
-                    name: device.friendlyName ?? "Unknown",
-                    icon: self.iconForDevice(device),
-                    type: self.typeForDevice(device),
-                    isConnected: device.isConnected,
-                    signalStrength: device.signalStrength ?? 3
-                ),
-                at: Int(index)
-            )
+    private func stopTimeObserver() {
+        if let observer = timeObserver, let player = player {
+            player.removeTimeObserver(observer)
         }
+        timeObserver = nil
     }
     
-    func iconForDevice(_ device: GCKDevice) -> String {
-        let model = device.modelName?.lowercased() ?? ""
-        let name = (device.friendlyName ?? "").lowercased()
-        
-        if model.contains("chromecast") || name.contains("chromecast") {
-            return "rectangle.connected.to.line.below"
-        } else if model.contains("nexus") || model.contains("shield") {
-            return "tv.and.hifispeaker.fill"
-        } else if name.contains("apple tv") {
-            return "appletv.fill"
-        } else if name.contains("playstation") || name.contains("xbox") {
-            return "gamecontroller.fill"
-        } else if model.contains("tv") || name.contains("tv") {
-            return "tv.fill"
-        } else if name.contains("macbook") || name.contains("laptop") {
-            return "laptopcomputer"
-        } else {
-            return "airplayvideo"
-        }
-    }
-    
-    func typeForDevice(_ device: GCKDevice) -> CastDeviceType {
-        let model = device.modelName?.lowercased() ?? ""
-        let name = (device.friendlyName ?? "").lowercased()
-        
-        if name.contains("apple tv") {
-            return .airplay
-        } else if model.contains("chromecast") || name.contains("chromecast") {
-            return .chromecast
-        } else {
-            return .smartTV
-        }
+    deinit {
+        stopTimeObserver()
     }
 }
 
-// MARK: - GCKSessionManagerListener
-extension EmmewCastManager: GCKSessionManagerListener {
-    func sessionManager(_ sessionManager: GCKSessionManager, didStart session: GCKSession) {
-        castSession = session as? GCKCastSession
-        remoteMediaClient = castSession?.remoteMediaClient
-        DispatchQueue.main.async {
-            self.isConnected = true
-            self.connectedDevice = CastDevice(
-                id: UUID(),
-                name: session.device.friendlyName ?? "Unknown",
-                icon: self.iconForDevice(session.device),
-                type: self.typeForDevice(session.device),
-                isConnected: true,
-                signalStrength: 4
-            )
-        }
+// MARK: - Web Receiver Helper
+extension EmmewCastManager {
+    /// Tạo URL cho Web Receiver (dùng cho laptop, console, Android phone...)
+    func webReceiverURL() -> URL? {
+        // TODO: Thay bằng URL thật của web receiver app
+        return URL(string: "https://emmew.app/receiver")
     }
     
-    func sessionManager(_ sessionManager: GCKSessionManager, didEnd session: GCKSession, withError error: Error?) {
-        DispatchQueue.main.async {
-            self.isConnected = false
-            self.isPlaying = false
-            self.connectedDevice = nil
-        }
-    }
-    
-    func sessionManager(_ sessionManager: GCKSessionManager, didFailToStart session: GCKSession, withError error: Error) {
-        print("Cast: Failed to start session - \(error.localizedDescription)")
+    /// Kiểm tra thiết bị có hỗ trợ AirPlay không
+    func isAirPlayAvailable() -> Bool {
+        let routeDetector = AVRouteDetector()
+        routeDetector.isRouteDetectionEnabled = true
+        return routeDetector.multipleRoutesDetected
     }
 }
 
-// MARK: - GCKLoggerDelegate
-extension EmmewCastManager: GCKLoggerDelegate {
-    func logMessage(_ message: String, at level: GCKLoggerLevel, fromFunction function: String, location: String) {
-        print("Cast Log [\(level)]: \(message)")
+// MARK: - AirPlay Picker Wrapper (SwiftUI)
+import SwiftUI
+
+struct AirPlayPicker: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let view = AVRoutePickerView()
+        view.activeTintColor = .white
+        view.tintColor = .white.withAlphaComponent(0.8)
+        view.prioritizesVideoDevices = true
+        return view
     }
+    
+    func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
 }
