@@ -44,7 +44,11 @@ struct ProfileView: View {
                             }
                         }
                         
-                        Text(appState.email.prefix(20) + (appState.email.count > 20 ? "..." : "")).font(.caption).foregroundColor(.gray)
+                        // Hiển thị email từ AppState
+                        Text(appState.email)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 30)
                         
                         Button { withAnimation { appState.logout() } } label: { Text("Đăng xuất").font(.caption).fontWeight(.medium).foregroundColor(.red).padding(.horizontal, 24).padding(.vertical, 10).background(Capsule().stroke(Color.red.opacity(0.4), lineWidth: 1)) }
                     } else {
@@ -67,7 +71,10 @@ struct ProfileView: View {
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) { ImagePicker(image: $inputImage) }
-        .sheet(isPresented: $showAuth) { SmartAuthView { email, password in appState.smartLogin(email: email, password: password); showAuth = false } }
+        .sheet(isPresented: $showAuth) { SmartAuthView { email, password in 
+            appState.smartLogin(email: email, password: password)
+            showAuth = false
+        } }
         .onChange(of: inputImage) { img in if let img = img, let data = img.jpegData(compressionQuality: 0.7) { appState.avatarImageData = data; appState.selectedAvatar = ""; appState.save() } }
     }
 }
