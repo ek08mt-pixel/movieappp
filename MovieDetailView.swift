@@ -390,11 +390,11 @@ struct EpisodeDownloadButton: View {
     let season: Int
     let episode: Int
     let episodeName: String?
-    let videoURL: URL?
     
     @StateObject private var downloadManager = DownloadManager.shared
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var isLoadingURL = false
     
     var body: some View {
         Button {
@@ -418,32 +418,39 @@ struct EpisodeDownloadButton: View {
                 
                 // Icon thay đổi theo trạng thái
                 Group {
-                    switch currentStatus {
-                    case .waiting:
-                        Image(systemName: "arrow.down.to.line")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                    case .downloading:
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                    case .paused:
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                    case .completed:
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.green)
-                    case .failed:
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.red)
+                    if isLoadingURL {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.7)
+                    } else {
+                        switch currentStatus {
+                        case .waiting:
+                            Image(systemName: "arrow.down.to.line")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                        case .downloading:
+                            Image(systemName: "stop.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        case .paused:
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        case .completed:
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.green)
+                        case .failed:
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.red)
+                        }
                     }
                 }
             }
         }
         .buttonStyle(.plain)
+        .disabled(isLoadingURL)
         .alert("Thông báo", isPresented: $showAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -462,63 +469,57 @@ struct EpisodeDownloadButton: View {
     private func handleDownload() {
         switch currentStatus {
         case .waiting:
-            // Resolve video URL và bắt đầu tải
             resolveAndStartDownload()
         case .downloading:
             downloadManager.pauseDownload(movieId: movieId, season: season, episode: episode)
         case .paused:
             downloadManager.resumeDownload(movieId: movieId, season: season, episode: episode)
         case .completed:
-            // Đã tải xong - có thể mở player local hoặc xóa
             if let localURL = downloadManager.getLocalURL(movieId: movieId, season: season, episode: episode) {
-                alertMessage = "Đã tải xong: \(localURL.lastPathComponent)"
+                alertMessage = "Đã tải xong: \(title) - Tập \(episode)"
                 showAlert = true
             }
         case .failed:
-            // Thử tải lại
             downloadManager.cancelDownload(movieId: movieId, season: season, episode: episode)
             resolveAndStartDownload()
         }
     }
     
     private func resolveAndStartDownload() {
-        // Nếu đã có videoURL từ props thì dùng luôn
-        if let url = videoURL {
-            downloadManager.startDownload(
-                url: url,
+        guard !isLoadingURL else { return }
+        isLoadingURL = true
+        
+        Task {
+            let viewModel = MovieDetailViewModel()
+            if let url = await viewModel.getVideoURL(
                 movieId: movieId,
-                title: title,
-                posterPath: posterPath,
                 mediaType: mediaType,
                 season: season,
-                episode: episode,
-                episodeName: episodeName
-            )
-            return
+                episode: episode
+            ) {
+                await MainActor.run {
+                    downloadManager.startDownload(
+                        url: url,
+                        movieId: movieId,
+                        title: title,
+                        posterPath: posterPath,
+                        mediaType: mediaType,
+                        season: season,
+                        episode: episode,
+                        episodeName: episodeName
+                    )
+                    isLoadingURL = false
+                }
+            } else {
+                await MainActor.run {
+                    alertMessage = "Không tìm thấy link video cho \(title) - Tập \(episode)"
+                    showAlert = true
+                    isLoadingURL = false
+                }
+            }
         }
-        
-        // Nếu không, resolve từ API
-        Task {
-            do {
-                let streamURL: URL
-                if mediaType == "tv" {
-                    let urlString = "https://phimapi.com/episode/\(movieId)?season=\(season)&episode=\(episode)"
-                    guard let apiURL = URL(string: urlString) else {
-                        await showError("URL không hợp lệ")
-                        return
-                    }
-                    let (data, _) = try await URLSession.shared.data(from: apiURL)
-                    let decoder = JSONDecoder()
-                    struct EpisodeResponse: Codable {
-                        let video: String?
-                        let url: String?
-                    }
-                    let response = try decoder.decode(EpisodeResponse.self, from: data)
-                    guard let videoUrlString = response.video ?? response.url,
-                          let resolvedURL = URL(string: videoUrlString) else {
-                        await showError("Không tìm thấy link video")
-                        return
-                    }
+    }
+}
                     streamURL = resolvedURL
                 } else {
                     let urlString = "https://phimapi.com/film/\(movieId)"
