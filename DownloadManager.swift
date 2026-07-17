@@ -50,7 +50,7 @@ class DownloadManager: NSObject, ObservableObject {
         super.init()
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 300
-        config.timeoutIntervalForResource = 3600
+        config.timeoutIntervalForResource = 600
         downloadSession = URLSession(configuration: config, delegate: self, delegateQueue: .main)
         loadDownloadedMovies()
     }
@@ -140,7 +140,6 @@ class DownloadManager: NSObject, ObservableObject {
     }
 }
 
-// MARK: - URLSessionDataDelegate
 extension DownloadManager: URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
         completionHandler(.allow)
@@ -148,28 +147,25 @@ extension DownloadManager: URLSessionDataDelegate {
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard let key = downloadTasks.first(where: { $0.value == dataTask })?.key else { return }
-        let fileManager = FileManager.default
-        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(key).m3u8")
         
-        if fileManager.fileExists(atPath: tempURL.path) {
-            if let fileHandle = try? FileHandle(forWritingTo: tempURL) {
-                fileHandle.seekToEndOfFile()
-                fileHandle.write(data)
-                fileHandle.closeFile()
+        if FileManager.default.fileExists(atPath: tempURL.path) {
+            if let fh = try? FileHandle(forWritingTo: tempURL) {
+                fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
             }
         } else {
             try? data.write(to: tempURL)
         }
         
-        if let existingData = try? Data(contentsOf: tempURL) {
-            let progress = Double(existingData.count) / 10000.0
-            activeDownloads[key]?.progress = min(progress, 0.29)
+        if let d = try? Data(contentsOf: tempURL) {
+            activeDownloads[key]?.progress = min(Double(d.count) / 10000.0, 0.99)
         }
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error as NSError? {
-            print("❌ Download error: \(error.localizedDescription)")
+        if let error = error as NSError?, error.code != NSURLErrorCancelled {
             if let key = downloadTasks.first(where: { $0.value == task })?.key {
                 activeDownloads[key]?.status = .failed
             }
@@ -179,141 +175,39 @@ extension DownloadManager: URLSessionDataDelegate {
         guard let key = downloadTasks.first(where: { $0.value == task })?.key,
               let metadata = pendingMetadata[key] else { return }
         
-        activeDownloads[key]?.progress = 0.3
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(key).m3u8")
+        let destURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            .appendingPathComponent(UUID().uuidString + ".m3u8")
         
-        let fileManager = FileManager.default
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let folderName = UUID().uuidString
-        let folderURL = documentsPath.appendingPathComponent(folderName)
-        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
-        
-        DispatchQueue.global(qos: .background).async {
-            do {
-                try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
-                
-                let content = try String(contentsOf: tempURL, encoding: .utf8)
-                let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
-                let lines = content.components(separatedBy: .newlines)
-                
-                var modifiedLines: [String] = []
-                var totalSegments = 0
-                var downloadedSegments = 0
-                
-                for line in lines {
-                    let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                        let subURL: URL
-                        if trimmed.hasPrefix("http") {
-                            subURL = URL(string: trimmed)!
-                        } else if let origURL = URL(string: originalURLString) {
-                            subURL = origURL.deletingLastPathComponent().appendingPathComponent(trimmed)
-                        } else { continue }
-                        
-                        if let subData = try? Data(contentsOf: subURL),
-                           let subContent = String(data: subData, encoding: .utf8) {
-                            for subLine in subContent.components(separatedBy: .newlines) {
-                                let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
-                                if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
-                                    totalSegments += 1
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                DispatchQueue.main.async {
-                    self.activeDownloads[key]?.progress = 0.4
-                }
-                
-                for line in lines {
-                    let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                        let subURL: URL
-                        if trimmed.hasPrefix("http") {
-                            subURL = URL(string: trimmed)!
-                        } else if let origURL = URL(string: originalURLString) {
-                            subURL = origURL.deletingLastPathComponent().appendingPathComponent(trimmed)
-                        } else {
-                            modifiedLines.append(line)
-                            continue
-                        }
-                        
-                        if let subData = try? Data(contentsOf: subURL),
-                           let subContent = String(data: subData, encoding: .utf8) {
-                            let subFileName = "sub.m3u8"
-                            let subFileURL = folderURL.appendingPathComponent(subFileName)
-                            
-                            let subLines = subContent.components(separatedBy: .newlines)
-                            var subModifiedLines: [String] = []
-                            let baseSubURL = subURL.deletingLastPathComponent()
-                            
-                            for subLine in subLines {
-                                let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
-                                if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
-                                    let segmentURL: URL
-                                    if subTrimmed.hasPrefix("http") {
-                                        segmentURL = URL(string: subTrimmed)!
-                                    } else {
-                                        segmentURL = baseSubURL.appendingPathComponent(subTrimmed)
-                                    }
-                                    
-                                    let segFileName = segmentURL.lastPathComponent
-                                    let segFileURL = folderURL.appendingPathComponent(segFileName)
-                                    if let segData = try? Data(contentsOf: segmentURL) {
-                                        try segData.write(to: segFileURL)
-                                    }
-                                    subModifiedLines.append(segFileName)
-                                    downloadedSegments += 1
-                                    
-                                    let progress = 0.4 + (0.6 * Double(downloadedSegments) / Double(max(totalSegments, 1)))
-                                    DispatchQueue.main.async {
-                                        self.activeDownloads[key]?.progress = min(progress, 0.99)
-                                    }
-                                } else {
-                                    subModifiedLines.append(subLine)
-                                }
-                            }
-                            
-                            try subModifiedLines.joined(separator: "\n").write(to: subFileURL, atomically: true, encoding: .utf8)
-                            modifiedLines.append(subFileName)
-                        }
-                    } else if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
-                        modifiedLines.append(line)
-                    } else {
-                        modifiedLines.append(line)
-                    }
-                }
-                
-                let masterFileURL = folderURL.appendingPathComponent("master.m3u8")
-                try modifiedLines.joined(separator: "\n").write(to: masterFileURL, atomically: true, encoding: .utf8)
-                
-                let downloadedMovie = DownloadedMovie(
-                    id: metadata.id, title: metadata.title, posterPath: metadata.posterPath,
-                    mediaType: metadata.mediaType, season: metadata.season, episode: metadata.episode,
-                    episodeName: metadata.episodeName, localURL: masterFileURL.absoluteString,
-                    originalURL: originalURLString, fileSize: 0
-                )
-                
-                DispatchQueue.main.async {
-                    self.downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
-                    self.downloadedMovies.append(downloadedMovie)
-                    self.activeDownloads[key]?.status = .completed
-                    self.activeDownloads[key]?.progress = 1.0
-                    self.pendingMetadata.removeValue(forKey: key)
-                    self.downloadTasks.removeValue(forKey: key)
-                    self.saveDownloadedMovies()
-                    try? fileManager.removeItem(at: tempURL)
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-                        self?.activeDownloads.removeValue(forKey: key)
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    print("❌ Save error: \(error)")
-                    self.activeDownloads[key]?.status = .failed
-                }
+        do {
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                try FileManager.default.removeItem(at: destURL)
             }
+            try FileManager.default.moveItem(at: tempURL, to: destURL)
+            
+            let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
+            
+            let movie = DownloadedMovie(
+                id: metadata.id, title: metadata.title, posterPath: metadata.posterPath,
+                mediaType: metadata.mediaType, season: metadata.season, episode: metadata.episode,
+                episodeName: metadata.episodeName, localURL: destURL.absoluteString,
+                originalURL: originalURLString, fileSize: 0
+            )
+            
+            downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
+            downloadedMovies.append(movie)
+            
+            activeDownloads[key]?.status = .completed
+            activeDownloads[key]?.progress = 1.0
+            pendingMetadata.removeValue(forKey: key)
+            downloadTasks.removeValue(forKey: key)
+            saveDownloadedMovies()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                self?.activeDownloads.removeValue(forKey: key)
+            }
+        } catch {
+            activeDownloads[key]?.status = .failed
         }
     }
 }
