@@ -12,6 +12,13 @@ class OnboardingManager: ObservableObject {
     
     func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        // Lưu email vào AppState để đồng bộ với Profile
+        if !email.isEmpty {
+            let appState = AppState()
+            appState.email = email
+            appState.isLoggedIn = true
+            appState.save()
+        }
     }
     
     func resetOnboarding() {
