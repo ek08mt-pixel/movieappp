@@ -103,14 +103,12 @@ struct MoviePlayerView: View {
             
             if verticalDistance > deltaX * 1.5 {
                 if locationX < screenWidth / 2 {
-                    let newBrightness = min(max(brightness + deltaY / 500, 0.01), 1.0)
-                    brightness = newBrightness
+                    brightness = min(max(brightness + deltaY / 500, 0.01), 1.0)
                     UIScreen.main.brightness = brightness
                     showBrightnessSlider = true
                     resetBrightnessTimer()
                 } else {
-                    let newVolume = min(max(volume + Float(deltaY / 500), 0), 1.0)
-                    volume = newVolume
+                    volume = min(max(volume + Float(deltaY / 500), 0), 1.0)
                     player.volume = volume
                     showVolumeSlider = true
                     resetVolumeTimer()
@@ -118,24 +116,7 @@ struct MoviePlayerView: View {
             }
         }
         .onEnded { v in
-            if v.translation.height < -80 && 
-               v.startLocation.y > UIScreen.main.bounds.height * 0.6 &&
-               abs(v.translation.height) > abs(v.translation.width) * 2 {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showOverlay = true
-                    overlayOffset = 0
-                }
-                loadOverlayData()
-            }
-            showBrightnessSlider = false
-            showVolumeSlider = false
-        }
-)
-        .onEnded { v in
-            // Vuốt từ dưới lên mở overlay
-            if v.translation.height < -80 && 
-               v.startLocation.y > UIScreen.main.bounds.height * 0.6 &&
-               abs(v.translation.height) > abs(v.translation.width) * 2 {
+            if v.translation.height < -80 && v.startLocation.y > UIScreen.main.bounds.height * 0.6 {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showOverlay = true
                     overlayOffset = 0
