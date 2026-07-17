@@ -1,5 +1,6 @@
 import UserNotifications
 import BackgroundTasks
+import UIKit
 
 class NotificationManager: ObservableObject {
     static let shared = NotificationManager()
@@ -30,7 +31,7 @@ class NotificationManager: ObservableObject {
         
         // Nếu không có phim TV nào → bắn thông báo phim hot
         if uniqueTVShows.isEmpty {
-            if let trending = try? await APIService.shared.trending(),
+            if let trending = try? await APIService.shared.trending24h(),
                let hotMovie = trending.first {
                 await MainActor.run {
                     scheduleHotMovieNotification(movie: hotMovie)
