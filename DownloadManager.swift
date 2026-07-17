@@ -146,60 +146,38 @@ extension DownloadManager: URLSessionDataDelegate {
         completionHandler(.allow)
     }
     
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        guard let key = downloadTasks.first(where: { $0.value == dataTask })?.key else { return }
-        let fileManager = FileManager.default
-        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
-        
-        if fileManager.fileExists(atPath: tempURL.path) {
-            if let fileHandle = try? FileHandle(forWritingTo: tempURL) {
-                fileHandle.seekToEndOfFile()
-                fileHandle.write(data)
-                fileHandle.closeFile()
-            }
-        } else {
-            try? data.write(to: tempURL)
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    if let error = error as NSError? {
+        print("❌ Download error: \(error.localizedDescription)")
+        if let key = downloadTasks.first(where: { $0.value == task })?.key {
+            activeDownloads[key]?.status = .failed
         }
-        
-        if let existingData = try? Data(contentsOf: tempURL) {
-            let progress = Double(existingData.count) / 10000.0
-            activeDownloads[key]?.progress = min(progress, 0.99)
-        }
+        return
     }
     
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error as NSError? {
-            print("❌ Download error: \(error.localizedDescription)")
-            if let key = downloadTasks.first(where: { $0.value == task })?.key {
-                activeDownloads[key]?.status = .failed
-            }
-            return
-        }
-        
-        guard let key = downloadTasks.first(where: { $0.value == task })?.key,
-              let metadata = pendingMetadata[key] else { return }
-        
-        let fileManager = FileManager.default
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let folderName = UUID().uuidString
-        let folderURL = documentsPath.appendingPathComponent(folderName)
-        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
-        
+    guard let key = downloadTasks.first(where: { $0.value == task })?.key,
+          let metadata = pendingMetadata[key] else { return }
+    
+    let fileManager = FileManager.default
+    let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+    let folderName = UUID().uuidString
+    let folderURL = documentsPath.appendingPathComponent(folderName)
+    let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
+    
+    // Chạy background
+    DispatchQueue.global(qos: .background).async {
         do {
             try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
             
-            // Đọc file m3u8 gốc
             let content = try String(contentsOf: tempURL, encoding: .utf8)
             let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
             let lines = content.components(separatedBy: .newlines)
             
-            var segmentURLs: [URL] = []
             var modifiedLines: [String] = []
             
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                    // Đây là sub-playlist
                     let subURL: URL
                     if trimmed.hasPrefix("http") {
                         subURL = URL(string: trimmed)!
@@ -210,14 +188,12 @@ extension DownloadManager: URLSessionDataDelegate {
                         continue
                     }
                     
-                    // Tải sub-playlist
                     if let subData = try? Data(contentsOf: subURL),
                        let subContent = String(data: subData, encoding: .utf8) {
                         let subFileName = "sub.m3u8"
                         let subFileURL = folderURL.appendingPathComponent(subFileName)
                         try subContent.write(to: subFileURL, atomically: true, encoding: .utf8)
                         
-                        // Parse sub-playlist để lấy segment .ts
                         let subLines = subContent.components(separatedBy: .newlines)
                         var subModifiedLines: [String] = []
                         let baseSubURL = subURL.deletingLastPathComponent()
@@ -232,7 +208,6 @@ extension DownloadManager: URLSessionDataDelegate {
                                     segmentURL = baseSubURL.appendingPathComponent(subTrimmed)
                                 }
                                 
-                                // Tải segment .ts
                                 let segFileName = segmentURL.lastPathComponent
                                 let segFileURL = folderURL.appendingPathComponent(segFileName)
                                 if let segData = try? Data(contentsOf: segmentURL) {
@@ -244,7 +219,6 @@ extension DownloadManager: URLSessionDataDelegate {
                             }
                         }
                         
-                        // Ghi sub-playlist đã sửa
                         try subModifiedLines.joined(separator: "\n").write(to: subFileURL, atomically: true, encoding: .utf8)
                         modifiedLines.append(subFileName)
                     }
@@ -255,12 +229,8 @@ extension DownloadManager: URLSessionDataDelegate {
                 }
             }
             
-            // Ghi master playlist đã sửa
             let masterFileURL = folderURL.appendingPathComponent("master.m3u8")
             try modifiedLines.joined(separator: "\n").write(to: masterFileURL, atomically: true, encoding: .utf8)
-            
-            let attributes = try fileManager.attributesOfItem(atPath: folderURL.path)
-            let fileSize = attributes[.size] as? Int64 ?? 0
             
             let downloadedMovie = DownloadedMovie(
                 id: metadata.id,
@@ -272,28 +242,31 @@ extension DownloadManager: URLSessionDataDelegate {
                 episodeName: metadata.episodeName,
                 localURL: masterFileURL.absoluteString,
                 originalURL: originalURLString,
-                fileSize: fileSize
+                fileSize: 0
             )
             
-            downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
-            downloadedMovies.append(downloadedMovie)
-            
-            activeDownloads[key]?.status = .completed
-            activeDownloads[key]?.progress = 1.0
-            pendingMetadata.removeValue(forKey: key)
-            downloadTasks.removeValue(forKey: key)
-            
-            saveDownloadedMovies()
-            
-            // Xóa temp
-            try? fileManager.removeItem(at: tempURL)
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-                self?.activeDownloads.removeValue(forKey: key)
+            DispatchQueue.main.async {
+                self.downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
+                self.downloadedMovies.append(downloadedMovie)
+                
+                self.activeDownloads[key]?.status = .completed
+                self.activeDownloads[key]?.progress = 1.0
+                self.pendingMetadata.removeValue(forKey: key)
+                self.downloadTasks.removeValue(forKey: key)
+                
+                self.saveDownloadedMovies()
+                
+                try? fileManager.removeItem(at: tempURL)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                    self?.activeDownloads.removeValue(forKey: key)
+                }
             }
         } catch {
-            print("❌ Save error: \(error)")
-            activeDownloads[key]?.status = .failed
+            DispatchQueue.main.async {
+                print("❌ Save error: \(error)")
+                self.activeDownloads[key]?.status = .failed
+            }
         }
     }
 }
