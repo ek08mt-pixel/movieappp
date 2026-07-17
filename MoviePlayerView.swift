@@ -75,55 +75,115 @@ struct MoviePlayerView: View {
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
-                .onTapGesture { if isScreenLocked { showControls = true; resetControlsTimer() } else if showOverlay { closeOverlay() } else { toggleControls() } }
+                .onTapGesture { 
+    if isScreenLocked { 
+        showControls = true
+        resetControlsTimer()
+    } else if showOverlay { 
+        closeOverlay() 
+    } else { 
+        toggleControls() 
+    } 
+}
                 .gesture(
-                    DragGesture(minimumDistance: 20)
-                        .onChanged { v in
-                            let horizontal = abs(v.translation.width)
-                            let vertical = abs(v.translation.height)
-                            if vertical > horizontal {
-                                if v.startLocation.x < UIScreen.main.bounds.width / 2 {
-                                    // Trái: brightness
-                                    brightness = min(max(brightness - v.translation.height / 300, 0.01), 1.0)
-                                    UIScreen.main.brightness = brightness
-                                    showBrightnessSlider = true
-                                    resetBrightnessTimer()
-                                } else {
-                                    // Phải: volume
-                                    volume = min(max(volume + Float(-v.translation.height / 300), 0), 1.0)
-                                    player.volume = volume
-                                    showVolumeSlider = true
-                                    resetVolumeTimer()
-                                }
-                            }
-                        }
-                )
+    DragGesture(minimumDistance: 5)
+        .onChanged { v in
+            let horizontal = abs(v.translation.width)
+            let vertical = abs(v.translation.height)
+            if vertical > horizontal {
+                let step = v.translation.height / 140 // mỗi bước = 1 đoạn gạch
+                let newSteps = round(step * 8) / 8 // chia 8 mức
+                if v.startLocation.x < UIScreen.main.bounds.width / 2 {
+                    let newBrightness = min(max(brightness - newSteps * 0.125, 0.01), 1.0)
+                    if abs(newBrightness - brightness) > 0.01 {
+                        brightness = newBrightness
+                        UIScreen.main.brightness = brightness
+                        showBrightnessSlider = true
+                        resetBrightnessTimer()
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                    }
+                } else {
+                    let newVolume = min(max(volume + Float(-newSteps * 0.125), 0), 1.0)
+                    if abs(newVolume - volume) > 0.01 {
+                        volume = newVolume
+                        player.volume = volume
+                        showVolumeSlider = true
+                        resetVolumeTimer()
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                    }
+                }
+            }
+        }
+)
             
             // Volume indicator
-            if showVolumeSlider && showControls {
-                HStack { Spacer()
-                    VStack(spacing: 6) {
-                        Image(systemName: volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill").font(.system(size: 14)).foregroundColor(.white)
-                        ZStack(alignment: .bottom) {
-                            Capsule().fill(.white.opacity(0.15)).frame(width: 4, height: 100)
-                            Capsule().fill(.white).frame(width: 4, height: max(4, 100 * CGFloat(volume)))
-                        }.clipShape(Capsule())
-                    }.padding(10).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4))).padding(.trailing, 8).padding(.vertical, 60)
+if showVolumeSlider && showControls {
+    HStack { Spacer()
+        VStack(spacing: 8) {
+            Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
+                .font(.system(size: 16))
+                .foregroundColor(.white)
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial.opacity(0.3))
+                    .frame(width: 36, height: 140)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.white.opacity(0.6))
+                    .frame(width: 36, height: max(8, 140 * CGFloat(volume)))
+                // Gạch ngang
+                VStack(spacing: 6) {
+                    ForEach(0..<8) { _ in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(.white.opacity(0.2))
+                            .frame(width: 20, height: 2)
+                    }
                 }
+                .frame(width: 36, height: 140)
             }
-            // Brightness indicator
-            if showBrightnessSlider && showControls {
-                HStack {
-                    VStack(spacing: 6) {
-                        Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill").font(.system(size: 14)).foregroundColor(.white)
-                        ZStack(alignment: .bottom) {
-                            Capsule().fill(.white.opacity(0.15)).frame(width: 4, height: 100)
-                            Capsule().fill(.white).frame(width: 4, height: max(4, 100 * brightness))
-                        }.clipShape(Capsule())
-                    }.padding(10).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4))).padding(.leading, 8).padding(.vertical, 60)
-                    Spacer()
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            Text("\(Int(volume * 100))%")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.white.opacity(0.6))
+        }
+        .padding(.trailing, 12).padding(.vertical, 50)
+    }
+}
+// Brightness indicator
+if showBrightnessSlider && showControls {
+    HStack {
+        VStack(spacing: 8) {
+            Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.white)
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial.opacity(0.3))
+                    .frame(width: 36, height: 140)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.yellow.opacity(0.6))
+                    .frame(width: 36, height: max(8, 140 * brightness))
+                VStack(spacing: 6) {
+                    ForEach(0..<8) { _ in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(.white.opacity(0.2))
+                            .frame(width: 20, height: 2)
+                    }
                 }
+                .frame(width: 36, height: 140)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            Text("\(Int(brightness * 100))%")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.white.opacity(0.6))
+        }
+        .padding(.leading, 12).padding(.vertical, 50)
+        Spacer()
+    }
+}
             
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             
@@ -195,7 +255,11 @@ struct MoviePlayerView: View {
     func saveHistory() { let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType); appState.watchHistory.removeAll { $0.id == movieId }; appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }; if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup { showNextEpisodePopup = true } } }
     func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
-    func toggleControls() { if isScreenLocked { showControls = true; resetControlsTimer(); return }; withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
+    func toggleControls() { 
+    if isScreenLocked { return }  // Không làm gì khi khóa
+    withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() } 
+    if showControls { resetControlsTimer() } 
+}
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false } } }
     func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false } } }
