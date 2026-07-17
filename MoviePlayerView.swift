@@ -68,22 +68,6 @@ struct MoviePlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
-                .overlay(
-                    HStack(spacing: 0) {
-                        Color.clear.frame(width: UIScreen.main.bounds.width * 0.22).contentShape(Rectangle())
-                            .gesture(DragGesture(minimumDistance: 10).onChanged { v in
-                                brightness = min(max(brightness - v.translation.height / 300, 0.01), 1.0)
-                                UIScreen.main.brightness = brightness; showBrightnessSlider = true; resetBrightnessTimer()
-                            })
-                        Color.clear.frame(width: UIScreen.main.bounds.width * 0.56).contentShape(Rectangle())
-                            .onTapGesture { if showOverlay { closeOverlay() } else { toggleControls() } }
-                        Color.clear.frame(width: UIScreen.main.bounds.width * 0.22).contentShape(Rectangle())
-                            .gesture(DragGesture(minimumDistance: 10).onChanged { v in
-                                volume = min(max(volume + Float(-v.translation.height / 300), 0), 1.0)
-                                player.volume = volume; showVolumeSlider = true; resetVolumeTimer()
-                            })
-                    }
-                )
                 .onAppear {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape()
@@ -91,7 +75,31 @@ struct MoviePlayerView: View {
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
+                .onTapGesture { if isScreenLocked { showControls = true; resetControlsTimer() } else if showOverlay { closeOverlay() } else { toggleControls() } }
+                .gesture(
+                    DragGesture(minimumDistance: 20)
+                        .onChanged { v in
+                            let horizontal = abs(v.translation.width)
+                            let vertical = abs(v.translation.height)
+                            if vertical > horizontal {
+                                if v.startLocation.x < UIScreen.main.bounds.width / 2 {
+                                    // Trái: brightness
+                                    brightness = min(max(brightness - v.translation.height / 300, 0.01), 1.0)
+                                    UIScreen.main.brightness = brightness
+                                    showBrightnessSlider = true
+                                    resetBrightnessTimer()
+                                } else {
+                                    // Phải: volume
+                                    volume = min(max(volume + Float(-v.translation.height / 300), 0), 1.0)
+                                    player.volume = volume
+                                    showVolumeSlider = true
+                                    resetVolumeTimer()
+                                }
+                            }
+                        }
+                )
             
+            // Volume indicator
             if showVolumeSlider && showControls {
                 HStack { Spacer()
                     VStack(spacing: 6) {
@@ -103,6 +111,7 @@ struct MoviePlayerView: View {
                     }.padding(10).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4))).padding(.trailing, 8).padding(.vertical, 60)
                 }
             }
+            // Brightness indicator
             if showBrightnessSlider && showControls {
                 HStack {
                     VStack(spacing: 6) {
@@ -144,7 +153,6 @@ struct MoviePlayerView: View {
                     HStack(spacing: 6) { Button { pipController?.startPictureInPicture() } label: { Image(systemName: "pip.enter").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSourceMenu = true } label: { Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 50); Spacer() }
                 if isCasting { VStack { Spacer(); HStack { Spacer(); HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 6, height: 6); Text("Đang phát trên \(castDeviceName)").font(.system(size: 10)).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))).padding(.trailing, 20).padding(.bottom, 100) } } }
             }
-            if isScreenLocked && !showControls { VStack { Spacer(); Image(systemName: "lock.fill").font(.system(size: 28)).foregroundColor(.white.opacity(0.5)).padding(.bottom, 80) } }
             if showNextEpisodePopup { }
             if showOverlay { youtubeOverlay }
             if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
