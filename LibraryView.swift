@@ -83,7 +83,7 @@ struct LibraryView: View {
             }
             .fullScreenCover(item: $playDownloadedMovie) { movie in
                 if let url = movie.localPlayURL {
-                    DownloadedPlayerView(url: url, title: movie.title, episodeName: movie.episodeName ?? "")
+                    DownloadedPlayerView(url: url, title: movie.title)
                 }
             }
         }
