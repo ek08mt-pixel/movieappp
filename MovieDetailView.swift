@@ -17,6 +17,7 @@ struct MovieDetailView: View {
     @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
+    @StateObject private var downloadManager = DownloadManager.shared
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -168,18 +169,64 @@ struct MovieDetailView: View {
                                             if let detail = vm.selectedSeason, detail.seasonNumber == season.seasonNumber {
                                                 LazyVStack(spacing: 6) {
                                                     ForEach(detail.episodes) { ep in
-                                                        Button { playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber; showPlayer = true } label: {
-                                                            HStack(spacing: 10) {
-                                                                if let still = ep.stillURL { CachedAsyncImage(url: still, size: .detail).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6)) }
-                                                                else { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4))) }
-                                                                VStack(alignment: .leading, spacing: 2) { Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white); Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1); if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) } }
-                                                                Spacer()
-                                                                Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6)).font(.system(size: 18))
-                                                            }.padding(.vertical, 6)
+                                                        HStack(spacing: 10) {
+                                                            // Nút Play
+                                                            Button {
+                                                                playSeason = ep.seasonNumber
+                                                                playEpisode = ep.episodeNumber
+                                                                showPlayer = true
+                                                            } label: {
+                                                                HStack(spacing: 10) {
+                                                                    if let still = ep.stillURL {
+                                                                        CachedAsyncImage(url: still, size: .detail)
+                                                                            .aspectRatio(16/9, contentMode: .fill)
+                                                                            .frame(width: 80, height: 45)
+                                                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                                                    } else {
+                                                                        RoundedRectangle(cornerRadius: 6)
+                                                                            .fill(.ultraThinMaterial)
+                                                                            .frame(width: 80, height: 45)
+                                                                            .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                                                                    }
+                                                                    VStack(alignment: .leading, spacing: 2) {
+                                                                        Text("Tập \(ep.episodeNumber)")
+                                                                            .font(.system(size: 11, weight: .bold))
+                                                                            .foregroundColor(.white)
+                                                                        Text(ep.name)
+                                                                            .font(.system(size: 10))
+                                                                            .foregroundColor(.gray)
+                                                                            .lineLimit(1)
+                                                                        if let rt = ep.runtime {
+                                                                            Text("\(rt) phút")
+                                                                                .font(.system(size: 9))
+                                                                                .foregroundColor(.gray)
+                                                                        }
+                                                                    }
+                                                                    Spacer()
+                                                                    Image(systemName: "play.circle")
+                                                                        .foregroundColor(.white.opacity(0.6))
+                                                                        .font(.system(size: 18))
+                                                                }
+                                                            }
+                                                            
+                                                            // Nút Download
+                                                            EpisodeDownloadButton(
+                                                                movieId: movie.id,
+                                                                title: movie.title,
+                                                                posterPath: movie.posterPath,
+                                                                mediaType: movie.mediaType,
+                                                                season: ep.seasonNumber,
+                                                                episode: ep.episodeNumber,
+                                                                episodeName: ep.name,
+                                                                videoURL: nil // Sẽ được resolve từ view model hoặc API
+                                                            )
                                                         }
+                                                        .padding(.vertical, 6)
                                                     }
                                                 }
-                                            } else { ProgressView().tint(.white).padding() }
+                                            } else {
+                                                ProgressView().tint(.white).padding()
+                                            }
                                         }
                                     }
                                 }
@@ -219,14 +266,11 @@ struct MovieDetailView: View {
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
         
-        // Tìm season chứa tập đó
         var accumulatedEps = 0
         for season in vm.seasons {
             let count = season.episodeCount
             if episodeNumber <= accumulatedEps + count {
-                // Tập nằm trong season này
                 let epInSeason = episodeNumber - accumulatedEps
-                // Mở season này
                 withAnimation {
                     expandedSeason = season.seasonNumber
                 }
@@ -334,6 +378,191 @@ struct MovieDetailView: View {
         await MainActor.run {
             ratings = (tmdbScore, imdbRating, rtRating)
         }
+    }
+}
+
+// MARK: - Episode Download Button
+struct EpisodeDownloadButton: View {
+    let movieId: Int
+    let title: String
+    let posterPath: String?
+    let mediaType: String?
+    let season: Int
+    let episode: Int
+    let episodeName: String?
+    let videoURL: URL?
+    
+    @StateObject private var downloadManager = DownloadManager.shared
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        Button {
+            handleDownload()
+        } label: {
+            ZStack {
+                // Background
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 40, height: 40)
+                
+                // Progress fill từ trái sang phải
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.white.opacity(0.7))
+                        .frame(width: geo.size.width * currentProgress, height: 40)
+                        .animation(.easeInOut(duration: 0.3), value: currentProgress)
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                
+                // Icon thay đổi theo trạng thái
+                Group {
+                    switch currentStatus {
+                    case .waiting:
+                        Image(systemName: "arrow.down.to.line")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    case .downloading:
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                    case .paused:
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                    case .completed:
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.green)
+                    case .failed:
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .alert("Thông báo", isPresented: $showAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private var currentStatus: DownloadManager.DownloadStatus {
+        downloadManager.downloadStatus(movieId: movieId, season: season, episode: episode)
+    }
+    
+    private var currentProgress: Double {
+        downloadManager.downloadProgress(movieId: movieId, season: season, episode: episode)
+    }
+    
+    private func handleDownload() {
+        switch currentStatus {
+        case .waiting:
+            // Resolve video URL và bắt đầu tải
+            resolveAndStartDownload()
+        case .downloading:
+            downloadManager.pauseDownload(movieId: movieId, season: season, episode: episode)
+        case .paused:
+            downloadManager.resumeDownload(movieId: movieId, season: season, episode: episode)
+        case .completed:
+            // Đã tải xong - có thể mở player local hoặc xóa
+            if let localURL = downloadManager.getLocalURL(movieId: movieId, season: season, episode: episode) {
+                alertMessage = "Đã tải xong: \(localURL.lastPathComponent)"
+                showAlert = true
+            }
+        case .failed:
+            // Thử tải lại
+            downloadManager.cancelDownload(movieId: movieId, season: season, episode: episode)
+            resolveAndStartDownload()
+        }
+    }
+    
+    private func resolveAndStartDownload() {
+        // Nếu đã có videoURL từ props thì dùng luôn
+        if let url = videoURL {
+            downloadManager.startDownload(
+                url: url,
+                movieId: movieId,
+                title: title,
+                posterPath: posterPath,
+                mediaType: mediaType,
+                season: season,
+                episode: episode,
+                episodeName: episodeName
+            )
+            return
+        }
+        
+        // Nếu không, resolve từ API
+        Task {
+            do {
+                let streamURL: URL
+                if mediaType == "tv" {
+                    let urlString = "https://phimapi.com/episode/\(movieId)?season=\(season)&episode=\(episode)"
+                    guard let apiURL = URL(string: urlString) else {
+                        await showError("URL không hợp lệ")
+                        return
+                    }
+                    let (data, _) = try await URLSession.shared.data(from: apiURL)
+                    let decoder = JSONDecoder()
+                    struct EpisodeResponse: Codable {
+                        let video: String?
+                        let url: String?
+                    }
+                    let response = try decoder.decode(EpisodeResponse.self, from: data)
+                    guard let videoUrlString = response.video ?? response.url,
+                          let resolvedURL = URL(string: videoUrlString) else {
+                        await showError("Không tìm thấy link video")
+                        return
+                    }
+                    streamURL = resolvedURL
+                } else {
+                    let urlString = "https://phimapi.com/film/\(movieId)"
+                    guard let apiURL = URL(string: urlString) else {
+                        await showError("URL không hợp lệ")
+                        return
+                    }
+                    let (data, _) = try await URLSession.shared.data(from: apiURL)
+                    let decoder = JSONDecoder()
+                    struct MovieResponse: Codable {
+                        let video: String?
+                        let url: String?
+                    }
+                    let response = try decoder.decode(MovieResponse.self, from: data)
+                    guard let videoUrlString = response.video ?? response.url,
+                          let resolvedURL = URL(string: videoUrlString) else {
+                        await showError("Không tìm thấy link video")
+                        return
+                    }
+                    streamURL = resolvedURL
+                }
+                
+                await MainActor.run {
+                    downloadManager.startDownload(
+                        url: streamURL,
+                        movieId: movieId,
+                        title: title,
+                        posterPath: posterPath,
+                        mediaType: mediaType,
+                        season: season,
+                        episode: episode,
+                        episodeName: episodeName
+                    )
+                }
+            } catch {
+                await showError("Lỗi: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    @MainActor
+    private func showError(_ message: String) {
+        alertMessage = message
+        showAlert = true
     }
 }
 
