@@ -466,8 +466,21 @@ struct EpisodeDownloadButton: View {
             alertMessage = "Đã tải xong: \(title) - Tập \(episode)"
             showAlert = true
         case .failed:
-            downloadManager.cancelDownload(movieId: movieId, season: season, episode: episode)
-            resolveAndStartDownload()
+            isLoadingURL = true
+            Task {
+                let viewModel = MovieDetailViewModel()
+                let debugInfo = await viewModel.getDebugInfo(
+                    movieId: movieId,
+                    mediaType: mediaType,
+                    season: season,
+                    episode: episode
+                )
+                await MainActor.run {
+                    alertMessage = "Lỗi tải\n\nDebug:\n\(debugInfo)"
+                    showAlert = true
+                    isLoadingURL = false
+                }
+            }
         }
     }
     
@@ -484,7 +497,7 @@ struct EpisodeDownloadButton: View {
                 episode: episode
             ) {
                 await MainActor.run {
-                    print("✅ Starting download: \(url.absoluteString)")
+                    print("✅ URL: \(url.absoluteString)")
                     downloadManager.startDownload(
                         url: url,
                         movieId: movieId,
@@ -496,10 +509,14 @@ struct EpisodeDownloadButton: View {
                         episodeName: episodeName
                     )
                     isLoadingURL = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        let status = downloadManager.downloadStatus(movieId: movieId, season: season, episode: episode)
+                        print("📊 Status after 1s: \(status)")
+                    }
                 }
             } else {
                 await MainActor.run {
-                    alertMessage = "Không tìm thấy link video cho \(title) - Tập \(episode)"
+                    alertMessage = "Không tìm thấy link video"
                     showAlert = true
                     isLoadingURL = false
                 }
