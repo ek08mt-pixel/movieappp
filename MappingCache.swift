@@ -37,7 +37,7 @@ final class MappingCache {
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
     static func getDirectSlug(tmdbID: Int, season: Int = 1) -> String? { directSlugs["\(tmdbID)_\(season)"] }
     static func isLongRunningAnime(tmdbID: Int) -> Bool { animeSlugs[tmdbID] != nil }
-    static func hasDirectSlug(tmdbID: Int) -> Bool { directSlugs[tmdbID] != nil }
+    static func hasDirectSlug(tmdbID: Int, season: Int = 1) -> Bool { directSlugs["\(tmdbID)_\(season)"] != nil }
     
     private init() {}
     
