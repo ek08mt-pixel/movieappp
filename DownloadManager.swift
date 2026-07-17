@@ -7,17 +7,18 @@ class DownloadManager: NSObject, ObservableObject {
     @Published var activeDownloads: [String: DownloadInfo] = [:]
     @Published var downloadedMovies: [DownloadedMovie] = []
     
-    private var downloadSession: AVAssetDownloadURLSession!
+    private var downloadSession: URLSession!
     private let backgroundIdentifier = "com.emmew.backgroundDownload"
     private let downloadedKey = "downloadedMovies"
     
-    // Lưu metadata tạm thời trong quá trình tải
     private var pendingMetadata: [String: PendingDownloadMetadata] = [:]
+    private var downloadTasks: [String: URLSessionDownloadTask] = [:]
+    private var downloadResumeData: [String: Data] = [:]
     
     struct DownloadInfo {
         var progress: Double = 0
         var status: DownloadStatus = .waiting
-        var task: AVAssetDownloadTask?
+        var task: URLSessionDownloadTask?
     }
     
     enum DownloadStatus {
@@ -51,7 +52,9 @@ class DownloadManager: NSObject, ObservableObject {
     override init() {
         super.init()
         let config = URLSessionConfiguration.background(withIdentifier: backgroundIdentifier)
-        downloadSession = AVAssetDownloadURLSession(configuration: config, assetDownloadDelegate: self, delegateQueue: .main)
+        config.isDiscretionary = false
+        config.sessionSendsLaunchEvents = true
+        downloadSession = URLSession(configuration: config, delegate: self, delegateQueue: .main)
         loadDownloadedMovies()
         restorePendingDownloads()
     }
@@ -59,21 +62,13 @@ class DownloadManager: NSObject, ObservableObject {
     func startDownload(url: URL, movieId: Int, title: String, posterPath: String?, mediaType: String?, season: Int? = nil, episode: Int? = nil, episodeName: String? = nil) {
         let key = downloadKey(movieId: movieId, season: season, episode: episode)
         
-        guard activeDownloads[key] == nil else { return }
+        guard activeDownloads[key] == nil || activeDownloads[key]?.status == .failed else { return }
         
-        let asset = AVURLAsset(url: url)
+        let task = downloadSession.downloadTask(with: url)
+        task.resume()
         
-        guard let task = downloadSession.makeAssetDownloadTask(
-            asset: asset,
-            assetTitle: "\(title) S\(season ?? 0)E\(episode ?? 0)",
-            assetArtworkData: nil,
-            options: nil
-        ) else {
-            print("Failed to create download task")
-            return
-        }
+        downloadTasks[key] = task
         
-        // Lưu metadata để dùng khi tải xong
         pendingMetadata[key] = PendingDownloadMetadata(
             id: movieId,
             title: title,
@@ -84,26 +79,32 @@ class DownloadManager: NSObject, ObservableObject {
             episodeName: episodeName
         )
         
-        task.resume()
-        
         activeDownloads[key] = DownloadInfo(progress: 0, status: .downloading, task: task)
     }
     
     func pauseDownload(movieId: Int, season: Int?, episode: Int?) {
         let key = downloadKey(movieId: movieId, season: season, episode: episode)
-        activeDownloads[key]?.task?.suspend()
-        activeDownloads[key]?.status = .paused
+        guard let task = downloadTasks[key] else { return }
+        task.cancel { resumeData in
+            self.downloadResumeData[key] = resumeData
+            self.activeDownloads[key]?.status = .paused
+        }
     }
     
     func resumeDownload(movieId: Int, season: Int?, episode: Int?) {
         let key = downloadKey(movieId: movieId, season: season, episode: episode)
-        activeDownloads[key]?.task?.resume()
+        guard let resumeData = downloadResumeData[key] else { return }
+        let task = downloadSession.downloadTask(withResumeData: resumeData)
+        task.resume()
+        downloadTasks[key] = task
         activeDownloads[key]?.status = .downloading
     }
     
     func cancelDownload(movieId: Int, season: Int?, episode: Int?) {
         let key = downloadKey(movieId: movieId, season: season, episode: episode)
-        activeDownloads[key]?.task?.cancel()
+        downloadTasks[key]?.cancel()
+        downloadTasks.removeValue(forKey: key)
+        downloadResumeData.removeValue(forKey: key)
         activeDownloads.removeValue(forKey: key)
         pendingMetadata.removeValue(forKey: key)
     }
@@ -163,7 +164,7 @@ class DownloadManager: NSObject, ObservableObject {
     private func restorePendingDownloads() {
         downloadSession.getAllTasks { tasks in
             for task in tasks {
-                if let downloadTask = task as? AVAssetDownloadTask {
+                if let downloadTask = task as? URLSessionDownloadTask {
                     downloadTask.resume()
                 }
             }
@@ -171,25 +172,23 @@ class DownloadManager: NSObject, ObservableObject {
     }
 }
 
-extension DownloadManager: AVAssetDownloadDelegate {
-    func urlSession(_ session: URLSession, assetDownloadTask: AVAssetDownloadTask, didFinishDownloadingTo location: URL) {
+extension DownloadManager: URLSessionDownloadDelegate {
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
         let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let destinationURL = documentsPath.appendingPathComponent(UUID().uuidString + ".movpkg")
+        let fileName = downloadTask.originalRequest?.url?.lastPathComponent ?? UUID().uuidString + ".mp4"
+        let destinationURL = documentsPath.appendingPathComponent(fileName)
         
         do {
-            // Xóa file cũ nếu có
             if fileManager.fileExists(atPath: destinationURL.path) {
                 try fileManager.removeItem(at: destinationURL)
             }
             try fileManager.moveItem(at: location, to: destinationURL)
             
-            // Lấy file size
             let attributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
             
-            // Tìm key và metadata
-            if let key = findKey(for: assetDownloadTask),
+            if let key = findKey(for: downloadTask),
                let metadata = pendingMetadata[key] {
                 
                 let downloadedMovie = DownloadedMovie(
@@ -204,53 +203,49 @@ extension DownloadManager: AVAssetDownloadDelegate {
                     fileSize: fileSize
                 )
                 
-                // Thêm vào danh sách, tránh trùng lặp
                 downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
                 downloadedMovies.append(downloadedMovie)
                 
                 activeDownloads[key]?.status = .completed
                 activeDownloads[key]?.progress = 1.0
                 pendingMetadata.removeValue(forKey: key)
+                downloadTasks.removeValue(forKey: key)
                 
                 saveDownloadedMovies()
                 
-                // Xóa task khỏi activeDownloads sau 3 giây
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
                     self?.activeDownloads.removeValue(forKey: key)
                 }
             }
         } catch {
-            print("Failed to save downloaded file: \(error.localizedDescription)")
-            if let key = findKey(for: assetDownloadTask) {
+            print("Failed to save: \(error)")
+            if let key = findKey(for: downloadTask) {
                 activeDownloads[key]?.status = .failed
             }
         }
     }
     
-    func urlSession(_ session: URLSession, assetDownloadTask: AVAssetDownloadTask, didLoad timeRange: CMTimeRange, totalTimeRangesLoaded loadedTimeRanges: [NSValue], timeRangeExpectedToLoad: CMTimeRange) {
-        guard timeRangeExpectedToLoad.duration.seconds > 0 else { return }
-        let progress = min(timeRange.duration.seconds / timeRangeExpectedToLoad.duration.seconds, 1.0)
-        if let key = findKey(for: assetDownloadTask) {
-            activeDownloads[key]?.progress = progress
-            activeDownloads[key]?.status = .downloading
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0 else { return }
+        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        if let key = findKey(for: downloadTask) {
+            activeDownloads[key]?.progress = min(progress, 1.0)
         }
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error as NSError? {
-            // User cancelled - không tính là lỗi
             if error.code == NSURLErrorCancelled {
                 return
             }
-            print("Download failed: \(error.localizedDescription)")
-            if let downloadTask = task as? AVAssetDownloadTask,
+            if let downloadTask = task as? URLSessionDownloadTask,
                let key = findKey(for: downloadTask) {
                 activeDownloads[key]?.status = .failed
             }
         }
     }
     
-    private func findKey(for task: AVAssetDownloadTask) -> String? {
-        return activeDownloads.first(where: { $0.value.task == task })?.key
+    private func findKey(for task: URLSessionDownloadTask) -> String? {
+        return downloadTasks.first(where: { $0.value == task })?.key
     }
 }
