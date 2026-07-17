@@ -6,15 +6,21 @@ struct DownloadedPlayerView: View {
     let title: String
     @Environment(\.dismiss) var dismiss
     @State private var player: AVPlayer?
+    @State private var isLoading = true
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            if let player = player {
+            if isLoading {
+                ProgressView("Starting server...").foregroundColor(.white)
+            } else if let player = player {
                 VideoPlayer(player: player)
                     .ignoresSafeArea()
                     .onAppear { player.play() }
-                    .onDisappear { player.pause() }
+                    .onDisappear {
+                        player.pause()
+                        LocalHTTPServer.shared.stop()
+                    }
             }
             VStack {
                 HStack {
@@ -30,15 +36,23 @@ struct DownloadedPlayerView: View {
             }
         }
         .onAppear {
-            playLocal()
+            startServerAndPlay()
         }
     }
     
-    private func playLocal() {
-        let masterURL = url.deletingLastPathComponent().appendingPathComponent("master.m3u8")
-        let asset = AVURLAsset(url: URL(string: "hls-custom://master.m3u8")!)
-        let loader = HLSResourceLoader(playlistURL: masterURL)
-        asset.resourceLoader.setDelegate(loader, queue: .main)
-        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+    private func startServerAndPlay() {
+        DispatchQueue.global().async {
+            let folderPath = url.deletingLastPathComponent().path
+            let started = LocalHTTPServer.shared.start(basePath: folderPath)
+            
+            DispatchQueue.main.async {
+                if started, let serverURL = LocalHTTPServer.shared.serverURL {
+                    let playlistURL = serverURL.appendingPathComponent("master.m3u8")
+                    print("🎬 Playing: \(playlistURL.absoluteString)")
+                    player = AVPlayer(playerItem: AVPlayerItem(asset: AVURLAsset(url: playlistURL)))
+                }
+                isLoading = false
+            }
+        }
     }
 }
