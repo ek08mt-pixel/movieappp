@@ -35,52 +35,51 @@ struct DownloadedPlayerView: View {
     }
     
     private func playLocalVideo() {
-    let folderURL = url.deletingLastPathComponent()
-    
-    do {
-        let content = try String(contentsOf: url, encoding: .utf8)
-        let lines = content.components(separatedBy: .newlines)
-        var fixedLines: [String] = []
+        let folderURL = url.deletingLastPathComponent()
         
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                let subURL = folderURL.appendingPathComponent(trimmed)
-                
-                if let subContent = try? String(contentsOf: subURL, encoding: .utf8) {
-                    var subLines = subContent.components(separatedBy: .newlines)
-                    var fixedSubLines: [String] = []
+        do {
+            let content = try String(contentsOf: url, encoding: .utf8)
+            let lines = content.components(separatedBy: .newlines)
+            var fixedLines: [String] = []
+            
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
+                    let subURL = folderURL.appendingPathComponent(trimmed)
                     
-                    for subLine in subLines {
-                        let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
-                        if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
-                            let tsURL = folderURL.appendingPathComponent(subTrimmed)
-                            // Dùng file:// scheme
-                            fixedSubLines.append(tsURL.absoluteString)
-                        } else {
-                            fixedSubLines.append(subLine)
+                    if let subContent = try? String(contentsOf: subURL, encoding: .utf8) {
+                        let subLines = subContent.components(separatedBy: .newlines)
+                        var fixedSubLines: [String] = []
+                        
+                        for subLine in subLines {
+                            let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
+                            if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
+                                let tsURL = folderURL.appendingPathComponent(subTrimmed)
+                                fixedSubLines.append(tsURL.absoluteString)
+                            } else {
+                                fixedSubLines.append(subLine)
+                            }
                         }
+                        
+                        let fixedSubContent = fixedSubLines.joined(separator: "\n")
+                        let fixedSubURL = folderURL.appendingPathComponent("fixed_sub.m3u8")
+                        try fixedSubContent.write(to: fixedSubURL, atomically: true, encoding: .utf8)
+                        
+                        fixedLines.append(fixedSubURL.absoluteString)
                     }
-                    
-                    let fixedSubContent = fixedSubLines.joined(separator: "\n")
-                    let fixedSubURL = folderURL.appendingPathComponent("fixed_sub.m3u8")
-                    try fixedSubContent.write(to: fixedSubURL, atomically: true, encoding: .utf8)
-                    
-                    // Dùng file:// scheme
-                    fixedLines.append(fixedSubURL.absoluteString)
+                } else {
+                    fixedLines.append(line)
                 }
-            } else {
-                fixedLines.append(line)
             }
+            
+            let fixedContent = fixedLines.joined(separator: "\n")
+            let fixedURL = folderURL.appendingPathComponent("fixed_master.m3u8")
+            try fixedContent.write(to: fixedURL, atomically: true, encoding: .utf8)
+            
+            let asset = AVURLAsset(url: fixedURL)
+            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        } catch {
+            print("❌ Error: \(error)")
         }
-        
-        let fixedContent = fixedLines.joined(separator: "\n")
-        let fixedURL = folderURL.appendingPathComponent("fixed_master.m3u8")
-        try fixedContent.write(to: fixedURL, atomically: true, encoding: .utf8)
-        
-        let asset = AVURLAsset(url: fixedURL)
-        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-    } catch {
-        print("❌ Error: \(error)")
     }
 }
