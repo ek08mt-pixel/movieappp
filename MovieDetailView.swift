@@ -466,21 +466,8 @@ struct EpisodeDownloadButton: View {
             alertMessage = "Đã tải xong: \(title) - Tập \(episode)"
             showAlert = true
         case .failed:
-            isLoadingURL = true
-            Task {
-                let viewModel = MovieDetailViewModel()
-                let debugInfo = await viewModel.getDebugInfo(
-                    movieId: movieId,
-                    mediaType: mediaType,
-                    season: season,
-                    episode: episode
-                )
-                await MainActor.run {
-                    alertMessage = "Lỗi tải - Debug:\n\(debugInfo)"
-                    showAlert = true
-                    isLoadingURL = false
-                }
-            }
+            downloadManager.cancelDownload(movieId: movieId, season: season, episode: episode)
+            resolveAndStartDownload()
         }
     }
     
@@ -497,6 +484,7 @@ struct EpisodeDownloadButton: View {
                 episode: episode
             ) {
                 await MainActor.run {
+                    print("✅ Starting download: \(url.absoluteString)")
                     downloadManager.startDownload(
                         url: url,
                         movieId: movieId,
@@ -510,14 +498,8 @@ struct EpisodeDownloadButton: View {
                     isLoadingURL = false
                 }
             } else {
-                let debugInfo = await viewModel.getDebugInfo(
-                    movieId: movieId,
-                    mediaType: mediaType,
-                    season: season,
-                    episode: episode
-                )
                 await MainActor.run {
-                    alertMessage = "Không tìm thấy link video\n\nDebug:\n\(debugInfo)"
+                    alertMessage = "Không tìm thấy link video cho \(title) - Tập \(episode)"
                     showAlert = true
                     isLoadingURL = false
                 }
