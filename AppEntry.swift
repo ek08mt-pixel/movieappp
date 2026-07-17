@@ -52,6 +52,9 @@ class AppState: ObservableObject {
     }
     @Published var showOnboarding: Bool = false
     
+    @Published var notificationMovieId: Int?
+    @Published var showNotificationMovie = false
+    
     init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         load()
@@ -146,8 +149,24 @@ class AppState: ObservableObject {
     }
 }
 
+// MARK: - AppDelegate for Notifications
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let movieId = response.notification.request.content.userInfo["movieId"] as? Int {
+            NotificationCenter.default.post(name: Notification.Name("OpenMovieFromNotification"), object: nil, userInfo: ["movieId": movieId])
+        }
+        completionHandler()
+    }
+}
+
 @main
 struct AppEntry: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject var appState = AppState()
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     
@@ -163,6 +182,17 @@ struct AppEntry: App {
                     .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                         Task {
                             await NotificationManager.shared.autoCheckFromAppState(appState)
+                        }
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenMovieFromNotification"))) { notification in
+                        if let movieId = notification.userInfo?["movieId"] as? Int {
+                            appState.notificationMovieId = movieId
+                            appState.showNotificationMovie = true
+                        }
+                    }
+                    .sheet(isPresented: $appState.showNotificationMovie) {
+                        if let movieId = appState.notificationMovieId {
+                            MovieDetailView(movie: Movie(id: movieId, title: "", overview: "", posterPath: nil, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: nil))
                         }
                     }
             } else {
