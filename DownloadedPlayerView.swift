@@ -45,29 +45,39 @@ struct DownloadedPlayerView: View {
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
             alertMessage = "File size: \(content.count) bytes\n\nContent:\n\(String(content.prefix(1000)))"
-            showAlert = true
             
             let lines = content.components(separatedBy: .newlines)
-            var streamURL: URL?
+            var streamPath: String?
             
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("http") && trimmed.hasSuffix(".m3u8") {
-                    streamURL = URL(string: trimmed)
+                if !trimmed.hasPrefix("#") && !trimmed.isEmpty && !trimmed.hasPrefix("http") {
+                    streamPath = trimmed
                     break
                 }
                 if trimmed.hasPrefix("http") {
-                    streamURL = URL(string: trimmed)
+                    streamPath = trimmed
                     break
                 }
             }
             
-            if let streamURL = streamURL {
+            if let path = streamPath {
+                let streamURL: URL
+                if path.hasPrefix("http") {
+                    streamURL = URL(string: path)!
+                } else {
+                    var baseURL = url.deletingLastPathComponent()
+                    streamURL = baseURL.appendingPathComponent(path)
+                }
+                
+                alertMessage += "\n\nStream URL: \(streamURL.absoluteString)"
+                showAlert = true
+                
                 let asset = AVURLAsset(url: streamURL)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
-                let asset = AVURLAsset(url: url)
-                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+                alertMessage += "\n\nNo stream path found"
+                showAlert = true
             }
         } catch {
             alertMessage = "Error: \(error.localizedDescription)"
