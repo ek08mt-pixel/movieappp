@@ -41,35 +41,36 @@ struct MovieListView: View {
     }
     
     func loadMore() async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        let newMovies: [Movie]?
-        
-        if isYearQuery, let year = Int(fixedQuery) {
-            newMovies = try? await APIService.shared.searchMovies(query: "\(year)", page: page)
-        } else if isCountryQuery {
-            let countryNames: [String: String] = [
-                "usuk": "American", "korean": "Korean", "japanese": "Japanese",
-                "vietnamese": "Vietnamese", "china": "Chinese", "india": "Indian",
-                "thailand": "Thai", "france": "French", "uk": "British",
-                "australia": "Australian", "mexico": "Mexican", "spain": "Spanish",
-                "brazil": "Brazilian", "russia": "Russian", "germany": "German",
-                "italy": "Italian", "canada": "Canadian", "sweden": "Swedish"
-            ]
-            let keyword = countryNames[fixedQuery.lowercased()] ?? fixedQuery
-            newMovies = try? await APIService.shared.searchMovies(query: keyword, page: page)
-        } else {
-            let q = fixedQuery.isEmpty ? title : fixedQuery
-            newMovies = try? await APIService.shared.searchMovies(query: q, page: page)
-        }
-        
-        if let new = newMovies, !new.isEmpty {
-            let filtered = new.filter { !($0.adult ?? false) }
-            if filtered.isEmpty { hasMore = false }
-            else { allMovies.append(contentsOf: filtered); page += 1 }
-        } else {
-            hasMore = false
-        }
+    isLoading = true
+    defer { isLoading = false }
+    
+    let newMovies: [Movie]?
+    
+    if isYearQuery, let year = Int(fixedQuery) {
+        // Dùng API discover với năm phát hành
+        newMovies = try? await APIService.shared.discoverMoviesByYear(year)
+    } else if isCountryQuery {
+        // Dùng API discover với ngôn ngữ gốc
+        let langMap: [String: String] = [
+            "usuk": "en", "korean": "ko", "japanese": "ja",
+            "vietnamese": "vi", "china": "zh", "india": "hi",
+            "thailand": "th", "france": "fr", "uk": "en",
+            "australia": "en", "mexico": "es", "spain": "es",
+            "brazil": "pt", "russia": "ru", "germany": "de",
+            "italy": "it", "canada": "en", "sweden": "sv"
+        ]
+        let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
+        newMovies = try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc")
+    } else {
+        let q = fixedQuery.isEmpty ? title : fixedQuery
+        newMovies = try? await APIService.shared.searchMovies(query: q, page: page)
+    }
+    
+    if let new = newMovies, !new.isEmpty {
+        let filtered = new.filter { !($0.adult ?? false) }
+        if filtered.isEmpty { hasMore = false }
+        else { allMovies.append(contentsOf: filtered); page += 1 }
+    } else {
+        hasMore = false
     }
 }
