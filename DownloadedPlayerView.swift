@@ -30,50 +30,9 @@ struct DownloadedPlayerView: View {
             }
         }
         .onAppear {
-            playFromLocalM3U8()
-        }
-    }
-    
-    private func playFromLocalM3U8() {
-        do {
-            let content = try String(contentsOf: url, encoding: .utf8)
-            let lines = content.components(separatedBy: .newlines)
-            var streamPath: String?
-            
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
-                    streamPath = trimmed
-                    break
-                }
-            }
-            
-            guard let path = streamPath else {
-                print("No stream path found")
-                return
-            }
-            
-            // Dùng original URL từ DownloadedMovie để tạo base
-            let originalURLString = UserDefaults.standard.string(forKey: "originalURL_\(url.lastPathComponent)") ?? ""
-            
-            if !originalURLString.isEmpty, let originalURL = URL(string: originalURLString) {
-                var baseURL = originalURL.deletingLastPathComponent()
-                let streamURL = baseURL.appendingPathComponent(path)
-                print("✅ Stream URL: \(streamURL)")
-                let asset = AVURLAsset(url: streamURL)
-                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-            } else {
-                // Fallback: tìm trong downloadedMovies
-                if let movie = DownloadManager.shared.downloadedMovies.first(where: { $0.localURL == url.absoluteString }),
-                   let origURL = URL(string: movie.originalURL) {
-                    var baseURL = origURL.deletingLastPathComponent()
-                    let streamURL = baseURL.appendingPathComponent(path)
-                    let asset = AVURLAsset(url: streamURL)
-                    player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-                }
-            }
-        } catch {
-            print("Error: \(error)")
+            // Phát file master.m3u8 local (đã có segment .ts)
+            let asset = AVURLAsset(url: url)
+            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         }
     }
 }
