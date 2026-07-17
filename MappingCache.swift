@@ -28,8 +28,10 @@ final class MappingCache {
         14091: "tham-tu-lung-danh-conan",
     ]
     
-    static let directSlugs: [Int: String] = [
-        111110: "dao-hai-tac-live-action-phan-2",
+    static let directSlugs: [String: String] = [
+    "111110_1": "dao-hai-tac-live-action-phan-1",
+    "111110_2": "dao-hai-tac-live-action-phan-2",
+]
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
