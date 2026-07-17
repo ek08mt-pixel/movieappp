@@ -10,14 +10,14 @@ class OnboardingManager: ObservableObject {
     @Published var email = ""
     @Published var profiles: [UIImage?] = [nil, nil, nil]
     
-    func completeOnboarding(appState: AppState) { 
-    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-    if !email.isEmpty {
-        appState.email = email
-        appState.isLoggedIn = true
-        appState.save()
+    func completeOnboarding(appState: AppState? = nil) {
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        if !email.isEmpty, let appState = appState {
+            appState.email = email
+            appState.isLoggedIn = true
+            appState.save()
+        }
     }
-}
     
     func resetOnboarding() {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
@@ -43,7 +43,7 @@ struct OnboardingView: View {
             case 1: ReasonStep(om: om)
             case 2: MoviePickerStep(om: om)
             case 3: GoodChoiceStep(om: om)
-            case 4: ProfileStep(om: om)
+            case 4: ProfileStep(om: om, appState: appState)
             default: EmptyView()
             }
         }
@@ -52,7 +52,7 @@ struct OnboardingView: View {
         }
         .onChange(of: om.currentStep) { step in
             if step > 4 {
-                om.completeOnboarding()
+                om.completeOnboarding(appState: appState)
                 showHome = true
             }
         }
@@ -120,9 +120,7 @@ struct WelcomeStep: View {
         VStack(spacing: 32) {
             Spacer()
             
-            // Logo & Welcome
             VStack(spacing: 16) {
-                // Speech bubble anime style
                 ZStack {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(.white.opacity(0.1))
@@ -131,7 +129,6 @@ struct WelcomeStep: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(.white.opacity(0.3), lineWidth: 1)
                         )
-                    // Tail
                     Path { path in
                         path.move(to: CGPoint(x: 40, y: 60))
                         path.addLine(to: CGPoint(x: 35, y: 72))
@@ -164,9 +161,7 @@ struct WelcomeStep: View {
             
             Spacer()
             
-            // Email & Buttons
             VStack(spacing: 16) {
-                // Email field
                 TextField("Email address", text: $om.email)
                     .font(.system(size: 16))
                     .foregroundColor(.white)
@@ -176,7 +171,6 @@ struct WelcomeStep: View {
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
                 
-                // Continue button
                 Button {
                     withAnimation { om.currentStep = 1 }
                 } label: {
@@ -188,12 +182,10 @@ struct WelcomeStep: View {
                         .background(Capsule().fill(.white))
                 }
                 
-                // Or
                 Text("or")
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.5))
                 
-                // Continue with Google
                 Button {
                     withAnimation { om.currentStep = 1 }
                 } label: {
@@ -211,7 +203,6 @@ struct WelcomeStep: View {
                     .glassCard()
                 }
                 
-                // Continue with Apple
                 Button {
                     withAnimation { om.currentStep = 1 }
                 } label: {
@@ -330,7 +321,6 @@ struct MoviePickerStep: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
                 
-                // Search bar
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").foregroundColor(.gray)
                     TextField("Search movies...", text: $searchText)
@@ -343,7 +333,6 @@ struct MoviePickerStep: View {
                 .glassCard()
                 .padding(.horizontal, 24)
                 
-                // Movie grid
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(displayMovies.prefix(12)) { movie in
@@ -433,7 +422,6 @@ struct GoodChoiceStep: View {
                 .foregroundColor(.white)
                 .padding(.bottom, 30)
             
-            // Selected movies
             HStack(spacing: 16) {
                 ForEach(Array(om.selectedMovies.prefix(3))) { movie in
                     CachedAsyncImage(url: movie.posterURL)
@@ -451,7 +439,6 @@ struct GoodChoiceStep: View {
                 .padding(.top, 20)
                 .padding(.horizontal, 40)
             
-            // Stars - tam giác màu trắng
             HStack(spacing: 12) {
                 ForEach(0..<3) { i in
                     Image(systemName: "triangle.fill")
@@ -480,15 +467,14 @@ struct GoodChoiceStep: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 50)
         }
-        .onAppear {
-            showStars = true
-        }
+        .onAppear { showStars = true }
     }
 }
 
 // MARK: - Step 4: Profile
 struct ProfileStep: View {
     @ObservedObject var om: OnboardingManager
+    var appState: AppState
     @State private var selectedProfileIndex: Int = 0
     @State private var showPhotoPicker = false
     
@@ -501,14 +487,11 @@ struct ProfileStep: View {
                 .foregroundColor(.white)
                 .padding(.bottom, 50)
             
-            // 3 avatar slots (2 trên, 1 dưới)
             VStack(spacing: 30) {
-                // 2 trên
                 HStack(spacing: 30) {
                     profileCircle(index: 0)
                     profileCircle(index: 1)
                 }
-                // 1 dưới
                 profileCircle(index: 2)
             }
             
@@ -519,7 +502,6 @@ struct ProfileStep: View {
             
             Spacer()
             
-            // Don't ask again
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.square.fill")
                     .font(.system(size: 16))
@@ -529,12 +511,12 @@ struct ProfileStep: View {
                     .foregroundColor(.white.opacity(0.6))
             }
             .padding(.bottom, 20)
-            ..onTapGesture {
-    om.completeOnboarding(appState: appState)
-}
+            .onTapGesture {
+                om.completeOnboarding(appState: appState)
+            }
             
             Button {
-    om.completeOnboarding(appState: appState)
+                om.completeOnboarding(appState: appState)
             } label: {
                 Text("Let's go!")
                     .font(.system(size: 16, weight: .semibold))
