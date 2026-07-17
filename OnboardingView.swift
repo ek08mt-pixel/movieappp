@@ -10,16 +10,14 @@ class OnboardingManager: ObservableObject {
     @Published var email = ""
     @Published var profiles: [UIImage?] = [nil, nil, nil]
     
-    func completeOnboarding() {
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        // Lưu email vào AppState để đồng bộ với Profile
-        if !email.isEmpty {
-            let appState = AppState()
-            appState.email = email
-            appState.isLoggedIn = true
-            appState.save()
-        }
+    func completeOnboarding(appState: AppState) { 
+    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+    if !email.isEmpty {
+        appState.email = email
+        appState.isLoggedIn = true
+        appState.save()
     }
+}
     
     func resetOnboarding() {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
@@ -33,6 +31,7 @@ class OnboardingManager: ObservableObject {
 // MARK: - Main Onboarding View
 struct OnboardingView: View {
     @StateObject private var om = OnboardingManager.shared
+    var appState: AppState
     @State private var showHome = false
     
     var body: some View {
@@ -530,12 +529,12 @@ struct ProfileStep: View {
                     .foregroundColor(.white.opacity(0.6))
             }
             .padding(.bottom, 20)
-            .onTapGesture {
-                om.completeOnboarding()
-            }
+            ..onTapGesture {
+    om.completeOnboarding(appState: appState)
+}
             
             Button {
-                om.completeOnboarding()
+    om.completeOnboarding(appState: appState)
             } label: {
                 Text("Let's go!")
                     .font(.system(size: 16, weight: .semibold))
