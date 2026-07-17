@@ -448,7 +448,7 @@ final class PhimAPIService {
         let targetSeason = season ?? 1
         let isLongAnime = MappingCache.isLongRunningAnime(tmdbID: tmdbID)
         
-        let searchItems: [[String: Any]]
+        var searchItems: [[String: Any]]
         if isLongAnime {
             searchItems = items.filter { ($0["type"] as? String) == "hoathinh" }
             if searchItems.isEmpty { searchItems = items }
