@@ -61,7 +61,6 @@ struct MainTabView: View {
     @State private var showWatchTogetherRoom = false
     @StateObject private var ostManager = OSTManager.shared
     @StateObject private var watchService = WatchTogetherService.shared
-    @StateObject private var pipManager = PiPWindowManager.shared
     
     init() { UITabBar.appearance().isHidden = true }
     
