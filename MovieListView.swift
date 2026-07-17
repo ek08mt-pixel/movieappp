@@ -7,6 +7,15 @@ struct MovieListView: View {
     
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
+    var isYearQuery: Bool {
+        Int(fixedQuery) != nil
+    }
+    
+    var isCountryQuery: Bool {
+        let countries = ["usuk", "korean", "japanese", "vietnamese", "china", "india", "thailand", "france", "uk", "australia", "mexico", "spain", "brazil", "russia", "germany", "italy", "canada", "sweden"]
+        return countries.contains(fixedQuery.lowercased())
+    }
+    
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
@@ -25,12 +34,36 @@ struct MovieListView: View {
                 }.padding(.horizontal, 16).padding(.top, 90).padding(.bottom, 100)
             }
             Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))).padding(.top, 54).padding(.leading, 20) }
-        }.navigationBarHidden(true).task { allMovies = movies; if allMovies.isEmpty || allMovies.count < 20 { await loadMore() } }
+        }.navigationBarHidden(true).task {
+            allMovies = movies.filter { !($0.adult ?? false) }
+            if allMovies.isEmpty { await loadMore() }
+        }
     }
     
     func loadMore() async {
-        isLoading = true; page += 1; let q = fixedQuery.isEmpty ? title : fixedQuery
-        if let new = try? await APIService.shared.searchMovies(query: q, page: page), !new.isEmpty { allMovies.append(contentsOf: new.filter { !($0.adult ?? false) }) } else { hasMore = false }
-        isLoading = false
+        isLoading = true
+        defer { isLoading = false }
+        
+        let newMovies: [Movie]?
+        
+        if isYearQuery, let year = Int(fixedQuery) {
+            // Lọc theo năm phát hành
+            newMovies = try? await APIService.shared.discoverMovies(year: year, page: page)
+        } else if isCountryQuery {
+            // Lọc theo quốc gia
+            newMovies = try? await APIService.shared.discoverMovies(region: fixedQuery, page: page)
+        } else {
+            // Search bình thường
+            let q = fixedQuery.isEmpty ? title : fixedQuery
+            newMovies = try? await APIService.shared.searchMovies(query: q, page: page)
+        }
+        
+        if let new = newMovies, !new.isEmpty {
+            let filtered = new.filter { !($0.adult ?? false) }
+            if filtered.isEmpty { hasMore = false }
+            else { allMovies.append(contentsOf: filtered); page += 1 }
+        } else {
+            hasMore = false
+        }
     }
 }
