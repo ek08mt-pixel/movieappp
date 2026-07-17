@@ -60,7 +60,11 @@ class DownloadManager: NSObject, ObservableObject {
         
         guard activeDownloads[key] == nil || activeDownloads[key]?.status == .failed else { return }
         
-        let task = downloadSession.downloadTask(with: url)
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
+        
+        let task = downloadSession.downloadTask(with: request)
         task.resume()
         downloadTasks[key] = task
         
@@ -143,6 +147,7 @@ class DownloadManager: NSObject, ObservableObject {
     }
 }
 
+// MARK: - URLSessionDownloadDelegate
 extension DownloadManager: URLSessionDownloadDelegate {
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         let fileManager = FileManager.default
@@ -199,9 +204,20 @@ extension DownloadManager: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error as NSError?, error.code != NSURLErrorCancelled {
+            print("Download error: \(error.localizedDescription), code: \(error.code)")
             if let key = downloadTasks.first(where: { $0.value == task })?.key {
                 activeDownloads[key]?.status = .failed
             }
         }
+    }
+}
+
+// MARK: - URLSessionTaskDelegate (Redirect)
+extension DownloadManager: URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        var newRequest = request
+        newRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        newRequest.setValue("*/*", forHTTPHeaderField: "Accept")
+        completionHandler(newRequest)
     }
 }
