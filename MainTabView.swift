@@ -1,54 +1,4 @@
 import SwiftUI
-import AVKit
-
-// MARK: - PiP Window Manager
-class PiPWindowManager: ObservableObject {
-    static let shared = PiPWindowManager()
-    
-    @Published var isActive = false
-    @Published var isPlaying = true
-    @Published var showFullScreen = false
-    
-    var player: AVPlayer?
-    var movieId: Int?
-    var movieTitle = ""
-    var mediaType: String?
-    var seasonNumber: Int?
-    var episodeNumber: Int?
-    var posterURL: URL?
-    var currentTime: Double = 0
-    var duration: Double = 0
-    
-    func startPiP(player: AVPlayer, movieId: Int, movieTitle: String, mediaType: String?, seasonNumber: Int?, episodeNumber: Int?, posterURL: URL?, currentTime: Double, duration: Double) {
-        self.player = player
-        self.movieId = movieId
-        self.movieTitle = movieTitle
-        self.mediaType = mediaType
-        self.seasonNumber = seasonNumber
-        self.episodeNumber = episodeNumber
-        self.posterURL = posterURL
-        self.currentTime = currentTime
-        self.duration = duration
-        isPlaying = player.rate > 0
-        isActive = true
-        showFullScreen = false
-    }
-    
-    func restoreFullScreen() { showFullScreen = true }
-    
-    func togglePlayPause() {
-        guard let player = player else { return }
-        if player.rate == 0 { player.play(); isPlaying = true }
-        else { player.pause(); isPlaying = false }
-    }
-    
-    func stopPiP() {
-        player?.pause(); player?.replaceCurrentItem(with: nil)
-        player = nil; isActive = false; isPlaying = false
-        movieId = nil; movieTitle = ""; posterURL = nil
-        seasonNumber = nil; episodeNumber = nil; showFullScreen = false
-    }
-}
 
 // MARK: - MainTabView
 struct MainTabView: View {
@@ -73,7 +23,7 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom && !pipManager.isActive {
+            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom {
                 VStack {
                     MiniPlayerView().padding(.top, 8)
                     Spacer()
@@ -111,23 +61,8 @@ struct MainTabView: View {
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
-        .animation(.spring(response: 0.4), value: pipManager.isActive)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
-        .fullScreenCover(isPresented: $pipManager.showFullScreen) {
-            if let movieId = pipManager.movieId {
-                MoviePlayerView(
-                    movieId: movieId,
-                    movieTitle: pipManager.movieTitle,
-                    mediaType: pipManager.mediaType,
-                    seasonNumber: pipManager.seasonNumber,
-                    episodeNumber: pipManager.episodeNumber,
-                    posterURL: pipManager.posterURL,
-                    resumeTime: pipManager.currentTime
-                )
-                .environmentObject(AppState())
-            }
-        }
         .onChange(of: watchService.isInRoom) { inRoom in
             withAnimation { showWatchTogetherRoom = inRoom }
         }
