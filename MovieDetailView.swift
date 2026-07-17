@@ -217,8 +217,7 @@ struct MovieDetailView: View {
                                                                 mediaType: movie.mediaType,
                                                                 season: ep.seasonNumber,
                                                                 episode: ep.episodeNumber,
-                                                                episodeName: ep.name,
-                                                                videoURL: nil // Sẽ được resolve từ view model hoặc API
+                                                                episodeName: ep.name
                                                             )
                                                         }
                                                         .padding(.vertical, 6)
@@ -270,7 +269,7 @@ struct MovieDetailView: View {
         for season in vm.seasons {
             let count = season.episodeCount
             if episodeNumber <= accumulatedEps + count {
-                let epInSeason = episodeNumber - accumulatedEps
+                _ = episodeNumber - accumulatedEps
                 withAnimation {
                     expandedSeason = season.seasonNumber
                 }
@@ -518,52 +517,6 @@ struct EpisodeDownloadButton: View {
                 }
             }
         }
-    }
-}
-                    streamURL = resolvedURL
-                } else {
-                    let urlString = "https://phimapi.com/film/\(movieId)"
-                    guard let apiURL = URL(string: urlString) else {
-                        await showError("URL không hợp lệ")
-                        return
-                    }
-                    let (data, _) = try await URLSession.shared.data(from: apiURL)
-                    let decoder = JSONDecoder()
-                    struct MovieResponse: Codable {
-                        let video: String?
-                        let url: String?
-                    }
-                    let response = try decoder.decode(MovieResponse.self, from: data)
-                    guard let videoUrlString = response.video ?? response.url,
-                          let resolvedURL = URL(string: videoUrlString) else {
-                        await showError("Không tìm thấy link video")
-                        return
-                    }
-                    streamURL = resolvedURL
-                }
-                
-                await MainActor.run {
-                    downloadManager.startDownload(
-                        url: streamURL,
-                        movieId: movieId,
-                        title: title,
-                        posterPath: posterPath,
-                        mediaType: mediaType,
-                        season: season,
-                        episode: episode,
-                        episodeName: episodeName
-                    )
-                }
-            } catch {
-                await showError("Lỗi: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    @MainActor
-    private func showError(_ message: String) {
-        alertMessage = message
-        showAlert = true
     }
 }
 
