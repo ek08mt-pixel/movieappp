@@ -32,7 +32,8 @@ struct DownloadedPlayerView: View {
         .onAppear {
             let folderURL = url.deletingLastPathComponent()
             let masterURL = folderURL.appendingPathComponent("master.m3u8")
-            let asset = AVURLAsset(url: masterURL)
+            let customURL = URL(string: "hls-custom://playlist/master.m3u8")!
+            let asset = AVURLAsset(url: customURL)
             let loader = HLSResourceLoader(playlistURL: masterURL)
             asset.resourceLoader.setDelegate(loader, queue: .main)
             player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
