@@ -102,13 +102,10 @@ struct DownloadedPlayerView: View {
     
     private func playLocalVideo() {
         let folderURL = url.deletingLastPathComponent()
-        
-        // Test file .ts đầu tiên
-        if let files = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil),
-           let firstTS = files.first(where: { $0.lastPathComponent.hasSuffix(".ts") }) {
-            print("🎬 Playing: \(firstTS.path)")
-            let asset = AVURLAsset(url: firstTS)
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-        }
+        let customURL = URL(string: "local-hls://playlist/master.m3u8")!
+        let asset = AVURLAsset(url: customURL)
+        let loader = LocalAssetLoader(folderURL: folderURL)
+        asset.resourceLoader.setDelegate(loader, queue: .main)
+        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
     }
 }
