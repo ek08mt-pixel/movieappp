@@ -24,9 +24,9 @@ final class MappingCache {
     
     // Slug cứng cho anime dài tập trên phimapi
     static let animeSlugs: [Int: String] = [
-        37854: "dao-hai-tac",                  // One Piece
-        23868: "doraemon-tuyen-tap-moi-nhat",  // Doraemon
-        14091: "tham-tu-lung-danh-conan",      // Conan
+        37854: "dao-hai-tac",
+        23868: "doraemon-tuyen-tap-moi-nhat",
+        14091: "tham-tu-lung-danh-conan",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
@@ -311,7 +311,6 @@ final class PhimAPIService {
     }
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
-        // Kiểm tra anime dài tập → dùng slug cứng
         if MappingCache.isLongRunningAnime(tmdbID: tmdbID), let animeSlug = MappingCache.getAnimeSlug(tmdbID: tmdbID) {
             fetchBySlug(slug: animeSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             return
@@ -459,6 +458,7 @@ final class PhimAPIService {
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
+}
 
 // MARK: - Sofaflix Service (Emew 2)
 final class SofaflixService {
