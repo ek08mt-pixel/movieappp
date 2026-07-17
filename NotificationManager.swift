@@ -5,12 +5,9 @@ class NotificationManager: ObservableObject {
     static let shared = NotificationManager()
     
     @Published var isAuthorized = false
-    @Published var followedShows: [Int: (title: String, lastSeason: Int, lastEpisode: Int, posterPath: String?, mediaType: String?)] = [:]
-    
-    private let followedKey = "followedShows"
     
     init() {
-        loadFollowedShows()
+        requestPermission()
     }
     
     // MARK: - Permission
@@ -20,75 +17,58 @@ class NotificationManager: ObservableObject {
         }
     }
     
-    // MARK: - Follow Shows
-    func toggleFollow(movieId: Int, title: String, season: Int, episode: Int, posterPath: String?, mediaType: String?) {
-        if followedShows[movieId] != nil {
-            followedShows.removeValue(forKey: movieId)
-        } else {
-            followedShows[movieId] = (title: title, lastSeason: season, lastEpisode: episode, posterPath: posterPath, mediaType: mediaType)
+    // MARK: - Auto Check từ AppState (không cần nút theo dõi)
+    func autoCheckFromAppState(_ appState: AppState) async {
+        // Gộp tất cả phim đã tương tác
+        var allMovies: [Movie] = []
+        allMovies.append(contentsOf: appState.favorites)
+        allMovies.append(contentsOf: appState.watchHistory)
+        allMovies.append(contentsOf: appState.watchedMovies)
+        
+        // Lọc trùng + chỉ lấy TV shows
+        let uniqueTVShows = Array(Set(allMovies.filter { $0.mediaType == "tv" }))
+        
+        // Nếu không có phim TV nào → bắn thông báo phim hot
+        if uniqueTVShows.isEmpty {
+            if let trending = try? await APIService.shared.trending(),
+               let hotMovie = trending.first {
+                await MainActor.run {
+                    scheduleHotMovieNotification(movie: hotMovie)
+                }
+            }
+            return
         }
-        saveFollowedShows()
-    }
-    
-    func isFollowing(movieId: Int) -> Bool {
-        followedShows[movieId] != nil
-    }
-    
-    private func saveFollowedShows() {
-        let data = try? JSONEncoder().encode(followedShows.mapValues { FollowedShowData(title: $0.title, lastSeason: $0.lastSeason, lastEpisode: $0.lastEpisode, posterPath: $0.posterPath, mediaType: $0.mediaType) })
-        UserDefaults.standard.set(data, forKey: followedKey)
-    }
-    
-    private func loadFollowedShows() {
-        guard let data = UserDefaults.standard.data(forKey: followedKey),
-              let decoded = try? JSONDecoder().decode([Int: FollowedShowData].self, from: data) else { return }
-        followedShows = decoded.mapValues { (title: $0.title, lastSeason: $0.lastSeason, lastEpisode: $0.lastEpisode, posterPath: $0.posterPath, mediaType: $0.mediaType) }
-    }
-    
-    // MARK: - Check New Episodes
-    func checkNewEpisodes() async {
-        for (movieId, show) in followedShows {
-            guard let mediaType = show.mediaType else { continue }
-            
-            var currentSeason = show.lastSeason
-            var currentEpisode = show.lastEpisode
-            var hasNewEpisode = false
-            
+        
+        // Check tập mới cho từng phim TV đã xem (tối đa 5 phim)
+        for show in uniqueTVShows.prefix(5) {
             do {
-                if mediaType == "tv" {
-                    let detail = try await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: currentSeason)
-                    let lastEp = detail.episodes.last?.episodeNumber ?? currentEpisode
-                    if lastEp > currentEpisode {
-                        currentEpisode = lastEp
-                        hasNewEpisode = true
-                    }
-                } else {
-                    // Phim lẻ - check xem có phần mới không
-                    let detail = try? await APIService.shared.movieDetail(movieId: movieId)
-                    if let collectionId = detail?.belongsToCollection?.id,
-                       let collection = try? await APIService.shared.collectionDetail(collectionId: collectionId) {
-                        let latestPart = collection.parts.sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }.last
-                        if let latest = latestPart, latest.id != movieId {
-                            hasNewEpisode = true
-                        }
+                let seasons = (try? await APIService.shared.fetchTVSeasons(tvId: show.id)) ?? []
+                guard let lastSeason = seasons.last?.seasonNumber else { continue }
+                let detail = try await APIService.shared.fetchSeasonDetail(tvId: show.id, seasonNumber: lastSeason)
+                guard let lastEp = detail.episodes.last?.episodeNumber else { continue }
+                
+                let savedKey = "lastNotified_\(show.id)"
+                let lastNotified = UserDefaults.standard.integer(forKey: savedKey)
+                
+                if lastEp > lastNotified {
+                    UserDefaults.standard.set(lastEp, forKey: savedKey)
+                    await MainActor.run {
+                        scheduleEpisodeNotification(
+                            showTitle: show.title,
+                            episode: lastEp,
+                            season: lastSeason,
+                            posterPath: show.posterPath
+                        )
                     }
                 }
             } catch { continue }
-            
-            if hasNewEpisode {
-                await MainActor.run {
-                    followedShows[movieId]?.lastEpisode = currentEpisode
-                    scheduleEpisodeNotification(showTitle: show.title, episode: currentEpisode, season: currentSeason, posterPath: show.posterPath)
-                }
-                saveFollowedShows()
-            }
         }
     }
     
     // MARK: - Schedule Notifications
     func scheduleEpisodeNotification(showTitle: String, episode: Int, season: Int, posterPath: String?, delay: TimeInterval = 1) {
         let content = UNMutableNotificationContent()
-        content.title = "Tập mới đã có!"
+        content.title = "📺 Tập mới đã có!"
         content.body = "\(showTitle) - S\(season):E\(episode) vừa ra mắt"
         content.sound = .default
         content.badge = (UIApplication.shared.applicationIconBadgeNumber + 1) as NSNumber
@@ -116,7 +96,7 @@ class NotificationManager: ObservableObject {
     
     func scheduleHotMovieNotification(movie: Movie, delay: TimeInterval = 1) {
         let content = UNMutableNotificationContent()
-        content.title = "Phim hot vừa cập nhật!"
+        content.title = "🔥 Phim hot vừa cập nhật!"
         content.body = "\(movie.title) ⭐ \(movie.ratingText)/10 - Xem ngay!"
         content.sound = .default
         
@@ -124,20 +104,4 @@ class NotificationManager: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
-    
-    // MARK: - Background Check
-    func scheduleBackgroundCheck() {
-        let request = BGAppRefreshTaskRequest(identifier: "com.emmew.checkNewEpisodes")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 3600)
-        try? BGTaskScheduler.shared.submit(request)
-    }
-}
-
-// MARK: - Codable Helper
-struct FollowedShowData: Codable {
-    let title: String
-    let lastSeason: Int
-    let lastEpisode: Int
-    let posterPath: String?
-    let mediaType: String?
 }
