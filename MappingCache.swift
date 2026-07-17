@@ -28,8 +28,14 @@ final class MappingCache {
         14091: "tham-tu-lung-danh-conan",
     ]
     
+    static let directSlugs: [Int: String] = [
+        111110: "dao-hai-tac-live-action-phan-2",
+    ]
+    
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
+    static func getDirectSlug(tmdbID: Int) -> String? { directSlugs[tmdbID] }
     static func isLongRunningAnime(tmdbID: Int) -> Bool { animeSlugs[tmdbID] != nil }
+    static func hasDirectSlug(tmdbID: Int) -> Bool { directSlugs[tmdbID] != nil }
     
     private init() {}
     
@@ -310,15 +316,25 @@ final class PhimAPIService {
     }
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
+        // 1. Direct slug (live action, movie lẻ...)
+        if let directSlug = MappingCache.getDirectSlug(tmdbID: tmdbID) {
+            fetchBySlug(slug: directSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
+            return
+        }
+        
+        // 2. Anime dài tập
         if MappingCache.isLongRunningAnime(tmdbID: tmdbID), let animeSlug = MappingCache.getAnimeSlug(tmdbID: tmdbID) {
             fetchBySlug(slug: animeSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             return
         }
         
+        // 3. Hardcoded slug
         if let slug = cache.getHardcodedSlug(tmdbID: tmdbID, season: season ?? 1) {
             fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             return
         }
+        
+        // 4. Search bình thường
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
         
         func fetchPage(_ page: Int, accumulatedItems: [[String: Any]], done: @escaping ([[String: Any]]) -> Void) {
