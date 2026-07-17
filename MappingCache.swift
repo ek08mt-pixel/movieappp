@@ -22,30 +22,15 @@ final class MappingCache {
         "76669_8": "uu-tu-phan-8",
     ]
     
-    // Danh sách anime dài tập: TMDB ID → số tập mỗi season
-    static let longRunningAnime: [Int: [Int]] = [
-        37854: [61, 16, 14, 38, 58, 47, 33, 37, 73, 47, 26, 14, 10, 21, 62, 50, 37, 36, 109, 195, 100],
-        23868: [40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40],
-        14091: [28, 27, 28, 31, 28, 28, 28, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
-    ]
-    
-    // Slug cứng trên phimapi
+    // Slug cứng cho anime dài tập trên phimapi
     static let animeSlugs: [Int: String] = [
-        37854: "one-piece",
-        23868: "doraemon",
-        14091: "conan",
+        37854: "dao-hai-tac",                  // One Piece
+        23868: "doraemon-tuyen-tap-moi-nhat",  // Doraemon
+        14091: "tham-tu-lung-danh-conan",      // Conan
     ]
-    
-    static func getAbsoluteEpisode(tmdbID: Int, season: Int, episode: Int) -> Int? {
-        guard let seasonEps = longRunningAnime[tmdbID] else { return nil }
-        guard season > 0 && season <= seasonEps.count else { return nil }
-        var total = 0
-        for i in 0..<(season - 1) { total += seasonEps[i] }
-        return total + episode
-    }
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
-    static func isLongRunningAnime(tmdbID: Int) -> Bool { longRunningAnime[tmdbID] != nil }
+    static func isLongRunningAnime(tmdbID: Int) -> Bool { animeSlugs[tmdbID] != nil }
     
     private init() {}
     
