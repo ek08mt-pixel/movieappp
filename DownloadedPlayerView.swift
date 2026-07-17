@@ -1,6 +1,29 @@
 import SwiftUI
 import AVKit
 
+class LocalAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
+    let folderURL: URL
+    
+    init(folderURL: URL) {
+        self.folderURL = folderURL
+    }
+    
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        guard let url = loadingRequest.request.url else { return false }
+        
+        let fileName = url.lastPathComponent
+        let fileURL = folderURL.appendingPathComponent(fileName)
+        
+        if let data = try? Data(contentsOf: fileURL) {
+            loadingRequest.dataRequest?.respond(with: data)
+            loadingRequest.finishLoading()
+            return true
+        }
+        
+        return false
+    }
+}
+
 struct DownloadedPlayerView: View {
     let url: URL
     let title: String
@@ -37,49 +60,12 @@ struct DownloadedPlayerView: View {
     private func playLocalVideo() {
         let folderURL = url.deletingLastPathComponent()
         
-        do {
-            let content = try String(contentsOf: url, encoding: .utf8)
-            let lines = content.components(separatedBy: .newlines)
-            var fixedLines: [String] = []
-            
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                    let subURL = folderURL.appendingPathComponent(trimmed)
-                    
-                    if let subContent = try? String(contentsOf: subURL, encoding: .utf8) {
-                        let subLines = subContent.components(separatedBy: .newlines)
-                        var fixedSubLines: [String] = []
-                        
-                        for subLine in subLines {
-                            let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
-                            if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
-                                let tsURL = folderURL.appendingPathComponent(subTrimmed)
-                                fixedSubLines.append(tsURL.absoluteString)
-                            } else {
-                                fixedSubLines.append(subLine)
-                            }
-                        }
-                        
-                        let fixedSubContent = fixedSubLines.joined(separator: "\n")
-                        let fixedSubURL = folderURL.appendingPathComponent("fixed_sub.m3u8")
-                        try fixedSubContent.write(to: fixedSubURL, atomically: true, encoding: .utf8)
-                        
-                        fixedLines.append(fixedSubURL.absoluteString)
-                    }
-                } else {
-                    fixedLines.append(line)
-                }
-            }
-            
-            let fixedContent = fixedLines.joined(separator: "\n")
-            let fixedURL = folderURL.appendingPathComponent("fixed_master.m3u8")
-            try fixedContent.write(to: fixedURL, atomically: true, encoding: .utf8)
-            
-            let asset = AVURLAsset(url: fixedURL)
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-        } catch {
-            print("❌ Error: \(error)")
-        }
+        // Tạo custom scheme URL
+        let customURL = URL(string: "local-hls://playlist/master.m3u8")!
+        let asset = AVURLAsset(url: customURL)
+        let loader = LocalAssetLoader(folderURL: folderURL)
+        asset.resourceLoader.setDelegate(loader, queue: .main)
+        
+        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
     }
 }
