@@ -18,18 +18,15 @@ class NotificationManager: ObservableObject {
         }
     }
     
-    // MARK: - Auto Check từ AppState (không cần nút theo dõi)
+    // MARK: - Auto Check từ AppState
     func autoCheckFromAppState(_ appState: AppState) async {
-        // Gộp tất cả phim đã tương tác
         var allMovies: [Movie] = []
         allMovies.append(contentsOf: appState.favorites)
         allMovies.append(contentsOf: appState.watchHistory)
         allMovies.append(contentsOf: appState.watchedMovies)
         
-        // Lọc trùng + chỉ lấy TV shows
         let uniqueTVShows = Array(Set(allMovies.filter { $0.mediaType == "tv" }))
         
-        // Nếu không có phim TV nào → bắn thông báo phim hot
         if uniqueTVShows.isEmpty {
             if let trending = try? await APIService.shared.trending24h(),
                let hotMovie = trending.first {
@@ -40,7 +37,6 @@ class NotificationManager: ObservableObject {
             return
         }
         
-        // Check tập mới cho từng phim TV đã xem (tối đa 5 phim)
         for show in uniqueTVShows.prefix(5) {
             do {
                 let seasons = (try? await APIService.shared.fetchTVSeasons(tvId: show.id)) ?? []
@@ -58,7 +54,8 @@ class NotificationManager: ObservableObject {
                             showTitle: show.title,
                             episode: lastEp,
                             season: lastSeason,
-                            posterPath: show.posterPath
+                            posterPath: show.posterPath,
+                            movieId: show.id
                         )
                     }
                 }
@@ -67,12 +64,22 @@ class NotificationManager: ObservableObject {
     }
     
     // MARK: - Schedule Notifications
-    func scheduleEpisodeNotification(showTitle: String, episode: Int, season: Int, posterPath: String?, delay: TimeInterval = 1) {
+    func scheduleEpisodeNotification(showTitle: String, episode: Int, season: Int, posterPath: String?, movieId: Int? = nil, delay: TimeInterval = 1) {
+        // Chống spam: kiểm tra đã gửi thông báo cho tập này chưa
+        let spamKey = "notified_ep_\(movieId ?? 0)_S\(season)E\(episode)"
+        let lastSpam = UserDefaults.standard.double(forKey: spamKey)
+        let now = Date().timeIntervalSince1970
+        if now - lastSpam < 86400 { return }
+        UserDefaults.standard.set(now, forKey: spamKey)
+        
         let content = UNMutableNotificationContent()
-        content.title = "Tập mới đã có!"
+        content.title = "📺 Tập mới đã có!"
         content.body = "\(showTitle) - S\(season):E\(episode) vừa ra mắt"
         content.sound = .default
         content.badge = (UIApplication.shared.applicationIconBadgeNumber + 1) as NSNumber
+        if let movieId = movieId {
+            content.userInfo = ["movieId": movieId, "type": "episode"]
+        }
         
         if let poster = posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w200\(poster)") {
             URLSession.shared.dataTask(with: url) { data, _, _ in
@@ -85,24 +92,32 @@ class NotificationManager: ObservableObject {
                     }
                 }
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-                let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+                let request = UNNotificationRequest(identifier: "ep_\(movieId ?? 0)_S\(season)E\(episode)", content: content, trigger: trigger)
                 UNUserNotificationCenter.current().add(request)
             }.resume()
         } else {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-            let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+            let request = UNNotificationRequest(identifier: "ep_\(movieId ?? 0)_S\(season)E\(episode)", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(request)
         }
     }
     
     func scheduleHotMovieNotification(movie: Movie, delay: TimeInterval = 1) {
+        // Chống spam: kiểm tra đã gửi thông báo cho phim này chưa trong 24h
+        let spamKey = "notified_hot_\(movie.id)"
+        let lastSpam = UserDefaults.standard.double(forKey: spamKey)
+        let now = Date().timeIntervalSince1970
+        if now - lastSpam < 86400 { return }
+        UserDefaults.standard.set(now, forKey: spamKey)
+        
         let content = UNMutableNotificationContent()
-        content.title = "Phim hot vừa cập nhật!"
+        content.title = "🔥 Phim hot vừa cập nhật!"
         content.body = "\(movie.title) ⭐ \(movie.ratingText)/10 - Xem ngay!"
         content.sound = .default
+        content.userInfo = ["movieId": movie.id, "type": "hot"]
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        let request = UNNotificationRequest(identifier: "hot_\(movie.id)", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
 }
