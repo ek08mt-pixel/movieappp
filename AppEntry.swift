@@ -48,7 +48,7 @@ class AppState: ObservableObject {
     @Published var telegramAvatarURL: String? = nil
     @Published var watchedMovies: [Movie] = []
     @Published var hasCompletedOnboarding: Bool {
-        didSet { UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding") }
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
     }
     @Published var showOnboarding: Bool = false
     
@@ -146,8 +146,6 @@ class AppState: ObservableObject {
     }
 }
 
-
-
 @main
 struct AppEntry: App {
     @StateObject var appState = AppState()
@@ -156,7 +154,13 @@ struct AppEntry: App {
     var body: some Scene {
         WindowGroup {
             if hasCompletedOnboarding {
-                MainTabView().environmentObject(appState)
+                MainTabView()
+                    .environmentObject(appState)
+                    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                        Task {
+                            await NotificationManager.shared.autoCheckFromAppState(appState)
+                        }
+                    }
             } else {
                 OnboardingView()
                     .environmentObject(appState)
