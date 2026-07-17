@@ -64,7 +64,6 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Ratings Bar
                         ratingsBar
                         
                         HStack(spacing: 10) {
@@ -123,7 +122,6 @@ struct MovieDetailView: View {
                                     }
                                 }
                                 
-                                // Thanh search tập
                                 if showEpisodeSearch {
                                     HStack(spacing: 8) {
                                         Image(systemName: "magnifyingglass").foregroundColor(.gray).font(.system(size: 13))
@@ -170,7 +168,6 @@ struct MovieDetailView: View {
                                                 LazyVStack(spacing: 6) {
                                                     ForEach(detail.episodes) { ep in
                                                         HStack(spacing: 10) {
-                                                            // Nút Play
                                                             Button {
                                                                 playSeason = ep.seasonNumber
                                                                 playEpisode = ep.episodeNumber
@@ -209,7 +206,6 @@ struct MovieDetailView: View {
                                                                 }
                                                             }
                                                             
-                                                            // Nút Download
                                                             EpisodeDownloadButton(
                                                                 movieId: movie.id,
                                                                 title: movie.title,
@@ -261,7 +257,6 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
     
-    // MARK: - Search Episode
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
         
@@ -282,7 +277,6 @@ struct MovieDetailView: View {
         }
     }
     
-    // MARK: - Ratings Bar
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
         guard hasAnyRating else { return AnyView(EmptyView()) }
@@ -328,7 +322,6 @@ struct MovieDetailView: View {
         .frame(maxWidth: .infinity)
     }
     
-    // MARK: - Fetch Ratings
     func fetchRatings() async {
         let imdbID: String
         if movie.mediaType == "tv" {
@@ -380,9 +373,6 @@ struct MovieDetailView: View {
     }
 }
 
-}
-
-// MARK: - Episode Download Button
 struct EpisodeDownloadButton: View {
     let movieId: Int
     let title: String
