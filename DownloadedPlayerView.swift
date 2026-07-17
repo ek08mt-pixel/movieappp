@@ -30,10 +30,45 @@ struct DownloadedPlayerView: View {
             }
         }
         .onAppear {
-            let assetURL = URL(string: "hls-custom://playlist/master.m3u8")!
-            let asset = AVURLAsset(url: assetURL)
-            let loader = HLSResourceLoader(playlistURL: url)
-            asset.resourceLoader.setDelegate(loader, queue: .main)
+            playLocalM3U8()
+        }
+    }
+    
+    private func playLocalM3U8() {
+        do {
+            let content = try String(contentsOf: url, encoding: .utf8)
+            print("📄 M3U8 content:\n\(content.prefix(500))")
+            
+            // Tìm URL gốc trong file .m3u8
+            let lines = content.components(separatedBy: .newlines)
+            var streamURL: URL?
+            
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("http") && trimmed.hasSuffix(".m3u8") {
+                    streamURL = URL(string: trimmed)
+                    break
+                }
+                if trimmed.hasPrefix("http") {
+                    streamURL = URL(string: trimmed)
+                    break
+                }
+            }
+            
+            if let streamURL = streamURL {
+                print("✅ Found stream URL: \(streamURL)")
+                let asset = AVURLAsset(url: streamURL)
+                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            } else {
+                print("❌ No stream URL found, trying original URL")
+                // Fallback: dùng URL gốc để phát trực tiếp
+                let asset = AVURLAsset(url: url)
+                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            }
+        } catch {
+            print("❌ Failed to read m3u8: \(error)")
+            // Fallback
+            let asset = AVURLAsset(url: url)
             player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         }
     }
