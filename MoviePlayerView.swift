@@ -75,7 +75,7 @@ struct MoviePlayerView: View {
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
-                .onTapGesture.onTapGesture { 
+                .onTapGesture { 
     if isScreenLocked { 
         // Khi khóa: tap 1 lần hiện controls, tap lần 2 mở khóa
         if showControls {
