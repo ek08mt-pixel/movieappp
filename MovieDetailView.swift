@@ -380,6 +380,8 @@ struct MovieDetailView: View {
     }
 }
 
+}
+
 // MARK: - Episode Download Button
 struct EpisodeDownloadButton: View {
     let movieId: Int
@@ -400,12 +402,10 @@ struct EpisodeDownloadButton: View {
             handleDownload()
         } label: {
             ZStack {
-                // Background
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 40, height: 40)
                 
-                // Progress fill từ trái sang phải
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.white.opacity(0.7))
@@ -415,7 +415,6 @@ struct EpisodeDownloadButton: View {
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 
-                // Icon thay đổi theo trạng thái
                 Group {
                     if isLoadingURL {
                         ProgressView()
@@ -485,42 +484,42 @@ struct EpisodeDownloadButton: View {
     }
     
     private func resolveAndStartDownload() {
-    guard !isLoadingURL else { return }
-    isLoadingURL = true
-    
-    Task {
-        let viewModel = MovieDetailViewModel()
-        if let url = await viewModel.getVideoURL(
-            movieId: movieId,
-            mediaType: mediaType,
-            season: season,
-            episode: episode
-        ) {
-            await MainActor.run {
-                downloadManager.startDownload(
-                    url: url,
-                    movieId: movieId,
-                    title: title,
-                    posterPath: posterPath,
-                    mediaType: mediaType,
-                    season: season,
-                    episode: episode,
-                    episodeName: episodeName
-                )
-                isLoadingURL = false
-            }
-        } else {
-            // Lấy debug info từ ViewModel
-            let debugInfo = await viewModel.getDebugInfo(
+        guard !isLoadingURL else { return }
+        isLoadingURL = true
+        
+        Task {
+            let viewModel = MovieDetailViewModel()
+            if let url = await viewModel.getVideoURL(
                 movieId: movieId,
                 mediaType: mediaType,
                 season: season,
                 episode: episode
-            )
-            await MainActor.run {
-                alertMessage = "Không tìm thấy link video\n\nDebug:\n\(debugInfo)"
-                showAlert = true
-                isLoadingURL = false
+            ) {
+                await MainActor.run {
+                    downloadManager.startDownload(
+                        url: url,
+                        movieId: movieId,
+                        title: title,
+                        posterPath: posterPath,
+                        mediaType: mediaType,
+                        season: season,
+                        episode: episode,
+                        episodeName: episodeName
+                    )
+                    isLoadingURL = false
+                }
+            } else {
+                let debugInfo = await viewModel.getDebugInfo(
+                    movieId: movieId,
+                    mediaType: mediaType,
+                    season: season,
+                    episode: episode
+                )
+                await MainActor.run {
+                    alertMessage = "Không tìm thấy link video\n\nDebug:\n\(debugInfo)"
+                    showAlert = true
+                    isLoadingURL = false
+                }
             }
         }
     }
