@@ -15,6 +15,8 @@ struct MovieDetailView: View {
     @State private var playEpisode: Int? = nil
     @State private var expandedSeason: Int? = nil
     @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
+    @State private var episodeSearchText = ""
+    @State private var showEpisodeSearch = false
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -106,7 +108,46 @@ struct MovieDetailView: View {
                         
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                HStack {
+                                    Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                    Spacer()
+                                    Button {
+                                        withAnimation { showEpisodeSearch.toggle() }
+                                    } label: {
+                                        Image(systemName: "magnifyingglass")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white.opacity(0.7))
+                                            .padding(8)
+                                            .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                                    }
+                                }
+                                
+                                // Thanh search tập
+                                if showEpisodeSearch {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "magnifyingglass").foregroundColor(.gray).font(.system(size: 13))
+                                        TextField("Nhập số tập...", text: $episodeSearchText)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.white)
+                                            .keyboardType(.numberPad)
+                                            .onChange(of: episodeSearchText) { query in
+                                                searchAndJumpToEpisode(query: query)
+                                            }
+                                        if !episodeSearchText.isEmpty {
+                                            Button {
+                                                episodeSearchText = ""
+                                                withAnimation { showEpisodeSearch = false }
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill").foregroundColor(.gray).font(.system(size: 14))
+                                            }
+                                        }
+                                    }
+                                    .padding(10)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.3)))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                                }
+                                
                                 ForEach(vm.seasons) { season in
                                     VStack(spacing: 0) {
                                         Button {
@@ -174,6 +215,30 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
     
+    // MARK: - Search Episode
+    func searchAndJumpToEpisode(query: String) {
+        guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
+        
+        // Tìm season chứa tập đó
+        var accumulatedEps = 0
+        for season in vm.seasons {
+            let count = season.episodeCount
+            if episodeNumber <= accumulatedEps + count {
+                // Tập nằm trong season này
+                let epInSeason = episodeNumber - accumulatedEps
+                // Mở season này
+                withAnimation {
+                    expandedSeason = season.seasonNumber
+                }
+                Task {
+                    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
+                }
+                return
+            }
+            accumulatedEps += count
+        }
+    }
+    
     // MARK: - Ratings Bar
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
@@ -181,7 +246,6 @@ struct MovieDetailView: View {
         
         return AnyView(
             HStack(spacing: 0) {
-                // TMDb
                 if let tmdb = ratings.tmdb {
                     ratingItem(icon: "t.square.fill", color: .yellow, label: "TMDb", value: tmdb)
                 }
@@ -190,7 +254,6 @@ struct MovieDetailView: View {
                     Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
                 }
                 
-                // IMDb (Amazon)
                 if let imdb = ratings.imdb {
                     ratingItem(icon: "i.square.fill", color: .orange, label: "IMDb", value: imdb)
                 }
@@ -199,7 +262,6 @@ struct MovieDetailView: View {
                     Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
                 }
                 
-                // Rotten Tomatoes
                 if let rt = ratings.rottenTomatoes {
                     ratingItem(icon: "r.square.fill", color: .red, label: "RT", value: rt)
                 }
@@ -238,15 +300,13 @@ struct MovieDetailView: View {
         
         guard !imdbID.isEmpty else { return }
         
-        // Lấy ratings từ TMDb
-let tmdbScore: String? = {
-    if movie.voteAverage > 0 {
-        return String(format: "%.1f/10", movie.voteAverage)
-    }
-    return nil
-}()
+        let tmdbScore: String? = {
+            if movie.voteAverage > 0 {
+                return String(format: "%.1f/10", movie.voteAverage)
+            }
+            return nil
+        }()
         
-        // IMDb rating từ OMDb API
         var imdbRating: String? = nil
         var rtRating: String? = nil
         
@@ -260,7 +320,6 @@ let tmdbScore: String? = {
                     imdbRating = "\(imdbScore)/10"
                 }
                 
-                // Rotten Tomatoes từ Ratings array
                 if let ratings = json["Ratings"] as? [[String: Any]] {
                     for rating in ratings {
                         if let source = rating["Source"] as? String, source == "Rotten Tomatoes",
