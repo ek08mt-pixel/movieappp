@@ -460,7 +460,6 @@ final class PhimAPIService {
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
-}
 
 // MARK: - Sofaflix Service (Emew 2)
 final class SofaflixService {
