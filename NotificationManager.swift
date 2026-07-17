@@ -65,7 +65,6 @@ class NotificationManager: ObservableObject {
     
     // MARK: - Schedule Notifications
     func scheduleEpisodeNotification(showTitle: String, episode: Int, season: Int, posterPath: String?, movieId: Int? = nil, delay: TimeInterval = 1) {
-        // Chống spam: kiểm tra đã gửi thông báo cho tập này chưa
         let spamKey = "notified_ep_\(movieId ?? 0)_S\(season)E\(episode)"
         let lastSpam = UserDefaults.standard.double(forKey: spamKey)
         let now = Date().timeIntervalSince1970
@@ -81,7 +80,7 @@ class NotificationManager: ObservableObject {
             content.userInfo = ["movieId": movieId, "type": "episode"]
         }
         
-        if let poster = posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w200\(poster)") {
+        if let poster = posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w500\(poster)") {
             URLSession.shared.dataTask(with: url) { data, _, _ in
                 if let data = data {
                     let tempDir = FileManager.default.temporaryDirectory
@@ -103,7 +102,6 @@ class NotificationManager: ObservableObject {
     }
     
     func scheduleHotMovieNotification(movie: Movie, delay: TimeInterval = 1) {
-        // Chống spam: kiểm tra đã gửi thông báo cho phim này chưa trong 24h
         let spamKey = "notified_hot_\(movie.id)"
         let lastSpam = UserDefaults.standard.double(forKey: spamKey)
         let now = Date().timeIntervalSince1970
@@ -116,8 +114,24 @@ class NotificationManager: ObservableObject {
         content.sound = .default
         content.userInfo = ["movieId": movie.id, "type": "hot"]
         
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-        let request = UNNotificationRequest(identifier: "hot_\(movie.id)", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
+        if let posterPath = movie.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                if let data = data {
+                    let tempDir = FileManager.default.temporaryDirectory
+                    let fileURL = tempDir.appendingPathComponent(UUID().uuidString + ".jpg")
+                    try? data.write(to: fileURL)
+                    if let attachment = try? UNNotificationAttachment(identifier: "poster", url: fileURL) {
+                        content.attachments = [attachment]
+                    }
+                }
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+                let request = UNNotificationRequest(identifier: "hot_\(movie.id)", content: content, trigger: trigger)
+                UNUserNotificationCenter.current().add(request)
+            }.resume()
+        } else {
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+            let request = UNNotificationRequest(identifier: "hot_\(movie.id)", content: content, trigger: trigger)
+            UNUserNotificationCenter.current().add(request)
+        }
     }
 }
