@@ -4,8 +4,6 @@ struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
     @EnvironmentObject var appState: AppState
     @State private var currentIndex = 0
-    @State private var randomMovie: Movie?
-    @State private var showRandom = false
     @State private var timer: Timer?
     @State private var showMenu = false
     @State private var menuOffset: CGFloat = -280
@@ -107,9 +105,6 @@ struct HomeView: View {
                         }
                         .overlay(alignment: .topTrailing) {
                             HStack(spacing: 12) {
-                                Button { if !vm.trending24h.isEmpty { randomMovie = vm.trending24h.randomElement(); showRandom = true } } label: {
-                                    ZStack { Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36); Text("🎲").font(.system(size: 18)) }
-                                }
                                 NavigationLink(destination: ProfileView()) {
                                     ZStack { Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36); Image(systemName: appState.selectedAvatar).foregroundColor(.white.opacity(0.7)).font(.system(size: 16)) }
                                 }
@@ -119,18 +114,14 @@ struct HomeView: View {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom).frame(height: 40).allowsHitTesting(false)
                         }
                         .overlay(alignment: .bottom) {
-                            HStack(spacing: 12) {
+                            // Dots kiểu Apple TV - thanh ngang
+                            HStack(spacing: 4) {
                                 ForEach(0..<5, id: \.self) { i in
                                     let active = i == (currentIndex % 5)
-                                    ZStack {
-                                        Circle().fill(.white.opacity(active ? 0.05 : 0.02)).frame(width: 10, height: 10)
-                                        Circle().stroke(.white.opacity(active ? 0.3 : 0.1), lineWidth: 0.5).frame(width: 10, height: 10)
-                                        if active {
-                                            Circle().fill(.white.opacity(0.6)).frame(width: 3, height: 3).offset(x: -2, y: -2).blur(radius: 0.5)
-                                            Circle().stroke(LinearGradient(colors: [.clear, .white.opacity(0.4), .purple.opacity(0.15), .cyan.opacity(0.15), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8).frame(width: 10, height: 10)
-                                        }
-                                    }.shadow(color: .white.opacity(active ? 0.3 : 0), radius: 4).scaleEffect(active ? 1.2 : 1)
-                                    .animation(.interpolatingSpring(stiffness: 200, damping: 12), value: currentIndex)
+                                    Capsule()
+                                        .fill(.white.opacity(active ? 0.8 : 0.2))
+                                        .frame(width: active ? 20 : 6, height: 4)
+                                        .animation(.easeInOut(duration: 0.3), value: currentIndex)
                                 }
                             }.padding(.bottom, 16)
                         }
@@ -237,10 +228,11 @@ struct HomeView: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 6) {
                                         ForEach([2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2005, 2000], id: \.self) { year in
-                                            Button { closeMenu() } label: {
+                                            NavigationLink(destination: MovieListView(title: "Năm \(year)", movies: [], fixedQuery: "\(year)")) {
                                                 Text("\(year)").font(.system(size: 12)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 6)
                                                     .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.4)))
                                             }
+                                            .simultaneousGesture(TapGesture().onEnded { closeMenu() })
                                         }
                                     }
                                 }.frame(height: 36)
@@ -250,11 +242,12 @@ struct HomeView: View {
                                 Text("Quốc gia").font(.headline).foregroundColor(.white.opacity(0.6))
                                 let countries: [(String, String)] = [("Âu Mỹ", "usuk"), ("Hàn Quốc", "korean"), ("Nhật Bản", "japanese"), ("Việt Nam", "vietnamese"), ("Trung Quốc", "china"), ("Ấn Độ", "india"), ("Thái Lan", "thailand"), ("Pháp", "france"), ("Anh", "uk"), ("Úc", "australia"), ("Mexico", "mexico"), ("Tây Ban Nha", "spain"), ("Brazil", "brazil"), ("Nga", "russia"), ("Đức", "germany"), ("Ý", "italy"), ("Canada", "canada"), ("Thụy Điển", "sweden")]
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                    ForEach(countries, id: \.0) { name, _ in
-                                        Button { closeMenu() } label: {
+                                    ForEach(countries, id: \.0) { name, key in
+                                        NavigationLink(destination: MovieListView(title: name, movies: [], fixedQuery: key)) {
                                             Text(name).font(.system(size: 12)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity)
                                                 .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.4))).overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.1), lineWidth: 0.5))
                                         }
+                                        .simultaneousGesture(TapGesture().onEnded { closeMenu() })
                                     }
                                 }
                                 Spacer().frame(height: 50)
@@ -332,12 +325,6 @@ struct HomeView: View {
             }
         }
         .task { await vm.loadAll() }
-        .sheet(isPresented: $showRandom) {
-            if let movie = randomMovie {
-                MovieDetailView(movie: movie)
-                    .overlay(alignment: .topTrailing) { Button { showRandom = false } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 30)).foregroundColor(.white).padding() } }
-            }
-        }
         .fullScreenCover(isPresented: $showContinuePlayer) {
             if let id = continueMovieId {
                 MoviePlayerView(
@@ -413,7 +400,6 @@ struct HomeView: View {
         }
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
-            // Nhấn 1 lần: xem tiếp
             continueMovieId = prog.movieId
             continueMovieTitle = prog.movieTitle
             continueMediaType = prog.mediaType
@@ -425,7 +411,6 @@ struct HomeView: View {
         }
         .contextMenu {
             Button {
-                // Đi đến trang chi tiết phim
                 let movie = Movie(
                     id: prog.movieId,
                     title: prog.movieTitle,
@@ -449,7 +434,6 @@ struct HomeView: View {
             }
             
             Button {
-                // Xóa khỏi danh sách tiếp tục xem
                 appState.watchProgressList.removeAll { $0.movieId == prog.movieId }
                 appState.save()
             } label: {
