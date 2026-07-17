@@ -166,7 +166,7 @@ struct AppEntry: App {
                         }
                     }
             } else {
-                OnboardingView()
+                OnboardingView(appState: appState)
                     .environmentObject(appState)
             }
         }
