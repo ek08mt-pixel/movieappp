@@ -68,7 +68,7 @@ class NotificationManager: ObservableObject {
     // MARK: - Schedule Notifications
     func scheduleEpisodeNotification(showTitle: String, episode: Int, season: Int, posterPath: String?, delay: TimeInterval = 1) {
         let content = UNMutableNotificationContent()
-        content.title = "📺 Tập mới đã có!"
+        content.title = "Tập mới đã có!"
         content.body = "\(showTitle) - S\(season):E\(episode) vừa ra mắt"
         content.sound = .default
         content.badge = (UIApplication.shared.applicationIconBadgeNumber + 1) as NSNumber
@@ -96,7 +96,7 @@ class NotificationManager: ObservableObject {
     
     func scheduleHotMovieNotification(movie: Movie, delay: TimeInterval = 1) {
         let content = UNMutableNotificationContent()
-        content.title = "🔥 Phim hot vừa cập nhật!"
+        content.title = "Phim hot vừa cập nhật!"
         content.body = "\(movie.title) ⭐ \(movie.ratingText)/10 - Xem ngay!"
         content.sound = .default
         
