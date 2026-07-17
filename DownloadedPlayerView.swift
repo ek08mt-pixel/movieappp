@@ -6,6 +6,8 @@ struct DownloadedPlayerView: View {
     let title: String
     @Environment(\.dismiss) var dismiss
     @State private var player: AVPlayer?
+    @State private var showAlert = false
+    @State private var alertMessage = ""
     
     var body: some View {
         ZStack {
@@ -32,14 +34,19 @@ struct DownloadedPlayerView: View {
         .onAppear {
             playLocalM3U8()
         }
+        .alert("Debug", isPresented: $showAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
     }
     
     private func playLocalM3U8() {
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
-            print("📄 M3U8 content:\n\(content.prefix(500))")
+            alertMessage = "File size: \(content.count) bytes\n\nContent:\n\(String(content.prefix(1000)))"
+            showAlert = true
             
-            // Tìm URL gốc trong file .m3u8
             let lines = content.components(separatedBy: .newlines)
             var streamURL: URL?
             
@@ -56,20 +63,15 @@ struct DownloadedPlayerView: View {
             }
             
             if let streamURL = streamURL {
-                print("✅ Found stream URL: \(streamURL)")
                 let asset = AVURLAsset(url: streamURL)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
-                print("❌ No stream URL found, trying original URL")
-                // Fallback: dùng URL gốc để phát trực tiếp
                 let asset = AVURLAsset(url: url)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             }
         } catch {
-            print("❌ Failed to read m3u8: \(error)")
-            // Fallback
-            let asset = AVURLAsset(url: url)
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            alertMessage = "Error: \(error.localizedDescription)"
+            showAlert = true
         }
     }
 }
