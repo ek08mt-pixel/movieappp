@@ -485,41 +485,36 @@ struct EpisodeDownloadButton: View {
     }
     
     private func resolveAndStartDownload() {
-        guard !isLoadingURL else { return }
-        isLoadingURL = true
-        
-        Task {
-            let viewModel = MovieDetailViewModel()
-            if let url = await viewModel.getVideoURL(
-                movieId: movieId,
-                mediaType: mediaType,
-                season: season,
-                episode: episode
-            ) {
-                await MainActor.run {
-                    print("✅ URL: \(url.absoluteString)")
-                    downloadManager.startDownload(
-                        url: url,
-                        movieId: movieId,
-                        title: title,
-                        posterPath: posterPath,
-                        mediaType: mediaType,
-                        season: season,
-                        episode: episode,
-                        episodeName: episodeName
-                    )
-                    isLoadingURL = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        let status = downloadManager.downloadStatus(movieId: movieId, season: season, episode: episode)
-                        print("📊 Status after 1s: \(status)")
-                    }
-                }
-            } else {
-                await MainActor.run {
-                    alertMessage = "Không tìm thấy link video"
-                    showAlert = true
-                    isLoadingURL = false
-                }
+    guard !isLoadingURL else { return }
+    isLoadingURL = true
+    
+    Task {
+        let viewModel = MovieDetailViewModel()
+        if let url = await viewModel.getVideoURL(
+            movieId: movieId,
+            mediaType: mediaType,
+            season: season,
+            episode: episode,
+            title: title  // <<< THÊM title
+        ) {
+            await MainActor.run {
+                downloadManager.startDownload(
+                    url: url,
+                    movieId: movieId,
+                    title: title,
+                    posterPath: posterPath,
+                    mediaType: mediaType,
+                    season: season,
+                    episode: episode,
+                    episodeName: episodeName
+                )
+                isLoadingURL = false
+            }
+        } else {
+            await MainActor.run {
+                alertMessage = "Không tìm thấy link video"
+                showAlert = true
+                isLoadingURL = false
             }
         }
     }
