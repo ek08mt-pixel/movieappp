@@ -69,8 +69,9 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear {
-                    player.play(); player.volume = volume
-                    setupTimeObserver(); resetControlsTimer(); loadOverlayData(); lockToLandscape()
+    player.play(); player.volume = volume
+    setupTimeObserver(); resetControlsTimer(); loadOverlayData()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { lockToLandscape() }
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
