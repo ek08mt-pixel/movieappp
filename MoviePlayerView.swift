@@ -95,8 +95,22 @@ struct MoviePlayerView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
-                .onAppear {
+            CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity)
+    .ignoresSafeArea()
+    .overlay(
+        HStack(spacing: 0) {
+            Color.clear.frame(width: UIScreen.main.bounds.width * 0.22).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 10).onChanged { v in
+                brightness = min(max(brightness - v.translation.height / 300, 0.01), 1.0)
+                UIScreen.main.brightness = brightness; showBrightnessSlider = true; resetBrightnessTimer()
+            })
+            Color.clear.frame(width: UIScreen.main.bounds.width * 0.56)
+            Color.clear.frame(width: UIScreen.main.bounds.width * 0.22).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 10).onChanged { v in
+                volume = min(max(volume + Float(-v.translation.height / 300), 0), 1.0)
+                player.volume = volume; showVolumeSlider = true; resetVolumeTimer()
+            })
+        }
+    )
+    .onAppear {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     lockToLandscape()
@@ -160,7 +174,7 @@ struct MoviePlayerView: View {
                             Spacer()
                             HStack(spacing:40){
                                 Button{prevEpisode()}label:{Image(systemName:"backward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
-                                Button{toggleOrientationLock()}label:{Image(systemName:isOrientationLocked ? "lock.rotation" : "lock.open.rotation").font(.system(size:26)).foregroundColor(isOrientationLocked ? .white : .white.opacity(0.4))}
+                                Button{ isScreenLocked.toggle(); showControls = !isScreenLocked }label:{ Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size:26)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
                                 Button{ cycleAspect() }label:{Image(systemName:selectedVideoGravity.icon).font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                                 Button{showAudioPopup=true}label:{Image(systemName:"waveform").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
                                 Button{nextEpisode()}label:{Image(systemName:"forward.end.fill").font(.system(size:26)).foregroundColor(.white.opacity(0.9))}
@@ -251,7 +265,7 @@ struct MoviePlayerView: View {
     func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; autoNextTriggered = false; showNextEpisodePopup = false; loadStream(season: seasonNumber, episode: ep - 1) }
     func nextEpisode() { guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }; showNextEpisodePopup = false; autoNextTriggered = true; loadStream(season: seasonNumber, episode: ep + 1); DispatchQueue.main.asyncAfter(deadline: .now() + 5) { autoNextTriggered = false } }
     func skipNextEpisode() { showNextEpisodePopup = false; autoNextTriggered = true; DispatchQueue.main.asyncAfter(deadline: .now() + 5) { autoNextTriggered = false } }
-    func toggleOrientationLock() { isOrientationLocked.toggle(); if isOrientationLocked { lockToLandscape() } else { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .all)) } } }
+    func toggleControls() { if isScreenLocked { showControls = true; resetControlsTimer(); return }; withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }; if showControls { resetControlsTimer() } }
     func loadOverlayData() { Task { similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []; if mediaType == "tv" { seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []; if let s = seasonNumber { selectedSeasonNumber = s; selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s) } }; if let detail = try? await APIService.shared.movieDetail(movieId: movieId), let cid = detail.belongsToCollection?.id, let col = try? await APIService.shared.collectionDetail(collectionId: cid) { collectionMovies = col.parts }; currentMovie = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType) } }
     func loadStream(season: Int? = nil, episode: Int? = nil, resumeAt: Double? = nil) { if let s = season { seasonNumber = s }; if let e = episode { episodeNumber = e }; let ep = episodeNumber ?? 1; let s = seasonNumber; imdbIDCache = nil; autoNextTriggered = false; showNextEpisodePopup = false; if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }; isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil; Task { do { let imdbID = try await fetchIMDB(); switch selectedSource { case .phimapi: let result = try await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep, serverIndex: selectedServerIndex) { c.resume(with: $0) } }; await MainActor.run { phimapiServers = result.1; currentStreamURL = result.0; selectedQuality = detectQuality(from: result.0); let item = AVPlayerItem(url: result.0); player.replaceCurrentItem(with: item); if let rt = resumeAt { player.seek(to: CMTime(seconds: rt, preferredTimescale: 600)) { _ in player.play() } } else { player.play() }; hasStartedPlaying = true; sourceStatus[.phimapi] = true; isLoading = false; tryResume() }; saveHistory(); case .nguonc: let url = try await withCheckedThrowingContinuation { c in NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { nguonCEmbedURL = url; nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }; case .vsmov: let url = try await withCheckedThrowingContinuation { c in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { currentStreamURL = url; selectedQuality = detectQuality(from: url); player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }; saveHistory() } } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } } } }
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
