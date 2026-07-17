@@ -485,36 +485,42 @@ struct EpisodeDownloadButton: View {
     }
     
     private func resolveAndStartDownload() {
-        guard !isLoadingURL else { return }
-        isLoadingURL = true
-        
-        Task {
-            let viewModel = MovieDetailViewModel()
-            if let url = await viewModel.getVideoURL(
+    guard !isLoadingURL else { return }
+    isLoadingURL = true
+    
+    Task {
+        let viewModel = MovieDetailViewModel()
+        if let url = await viewModel.getVideoURL(
+            movieId: movieId,
+            mediaType: mediaType,
+            season: season,
+            episode: episode
+        ) {
+            await MainActor.run {
+                downloadManager.startDownload(
+                    url: url,
+                    movieId: movieId,
+                    title: title,
+                    posterPath: posterPath,
+                    mediaType: mediaType,
+                    season: season,
+                    episode: episode,
+                    episodeName: episodeName
+                )
+                isLoadingURL = false
+            }
+        } else {
+            // Lấy debug info từ ViewModel
+            let debugInfo = await viewModel.getDebugInfo(
                 movieId: movieId,
                 mediaType: mediaType,
                 season: season,
                 episode: episode
-            ) {
-                await MainActor.run {
-                    downloadManager.startDownload(
-                        url: url,
-                        movieId: movieId,
-                        title: title,
-                        posterPath: posterPath,
-                        mediaType: mediaType,
-                        season: season,
-                        episode: episode,
-                        episodeName: episodeName
-                    )
-                    isLoadingURL = false
-                }
-            } else {
-                await MainActor.run {
-                    alertMessage = "Không tìm thấy link video cho \(title) - Tập \(episode)"
-                    showAlert = true
-                    isLoadingURL = false
-                }
+            )
+            await MainActor.run {
+                alertMessage = "Không tìm thấy link video\n\nDebug:\n\(debugInfo)"
+                showAlert = true
+                isLoadingURL = false
             }
         }
     }
