@@ -86,7 +86,7 @@ class DownloadManager: NSObject, ObservableObject {
         
         task.resume()
         
-        activeDownloads[key] = DownloadInfo(task: task, status: .downloading)
+        activeDownloads[key] = DownloadInfo(progress: 0, status: .downloading, task: task)
     }
     
     func pauseDownload(movieId: Int, season: Int?, episode: Int?) {
