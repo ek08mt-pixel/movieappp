@@ -3,8 +3,6 @@ import AVKit
 
 class LocalAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
     let folderURL: URL
-    var masterContent: String = ""
-    var subContent: String = ""
     
     init(folderURL: URL) {
         self.folderURL = folderURL
@@ -16,11 +14,9 @@ class LocalAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
         let fileName = url.lastPathComponent
         
         if fileName == "master.m3u8" {
-            // Đọc master.m3u8 từ folder
             let masterURL = folderURL.appendingPathComponent("master.m3u8")
             if let content = try? String(contentsOf: masterURL, encoding: .utf8) {
-                masterContent = content
-                var lines = content.components(separatedBy: .newlines)
+                let lines = content.components(separatedBy: .newlines)
                 var fixedLines: [String] = []
                 
                 for line in lines {
@@ -40,7 +36,7 @@ class LocalAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
         } else if fileName == "sub.m3u8" {
             let subURL = folderURL.appendingPathComponent("sub.m3u8")
             if let content = try? String(contentsOf: subURL, encoding: .utf8) {
-                var lines = content.components(separatedBy: .newlines)
+                let lines = content.components(separatedBy: .newlines)
                 var fixedLines: [String] = []
                 
                 for line in lines {
@@ -60,7 +56,6 @@ class LocalAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
             }
         }
         
-        // Fallback: thử đọc file trực tiếp từ folder
         let fileURL = folderURL.appendingPathComponent(fileName)
         if let data = try? Data(contentsOf: fileURL) {
             loadingRequest.dataRequest?.respond(with: data)
@@ -106,13 +101,14 @@ struct DownloadedPlayerView: View {
     }
     
     private func playLocalVideo() {
-    let folderURL = url.deletingLastPathComponent()
-    
-    // Test: tìm file .ts đầu tiên phát thử
-    if let files = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil),
-       let firstTS = files.first(where: { $0.lastPathComponent.hasSuffix(".ts") }) {
-        print("🎬 Playing: \(firstTS.path)")
-        let asset = AVURLAsset(url: firstTS)
-        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        let folderURL = url.deletingLastPathComponent()
+        
+        // Test file .ts đầu tiên
+        if let files = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil),
+           let firstTS = files.first(where: { $0.lastPathComponent.hasSuffix(".ts") }) {
+            print("🎬 Playing: \(firstTS.path)")
+            let asset = AVURLAsset(url: firstTS)
+            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        }
     }
 }
