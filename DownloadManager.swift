@@ -40,6 +40,7 @@ class DownloadManager: NSObject, ObservableObject {
         let episode: Int?
         let episodeName: String?
         let localURL: String
+        let originalURL: String
         let fileSize: Int64
         
         var localPlayURL: URL? { URL(string: localURL) }
@@ -84,7 +85,6 @@ class DownloadManager: NSObject, ObservableObject {
     }
     
     func resumeDownload(movieId: Int, season: Int?, episode: Int?) {
-        // Không hỗ trợ resume với data task, tải lại từ đầu
         activeDownloads[downloadKey(movieId: movieId, season: season, episode: episode)]?.status = .waiting
     }
     
@@ -142,18 +142,12 @@ class DownloadManager: NSObject, ObservableObject {
 
 // MARK: - URLSessionDataDelegate
 extension DownloadManager: URLSessionDataDelegate {
-    private struct DownloadContext {
-        var data = Data()
-        var expectedSize: Int64 = 0
-    }
-    
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
         completionHandler(.allow)
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard let key = downloadTasks.first(where: { $0.value == dataTask })?.key else { return }
-        // Lưu data vào file tạm
         let fileManager = FileManager.default
         let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
         
@@ -167,9 +161,8 @@ extension DownloadManager: URLSessionDataDelegate {
             try? data.write(to: tempURL)
         }
         
-        // Cập nhật progress dựa trên expected content length
         if let existingData = try? Data(contentsOf: tempURL) {
-            let progress = Double(existingData.count) / 10000.0 // ước lượng ~10KB
+            let progress = Double(existingData.count) / 10000.0
             activeDownloads[key]?.progress = min(progress, 0.99)
         }
     }
@@ -198,7 +191,6 @@ extension DownloadManager: URLSessionDataDelegate {
                 }
                 try fileManager.moveItem(at: tempURL, to: destinationURL)
             } else {
-                // Không có data
                 activeDownloads[key]?.status = .failed
                 return
             }
@@ -206,10 +198,19 @@ extension DownloadManager: URLSessionDataDelegate {
             let attributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
             
+            let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
+            
             let downloadedMovie = DownloadedMovie(
-                id: metadata.id, title: metadata.title, posterPath: metadata.posterPath,
-                mediaType: metadata.mediaType, season: metadata.season, episode: metadata.episode,
-                episodeName: metadata.episodeName, localURL: destinationURL.absoluteString, fileSize: fileSize
+                id: metadata.id,
+                title: metadata.title,
+                posterPath: metadata.posterPath,
+                mediaType: metadata.mediaType,
+                season: metadata.season,
+                episode: metadata.episode,
+                episodeName: metadata.episodeName,
+                localURL: destinationURL.absoluteString,
+                originalURL: originalURLString,
+                fileSize: fileSize
             )
             
             downloadedMovies.removeAll { $0.id == metadata.id && $0.season == metadata.season && $0.episode == metadata.episode }
