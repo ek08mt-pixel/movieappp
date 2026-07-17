@@ -21,6 +21,41 @@ class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         let fileName = url.lastPathComponent
         let fileURL = segmentsDir.appendingPathComponent(fileName)
         
+        // Nếu là file .m3u8, parse và sửa path thành absolute
+        if fileName.hasSuffix(".m3u8") {
+            if var content = try? String(contentsOf: fileURL, encoding: .utf8) {
+                let lines = content.components(separatedBy: .newlines)
+                var fixedLines: [String] = []
+                
+                for line in lines {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.hasPrefix("#") && !trimmed.isEmpty && (trimmed.hasSuffix(".ts") || trimmed.hasSuffix(".m3u8")) {
+                        let absoluteURL = segmentsDir.appendingPathComponent(trimmed)
+                        fixedLines.append(absoluteURL.absoluteString)
+                    } else {
+                        fixedLines.append(line)
+                    }
+                }
+                
+                content = fixedLines.joined(separator: "\n")
+                let data = content.data(using: .utf8)!
+                
+                if let contentRequest = loadingRequest.contentInformationRequest {
+                    contentRequest.contentType = "application/vnd.apple.mpegurl"
+                    contentRequest.contentLength = Int64(data.count)
+                    contentRequest.isByteRangeAccessSupported = false
+                }
+                
+                if let dataRequest = loadingRequest.dataRequest {
+                    dataRequest.respond(with: data)
+                }
+                
+                loadingRequest.finishLoading()
+                return true
+            }
+        }
+        
+        // File .ts hoặc file khác
         guard let data = try? Data(contentsOf: fileURL) else {
             loadingRequest.finishLoading(with: NSError(domain: "File not found: \(fileName)", code: -2))
             return false
