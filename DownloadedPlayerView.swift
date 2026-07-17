@@ -42,50 +42,56 @@ struct DownloadedPlayerView: View {
     }
     
     private func playLocalVideo() {
-        let folderURL = url.deletingLastPathComponent()
-        let fileManager = FileManager.default
+    let folderURL = url.deletingLastPathComponent()
+    let fileManager = FileManager.default
+    
+    do {
+        // Đọc master.m3u8
+        let content = try String(contentsOf: url, encoding: .utf8)
+        let lines = content.components(separatedBy: .newlines)
+        var fixedLines: [String] = []
         
-        do {
-            let files = try fileManager.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil)
-            var debug = "Folder: \(folderURL.lastPathComponent)\nFiles: \(files.count)\n\n"
-            
-            for file in files {
-                debug += "\(file.lastPathComponent) - \(file.fileSizeString)\n"
-            }
-            
-            // Đọc master.m3u8 và sửa lại path thành absolute
-            let content = try String(contentsOf: url, encoding: .utf8)
-            var lines = content.components(separatedBy: .newlines)
-            var fixedLines: [String] = []
-            
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
-                    // Thay relative path thành absolute
-                    let absoluteURL = folderURL.appendingPathComponent(trimmed)
-                    fixedLines.append(absoluteURL.path)
-                } else {
-                    fixedLines.append(line)
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
+                let subURL = folderURL.appendingPathComponent(trimmed)
+                
+                // Đọc và sửa sub.m3u8
+                if let subContent = try? String(contentsOf: subURL, encoding: .utf8) {
+                    var subLines = subContent.components(separatedBy: .newlines)
+                    var fixedSubLines: [String] = []
+                    
+                    for subLine in subLines {
+                        let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
+                        if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
+                            let tsURL = folderURL.appendingPathComponent(subTrimmed)
+                            fixedSubLines.append(tsURL.path)
+                        } else {
+                            fixedSubLines.append(subLine)
+                        }
+                    }
+                    
+                    let fixedSubContent = fixedSubLines.joined(separator: "\n")
+                    let fixedSubURL = folderURL.appendingPathComponent("fixed_sub.m3u8")
+                    try fixedSubContent.write(to: fixedSubURL, atomically: true, encoding: .utf8)
+                    
+                    fixedLines.append(fixedSubURL.path)
                 }
+            } else {
+                fixedLines.append(line)
             }
-            
-            let fixedContent = fixedLines.joined(separator: "\n")
-            let fixedURL = folderURL.appendingPathComponent("fixed_master.m3u8")
-            try fixedContent.write(to: fixedURL, atomically: true, encoding: .utf8)
-            
-            debug += "\nMaster content:\n\(String(content.prefix(300)))"
-            debug += "\n\nFixed URL: \(fixedURL.path)"
-            
-            alertMessage = debug
-            showAlert = true
-            
-            let asset = AVURLAsset(url: fixedURL)
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-            
-        } catch {
-            alertMessage = "Error: \(error.localizedDescription)"
-            showAlert = true
         }
+        
+        let fixedContent = fixedLines.joined(separator: "\n")
+        let fixedURL = folderURL.appendingPathComponent("fixed_master.m3u8")
+        try fixedContent.write(to: fixedURL, atomically: true, encoding: .utf8)
+        
+        print("✅ Playing: \(fixedURL.path)")
+        let asset = AVURLAsset(url: fixedURL)
+        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        
+    } catch {
+        print("❌ Error: \(error)")
     }
 }
 
