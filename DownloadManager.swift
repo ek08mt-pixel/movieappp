@@ -50,7 +50,7 @@ class DownloadManager: NSObject, ObservableObject {
         super.init()
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 300
-        config.timeoutIntervalForResource = 600
+        config.timeoutIntervalForResource = 3600
         downloadSession = URLSession(configuration: config, delegate: self, delegateQueue: .main)
         loadDownloadedMovies()
     }
@@ -181,24 +181,86 @@ extension DownloadManager: URLSessionDataDelegate {
         
         let fileManager = FileManager.default
         let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let destinationURL = documentsPath.appendingPathComponent(UUID().uuidString + ".m3u8")
+        let folderName = UUID().uuidString
+        let folderURL = documentsPath.appendingPathComponent(folderName)
         let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(key).m3u8")
         
         do {
-            if fileManager.fileExists(atPath: tempURL.path) {
-                if fileManager.fileExists(atPath: destinationURL.path) {
-                    try fileManager.removeItem(at: destinationURL)
+            try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            
+            // Đọc file m3u8 gốc
+            let content = try String(contentsOf: tempURL, encoding: .utf8)
+            let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
+            let lines = content.components(separatedBy: .newlines)
+            
+            var segmentURLs: [URL] = []
+            var modifiedLines: [String] = []
+            
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.hasPrefix("#") && !trimmed.isEmpty && trimmed.hasSuffix(".m3u8") {
+                    // Đây là sub-playlist
+                    let subURL: URL
+                    if trimmed.hasPrefix("http") {
+                        subURL = URL(string: trimmed)!
+                    } else if let origURL = URL(string: originalURLString) {
+                        subURL = origURL.deletingLastPathComponent().appendingPathComponent(trimmed)
+                    } else {
+                        modifiedLines.append(line)
+                        continue
+                    }
+                    
+                    // Tải sub-playlist
+                    if let subData = try? Data(contentsOf: subURL),
+                       let subContent = String(data: subData, encoding: .utf8) {
+                        let subFileName = "sub.m3u8"
+                        let subFileURL = folderURL.appendingPathComponent(subFileName)
+                        try subContent.write(to: subFileURL, atomically: true, encoding: .utf8)
+                        
+                        // Parse sub-playlist để lấy segment .ts
+                        let subLines = subContent.components(separatedBy: .newlines)
+                        var subModifiedLines: [String] = []
+                        let baseSubURL = subURL.deletingLastPathComponent()
+                        
+                        for subLine in subLines {
+                            let subTrimmed = subLine.trimmingCharacters(in: .whitespaces)
+                            if !subTrimmed.hasPrefix("#") && !subTrimmed.isEmpty && subTrimmed.hasSuffix(".ts") {
+                                let segmentURL: URL
+                                if subTrimmed.hasPrefix("http") {
+                                    segmentURL = URL(string: subTrimmed)!
+                                } else {
+                                    segmentURL = baseSubURL.appendingPathComponent(subTrimmed)
+                                }
+                                
+                                // Tải segment .ts
+                                let segFileName = segmentURL.lastPathComponent
+                                let segFileURL = folderURL.appendingPathComponent(segFileName)
+                                if let segData = try? Data(contentsOf: segmentURL) {
+                                    try segData.write(to: segFileURL)
+                                }
+                                subModifiedLines.append(segFileName)
+                            } else {
+                                subModifiedLines.append(subLine)
+                            }
+                        }
+                        
+                        // Ghi sub-playlist đã sửa
+                        try subModifiedLines.joined(separator: "\n").write(to: subFileURL, atomically: true, encoding: .utf8)
+                        modifiedLines.append(subFileName)
+                    }
+                } else if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
+                    modifiedLines.append(line)
+                } else {
+                    modifiedLines.append(line)
                 }
-                try fileManager.moveItem(at: tempURL, to: destinationURL)
-            } else {
-                activeDownloads[key]?.status = .failed
-                return
             }
             
-            let attributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
-            let fileSize = attributes[.size] as? Int64 ?? 0
+            // Ghi master playlist đã sửa
+            let masterFileURL = folderURL.appendingPathComponent("master.m3u8")
+            try modifiedLines.joined(separator: "\n").write(to: masterFileURL, atomically: true, encoding: .utf8)
             
-            let originalURLString = task.originalRequest?.url?.absoluteString ?? ""
+            let attributes = try fileManager.attributesOfItem(atPath: folderURL.path)
+            let fileSize = attributes[.size] as? Int64 ?? 0
             
             let downloadedMovie = DownloadedMovie(
                 id: metadata.id,
@@ -208,7 +270,7 @@ extension DownloadManager: URLSessionDataDelegate {
                 season: metadata.season,
                 episode: metadata.episode,
                 episodeName: metadata.episodeName,
-                localURL: destinationURL.absoluteString,
+                localURL: masterFileURL.absoluteString,
                 originalURL: originalURLString,
                 fileSize: fileSize
             )
@@ -222,6 +284,9 @@ extension DownloadManager: URLSessionDataDelegate {
             downloadTasks.removeValue(forKey: key)
             
             saveDownloadedMovies()
+            
+            // Xóa temp
+            try? fileManager.removeItem(at: tempURL)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
                 self?.activeDownloads.removeValue(forKey: key)
