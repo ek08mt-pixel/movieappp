@@ -287,10 +287,12 @@ final class PhimAPIService {
         let isSeries = (mediaType == "tv") || (season != nil)
         let cacheKey = "\(tmdbID)_S\(s)E\(ep)_server\(serverIndex)"
         
-        if let cached = cache.dict(for: "phimapi_stream_cache")[cacheKey], let url = URL(string: cached) {
-            completion(.success((url, [])))
-            return
-        }
+        if !MappingCache.hasDirectSlug(tmdbID: tmdbID, season: s),
+   let cached = cache.dict(for: "phimapi_stream_cache")[cacheKey],
+   let url = URL(string: cached) {
+    completion(.success((url, [])))
+    return
+}
         
         if isSeries {
             fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: s, episode: ep, serverIndex: serverIndex, completion: completion)
