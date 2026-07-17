@@ -73,4 +73,5 @@ struct MovieListView: View {
     } else {
         hasMore = false
     }
+  }
 }
