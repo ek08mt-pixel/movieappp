@@ -22,6 +22,31 @@ final class MappingCache {
         "76669_8": "uu-tu-phan-8",
     ]
     
+    // Danh sách anime dài tập: TMDB ID → số tập mỗi season
+    static let longRunningAnime: [Int: [Int]] = [
+        37854: [61, 16, 14, 38, 58, 47, 33, 37, 73, 47, 26, 14, 10, 21, 62, 50, 37, 36, 109, 195, 100],
+        23868: [40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40],
+        14091: [28, 27, 28, 31, 28, 28, 28, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    ]
+    
+    // Slug cứng trên phimapi
+    static let animeSlugs: [Int: String] = [
+        37854: "one-piece",
+        23868: "doraemon",
+        14091: "conan",
+    ]
+    
+    static func getAbsoluteEpisode(tmdbID: Int, season: Int, episode: Int) -> Int? {
+        guard let seasonEps = longRunningAnime[tmdbID] else { return nil }
+        guard season > 0 && season <= seasonEps.count else { return nil }
+        var total = 0
+        for i in 0..<(season - 1) { total += seasonEps[i] }
+        return total + episode
+    }
+    
+    static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
+    static func isLongRunningAnime(tmdbID: Int) -> Bool { longRunningAnime[tmdbID] != nil }
+    
     private init() {}
     
     func getNguonCSlug(imdbID: String) -> String? { dict(for: nguonCKey)[imdbID] }
@@ -81,9 +106,7 @@ private func isSpinoff(_ item: [String: Any]) -> Bool {
     let origin = (item["origin_name"] as? String ?? "").lowercased()
     let name = (item["name"] as? String ?? "").lowercased()
     let spinoffKeywords = ["ginpachi", "3-z", "3z", "spin-off", "spinoff", "movie", "live action"]
-    for kw in spinoffKeywords {
-        if origin.contains(kw) || name.contains(kw) { return true }
-    }
+    for kw in spinoffKeywords { if origin.contains(kw) || name.contains(kw) { return true } }
     return false
 }
 
@@ -278,7 +301,7 @@ final class PhimAPIService {
         }
         
         if isSeries {
-            fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
+            fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: s, episode: ep, serverIndex: serverIndex, completion: completion)
             return
         }
         
@@ -290,21 +313,27 @@ final class PhimAPIService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true {
                     let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
-                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: nil, episode: nil, serverIndex: serverIndex)
+                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: nil, episode: nil, serverIndex: serverIndex, tmdbID: tmdbID)
                     if let streamURL = result.url {
                         self.cache.save(["\(cacheKey)": streamURL.absoluteString], for: "phimapi_stream_cache")
                         completion(.success((streamURL, result.servers)))
                         return
                     }
                 }
-                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
-            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: season, episode: episode, serverIndex: serverIndex, completion: completion) }
+                self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: s, episode: ep, serverIndex: serverIndex, completion: completion)
+            } catch { self.fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: s, episode: ep, serverIndex: serverIndex, completion: completion) }
         }.resume()
     }
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
+        // Kiểm tra anime dài tập → dùng slug cứng
+        if MappingCache.isLongRunningAnime(tmdbID: tmdbID), let animeSlug = MappingCache.getAnimeSlug(tmdbID: tmdbID) {
+            fetchBySlug(slug: animeSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
+            return
+        }
+        
         if let slug = cache.getHardcodedSlug(tmdbID: tmdbID, season: season ?? 1) {
-            fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
+            fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             return
         }
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { completion(.failure(StreamServiceError.invalidURL)); return }
@@ -330,14 +359,14 @@ final class PhimAPIService {
             let filtered = allItems.filter { !isSpinoff($0) }
             let bestMatch = self.findBestMatch(items: filtered, tmdbID: tmdbID, title: title, mediaType: mediaType, season: season)
             if let match = bestMatch, let slug = match["slug"] as? String {
-                self.fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, completion: completion)
+                self.fetchBySlug(slug: slug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             } else {
                 completion(.failure(StreamServiceError.noMatchFound(id: title)))
             }
         }
     }
     
-    private func fetchBySlug(slug: String, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
+    private func fetchBySlug(slug: String, season: Int?, episode: Int?, serverIndex: Int, tmdbID: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
@@ -346,7 +375,7 @@ final class PhimAPIService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     let phimType: String = (json["item"] as? [String: Any])?["type"] as? String ?? (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
-                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: season, episode: episode, serverIndex: serverIndex)
+                    let result = self.extractStreamURLWithServers(from: json, phimType: phimType, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID)
                     if let streamURL = result.url {
                         completion(.success((streamURL, result.servers)))
                     } else {
@@ -357,14 +386,12 @@ final class PhimAPIService {
         }.resume()
     }
     
-    private func extractStreamURLWithServers(from json: [String: Any], phimType: String, season: Int?, episode: Int?, serverIndex: Int) -> (url: URL?, servers: [String]) {
+    private func extractStreamURLWithServers(from json: [String: Any], phimType: String, season: Int?, episode: Int?, serverIndex: Int, tmdbID: Int = 0) -> (url: URL?, servers: [String]) {
         var serverNames: [String] = []
         
         if let episodes = json["episodes"] as? [[String: Any]] {
             for server in episodes {
-                if let name = server["server_name"] as? String {
-                    serverNames.append(name)
-                }
+                if let name = server["server_name"] as? String { serverNames.append(name) }
             }
         }
         
@@ -377,14 +404,16 @@ final class PhimAPIService {
                    let serverData = firstServer["server_data"] as? [[String: Any]] {
                     totalEpsInFirstServer = serverData.count
                 }
-                let effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 
-                let targetServers: [[String: Any]]
-                if serverIndex < episodes.count {
-                    targetServers = [episodes[serverIndex]]
+                let effectiveEp: Int
+                if MappingCache.isLongRunningAnime(tmdbID: tmdbID),
+                   let absEp = MappingCache.getAbsoluteEpisode(tmdbID: tmdbID, season: targetSeason, episode: ep) {
+                    effectiveEp = absEp
                 } else {
-                    targetServers = episodes
+                    effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 }
+                
+                let targetServers: [[String: Any]] = serverIndex < episodes.count ? [episodes[serverIndex]] : episodes
                 
                 for server in targetServers {
                     if let serverData = server["server_data"] as? [[String: Any]] {
@@ -417,15 +446,11 @@ final class PhimAPIService {
                let serverData = episodes[serverIndex]["server_data"] as? [[String: Any]],
                let firstEp = serverData.first,
                let linkM3u8 = firstEp["link_m3u8"] as? String,
-               let streamURL = URL(string: linkM3u8) {
-                return (streamURL, serverNames)
-            }
+               let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
             if let episodes = json["episodes"] as? [[String: Any]],
                let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first,
                let linkM3u8 = firstEp["link_m3u8"] as? String,
-               let streamURL = URL(string: linkM3u8) {
-                return (streamURL, serverNames)
-            }
+               let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
             let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
             if let m = movie {
                 if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
@@ -440,44 +465,12 @@ final class PhimAPIService {
         let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
         let targetSeason = season ?? 1
         
-        if let exact = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
-            extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason
-        }) { return exact }
-        
-        if let seasonMatch = items.first(where: {
-            guard isSeriesType($0["type"] as? String ?? "") else { return false }
-            let origin = ($0["origin_name"] as? String ?? "").lowercased()
-            let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
-            return s == targetSeason && origin.contains(normalizedTitle)
-        }) { return seasonMatch }
-        
-        if let exact = items.first(where: {
-            ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID &&
-            ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason
-        }) { return exact }
-        
-        if isSeries {
-            let fallbackMatch = items.first(where: {
-                guard isSeriesType($0["type"] as? String ?? "") else { return false }
-                let origin = ($0["origin_name"] as? String ?? "").lowercased()
-                let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? "")
-                return (s == 1 || s == nil) && origin.contains(normalizedTitle)
-            })
-            if let match = fallbackMatch { return match }
-        }
-        
+        if let exact = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason }) { return exact }
+        if let seasonMatch = items.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; return extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return seasonMatch }
+        if let exact = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason }) { return exact }
+        if isSeries, let fallbackMatch = items.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? ""); return (s == 1 || s == nil) && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return fallbackMatch }
         if let sameTMDB = items.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) { return sameTMDB }
-        
-        if isSeries {
-            let matched = items.filter { item in
-                guard isSeriesType(item["type"] as? String ?? "") else { return false }
-                let origin = (item["origin_name"] as? String ?? "").lowercased()
-                return origin.contains(normalizedTitle)
-            }
-            if !matched.isEmpty { return matched.first }
-        }
-        
+        if isSeries { let matched = items.filter { isSeriesType($0["type"] as? String ?? "") && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }; if !matched.isEmpty { return matched.first } }
         if let exactName = items.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         if isSeries { return items.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return items.first(where: { isSingleType($0["type"] as? String ?? "") })
@@ -529,9 +522,7 @@ final class SofaflixService {
                             if let name = epItem["name"] as? String,
                                let linkM3u8 = epItem["link_m3u8"] as? String,
                                let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: ep) {
-                                return streamURL
-                            }
+                               matchEpisode(name: name, target: ep) { return streamURL }
                         }
                     }
                 }
@@ -541,9 +532,7 @@ final class SofaflixService {
                             if let name = epItem["name"] as? String,
                                let linkM3u8 = epItem["link_m3u8"] as? String,
                                let streamURL = URL(string: linkM3u8),
-                               matchEpisode(name: name, target: ep) {
-                                return streamURL
-                            }
+                               matchEpisode(name: name, target: ep) { return streamURL }
                         }
                     }
                 }
