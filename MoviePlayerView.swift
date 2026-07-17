@@ -101,7 +101,6 @@ struct MoviePlayerView: View {
             let deltaX = abs(v.translation.width)
             let verticalDistance = abs(v.translation.height)
             
-            // Chỉ xử lý vuốt dọc khi vuốt ít ngang
             if verticalDistance > deltaX * 1.5 {
                 if locationX < screenWidth / 2 {
                     let newBrightness = min(max(brightness + deltaY / 500, 0.01), 1.0)
@@ -118,6 +117,20 @@ struct MoviePlayerView: View {
                 }
             }
         }
+        .onEnded { v in
+            if v.translation.height < -80 && 
+               v.startLocation.y > UIScreen.main.bounds.height * 0.6 &&
+               abs(v.translation.height) > abs(v.translation.width) * 2 {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showOverlay = true
+                    overlayOffset = 0
+                }
+                loadOverlayData()
+            }
+            showBrightnessSlider = false
+            showVolumeSlider = false
+        }
+)
         .onEnded { v in
             // Vuốt từ dưới lên mở overlay
             if v.translation.height < -80 && 
@@ -279,8 +292,18 @@ if showBrightnessSlider && showControls {
     if showControls { resetControlsTimer() } 
 }
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
-    func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showVolumeSlider = false } } }
-    func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showBrightnessSlider = false } } }
+    func resetVolumeTimer() { 
+    volumeTimer?.invalidate()
+    volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in 
+        showVolumeSlider = false 
+    } 
+}
+func resetBrightnessTimer() { 
+    brightnessTimer?.invalidate()
+    brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in 
+        showBrightnessSlider = false 
+    } 
+}
     func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: ws.interfaceOrientation.isLandscape ? .portrait : .landscapeRight)) }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
