@@ -391,9 +391,9 @@ final class PhimAPIService {
                 }
                 
                 let effectiveEp: Int
-                if MappingCache.isLongRunningAnime(tmdbID: tmdbID),
-                   let absEp = MappingCache.getAbsoluteEpisode(tmdbID: tmdbID, season: targetSeason, episode: ep) {
-                    effectiveEp = absEp
+                if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
+    effectiveEp = ep
+}
                 } else {
                     effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 }
