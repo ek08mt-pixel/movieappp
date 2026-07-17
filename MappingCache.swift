@@ -319,7 +319,7 @@ final class PhimAPIService {
     
     private func fallbackSearch(title: String, tmdbID: Int, mediaType: String?, season: Int?, episode: Int?, serverIndex: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
         // 1. Direct slug (live action, movie lẻ...)
-        if let directSlug = MappingCache.getDirectSlug(tmdbID: tmdbID) {
+        if let directSlug = MappingCache.getDirectSlug(tmdbID: tmdbID, season: season ?? 1) {
             fetchBySlug(slug: directSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
             return
         }
