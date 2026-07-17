@@ -463,13 +463,24 @@ struct EpisodeDownloadButton: View {
         case .paused:
             downloadManager.resumeDownload(movieId: movieId, season: season, episode: episode)
         case .completed:
-            if let localURL = downloadManager.getLocalURL(movieId: movieId, season: season, episode: episode) {
-                alertMessage = "Đã tải xong: \(title) - Tập \(episode)"
-                showAlert = true
-            }
+            alertMessage = "Đã tải xong: \(title) - Tập \(episode)"
+            showAlert = true
         case .failed:
-            downloadManager.cancelDownload(movieId: movieId, season: season, episode: episode)
-            resolveAndStartDownload()
+            isLoadingURL = true
+            Task {
+                let viewModel = MovieDetailViewModel()
+                let debugInfo = await viewModel.getDebugInfo(
+                    movieId: movieId,
+                    mediaType: mediaType,
+                    season: season,
+                    episode: episode
+                )
+                await MainActor.run {
+                    alertMessage = "Lỗi tải - Debug:\n\(debugInfo)"
+                    showAlert = true
+                    isLoadingURL = false
+                }
+            }
         }
     }
     
