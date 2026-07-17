@@ -30,13 +30,11 @@ struct DownloadedPlayerView: View {
             }
         }
         .onAppear {
-            let folderURL = url.deletingLastPathComponent()
-            let masterURL = folderURL.appendingPathComponent("master.m3u8")
-            let customURL = URL(string: "hls-custom://playlist/master.m3u8")!
-            let asset = AVURLAsset(url: customURL)
-            let loader = HLSResourceLoader(playlistURL: masterURL)
-            asset.resourceLoader.setDelegate(loader, queue: .main)
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            if let movie = DownloadManager.shared.downloadedMovies.first(where: { $0.localURL == url.absoluteString }),
+               let streamURL = URL(string: movie.originalURL) {
+                let asset = AVURLAsset(url: streamURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            }
         }
     }
 }
