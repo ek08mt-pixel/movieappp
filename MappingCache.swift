@@ -22,7 +22,6 @@ final class MappingCache {
         "76669_8": "uu-tu-phan-8",
     ]
     
-    // Slug cứng cho anime dài tập trên phimapi
     static let animeSlugs: [Int: String] = [
         37854: "dao-hai-tac",
         23868: "doraemon-tuyen-tap-moi-nhat",
@@ -444,30 +443,29 @@ final class PhimAPIService {
     }
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
-    let isSeries = (mediaType == "tv") || (season != nil)
-    let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-    let targetSeason = season ?? 1
-    let isLongAnime = MappingCache.isLongRunningAnime(tmdbID: tmdbID)
-    
-    // Nếu là anime dài tập, chỉ lấy type "hoathinh", bỏ qua live action/movie lẻ
-    let searchItems: [[String: Any]]
-    if isLongAnime {
-        searchItems = items.filter { ($0["type"] as? String) == "hoathinh" }
-        if searchItems.isEmpty { searchItems = items } // fallback nếu không có
-    } else {
-        searchItems = items
+        let isSeries = (mediaType == "tv") || (season != nil)
+        let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+        let targetSeason = season ?? 1
+        let isLongAnime = MappingCache.isLongRunningAnime(tmdbID: tmdbID)
+        
+        let searchItems: [[String: Any]]
+        if isLongAnime {
+            searchItems = items.filter { ($0["type"] as? String) == "hoathinh" }
+            if searchItems.isEmpty { searchItems = items }
+        } else {
+            searchItems = items
+        }
+        
+        if let exact = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason }) { return exact }
+        if let seasonMatch = searchItems.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; return extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return seasonMatch }
+        if let exact = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason }) { return exact }
+        if isSeries, let fallbackMatch = searchItems.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? ""); return (s == 1 || s == nil) && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return fallbackMatch }
+        if let sameTMDB = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) { return sameTMDB }
+        if isSeries { let matched = searchItems.filter { isSeriesType($0["type"] as? String ?? "") && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }; if !matched.isEmpty { return matched.first } }
+        if let exactName = searchItems.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
+        if isSeries { return searchItems.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
+        return searchItems.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
-    
-    if let exact = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason }) { return exact }
-    if let seasonMatch = searchItems.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; return extractSeasonFromOriginName($0["origin_name"] as? String ?? "") == targetSeason && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return seasonMatch }
-    if let exact = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID && ($0["tmdb"] as? [String: Any])?["season"] as? Int == targetSeason }) { return exact }
-    if isSeries, let fallbackMatch = searchItems.first(where: { guard isSeriesType($0["type"] as? String ?? "") else { return false }; let s = extractSeasonFromOriginName($0["origin_name"] as? String ?? ""); return (s == 1 || s == nil) && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }) { return fallbackMatch }
-    if let sameTMDB = searchItems.first(where: { ($0["tmdb"] as? [String: Any])?["id"] as? Int == tmdbID }) { return sameTMDB }
-    if isSeries { let matched = searchItems.filter { isSeriesType($0["type"] as? String ?? "") && ($0["origin_name"] as? String ?? "").lowercased().contains(normalizedTitle) }; if !matched.isEmpty { return matched.first } }
-    if let exactName = searchItems.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
-    if isSeries { return searchItems.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
-    return searchItems.first(where: { isSingleType($0["type"] as? String ?? "") })
-}
 }
 
 // MARK: - Sofaflix Service (Emew 2)
