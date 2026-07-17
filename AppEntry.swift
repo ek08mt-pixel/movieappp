@@ -151,6 +151,10 @@ struct AppEntry: App {
     @StateObject var appState = AppState()
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     
+    init() {
+        UIApplication.shared.isNetworkActivityIndicatorVisible = false
+    }
+    
     var body: some Scene {
         WindowGroup {
             if hasCompletedOnboarding {
