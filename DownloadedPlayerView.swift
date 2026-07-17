@@ -30,11 +30,8 @@ struct DownloadedPlayerView: View {
             }
         }
         .onAppear {
-            if let movie = DownloadManager.shared.downloadedMovies.first(where: { $0.localURL == url.absoluteString }),
-               let streamURL = URL(string: movie.originalURL) {
-                let asset = AVURLAsset(url: streamURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
-                player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-            }
+            let asset = AVURLAsset(url: url)
+            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         }
     }
 }
