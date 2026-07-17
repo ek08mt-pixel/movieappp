@@ -75,10 +75,17 @@ struct MoviePlayerView: View {
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
-                .onTapGesture { 
+                .onTapGesture.onTapGesture { 
     if isScreenLocked { 
-        showControls = true
-        resetControlsTimer()
+        // Khi khóa: tap 1 lần hiện controls, tap lần 2 mở khóa
+        if showControls {
+            isScreenLocked = false
+            showControls = true
+            resetControlsTimer()
+        } else {
+            showControls = true
+            resetControlsTimer()
+        }
     } else if showOverlay { 
         closeOverlay() 
     } else { 
@@ -86,34 +93,41 @@ struct MoviePlayerView: View {
     } 
 }
                 .gesture(
-    DragGesture(minimumDistance: 5)
+    DragGesture(minimumDistance: 0)
         .onChanged { v in
-            let horizontal = abs(v.translation.width)
-            let vertical = abs(v.translation.height)
-            if vertical > horizontal {
-                let step = v.translation.height / 140 // mỗi bước = 1 đoạn gạch
-                let newSteps = round(step * 8) / 8 // chia 8 mức
-                if v.startLocation.x < UIScreen.main.bounds.width / 2 {
-                    let newBrightness = min(max(brightness - newSteps * 0.125, 0.01), 1.0)
-                    if abs(newBrightness - brightness) > 0.01 {
-                        brightness = newBrightness
-                        UIScreen.main.brightness = brightness
-                        showBrightnessSlider = true
-                        resetBrightnessTimer()
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                    }
+            let locationX = v.startLocation.x
+            let screenWidth = UIScreen.main.bounds.width
+            let deltaY = -v.translation.height
+            let deltaX = abs(v.translation.width)
+            let verticalDistance = abs(v.translation.height)
+            
+            // Chỉ xử lý vuốt dọc khi vuốt ít ngang
+            if verticalDistance > deltaX * 1.5 {
+                if locationX < screenWidth / 2 {
+                    let newBrightness = min(max(brightness + deltaY / 500, 0.01), 1.0)
+                    brightness = newBrightness
+                    UIScreen.main.brightness = brightness
+                    showBrightnessSlider = true
+                    resetBrightnessTimer()
                 } else {
-                    let newVolume = min(max(volume + Float(-newSteps * 0.125), 0), 1.0)
-                    if abs(newVolume - volume) > 0.01 {
-                        volume = newVolume
-                        player.volume = volume
-                        showVolumeSlider = true
-                        resetVolumeTimer()
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                    }
+                    let newVolume = min(max(volume + Float(deltaY / 500), 0), 1.0)
+                    volume = newVolume
+                    player.volume = volume
+                    showVolumeSlider = true
+                    resetVolumeTimer()
                 }
+            }
+        }
+        .onEnded { v in
+            // Vuốt từ dưới lên mở overlay
+            if v.translation.height < -80 && 
+               v.startLocation.y > UIScreen.main.bounds.height * 0.6 &&
+               abs(v.translation.height) > abs(v.translation.width) * 2 {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showOverlay = true
+                    overlayOffset = 0
+                }
+                loadOverlayData()
             }
         }
 )
@@ -256,7 +270,11 @@ if showBrightnessSlider && showControls {
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }; if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup { showNextEpisodePopup = true } } }
     func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
     func toggleControls() { 
-    if isScreenLocked { return }  // Không làm gì khi khóa
+    if isScreenLocked { 
+        showControls = true
+        resetControlsTimer()
+        return 
+    }
     withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() } 
     if showControls { resetControlsTimer() } 
 }
