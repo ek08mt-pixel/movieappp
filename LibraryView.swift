@@ -2,20 +2,22 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var downloadManager = DownloadManager.shared
     @State private var selectedTab: LibraryTab = .watched
     @State private var playMovie: Movie?
+    @State private var playDownloadedMovie: DownloadManager.DownloadedMovie?
     
     enum LibraryTab: String, CaseIterable {
         case watched = "Vừa xem"
         case saved = "Đã lưu"
-        case watched2 = "Đã xem"
+        case downloaded = "Đã tải"
     }
     
     var currentMovies: [Movie] {
         switch selectedTab {
         case .saved: return appState.favorites
         case .watched: return appState.watchHistory
-        case .watched2: return appState.watchedMovies
+        case .downloaded: return []
         }
     }
     
@@ -29,13 +31,22 @@ struct LibraryView: View {
                     HStack(spacing: 0) {
                         tabButton(.watched)
                         tabButton(.saved)
-                        tabButton(.watched2)
+                        tabButton(.downloaded)
                     }
                     .padding(4)
                     .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5)))
                     .padding(.horizontal, 20).padding(.top, 8)
                     
-                    if currentMovies.isEmpty {
+                    if selectedTab == .downloaded {
+                        if downloadManager.downloadedMovies.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "arrow.down.circle.slash").font(.system(size: 50)).foregroundColor(.gray)
+                                Text("Chưa có phim đã tải").foregroundColor(.gray)
+                            }.frame(maxHeight: .infinity)
+                        } else {
+                            downloadedGridView
+                        }
+                    } else if currentMovies.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: emptyIcon).font(.system(size: 50)).foregroundColor(.gray)
                             Text(emptyText).foregroundColor(.gray)
@@ -49,7 +60,7 @@ struct LibraryView: View {
                                         switch selectedTab {
                                         case .watched: appState.watchHistory.removeAll(); appState.watchProgressList.removeAll(); appState.save()
                                         case .saved: appState.favorites.removeAll(); appState.save()
-                                        case .watched2: appState.watchedMovies.removeAll(); appState.save()
+                                        case .downloaded: break
                                         }
                                     }
                                 }
@@ -70,6 +81,11 @@ struct LibraryView: View {
                 let p = appState.watchProgressList.first { $0.movieId == movie.id }
                 MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode, posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0).environmentObject(appState)
             }
+            .fullScreenCover(item: $playDownloadedMovie) { movie in
+                if let url = movie.localPlayURL {
+                    DownloadedPlayerView(url: url, title: movie.title, episodeName: movie.episodeName ?? "")
+                }
+            }
         }
     }
     
@@ -77,14 +93,50 @@ struct LibraryView: View {
         switch selectedTab {
         case .watched: return "eye.slash"
         case .saved: return "bookmark.slash"
-        case .watched2: return "checkmark.circle.slash"
+        case .downloaded: return "arrow.down.circle.slash"
         }
     }
     var emptyText: String {
         switch selectedTab {
         case .watched: return "Chưa có phim đã xem"
         case .saved: return "Chưa có phim đã lưu"
-        case .watched2: return "Chưa có phim đánh dấu đã xem"
+        case .downloaded: return "Chưa có phim đã tải"
+        }
+    }
+    
+    var downloadedGridView: some View {
+        ScrollView {
+            LazyVGrid(columns: savedColumns, spacing: 12) {
+                ForEach(downloadManager.downloadedMovies) { movie in
+                    ZStack(alignment: .topTrailing) {
+                        Button {
+                            playDownloadedMovie = movie
+                        } label: {
+                            VStack(spacing: 6) {
+                                ZStack {
+                                    CachedAsyncImage(url: URL(string: movie.posterPath ?? ""))
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: (UIScreen.main.bounds.width - 56) / 3, height: ((UIScreen.main.bounds.width - 56) / 3) * 1.5)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    Circle().fill(.black.opacity(0.5)).frame(width: 36, height: 36)
+                                        .overlay(Image(systemName: "play.fill").foregroundColor(.white).font(.system(size: 14)))
+                                }
+                                Text(movie.title).font(.system(size: 10, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(height: 28)
+                                if let epName = movie.episodeName {
+                                    Text(epName).font(.system(size: 8)).foregroundColor(.gray).lineLimit(1)
+                                }
+                            }
+                        }
+                        Button {
+                            withAnimation {
+                                downloadManager.deleteDownload(movieId: movie.id, season: movie.season, episode: movie.episode)
+                            }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundColor(.white.opacity(0.8)).padding(4)
+                        }
+                    }
+                }
+            }.padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 100)
         }
     }
     
@@ -144,8 +196,6 @@ struct LibraryView: View {
                             case .watched:
                                 appState.watchHistory.removeAll { $0.id == movie.id }
                                 appState.watchProgressList.removeAll { $0.movieId == movie.id }
-                            case .watched2:
-                                appState.watchedMovies.removeAll { $0.id == movie.id }
                             default: break
                             }
                             appState.save()
