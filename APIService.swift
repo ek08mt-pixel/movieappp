@@ -150,7 +150,7 @@ class APIService {
         return response.results.map { $0.withPlaceholder() }
     }
     
-    private func discoverMovies(lang: String, sortBy: String) async throws -> [Movie] {
+    func discoverMovies(lang: String, sortBy: String) async throws -> [Movie] {
         try await fetchMultiplePages { [self] page in
             let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
             guard let url = URL(string: urlString) else { return [] }
