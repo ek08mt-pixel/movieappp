@@ -129,7 +129,6 @@ struct ExploreView: View {
         }
         .task { loadData() }
     }
-}
     
     func loadData() {
         Task {
