@@ -253,19 +253,42 @@ struct LivePlayerView: View {
             }
         }
         
-        // Top bar
         VStack {
             HStack {
-                Button { dismiss() } label: { ... }
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                }
                 Spacer()
-                Text(currentChannel.name)...
-                Button { ... } label: { ... }
+                Text(currentChannel.name).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                Button {
+                    var blocked = blockedURLs.components(separatedBy: ",")
+                    blocked.append(currentChannel.url)
+                    blockedURLs = blocked.joined(separator: ",")
+                    dismiss()
+                } label: {
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 12)).foregroundColor(.yellow.opacity(0.7))
+                }
                 Spacer()
                 Circle().fill(.clear).frame(width: 36)
             }.padding(.horizontal, 16).padding(.top, 50)
             Spacer()
-            // Nút chuyển kênh
-            ...
+            if !allChannels.isEmpty {
+                HStack(spacing: 40) {
+                    Button {
+                        let prev = max(currentIndex - 1, 0)
+                        currentChannel = allChannels[prev]; loadStream()
+                    } label: {
+                        Image(systemName: "chevron.left.2").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                    }.opacity(currentIndex > 0 ? 1 : 0.3)
+                    Button {
+                        let next = min(currentIndex + 1, allChannels.count - 1)
+                        currentChannel = allChannels[next]; loadStream()
+                    } label: {
+                        Image(systemName: "chevron.right.2").font(.system(size: 24)).foregroundColor(.white.opacity(0.7)).padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                    }.opacity(currentIndex < allChannels.count - 1 ? 1 : 0.3)
+                }.padding(.bottom, 30)
+            }
         }
     }
     .onAppear { loadStream() }
