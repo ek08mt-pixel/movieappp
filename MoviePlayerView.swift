@@ -61,7 +61,6 @@ struct MoviePlayerView: View {
     @State private var showCastSheet = false; @State private var showRemoteControl = false
     @State private var castDeviceName: String = ""; @State private var isCasting = false
     @State private var showEpisodePopup = false
-    @State private var seekPreviewImage: UIImage?
     @State private var showSeekPreview = false
     @State private var seekPreviewTime: Double = 0
     
