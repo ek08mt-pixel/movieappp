@@ -35,3 +35,19 @@ struct LandscapePlayer: UIViewControllerRepresentable {
         }
     }
 }
+
+struct LandscapeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .onDisappear {
+                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+                    }
+                }
+            }
+    }
+}
