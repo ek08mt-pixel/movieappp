@@ -27,23 +27,23 @@ struct LandscapePlayer: UIViewControllerRepresentable {
 }
 
 struct LandscapeModifier: ViewModifier {
+    @Environment(\.dismiss) var dismiss
+    
     func body(content: Content) -> some View {
         content
             .onAppear {
-    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-    }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-        }
-    }
-}
+                // Force landscape ngay lập tức
+                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+                }
+            }
             .onDisappear {
+                // Force portrait khi back
                 if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                     ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // Gọi lại lần 2 để chắc
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                         ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
                     }
