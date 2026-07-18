@@ -87,7 +87,6 @@ struct ExploreView: View {
     .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
     .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
 }
-                            }
                         }
                         .padding(.horizontal, 16)
                         
