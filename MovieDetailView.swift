@@ -271,7 +271,7 @@ struct MovieDetailView: View {
         ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
     }
 }
-    
+ }
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
         
@@ -387,7 +387,7 @@ struct MovieDetailView: View {
         }
     }
 }
-}
+
 struct EpisodeDownloadButton: View {
     let movieId: Int
     let title: String
