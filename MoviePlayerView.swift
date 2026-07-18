@@ -165,7 +165,21 @@ struct MoviePlayerView: View {
     }
     
     func forceLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
-    func forcePortraitWithDelay() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } } }
+    func forcePortraitWithDelay() {
+    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+    }
+}
     func cycleAspect() { selectedVideoGravity.next() }
     func detectQuality(from url: URL) -> String { let s = url.absoluteString.lowercased(); if s.contains("4k") || s.contains("2160") { return "4K" }; if s.contains("2880") { return "2880p" }; if s.contains("1440") { return "1440p" }; if s.contains("1080") { return "1080p" }; if s.contains("720") { return "720p" }; if s.contains("480") { return "480p" }; return "Auto" }
     func qualityURL(from u: URL, quality: String) -> URL { guard quality != "Auto" else { return u }; let m = ["4K": "2160", "2880p": "2880", "2160p": "2160", "1440p": "1440", "1080p": "1080", "720p": "720", "480p": "480"]; guard let t = m[quality] else { return u }; for q in ["2160", "2880", "1440", "1080", "720", "480", "4k"] { if u.absoluteString.lowercased().contains(q) { return URL(string: u.absoluteString.replacingOccurrences(of: q, with: t, options: .caseInsensitive)) ?? u } }; return u }
