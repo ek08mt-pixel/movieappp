@@ -586,21 +586,30 @@ final class OphimService {
                let dataObj = json["data"] as? [String: Any],
                let items = dataObj["items"] as? [[String: Any]] {
                 
-                // Tìm phim khớp nhất với title
                 var bestMatch: [String: Any]?
-                let lowerTitle = title.lowercased()
-                
-                for item in items {
-                    let name = (item["name"] as? String ?? "").lowercased()
-                    let origin = (item["origin_name"] as? String ?? "").lowercased()
-                    if name.contains(lowerTitle) || origin.contains(lowerTitle) || lowerTitle.contains(name) {
-                        bestMatch = item
-                        break
-                    }
-                }
-                
-                // Nếu không tìm thấy, lấy item đầu tiên
-                if bestMatch == nil { bestMatch = items.first }
+let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+
+// Ưu tiên khớp chính xác
+for item in items {
+    let name = (item["name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+    let origin = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+    if origin == lowerTitle || name == lowerTitle {
+        bestMatch = item
+        break
+    }
+}
+
+// Fallback khớp 1 phần
+if bestMatch == nil {
+    for item in items {
+        let name = (item["name"] as? String ?? "").lowercased()
+        let origin = (item["origin_name"] as? String ?? "").lowercased()
+        if origin.contains(lowerTitle) || name.contains(lowerTitle) || lowerTitle.contains(origin) {
+            bestMatch = item
+            break
+        }
+    }
+}
                 
                 if let slug = bestMatch?["slug"] as? String {
                     self.fetchDetail(slug: slug, episode: ep, completion: completion)
