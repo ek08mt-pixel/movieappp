@@ -66,7 +66,7 @@ struct MoviePlayerView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            LandscapePlayer(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
+            CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
