@@ -559,3 +559,82 @@ final class SofaflixService {
         return nil
     }
 }
+// MARK: - Ophim Service (New)
+final class OphimService {
+    static let shared = OphimService()
+    private let baseURL = "https://ophim1.com/v1/api"
+    private init() {}
+    
+    func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+        let ep = episode ?? 1
+        let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        
+        // B1: Search phim
+        guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   json["status"] as? String == "success",
+                   let dataObj = json["data"] as? [String: Any],
+                   let items = dataObj["items"] as? [[String: Any]],
+                   let firstItem = items.first,
+                   let slug = firstItem["slug"] as? String {
+                    
+                    // B2: Lấy chi tiết phim
+                    self.fetchDetail(slug: slug, episode: ep, completion: completion)
+                } else {
+                    completion(.failure(StreamServiceError.noMatchFound(id: title)))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   json["status"] as? String == "success",
+                   let movie = json["data"] as? [String: Any],
+                   let episodes = movie["episodes"] as? [[String: Any]] {
+                    
+                    for server in episodes {
+                        if let serverData = server["server_data"] as? [[String: Any]] {
+                            for epItem in serverData {
+                                if let name = epItem["name"] as? String,
+                                   let linkM3u8 = epItem["link_m3u8"] as? String,
+                                   let streamURL = URL(string: linkM3u8),
+                                   matchEpisode(name: name, target: episode) {
+                                    completion(.success(streamURL))
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    completion(.failure(StreamServiceError.episodeNotFound(ep: "\(episode)")))
+                } else {
+                    completion(.failure(StreamServiceError.noData))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+}
