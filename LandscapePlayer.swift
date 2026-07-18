@@ -30,10 +30,12 @@ struct LandscapeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear {
-                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-                }
-            }
+    DispatchQueue.main.async {
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+        }
+    }
+}
             .onDisappear {
                 if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                     ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
