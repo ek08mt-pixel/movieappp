@@ -387,7 +387,7 @@ struct MovieDetailView: View {
         }
     }
 }
-
+}
 struct EpisodeDownloadButton: View {
     let movieId: Int
     let title: String
