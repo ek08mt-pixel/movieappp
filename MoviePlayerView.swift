@@ -131,30 +131,14 @@ struct MoviePlayerView: View {
                     Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.25))) }
                 }
                 
-                // Seek preview thumbnail
                 if showSeekPreview {
-                    VStack(spacing: 4) {
-                        if let image = seekPreviewImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 120, height: 68)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 1))
-                                .shadow(color: .black.opacity(0.5), radius: 4)
-                        } else {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(.ultraThinMaterial.opacity(0.5))
-                                .frame(width: 120, height: 68)
-                        }
-                        Text(formatTime(seekPreviewTime))
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(.black.opacity(0.6)))
-                    }
-                    .offset(y: -90)
-                }
+    Text(formatTime(seekPreviewTime))
+        .font(.system(size: 12, design: .monospaced))
+        .foregroundColor(.white)
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Capsule().fill(.ultraThinMaterial.opacity(0.7)))
+        .offset(y: -60)
+}
                 
                 VStack { Spacer()
                     VStack(spacing: 2) {
