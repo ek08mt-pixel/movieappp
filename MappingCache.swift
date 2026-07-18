@@ -566,38 +566,55 @@ final class OphimService {
     private init() {}
     
     func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let ep = episode ?? 1
-        let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+    let ep = episode ?? 1
+    let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+    
+    guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else {
+        completion(.failure(StreamServiceError.invalidURL))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
+        guard let self = self else { return }
+        if let error = error { completion(.failure(error)); return }
+        guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
         
-        // B1: Search phim
-        guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else {
-            completion(.failure(StreamServiceError.invalidURL))
-            return
-        }
-        
-        URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   json["status"] as? String == "success",
-                   let dataObj = json["data"] as? [String: Any],
-                   let items = dataObj["items"] as? [[String: Any]],
-                   let firstItem = items.first,
-                   let slug = firstItem["slug"] as? String {
-                    
-                    // B2: Lấy chi tiết phim
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let status = json["status"] as? String,
+               status == "success",
+               let dataObj = json["data"] as? [String: Any],
+               let items = dataObj["items"] as? [[String: Any]] {
+                
+                // Tìm phim khớp nhất với title
+                var bestMatch: [String: Any]?
+                let lowerTitle = title.lowercased()
+                
+                for item in items {
+                    let name = (item["name"] as? String ?? "").lowercased()
+                    let origin = (item["origin_name"] as? String ?? "").lowercased()
+                    if name.contains(lowerTitle) || origin.contains(lowerTitle) || lowerTitle.contains(name) {
+                        bestMatch = item
+                        break
+                    }
+                }
+                
+                // Nếu không tìm thấy, lấy item đầu tiên
+                if bestMatch == nil { bestMatch = items.first }
+                
+                if let slug = bestMatch?["slug"] as? String {
                     self.fetchDetail(slug: slug, episode: ep, completion: completion)
                 } else {
                     completion(.failure(StreamServiceError.noMatchFound(id: title)))
                 }
-            } catch {
-                completion(.failure(error))
+            } else {
+                completion(.failure(StreamServiceError.noMatchFound(id: title)))
             }
-        }.resume()
-    }
+        } catch {
+            completion(.failure(error))
+        }
+    }.resume()
+}
     
     private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else {
