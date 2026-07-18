@@ -565,61 +565,63 @@ final class OphimService {
     private let baseURL = "https://ophim1.com/v1/api"
     private init() {}
     
-    func fetchStream(title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    let ep = episode ?? 1
-    let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-    
-    guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else {
+    private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
+    guard let url = URL(string: "\(baseURL)/phim/\(slug)") else {
         completion(.failure(StreamServiceError.invalidURL))
         return
     }
     
-    URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
-        guard let self = self else { return }
-        if let error = error { completion(.failure(error)); return }
-        guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+    print("🔗 Fetching: \(url.absoluteString)")
+    
+    URLSession.shared.dataTask(with: url) { data, _, error in
+        if let error = error { 
+            print("❌ Error: \(error)")
+            completion(.failure(error))
+            return 
+        }
+        guard let data = data else { 
+            completion(.failure(StreamServiceError.noData))
+            return 
+        }
+        
+        // Debug: in JSON
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📦 Response: \(jsonString.prefix(1000))")
+        }
         
         do {
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                let status = json["status"] as? String,
                status == "success",
-               let dataObj = json["data"] as? [String: Any],
-               let items = dataObj["items"] as? [[String: Any]] {
+               let movie = json["data"] as? [String: Any],
+               let episodes = movie["episodes"] as? [[String: Any]] {
                 
-                var bestMatch: [String: Any]?
-let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-
-// Ưu tiên khớp chính xác
-for item in items {
-    let name = (item["name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-    let origin = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-    if origin == lowerTitle || name == lowerTitle {
-        bestMatch = item
-        break
-    }
-}
-
-// Fallback khớp 1 phần
-if bestMatch == nil {
-    for item in items {
-        let name = (item["name"] as? String ?? "").lowercased()
-        let origin = (item["origin_name"] as? String ?? "").lowercased()
-        if origin.contains(lowerTitle) || name.contains(lowerTitle) || lowerTitle.contains(origin) {
-            bestMatch = item
-            break
-        }
-    }
-}
+                print("✅ Found \(episodes.count) servers")
                 
-                if let slug = bestMatch?["slug"] as? String {
-                    self.fetchDetail(slug: slug, episode: ep, completion: completion)
-                } else {
-                    completion(.failure(StreamServiceError.noMatchFound(id: title)))
+                for server in episodes {
+                    if let serverData = server["server_data"] as? [[String: Any]] {
+                        print("📂 Server data: \(serverData.count) episodes")
+                        for epItem in serverData {
+                            if let name = epItem["name"] as? String {
+                                print("  - \(name)")
+                                if let linkM3u8 = epItem["link_m3u8"] as? String,
+                                   let streamURL = URL(string: linkM3u8),
+                                   matchEpisode(name: name, target: episode) {
+                                    print("✅ Matched: \(linkM3u8)")
+                                    completion(.success(streamURL))
+                                    return
+                                }
+                            }
+                        }
+                    }
                 }
+                completion(.failure(StreamServiceError.episodeNotFound(ep: "\(episode)")))
             } else {
-                completion(.failure(StreamServiceError.noMatchFound(id: title)))
+                print("❌ Invalid JSON structure")
+                completion(.failure(StreamServiceError.noData))
             }
         } catch {
+            print("❌ JSON error: \(error)")
             completion(.failure(error))
         }
     }.resume()
