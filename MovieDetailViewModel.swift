@@ -76,6 +76,7 @@ class MovieDetailViewModel: ObservableObject {
                 }
             }
         }
+    }
     
     func getDebugInfo(movieId: Int, mediaType: String?, season: Int?, episode: Int?) async -> String {
         let type = mediaType ?? "movie"
