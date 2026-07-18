@@ -8,7 +8,6 @@ struct MovieDetailView: View {
     @StateObject private var vm = MovieDetailViewModel()
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
-    @State private var showPlayer = false
     @State private var showBookingSheet = false
     @State private var showFullOverview = false
     @State private var showImages = false
@@ -68,7 +67,7 @@ struct MovieDetailView: View {
                         ratingsBar
                         
                         HStack(spacing: 10) {
-                            Button { playSeason = nil; playEpisode = nil; showPlayer = true } label: {
+                            Button { playSeason = nil; playEpisode = nil; presentPlayer() } label: {
                                 Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
                             Button {
@@ -172,7 +171,7 @@ struct MovieDetailView: View {
                                                             Button {
                                                                 playSeason = ep.seasonNumber
                                                                 playEpisode = ep.episodeNumber
-                                                                showPlayer = true
+                                                                presentPlayer()
                                                             } label: {
                                                                 HStack(spacing: 10) {
                                                                     if let still = ep.stillURL {
@@ -253,18 +252,27 @@ struct MovieDetailView: View {
             await vm.load(movieId: movie.id, mediaType: movie.mediaType)
             await fetchRatings()
         }
-        .fullScreenCover(isPresented: $showPlayer) { 
-    MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL)
-        .environmentObject(appState)
-        .onDisappear {
-            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-            }
-        }
-}
-.sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
-.sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
+        .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
+        .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
+    
+    func presentPlayer() {
+        guard let topVC = UIApplication.topViewController() else { return }
+        
+        let moviePlayer = MoviePlayerView(
+            movieId: movie.id,
+            movieTitle: movie.originalTitle ?? movie.title,
+            mediaType: playerMediaType,
+            seasonNumber: playSeason,
+            episodeNumber: playEpisode,
+            posterURL: movie.posterURL
+        ).environmentObject(appState)
+        
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+    }
+    
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
         
