@@ -60,6 +60,7 @@ struct MoviePlayerView: View {
     @State private var availableQualities: [String] = ["4K", "2880p", "2160p", "1440p", "1080p", "720p", "480p"]
     @State private var showCastSheet = false; @State private var showRemoteControl = false
     @State private var castDeviceName: String = ""; @State private var isCasting = false
+    @State private var showEpisodePopup = false
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
     
