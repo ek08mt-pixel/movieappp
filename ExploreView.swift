@@ -41,52 +41,36 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
                         
-                        // OST, Timeline, Pick - 3 pill ngang hàng
                         HStack(spacing: 10) {
                             NavigationLink(destination: OSTView()) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "music.note")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.pink)
-                                    Text("OST")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.white)
+                                    Image(systemName: "music.note").font(.system(size: 16)).foregroundColor(.pink)
+                                    Text("OST").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
                             }
                             
                             NavigationLink(destination: TimelineView()) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "calendar")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.blue)
-                                    Text("Timeline")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.white)
+                                    Image(systemName: "calendar").font(.system(size: 16)).foregroundColor(.blue)
+                                    Text("Timeline").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
                             }
                             
                             NavigationLink(destination: LiveTVView()) {
-    HStack(spacing: 8) {
-        Image(systemName: "tv.fill")
-            .font(.system(size: 16))
-            .foregroundColor(.green)
-        Text("Live TV")
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(.white)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 14)
-    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
-}
+                                HStack(spacing: 8) {
+                                    Image(systemName: "tv.fill").font(.system(size: 16)).foregroundColor(.green)
+                                    Text("Live TV").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                            }
                         }
                         .padding(.horizontal, 16)
                         
@@ -116,9 +100,9 @@ struct ExploreView: View {
                                     }
                                 }
                             }
-                      }.padding(.horizontal, 16)
+                        }.padding(.horizontal, 16)
                         
-                   if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
+                        if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
                         if !hiddenMovies.isEmpty { movieRow(title: "Hidden Gems", movies: hiddenMovies) }
                         Spacer().frame(height: 120)
@@ -138,9 +122,9 @@ struct ExploreView: View {
     }
     
     @ViewBuilder func movieRow(title: String, movies: [Movie]) -> some View {
-        VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) }
+        VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
-    }
+}
 
 // MARK: - SwipePickOverlay
 struct SwipePickOverlay: View {
