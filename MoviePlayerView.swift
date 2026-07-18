@@ -118,23 +118,28 @@ struct MoviePlayerView: View {
             if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup {
                 VStack { Spacer()
                     VStack(spacing: 4) {
-                        ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 4); Capsule().fill(.white.opacity(0.8)).frame(width: max(4, (UIScreen.main.bounds.width - 100) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4) }.frame(height: 20).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - 100; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false })
+                        ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 6); Capsule().fill(.white.opacity(0.8)).frame(width: max(6, (UIScreen.main.bounds.width - 120) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 6) }.frame(height: 20).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - 120; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false })
                         HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
-                    }.padding(.horizontal, 50).padding(.bottom, 4)
+                    }.padding(.horizontal, 60).padding(.bottom, 8)
                     HStack(spacing: 0) {
-                        Spacer()
-                        HStack(spacing: 14) {
-                            Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
-                            Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
-                            Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
-                            Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
-                            Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
-                            Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 15)).foregroundColor(.white.opacity(0.8)) }
+                        HStack(spacing: 16) {
+                            Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 20)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
+                            Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 20)).foregroundColor(.white.opacity(0.9)) }
+                            Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 20)).foregroundColor(.white.opacity(0.9)) }
+                            Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 18)).foregroundColor(.white.opacity(0.8)) }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.7)))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
-                    }.padding(.horizontal, 20).padding(.bottom, 50)
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.7)))
+                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.12), lineWidth: 0.4))
+                        Spacer()
+                        HStack(spacing: 30) {
+                            Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.9)) }
+                            Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 36, weight: .bold)).foregroundColor(.white) }
+                            Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.9)) }
+                        }
+                        Spacer()
+                        Circle().fill(.clear).frame(width: 80)
+                    }.padding(.horizontal, 20).padding(.bottom, 55)
                 }
                 VStack { HStack(spacing: 8) { Button { saveProgress(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
                     HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 50); Spacer() }
