@@ -50,7 +50,7 @@ struct MoviePlayerView: View {
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
     @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     @State private var imdbIDCache: String?; @State private var hasStartedPlaying = false; @State private var didResume = false
-    @State private var isOrientationLocked = true; @State private var isScreenLocked = false
+    @State private var isScreenLocked = false
     @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
     @State private var phimapiServers: [String] = []
     @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
@@ -70,11 +70,15 @@ struct MoviePlayerView: View {
                 .onAppear {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
-                    DispatchQueue.main.async { lockToLandscape() }
+                    forceLandscape()
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
-                .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
+                .onDisappear {
+                    saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
+                    controlsTimer?.invalidate(); stopCasting()
+                    forcePortraitWithDelay()
+                }
                 .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else { toggleControls() } }
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in let lx = v.startLocation.x; let w = UIScreen.main.bounds.width; let dy = -v.translation.height; let dx = abs(v.translation.width); let vd = abs(v.translation.height); if vd > dx * 1.5 { if lx < w / 2 { brightness = min(max(brightness + dy / 500, 0.01), 1.0); UIScreen.main.brightness = brightness; showBrightnessSlider = true; resetBrightnessTimer() } else { volume = min(max(volume + Float(dy / 500), 0), 1.0); player.volume = volume; showVolumeSlider = true; resetVolumeTimer() } } }.onEnded { v in if v.translation.height < -80 && v.startLocation.y > UIScreen.main.bounds.height * 0.6 { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showOverlay = true; overlayOffset = 0 }; loadOverlayData() } })
                 .overlay(
@@ -127,9 +131,9 @@ struct MoviePlayerView: View {
                 // Bottom controls
                 VStack { Spacer()
                     VStack(spacing: 2) {
-                        ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 5); Capsule().fill(.white.opacity(0.8)).frame(width: max(5, (UIScreen.main.bounds.width - 120) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5) }.frame(height: 20).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - 120; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false })
+                        ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 5); Capsule().fill(.white.opacity(0.8)).frame(width: max(5, (UIScreen.main.bounds.width - UIScreen.main.bounds.width * 0.3) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5) }.frame(height: 20).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - UIScreen.main.bounds.width * 0.3; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false })
                         HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
-                    }.padding(.horizontal, 60)
+                    }.padding(.horizontal, UIScreen.main.bounds.width * 0.15)
                     HStack(spacing: 0) {
                         HStack(spacing: 12) {
                             Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
@@ -141,10 +145,9 @@ struct MoviePlayerView: View {
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.6)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
                         Spacer()
-                        Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
-                    }.padding(.horizontal, 20).padding(.bottom, 75)
+                    }.padding(.horizontal, 20).padding(.bottom, UIScreen.main.bounds.height * 0.04)
                 }
-                VStack { HStack(spacing: 8) { Button { saveProgress(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
+                VStack { HStack(spacing: 8) { Button { saveProgress(); dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
                     HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 56); Spacer() }
                 if isCasting { VStack { Spacer(); HStack { Spacer(); HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 6, height: 6); Text("Đang phát trên \(castDeviceName)").font(.system(size: 10)).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))).padding(.trailing, 20).padding(.bottom, 100) } } }
             }
@@ -158,6 +161,23 @@ struct MoviePlayerView: View {
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
         .fullScreenCover(isPresented: $showRemoteControl) { CastRemoteView(movieTitle: movieTitle, episodeInfo: episodeInfo, posterURL: posterURL, castDeviceName: castDeviceName, player: player, currentTime: $currentTime, duration: $duration, isCasting: $isCasting) }
         .sheet(isPresented: $showCastSheet) { CastSheetView(showRemote: $showRemoteControl, castDeviceName: $castDeviceName, isCasting: $isCasting, player: player).presentationDetents([.medium, .large]).presentationDragIndicator(.hidden) }
+    }
+    
+    func forceLandscape() {
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+        }
+    }
+    
+    func forcePortraitWithDelay() {
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+            }
+        }
     }
     
     func cycleAspect() { selectedVideoGravity.next() }
@@ -177,15 +197,13 @@ struct MoviePlayerView: View {
     func audioOptions() -> [String] { if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }; return ["Vietsub", "Lồng Tiếng", "Original"] }
     func selectAudio(_ label: String) { selectedAudioLabel = label; UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)"); if selectedSource == .phimapi, let idx = phimapiServers.firstIndex(of: label) { selectedServerIndex = idx; UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)"); let st = currentTime; loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) }; showAudioPopup = false }
     func closeOverlay() { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { overlayOffset = UIScreen.main.bounds.height }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { showOverlay = false } }
-    func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
+    func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); forcePortraitWithDelay(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
     func prevEpisode() { guard let ep = episodeNumber, ep > 1 else { return }; autoNextTriggered = false; showNextEpisodePopup = false; loadStream(season: seasonNumber, episode: ep - 1) }
     func nextEpisode() { guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }; showNextEpisodePopup = false; autoNextTriggered = true; loadStream(season: seasonNumber, episode: ep + 1); DispatchQueue.main.asyncAfter(deadline: .now() + 5) { autoNextTriggered = false } }
     func loadOverlayData() { Task { similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []; if mediaType == "tv" { seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []; if let s = seasonNumber { selectedSeasonNumber = s; selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s) } }; if let detail = try? await APIService.shared.movieDetail(movieId: movieId), let cid = detail.belongsToCollection?.id, let col = try? await APIService.shared.collectionDetail(collectionId: cid) { collectionMovies = col.parts }; currentMovie = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType) } }
     func loadStream(season: Int? = nil, episode: Int? = nil, resumeAt: Double? = nil) { if let s = season { seasonNumber = s }; if let e = episode { episodeNumber = e }; let ep = episodeNumber ?? 1; let s = seasonNumber; imdbIDCache = nil; autoNextTriggered = false; showNextEpisodePopup = false; if mediaType == "tv" || s != nil { selectedSeasonNumber = s; Task { selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s ?? 1) } }; isLoading = true; errorMessage = nil; sourceStatus[selectedSource] = nil; Task { do { let imdbID = try await fetchIMDB(); switch selectedSource { case .phimapi: let result = try await withCheckedThrowingContinuation { c in PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: movieTitle, mediaType: mediaType, season: s, episode: ep, serverIndex: selectedServerIndex) { c.resume(with: $0) } }; await MainActor.run { phimapiServers = result.1; currentStreamURL = result.0; selectedQuality = detectQuality(from: result.0); let item = AVPlayerItem(url: result.0); player.replaceCurrentItem(with: item); if let rt = resumeAt { player.seek(to: CMTime(seconds: rt, preferredTimescale: 600)) { _ in player.play() } } else { player.play() }; hasStartedPlaying = true; sourceStatus[.phimapi] = true; isLoading = false; tryResume() }; saveHistory(); case .nguonc: let url = try await withCheckedThrowingContinuation { c in NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { nguonCEmbedURL = url; nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"; isLoading = false; sourceStatus[.nguonc] = true; showNguonCWebView = true }; case .vsmov: let url = try await withCheckedThrowingContinuation { c in VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } }; await MainActor.run { currentStreamURL = url; selectedQuality = detectQuality(from: url); player.replaceCurrentItem(with: AVPlayerItem(url: url)); player.play(); hasStartedPlaying = true; sourceStatus[.vsmov] = true; isLoading = false; tryResume() }; saveHistory() } } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } } } }
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
     func fetchIMDB() async throws -> String { if let c = imdbIDCache { return c }; var id: String?; if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }; if id == nil || id?.isEmpty == true { let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; id = try? JSONDecoder().decode(E.self, from: data).imdb_id }; guard let f = id, !f.isEmpty else { throw StreamError.noStreamAvailable }; imdbIDCache = f; return f }
-    func lockToLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
-    func unlockOrientation() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }
     func saveProgress() { guard hasStartedPlaying, currentTime > 0, duration > 0 else { return }; appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: currentTime, duration: duration, lastWatched: Date())) }
     func saveHistory() { let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType); appState.watchHistory.removeAll { $0.id == movieId }; appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds }; if duration > 240 && currentTime >= duration - 120 && !autoNextTriggered && !showNextEpisodePopup { showNextEpisodePopup = true } } }
@@ -194,7 +212,6 @@ struct MoviePlayerView: View {
     func resetControlsTimer() { controlsTimer?.invalidate(); controlsTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { _ in withAnimation(.easeInOut(duration: 0.3)) { showControls = false } } }
     func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in showVolumeSlider = false } }
     func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in showBrightnessSlider = false } }
-    func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: ws.interfaceOrientation.isLandscape ? .portrait : .landscapeRight)) }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
 
