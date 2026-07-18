@@ -247,7 +247,7 @@ struct LiveTVView: View {
             }.padding(.top, 35).padding(.leading, 16)
         }
         .navigationBarHidden(true)
-        .fullScreenCover(item: $selectedChannel) { channel in LivePlayerView(channel: channel) }
+        .fullScreenCover(item: $selectedChannel) { channel in LivePlayerView(channel: channel, allChannels: filteredChannels) }
         .task { await loadChannels() }
     }
     
