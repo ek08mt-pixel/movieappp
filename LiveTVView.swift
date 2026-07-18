@@ -34,6 +34,28 @@ class IPTVService {
 "Animax", "Anime", "Nicktoons", "Cartoon Netowrk"
     ]
     
+    private let regionURLs = [
+    "https://iptv-org.github.io/iptv/regions/amer.m3u",
+    "https://iptv-org.github.io/iptv/regions/eur.m3u",
+    "https://iptv-org.github.io/iptv/regions/asia.m3u",
+    "https://iptv-org.github.io/iptv/countries/us.m3u",
+    "https://iptv-org.github.io/iptv/countries/uk.m3u",
+]
+
+func fetchRegionChannels() async -> [IPTVChannel] {
+    var all: [IPTVChannel] = []
+    for urlString in regionURLs {
+        guard let url = URL(string: urlString) else { continue }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let content = String(data: data, encoding: .utf8) {
+                all.append(contentsOf: parseM3U(content))
+            }
+        } catch {}
+    }
+    var seen = Set<String>()
+    return all.filter { seen.insert($0.url).inserted }
+}
     private let popularCategories = [
         "Movies", "Kids", "News", "Sports", "Music", "Documentary",
         "Entertainment", "General", "Science"
