@@ -261,10 +261,22 @@ struct LiveTVView: View {
 // MARK: - Live Player View
 struct LivePlayerView: View {
     let channel: IPTVChannel
+    let allChannels: [IPTVChannel]
     @Environment(\.dismiss) var dismiss
     @State private var player: AVPlayer?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var currentChannel: IPTVChannel
+    
+    init(channel: IPTVChannel, allChannels: [IPTVChannel] = []) {
+        self.channel = channel
+        self.allChannels = allChannels
+        _currentChannel = State(initialValue: channel)
+    }
+    
+    var currentIndex: Int {
+        allChannels.firstIndex(where: { $0.url == currentChannel.url }) ?? 0
+    }
     
     var body: some View {
         ZStack {
@@ -285,6 +297,7 @@ struct LivePlayerView: View {
                 }
             }
             
+            // Top bar
             VStack {
                 HStack {
                     Button { dismiss() } label: {
@@ -292,11 +305,43 @@ struct LivePlayerView: View {
                             .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                     }
                     Spacer()
-                    Text(channel.name).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                    Text(currentChannel.name).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
                     Spacer()
                     Circle().fill(.clear).frame(width: 36)
                 }.padding(.horizontal, 16).padding(.top, 50)
                 Spacer()
+                
+                // Nút chuyển kênh
+                if !allChannels.isEmpty {
+                    HStack(spacing: 40) {
+                        Button {
+                            let prev = max(currentIndex - 1, 0)
+                            currentChannel = allChannels[prev]
+                            loadStream()
+                        } label: {
+                            Image(systemName: "chevron.left.2")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(12)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                        }
+                        .opacity(currentIndex > 0 ? 1 : 0.3)
+                        
+                        Button {
+                            let next = min(currentIndex + 1, allChannels.count - 1)
+                            currentChannel = allChannels[next]
+                            loadStream()
+                        } label: {
+                            Image(systemName: "chevron.right.2")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(12)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                        }
+                        .opacity(currentIndex < allChannels.count - 1 ? 1 : 0.3)
+                    }
+                    .padding(.bottom, 30)
+                }
             }
         }
         .onAppear { loadStream() }
@@ -304,11 +349,17 @@ struct LivePlayerView: View {
     
     func loadStream() {
         isLoading = true; errorMessage = nil
-        guard let url = URL(string: channel.url) else { errorMessage = "URL không hợp lệ"; isLoading = false; return }
+        player?.pause(); player = nil
+        guard let url = URL(string: currentChannel.url) else {
+            errorMessage = "URL không hợp lệ"; isLoading = false; return
+        }
         player = AVPlayer(url: url)
         isLoading = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            if player?.currentItem?.status == .failed { errorMessage = "Không thể phát kênh này"; player = nil }
+            if player?.currentItem?.status == .failed {
+                errorMessage = "Không thể phát kênh này"
+                player = nil
+            }
         }
     }
 }
