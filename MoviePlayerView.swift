@@ -50,8 +50,7 @@ struct MoviePlayerView: View {
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
     @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
     @State private var imdbIDCache: String?; @State private var hasStartedPlaying = false; @State private var didResume = false
-    @State private var isOrientationLocked = true
-    @State private var isScreenLocked = false
+    @State private var isOrientationLocked = true; @State private var isScreenLocked = false
     @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
     @State private var phimapiServers: [String] = []
     @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
@@ -77,6 +76,13 @@ struct MoviePlayerView: View {
                 .onDisappear { saveProgress(); player.pause(); player.replaceCurrentItem(with: nil); controlsTimer?.invalidate(); unlockOrientation(); stopCasting() }
                 .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else { toggleControls() } }
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in let lx = v.startLocation.x; let w = UIScreen.main.bounds.width; let dy = -v.translation.height; let dx = abs(v.translation.width); let vd = abs(v.translation.height); if vd > dx * 1.5 { if lx < w / 2 { brightness = min(max(brightness + dy / 500, 0.01), 1.0); UIScreen.main.brightness = brightness; showBrightnessSlider = true; resetBrightnessTimer() } else { volume = min(max(volume + Float(dy / 500), 0), 1.0); player.volume = volume; showVolumeSlider = true; resetVolumeTimer() } } }.onEnded { v in if v.translation.height < -80 && v.startLocation.y > UIScreen.main.bounds.height * 0.6 { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { showOverlay = true; overlayOffset = 0 }; loadOverlayData() } })
+                .overlay(
+                    HStack {
+                        Color.clear.frame(width: UIScreen.main.bounds.width * 0.25).contentShape(Rectangle()).onTapGesture(count: 2) { seek(-10) }
+                        Spacer()
+                        Color.clear.frame(width: UIScreen.main.bounds.width * 0.25).contentShape(Rectangle()).onTapGesture(count: 2) { seek(10) }
+                    }
+                )
             
             if showVolumeSlider && showControls {
                 HStack { Spacer()
@@ -110,23 +116,25 @@ struct MoviePlayerView: View {
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             
             if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup {
-                if !isCasting { HStack(spacing: 64) { Button { seek(-10) } label: { Image(systemName: "gobackward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5)) }; Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 36, weight: .bold)).foregroundColor(.white) }; Button { seek(10) } label: { Image(systemName: "goforward.10").font(.system(size: 20, weight: .light)).foregroundColor(.white.opacity(0.6)).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.2))).overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5)) } } }
                 VStack { Spacer()
                     VStack(spacing: 4) {
                         ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 4); Capsule().fill(.white.opacity(0.8)).frame(width: max(4, (UIScreen.main.bounds.width - 100) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4) }.frame(height: 20).contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - 100; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false })
                         HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
-                    }.padding(.horizontal, 50).padding(.bottom, 12)
-                    HStack(spacing: 0) { Spacer()
-                        HStack(spacing: 45) {
-                            Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.9)) }
-                            Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 24)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
-                            Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 24)).foregroundColor(.white.opacity(0.9)) }
-                            Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 24)).foregroundColor(.white.opacity(0.9)) }
-                            Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 24)).foregroundColor(.white.opacity(0.9)) }
-                        }
+                    }.padding(.horizontal, 50).padding(.bottom, 4)
+                    HStack(spacing: 0) {
                         Spacer()
-                        Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }
-                    }.padding(.horizontal, 20).padding(.bottom, 25)
+                        HStack(spacing: 14) {
+                            Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
+                            Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
+                            Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
+                            Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
+                            Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
+                            Button { toggleOrientation() } label: { Image(systemName: "rotate.right").font(.system(size: 15)).foregroundColor(.white.opacity(0.8)) }
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.7)))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
+                    }.padding(.horizontal, 20).padding(.bottom, 50)
                 }
                 VStack { HStack(spacing: 8) { Button { saveProgress(); if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
                     HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 50); Spacer() }
