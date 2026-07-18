@@ -214,18 +214,36 @@ struct MoviePlayerView: View {
     }
     
     func generateSeekPreview(at time: Double) {
-        guard let asset = player.currentItem?.asset else { return }
-        let imageGenerator = AVAssetImageGenerator(asset: asset)
-        imageGenerator.appliesPreferredTrackTransform = true
-        imageGenerator.maximumSize = CGSize(width: 240, height: 136)
-        let cmTime = CMTime(seconds: time, preferredTimescale: 600)
-        DispatchQueue.global().async {
-            if let cgImage = try? imageGenerator.copyCGImage(at: cmTime, actualTime: nil) {
-                let uiImage = UIImage(cgImage: cgImage)
-                DispatchQueue.main.async { seekPreviewImage = uiImage }
+    guard let currentItem = player.currentItem else { return }
+    let imageGenerator = AVAssetImageGenerator(asset: currentItem.asset)
+    imageGenerator.appliesPreferredTrackTransform = true
+    imageGenerator.maximumSize = CGSize(width: 240, height: 136)
+    imageGenerator.requestedTimeToleranceBefore = .zero
+    imageGenerator.requestedTimeToleranceAfter = .zero
+    
+    let cmTime = CMTime(seconds: time, preferredTimescale: 600)
+    DispatchQueue.global().async {
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: cmTime, actualTime: nil)
+            let uiImage = UIImage(cgImage: cgImage)
+            DispatchQueue.main.async {
+                seekPreviewImage = uiImage
+            }
+        } catch {
+            // Fallback: dùng ảnh poster nếu có
+            if let posterURL = posterURL {
+                DispatchQueue.global().async {
+                    if let data = try? Data(contentsOf: posterURL),
+                       let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            seekPreviewImage = image
+                        }
+                    }
+                }
             }
         }
     }
+}
     
     func forceLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
     func forcePortraitWithDelay() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }; DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } } }
