@@ -142,10 +142,7 @@ struct MoviePlayerView: View {
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.6)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
                         Spacer()
-                        Button { toggleOrientation() } label: {
-                            Image(systemName: "rotate.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.8)).padding(8)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
-                        }
+                    
                     }.padding(.horizontal, 20).padding(.bottom, UIScreen.main.bounds.height * 0.04)
                 }
                 VStack { HStack(spacing: 8) { Button { saveProgress(); dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
