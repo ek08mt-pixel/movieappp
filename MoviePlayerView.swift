@@ -70,7 +70,7 @@ struct MoviePlayerView: View {
                 .onAppear {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { forceLandscape() }
+                    forceLandscape()
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
