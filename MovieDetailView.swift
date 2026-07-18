@@ -255,6 +255,11 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showPlayer) { MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState) }
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
+        .onDisappear {
+            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+            }
+        }
     }
     
     func searchAndJumpToEpisode(query: String) {
