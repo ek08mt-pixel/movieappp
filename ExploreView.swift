@@ -4,7 +4,6 @@ import SwiftUI
 struct ExploreView: View {
     @EnvironmentObject var appState: AppState
     @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
-    @State private var showSwipePick = false
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
     ("IMDb Top", 210024, .keyword),
@@ -126,12 +125,6 @@ struct ExploreView: View {
                         Spacer().frame(height: 120)
                     }
                 }
-            }
-        }
-        .overlay {
-            if showSwipePick {
-                SwipePickOverlay(show: $showSwipePick)
-                    .environmentObject(appState)
             }
         }
         .task { loadData() }
