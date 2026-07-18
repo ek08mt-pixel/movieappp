@@ -217,7 +217,7 @@ struct LiveTVView: View {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).foregroundColor(.white).padding(12)
                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4)).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5)))
-            }.padding(.top, 54).padding(.leading, 16)
+            }.padding(.top, 63).padding(.leading, 16)
         }
         .navigationBarHidden(true)
         .fullScreenCover(item: $selectedChannel) { channel in
