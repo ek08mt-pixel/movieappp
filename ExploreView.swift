@@ -74,21 +74,20 @@ struct ExploreView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
                             }
                             
-                            Button {
-                                showSwipePick = true
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "heart.circle")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.red)
-                                    Text("Pick")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                            NavigationLink(destination: LiveTVView()) {
+    HStack(spacing: 8) {
+        Image(systemName: "tv.fill")
+            .font(.system(size: 16))
+            .foregroundColor(.green)
+        Text("Live TV")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.white)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 14)
+    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
+    .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+}
                             }
                         }
                         .padding(.horizontal, 16)
