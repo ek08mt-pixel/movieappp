@@ -117,7 +117,7 @@ struct ExploreView: View {
                                     }
                                 }
                             }
-                        }.padding(.horizontal, 16)
+                      }.padding(.horizontal, 16)
                         
                    if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
@@ -129,6 +129,7 @@ struct ExploreView: View {
         }
         .task { loadData() }
     }
+}
     
     func loadData() {
         Task {
