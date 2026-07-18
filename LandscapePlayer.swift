@@ -1,13 +1,23 @@
 import SwiftUI
 import AVKit
 
+class LandscapeViewController: AVPlayerViewController {
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .landscapeRight
+    }
+    
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        return .landscapeRight
+    }
+}
+
 struct LandscapePlayer: UIViewControllerRepresentable {
     let player: AVPlayer
     let pipController: Binding<AVPictureInPictureController?>
     let gravity: VideoGravityMode
     
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let vc = AVPlayerViewController()
+    func makeUIViewController(context: Context) -> LandscapeViewController {
+        let vc = LandscapeViewController()
         vc.player = player
         vc.showsPlaybackControls = false
         vc.videoGravity = gravity.avGravity
@@ -18,36 +28,10 @@ struct LandscapePlayer: UIViewControllerRepresentable {
         return vc
     }
     
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {
+    func updateUIViewController(_ ui: LandscapeViewController, context: Context) {
         ui.videoGravity = gravity.avGravity
         if pipController.wrappedValue == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer {
             pipController.wrappedValue = AVPictureInPictureController(playerLayer: layer)
         }
-    }
-}
-
-struct LandscapeModifier: ViewModifier {
-    @Environment(\.dismiss) var dismiss
-    
-    func body(content: Content) -> some View {
-        content
-            .onAppear {
-                // Force landscape ngay lập tức
-                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-                }
-            }
-            .onDisappear {
-                // Force portrait khi back
-                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-                }
-                // Gọi lại lần 2 để chắc
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-                    }
-                }
-            }
     }
 }
