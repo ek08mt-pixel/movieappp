@@ -256,11 +256,10 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showPlayer) { 
     MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL)
         .environmentObject(appState)
-        .onAppear {
-            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-        }
         .onDisappear {
-            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+            }
         }
 }
 .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
