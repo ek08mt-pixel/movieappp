@@ -1,5 +1,6 @@
 import SwiftUI
 import Security
+import UIKit
 
 // MARK: - Keychain Helper
 struct KeychainHelper {
