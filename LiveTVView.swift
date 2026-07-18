@@ -15,14 +15,19 @@ class IPTVService {
     
     // Danh sách kênh nổi tiếng ưu tiên
     private let popularChannels: Set<String> = [
-        "HBO", "HBO 2", "HBO Signature", "Cinemax", "Starz",
-        "Cartoon Network", "Nickelodeon", "Disney Channel", "Boomerang",
-        "CNN", "BBC World News", "Al Jazeera", "Sky News",
-        "ESPN", "Fox Sports", "NBC Sports", "beIN Sports",
-        "MTV", "VH1", "BET", "Comedy Central",
-        "National Geographic", "Discovery", "Animal Planet",
-        "TV5Monde", "France 24", "DW", "Arte"
-    ]
+    "HBO", "HBO 2", "HBO Signature", "Cinemax", "Starz",
+    "Cartoon Network", "Nickelodeon", "Disney Channel", "Boomerang",
+    "CNN", "BBC World News", "Al Jazeera", "Sky News",
+    "ESPN", "Fox Sports", "NBC Sports", "beIN Sports",
+    "MTV", "VH1", "BET", "Comedy Central",
+    "National Geographic", "Discovery", "Animal Planet",
+    "TV5Monde", "France 24", "DW", "Arte",
+    "BBC One", "BBC Two", "ITV", "Channel 4",
+    "ABC", "NBC", "CBS", "FOX", "PBS",
+    "AMC", "FX", "TNT", "TBS", "USA Network",
+    "History", "A&E", "Lifetime", "Freeform",
+    "Nick Jr", "Cartoon Netowrk", "Disney Junior", "PBS Kids"
+]
     
     private let popularCategories = [
         "Movies", "Kids", "News", "Sports", "Music", "Documentary",
@@ -56,14 +61,12 @@ class IPTVService {
             // Sắp xếp: Popular trước, sau đó theo category
             var result: [IPTVChannel] = []
             result.append(contentsOf: popular)
-            
-            for cat in popularCategories {
-                if let channels = byCategory[cat] {
-                    result.append(contentsOf: channels.prefix(10)) // Giới hạn 10 kênh/category
-                }
-            }
-            
-            result.append(contentsOf: other.prefix(50))
+for cat in popularCategories {
+    if let channels = byCategory[cat] {
+        result.append(contentsOf: channels) // Bỏ giới hạn
+    }
+}
+result.append(contentsOf: other) // Bỏ giới hạn
             
             // Xóa trùng
             var seen = Set<String>()
