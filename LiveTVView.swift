@@ -263,8 +263,6 @@ struct LiveTVView: View {
         channels = await IPTVService.shared.fetchChannels()
         isLoading = false
     }
-}
-}
 // MARK: - Live Player View
 struct LivePlayerView: View {
     let channel: IPTVChannel
