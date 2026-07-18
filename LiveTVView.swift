@@ -242,7 +242,7 @@ struct LivePlayerView: View {
             if let player = player, errorMessage == nil {
                 CustomPlayerVC(player: player, pipController: .constant(nil), gravity: .fit).ignoresSafeArea()
                     .onAppear { player.play() }
-                    .onDisappear { player?.pause() }
+                    .onDisappear { player.pause() }
             } else if isLoading { ProgressView().tint(.white) }
             else if let err = errorMessage {
                 VStack(spacing: 16) {
