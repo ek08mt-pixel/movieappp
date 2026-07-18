@@ -265,7 +265,6 @@ struct LiveTVView: View {
         isLoading = false
     }
 }
-
 // MARK: - Live Player View
 struct LivePlayerView: View {
     let channel: IPTVChannel
