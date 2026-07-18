@@ -231,8 +231,12 @@ extension DownloadManager: URLSessionDataDelegate {
                             }
                             
                             let subFileURL = folderURL.appendingPathComponent("sub.m3u8")
-                            try relativeSubLines.joined(separator: "\n").write(to: subFileURL, atomically: true, encoding: .utf8)
-                            masterLines.append("sub.m3u8")  // relative
+var finalContent = relativeSubLines.joined(separator: "\n")
+if !finalContent.contains("#EXT-X-ENDLIST") {
+    finalContent += "\n#EXT-X-ENDLIST"
+}
+try finalContent.write(to: subFileURL, atomically: true, encoding: .utf8)
+masterLines.append("sub.m3u8")  // relative
                         }
                     } else {
                         masterLines.append(line)
