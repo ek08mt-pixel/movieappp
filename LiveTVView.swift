@@ -72,7 +72,9 @@ func fetchRegionChannels() async -> [IPTVChannel] {
             let (data, _) = try await URLSession.shared.data(from: url)
             guard let content = String(data: data, encoding: .utf8) else { return loadCache() ?? [] }
             var channels = filterAndSort(parseM3U(content))
-channels.insert(contentsOf: VietnamIPTV.shared.getChannels(), at: 0) let regionChannels = await fetchRegionChannels()
+channels.insert(contentsOf: VietnamIPTV.shared.getChannels(), at: 0) 
+let regionChannels = await 
+fetchRegionChannels()
 channels.insert(contentsOf: regionChannels, at: 0)
 saveCache(channels)
 return channels
