@@ -256,15 +256,21 @@ struct MovieDetailView: View {
     MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL)
         .environmentObject(appState)
         .modifier(LandscapeModifier())
-}
-        .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
-        .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
-        .onDisappear {
-            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+                }
             }
         }
+}
+.sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
+.sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
+.onDisappear {
+    if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
     }
+}
     
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
