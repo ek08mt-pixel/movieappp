@@ -205,15 +205,18 @@ struct MoviePlayerView: View {
             Divider().background(Color.white.opacity(0.1))
             Text("Chất lượng").font(.system(size: 10)).foregroundColor(.white.opacity(0.5))
             HStack(spacing: 4) {
-                ForEach(availableQualities, id: \.self) { q in
-                    Button { applyQuality(q); showSettings = false } label: {
-                        Text(q)
-    .font(.system(size: 9))
-    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.5))
-    .fixedSize(horizontal: true, vertical: false)
-    .padding(.horizontal, 6).padding(.vertical, 4)
-    .background(Capsule().fill(selectedQuality == q ? .white.opacity(0.15) : .clear))
-            Divider().background(Color.white.opacity(0.1))
+    ForEach(availableQualities, id: \.self) { q in
+        Button { applyQuality(q); showSettings = false } label: {
+            Text(q)
+                .font(.system(size: 9))
+                .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.5))
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 6).padding(.vertical, 4)
+                .background(Capsule().fill(selectedQuality == q ? .white.opacity(0.15) : .clear))
+        }
+    }
+}
+Divider().background(Color.white.opacity(0.1))
             HStack(spacing: 6) {
                 ForEach(["0.5x", "1.0x", "1.5x", "2.0x"], id: \.self) { s in
                     Button { player.rate = Float(s.replacingOccurrences(of: "x", with: "")) ?? 1.0; showSettings = false } label: {
