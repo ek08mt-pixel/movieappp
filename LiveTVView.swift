@@ -15,7 +15,7 @@ class IPTVService {
     private let playlistURL = "https://iptv-org.github.io/iptv/index.m3u"
     private let cacheKey = "iptv_channels_cache"
     private let cacheDateKey = "iptv_cache_date"
-    private let cartoonPlaylistURL = "https://raw.githubusercontent.com/Waqarrakhshani/IPTVlist/65356819bdd2263bf6f5595617a1ea808ef242f3/iptv4today.m3u8"
+    
     
     private let popularChannels: Set<String> = [
         "HBO", "HBO 2", "HBO Signature", "Cinemax", "Starz",
@@ -49,9 +49,7 @@ class IPTVService {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             guard let content = String(data: data, encoding: .utf8) else { return loadCache() ?? [] }
-            var channels = filterAndSort(parseM3U(content))
-let cartoons = await fetchCartoonChannels()
-channels.insert(contentsOf: cartoons, at: 0)
+            let channels = filterAndSort(parseM3U(content))
 saveCache(channels)
 return channels
         } catch {
@@ -86,20 +84,6 @@ return channels
         
         var seen = Set<String>()
         return result.filter { seen.insert($0.url).inserted }
-    }
-    func fetchCartoonChannels() async -> [IPTVChannel] {
-    guard let url = URL(string: cartoonPlaylistURL) else { return [] }
-    do {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        guard let content = String(data: data, encoding: .utf8) else { return [] }
-        return parseM3U(content).filter { channel in
-            let name = channel.name.lowercased()
-            return name.contains("cartoon") || name.contains("nick") || name.contains("disney") ||
-                   name.contains("boomerang") || name.contains("oggy") || name.contains("family guy") ||
-                   name.contains("kids") || name.contains("baby") || name.contains("shark") ||
-                   name.contains("animax") || name.contains("anime") || name.contains("toon")
-        }
-    } catch { return [] }
 }
     private func parseM3U(_ content: String) -> [IPTVChannel] {
         var channels: [IPTVChannel] = []
