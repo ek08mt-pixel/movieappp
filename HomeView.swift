@@ -10,7 +10,6 @@ struct HomeView: View {
     @State private var showGenrePopup = false
     @State private var hideStatusBar = false
     
-    @State private var showContinuePlayer = false
     @State private var continueMovieId: Int?
     @State private var continueMovieTitle = ""
     @State private var continueMediaType: String?
@@ -114,7 +113,6 @@ struct HomeView: View {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom).frame(height: 40).allowsHitTesting(false)
                         }
                         .overlay(alignment: .bottom) {
-                            // Dots kiểu Apple TV - thanh ngang
                             HStack(spacing: 4) {
                                 ForEach(0..<5, id: \.self) { i in
                                     let active = i == (currentIndex % 5)
@@ -325,20 +323,6 @@ struct HomeView: View {
             }
         }
         .task { await vm.loadAll() }
-        .fullScreenCover(isPresented: $showContinuePlayer) {
-            if let id = continueMovieId {
-                MoviePlayerView(
-                    movieId: id,
-                    movieTitle: continueMovieTitle,
-                    mediaType: continueMediaType,
-                    seasonNumber: continueSeason,
-                    episodeNumber: continueEpisode,
-                    posterURL: continuePosterURL,
-                    resumeTime: continueCurrentTime
-                )
-                .environmentObject(appState)
-            }
-        }
     }
     
     // MARK: - Continue Watching Card with Context Menu
@@ -407,7 +391,7 @@ struct HomeView: View {
             continueEpisode = prog.episode
             continuePosterURL = URL(string: prog.posterPath ?? "")
             continueCurrentTime = prog.currentTime
-            showContinuePlayer = true
+            presentContinuePlayer()
         }
         .contextMenu {
             Button {
@@ -440,6 +424,24 @@ struct HomeView: View {
                 Label("Xóa", systemImage: "trash")
             }
         }
+    }
+    
+    func presentContinuePlayer() {
+        guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
+        
+        let moviePlayer = MoviePlayerView(
+            movieId: id,
+            movieTitle: continueMovieTitle,
+            mediaType: continueMediaType,
+            seasonNumber: continueSeason,
+            episodeNumber: continueEpisode,
+            posterURL: continuePosterURL,
+            resumeTime: continueCurrentTime
+        ).environmentObject(appState)
+        
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
     }
     
     func formatRemaining(_ prog: WatchProgress) -> String {
