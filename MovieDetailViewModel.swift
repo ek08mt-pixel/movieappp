@@ -65,41 +65,17 @@ class MovieDetailViewModel: ObservableObject {
         
         guard !imdbID.isEmpty else { return nil }
         
-        return await withCheckedContinuation { continuation in
-            PhimAPIService.shared.fetchStream(
-                imdbID: imdbID,
-                tmdbID: movieId,
-                title: title,
-                mediaType: type,
-                season: s,
-                episode: ep,
-                serverIndex: 0
-            ) { result in
+       return await withCheckedContinuation { continuation in
+            OphimService.shared.fetchStream(title: title, season: s, episode: ep) { result in
                 switch result {
-                case .success(let (url, _)):
+                case .success(let url):
                     self.videoURLCache[cacheKey] = url
                     continuation.resume(returning: url)
                 case .failure:
-                    SofaflixService.shared.fetchStream(
-                        imdbID: imdbID,
-                        tmdbID: movieId,
-                        title: title,
-                        mediaType: type,
-                        season: s,
-                        episode: ep
-                    ) { result in
-                        switch result {
-                        case .success(let url):
-                            self.videoURLCache[cacheKey] = url
-                            continuation.resume(returning: url)
-                        case .failure:
-                            continuation.resume(returning: nil)
-                        }
-                    }
+                    continuation.resume(returning: nil)
                 }
             }
         }
-    }
     
     func getDebugInfo(movieId: Int, mediaType: String?, season: Int?, episode: Int?) async -> String {
         let type = mediaType ?? "movie"
