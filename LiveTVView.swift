@@ -181,7 +181,6 @@ struct LiveTVView: View {
         if !searchText.isEmpty { result = result.filter { $0.name.lowercased().contains(searchText.lowercased()) } }
         return result
     }
-    var filteredChannels: [IPTVChannel] {
     let blocked = Set(blockedURLs.components(separatedBy: ","))
     var result = channels.filter { !blocked.contains($0.url) }
     if currentCategory != "All" { result = result.filter { $0.category == currentCategory } }
@@ -264,6 +263,7 @@ struct LiveTVView: View {
         channels = await IPTVService.shared.fetchChannels()
         isLoading = false
     }
+}
 }
 // MARK: - Live Player View
 struct LivePlayerView: View {
