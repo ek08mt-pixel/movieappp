@@ -119,7 +119,7 @@ struct ExploreView: View {
                             }
                         }.padding(.horizontal, 16)
                         
-                        if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
+                   if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
                         if !hiddenMovies.isEmpty { movieRow(title: "Hidden Gems", movies: hiddenMovies) }
                         Spacer().frame(height: 120)
