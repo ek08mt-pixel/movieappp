@@ -18,6 +18,9 @@ class VietnamIPTV {
             IPTVChannel(name: "VTV5 Tây Nam Bộ", url: "https://live.fptplay53.net/live/media/vtv5tnb/live-hls-avc/index.m3u8", category: "🇻🇳 VTV", logo: nil),
             IPTVChannel(name: "VTV5 Tây Nguyên", url: "https://live.fptplay53.net/live/media/vtv5tn/live-hls-avc/index.m3u8", category: "🇻🇳 VTV", logo: nil),
             
+            // MARK: - Cartoon / Kids
+IPTVChannel(name: "Disney Channel", url: "http://45.171.108.253:8888/DISNEY_CHANNEL/index.m3u8", category: "🌟 Cartoon", logo: nil),
+
             // MARK: - HTV
             IPTVChannel(name: "HTV1", url: "https://live.fptplay53.net/epzhd1/htv1_vhls.smil/chunklist.m3u8", category: "🇻🇳 HTV", logo: nil),
             IPTVChannel(name: "HTV2", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", category: "🇻🇳 HTV", logo: nil),
