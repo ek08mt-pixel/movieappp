@@ -286,7 +286,7 @@ struct LivePlayerView: View {
                 CustomPlayerVC(player: player, pipController: .constant(nil), gravity: .fit)
                     .ignoresSafeArea()
                     .onAppear { player.play() }
-                    .onDisappear { player.pause() }
+                    .onDisappear { player?.pause() }
             } else if isLoading {
                 ProgressView().tint(.white)
             } else if let err = errorMessage {
@@ -348,18 +348,21 @@ struct LivePlayerView: View {
     }
     
     func loadStream() {
-        isLoading = true; errorMessage = nil
-        player?.pause(); player = nil
-        guard let url = URL(string: currentChannel.url) else {
-            errorMessage = "URL không hợp lệ"; isLoading = false; return
-        }
-        player = AVPlayer(url: url)
-        isLoading = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            if player?.currentItem?.status == .failed {
-                errorMessage = "Không thể phát kênh này"
-                player = nil
-            }
+    isLoading = true; errorMessage = nil
+    player?.pause()
+    player?.replaceCurrentItem(with: nil)
+    player = nil
+    guard let url = URL(string: currentChannel.url) else {
+        errorMessage = "URL không hợp lệ"; isLoading = false; return
+    }
+    let newPlayer = AVPlayer(url: url)
+    player = newPlayer
+    isLoading = false
+    newPlayer.play()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        if newPlayer.currentItem?.status == .failed {
+            errorMessage = "Không thể phát kênh này"
+            player = nil
         }
     }
 }
