@@ -138,12 +138,12 @@ struct MoviePlayerView: View {
                             Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
                             Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 8).padding(.leading, 4)
+                        .padding(.horizontal, 14).padding(.vertical, 7).padding(.leading, 8)
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.6)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
                         Spacer()
                     
-                    }.padding(.horizontal, 20).padding(.bottom, UIScreen.main.bounds.height * 0.04)
+                    }.padding(.horizontal, 24).padding(.bottom, UIScreen.main.bounds.height * 0.06)
                 }
                 VStack { HStack(spacing: 8) { Button { saveProgress(); dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } }; Spacer()
                     HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 56); Spacer() }
@@ -207,12 +207,12 @@ struct MoviePlayerView: View {
             HStack(spacing: 4) {
                 ForEach(availableQualities, id: \.self) { q in
                     Button { applyQuality(q); showSettings = false } label: {
-                        Text(q).font(.system(size: 9)).foregroundColor(selectedQuality == q ? .white : .white.opacity(0.5))
-                            .padding(.horizontal, 6).padding(.vertical, 4)
-                            .background(Capsule().fill(selectedQuality == q ? .white.opacity(0.15) : .clear))
-                    }
-                }
-            }
+                        Text(q)
+    .font(.system(size: 9))
+    .foregroundColor(selectedQuality == q ? .white : .white.opacity(0.5))
+    .fixedSize(horizontal: true, vertical: false)
+    .padding(.horizontal, 6).padding(.vertical, 4)
+    .background(Capsule().fill(selectedQuality == q ? .white.opacity(0.15) : .clear))
             Divider().background(Color.white.opacity(0.1))
             HStack(spacing: 6) {
                 ForEach(["0.5x", "1.0x", "1.5x", "2.0x"], id: \.self) { s in
