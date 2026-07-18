@@ -165,7 +165,9 @@ struct LiveTVView: View {
     @State private var selectedChannel: IPTVChannel?
     @State private var searchText = ""
     @State private var currentCategory = "All"
+    @AppStorage("blocked_channels") private var blockedURLs: String = ""
     @Environment(\.dismiss) var dismiss
+    
     
     var categories: [String] {
         var cats = Set<String>()
@@ -179,7 +181,13 @@ struct LiveTVView: View {
         if !searchText.isEmpty { result = result.filter { $0.name.lowercased().contains(searchText.lowercased()) } }
         return result
     }
-    
+    var filteredChannels: [IPTVChannel] {
+    let blocked = Set(blockedURLs.components(separatedBy: ","))
+    var result = channels.filter { !blocked.contains($0.url) }
+    if currentCategory != "All" { result = result.filter { $0.category == currentCategory } }
+    if !searchText.isEmpty { result = result.filter { $0.name.lowercased().contains(searchText.lowercased()) } }
+    return result
+}
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
@@ -267,6 +275,8 @@ struct LivePlayerView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var currentChannel: IPTVChannel
+    @State private var showReportButton = false
+    @AppStorage("blocked_channels") private var blockedURLs: String = ""
     
     init(channel: IPTVChannel, allChannels: [IPTVChannel] = []) {
         self.channel = channel
@@ -306,6 +316,16 @@ struct LivePlayerView: View {
                     }
                     Spacer()
                     Text(currentChannel.name).font(.system(size: 13, weight: .medium)).foregroundColor(.white).lineLimit(1)
+                    Button {
+    var blocked = blockedURLs.components(separatedBy: ",")
+    blocked.append(currentChannel.url)
+    blockedURLs = blocked.joined(separator: ",")
+    dismiss()
+} label: {
+    Image(systemName: "exclamationmark.triangle.fill")
+        .font(.system(size: 12))
+        .foregroundColor(.yellow.opacity(0.7))
+}
                     Spacer()
                     Circle().fill(.clear).frame(width: 36)
                 }.padding(.horizontal, 16).padding(.top, 50)
