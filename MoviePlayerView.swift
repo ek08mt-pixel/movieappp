@@ -62,6 +62,7 @@ struct MoviePlayerView: View {
     @State private var castDeviceName: String = ""; @State private var isCasting = false
     @State private var showEpisodePopup = false
     @State private var showSeekPreview = false
+    @State private var seekPreviewImage: UIImage?
     @State private var seekPreviewTime: Double = 0
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
