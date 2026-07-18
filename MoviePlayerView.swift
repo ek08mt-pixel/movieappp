@@ -275,6 +275,10 @@ struct CastRemoteView: View {
         if showAudioMenu { VStack(spacing: 8) { ForEach(["Vietsub", "Thuyết minh", "Lồng tiếng", "Original"], id: \.self) { audio in Button { selectedAudio = audio; showAudioMenu = false } label: { HStack { Text(audio).font(.system(size: 14)).foregroundColor(.white); Spacer(); if selectedAudio == audio { Image(systemName: "checkmark").font(.system(size: 12)).foregroundColor(.white) } }.padding(.horizontal, 16).padding(.vertical, 10).background(RoundedRectangle(cornerRadius: 10).fill(selectedAudio == audio ? .white.opacity(0.15) : .white.opacity(0.05))) } } }.padding(14).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5)).padding(.horizontal, 40) }; Spacer().frame(height: 50) } }.onAppear { isPlaying = player.rate > 0 } }
     func stopCasting() { isCasting = false; EmmewCastManager.shared.stopCasting(); dismiss() }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
+    func toggleOrientation() { 
+        guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        ws.requestGeometryUpdate(.iOS(interfaceOrientations: ws.interfaceOrientation.isLandscape ? .portrait : .landscapeRight))
+    }
 }
 
 struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?; var gravity: VideoGravityMode = .fit
