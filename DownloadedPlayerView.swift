@@ -12,7 +12,7 @@ struct DownloadedPlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if isLoading {
-                ProgressView("Starting server...").foregroundColor(.white)
+                ProgressView("Đang tải...").foregroundColor(.white)
             } else if let player = player {
                 VideoPlayer(player: player)
                     .ignoresSafeArea()
@@ -42,14 +42,15 @@ struct DownloadedPlayerView: View {
     
     private func startServerAndPlay() {
         DispatchQueue.global().async {
-            let folderPath = url.deletingLastPathComponent().path
-            let started = LocalHTTPServer.shared.start(basePath: folderPath)
+            let folderURL = url.deletingLastPathComponent()
+            let started = LocalHTTPServer.shared.start(baseDirectory: folderURL, port: 8080)
             
             DispatchQueue.main.async {
                 if started, let serverURL = LocalHTTPServer.shared.serverURL {
-                    let playlistURL = serverURL.appendingPathComponent("master.m3u8")
+                    let playlistURL = serverURL.appendingPathComponent("sub.m3u8")
                     print("🎬 Playing: \(playlistURL.absoluteString)")
-                    player = AVPlayer(playerItem: AVPlayerItem(asset: AVURLAsset(url: playlistURL)))
+                    let asset = AVURLAsset(url: playlistURL)
+                    player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
                 }
                 isLoading = false
             }
