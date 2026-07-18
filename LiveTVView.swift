@@ -92,22 +92,71 @@ struct IPTVChannel: Identifiable {
 }
 
 class IPTVService {
+    private let playlistURL = "https://iptv-org.github.io/iptv/index.m3u"
+    
     func fetchChannels() async -> [IPTVChannel] {
-        // Tạm thời dùng danh sách kênh cứng để test
-        return [
-            IPTVChannel(name: "Cartoon Network", url: "", category: "Kids", logo: nil),
-            IPTVChannel(name: "Nickelodeon", url: "", category: "Kids", logo: nil),
-            IPTVChannel(name: "Disney Channel", url: "", category: "Kids", logo: nil),
-            IPTVChannel(name: "HBO", url: "", category: "Movies", logo: nil),
-            IPTVChannel(name: "HBO 2", url: "", category: "Movies", logo: nil),
-            IPTVChannel(name: "Cinemax", url: "", category: "Movies", logo: nil),
-            IPTVChannel(name: "CNN", url: "", category: "News", logo: nil),
-            IPTVChannel(name: "BBC World", url: "", category: "News", logo: nil),
-            IPTVChannel(name: "ESPN", url: "", category: "Sports", logo: nil),
-            IPTVChannel(name: "Fox Sports", url: "", category: "Sports", logo: nil),
-            IPTVChannel(name: "MTV", url: "", category: "Music", logo: nil),
-            IPTVChannel(name: "VH1", url: "", category: "Music", logo: nil),
-        ]
+        guard let url = URL(string: playlistURL) else { return [] }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let content = String(data: data, encoding: .utf8) else { return [] }
+            return parseM3U(content)
+        } catch {
+            print("❌ Failed to fetch IPTV: \(error)")
+            return []
+        }
+    }
+    
+    private func parseM3U(_ content: String) -> [IPTVChannel] {
+        var channels: [IPTVChannel] = []
+        let lines = content.components(separatedBy: .newlines)
+        
+        var currentName = ""
+        var currentLogo: String?
+        var currentCategory: String?
+        
+        for i in 0..<lines.count {
+            let line = lines[i].trimmingCharacters(in: .whitespaces)
+            
+            if line.hasPrefix("#EXTINF:") {
+                // Parse tên kênh và attributes
+                if let nameRange = line.range(of: ",") {
+                    currentName = String(line[nameRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+                }
+                
+                // Parse logo
+                if let logoRange = line.range(of: "tvg-logo=\""),
+                   let logoEnd = line[logoRange.upperBound...].range(of: "\"") {
+                    let logo = String(line[logoRange.upperBound..<logoEnd.lowerBound])
+                    currentLogo = logo.isEmpty ? nil : logo
+                }
+                
+                // Parse category
+                if let catRange = line.range(of: "group-title=\""),
+                   let catEnd = line[catRange.upperBound...].range(of: "\"") {
+                    let cat = String(line[catRange.upperBound..<catEnd.lowerBound])
+                    currentCategory = cat.isEmpty ? nil : cat
+                }
+            } else if !line.hasPrefix("#") && !line.isEmpty {
+                // Đây là URL stream
+                if !currentName.isEmpty && (line.hasPrefix("http") || line.hasPrefix("https")) {
+                    let channel = IPTVChannel(
+                        name: currentName,
+                        url: line,
+                        category: currentCategory,
+                        logo: currentLogo
+                    )
+                    channels.append(channel)
+                }
+                currentName = ""
+                currentLogo = nil
+                currentCategory = nil
+            }
+        }
+        
+        // Lọc bỏ kênh trùng và sắp xếp theo category
+        var seen = Set<String>()
+        return channels.filter { seen.insert($0.name).inserted }
     }
 }
 
