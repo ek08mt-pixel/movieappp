@@ -28,7 +28,9 @@ class IPTVService {
         "ABC", "NBC", "CBS", "FOX", "PBS",
         "AMC", "FX", "TNT", "TBS", "USA Network",
         "History", "A&E", "Lifetime", "Freeform",
-        "Nick Jr", "Disney Junior", "PBS Kids"
+        "Nick Jr", "Disney Junior", "PBS Kids", "Oggy", "Oggy and the Cockroaches", "Family Guy", "American Dad",
+"Fox Family", "Fox Comedy", "Adult Swim", "Toonami",
+"Animax", "Anime", "Nicktoons", "Cartoon Netowrk"
     ]
     
     private let popularCategories = [
