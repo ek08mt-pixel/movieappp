@@ -49,7 +49,8 @@ class IPTVService {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             guard let content = String(data: data, encoding: .utf8) else { return loadCache() ?? [] }
-            let channels = filterAndSort(parseM3U(content))
+            var channels = filterAndSort(parseM3U(content))
+channels.insert(contentsOf: VietnamIPTV.shared.getChannels(), at: 0)
 saveCache(channels)
 return channels
         } catch {
