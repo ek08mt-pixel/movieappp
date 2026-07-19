@@ -87,21 +87,18 @@ struct MoviePlayerView: View {
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
     let lx = v.startLocation.x
     let screenW = UIScreen.main.bounds.width
-    let dy = -v.translation.height / 2
+    let dy = -v.translation.height / 1.5
     
-    if lx < screenW / 2 {
-        let newBrightness = min(max(brightness + dy / 350, 0.01), 1.0)
-        brightness = newBrightness
+    // Trái 45% màn hình → brightness, Phải 45% → volume
+    if lx < screenW * 0.55 {
+        brightness = min(max(brightness + dy / 250, 0.01), 1.0)
         UIScreen.main.brightness = brightness
-        showBrightnessSlider = true
-        showVolumeSlider = false
+        showBrightnessSlider = true; showVolumeSlider = false
         resetBrightnessTimer()
     } else {
-        let newVolume = min(max(volume + Float(dy / 350), 0), 1.0)
-        volume = newVolume
+        volume = min(max(volume + Float(dy / 250), 0), 1.0)
         player.volume = volume
-        showVolumeSlider = true
-        showBrightnessSlider = false
+        showVolumeSlider = true; showBrightnessSlider = false
         resetVolumeTimer()
     }
 })
