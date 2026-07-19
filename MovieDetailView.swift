@@ -209,6 +209,7 @@ struct MovieDetailView: View {
                                                         .padding(.vertical, 6)
                                                     }
                                                 }
+                                                }
                                             } else {
                                                 ProgressView().tint(.white).padding()
                                             }
