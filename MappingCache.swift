@@ -27,7 +27,7 @@ final class MappingCache {
         23868: "doraemon-tuyen-tap-moi-nhat",
         14091: "tham-tu-lung-danh-conan",
         46261: "hoi-phap-su-phan-1",
-        80611: "linh-hon-bac-phan-1",
+        57041: "linh-hon-bac-phan-1",
     ]
     
     static let directSlugs: [String: String] = [
@@ -74,6 +74,11 @@ final class MappingCache {
 "103411_2": "mau-va-nuoc-phan-2",
 "103411_3": "mau-va-nuoc-phan-3",
 "103411_4": "mau-va-nuoc-phan-4",
+"57041_1": "linh-hon-bac-phan-1",
+"57041_2": "linh-hon-bac-phan-1",
+"57041_3": "linh-hon-bac-phan-1",
+"57041_4": "linh-hon-bac-phan-1",
+"57041_5": "linh-hon-bac-phan-5",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
@@ -419,13 +424,11 @@ final class PhimAPIService {
     default: effectiveEp = ep
     }
 }
-    if tmdbID == 80611 {
+    if tmdbID == 57041 {
     switch targetSeason {
-    case 1: effectiveEp = ep
     case 2: effectiveEp = 49 + ep
     case 3: effectiveEp = 99 + ep
     case 4: effectiveEp = 150 + ep
-    case 5: effectiveEp = 201 + ep
     default: effectiveEp = ep
     }
 }
