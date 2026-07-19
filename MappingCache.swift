@@ -425,7 +425,6 @@ final class PhimAPIService {
         default: effectiveEp = ep
         }
     }
-}
                 } else {
                     effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 }
@@ -663,4 +662,5 @@ final class OphimService {
                 }
             } catch { completion(.failure(error)) }
         }.resume()
+    }
     }
