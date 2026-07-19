@@ -34,6 +34,12 @@ final class MappingCache {
         "111110_2": "dao-hai-tac-live-action-phan-2",
         "222624_1": "gintama-thay-ginpachi-o-lop-3z",
         "46261_1": "hoi-phap-su",
+        "4607_1": "mat-tich-phan-1",
+"4607_2": "mat-tich-phan-2",
+"4607_3": "mat-tich-phan-3",
+"4607_4": "mat-tich-phan-4",
+"4607_5": "mat-tich-phan-5",
+"4607_6": "mat-tich-phan-6",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
