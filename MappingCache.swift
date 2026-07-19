@@ -26,6 +26,7 @@ final class MappingCache {
         37854: "dao-hai-tac",
         23868: "doraemon-tuyen-tap-moi-nhat",
         14091: "tham-tu-lung-danh-conan",
+        46261: "hoi-phap-su",
     ]
     
     static let directSlugs: [String: String] = [
