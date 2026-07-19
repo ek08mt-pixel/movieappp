@@ -86,23 +86,31 @@ struct MoviePlayerView: View {
                 .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else { toggleControls() } }
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
     let lx = v.startLocation.x
-    let dy = -v.translation.height / 3
-    if lx < UIScreen.main.bounds.width / 2 {
+    let screenW = UIScreen.main.bounds.width
+    let margin: CGFloat = 30
+    
+    // Chỉ nhận vuốt trong vùng giữa (có margin 2 bên)
+    if lx < margin || lx > screenW - margin { return }
+    
+    let dy = -v.translation.height / 2
+    if lx < screenW / 2 {
         let newBrightness = min(max(brightness + dy / 400, 0.01), 1.0)
-        if abs(newBrightness - brightness) > 0.01 {
+        if abs(newBrightness - brightness) > 0.005 {
             brightness = newBrightness
             UIScreen.main.brightness = brightness
             showBrightnessSlider = true
+            showVolumeSlider = false
             resetBrightnessTimer()
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
         }
     } else {
         let newVolume = min(max(volume + Float(dy / 400), 0), 1.0)
-        if abs(newVolume - volume) > 0.01 {
+        if abs(newVolume - volume) > 0.005 {
             volume = newVolume
             player.volume = volume
             showVolumeSlider = true
+            showBrightnessSlider = false
             resetVolumeTimer()
             let impact = UIImpactFeedbackGenerator(style: .light)
             impact.impactOccurred()
@@ -117,51 +125,59 @@ struct MoviePlayerView: View {
                     }
                 )
             
-           if showVolumeSlider || showBrightnessSlider {
+           if (showVolumeSlider || showBrightnessSlider) && showControls {
     VStack {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             if showBrightnessSlider {
-                HStack(spacing: 6) {
-                    Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.yellow)
-                    Text("\(Int(brightness * 100))%")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white)
+                Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.yellow)
+                // Slider brightness
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.1)).frame(width: 60, height: 4)
+                    Capsule().fill(.yellow.opacity(0.7)).frame(width: 60 * brightness, height: 4)
+                    // Gạch dọc di chuyển
+                    HStack(spacing: 2) {
+                        ForEach(0..<10) { i in
+                            RoundedRectangle(cornerRadius: 0.3)
+                                .fill(.white.opacity(0.15))
+                                .frame(width: 1, height: 14)
+                        }
+                    }
+                    .frame(width: 60)
                 }
-                .padding(.leading, 10)
-            }
-            Spacer()
-            if showVolumeSlider {
-                HStack(spacing: 6) {
-                    Text("\(Int(volume * 100))%")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white)
-                    Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
+                Text("\(Int(brightness * 100))%")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white)
+            } else if showVolumeSlider {
+                Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                // Slider volume
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.1)).frame(width: 60, height: 4)
+                    Capsule().fill(.white.opacity(0.6)).frame(width: 60 * CGFloat(volume), height: 4)
+                    HStack(spacing: 2) {
+                        ForEach(0..<10) { i in
+                            RoundedRectangle(cornerRadius: 0.3)
+                                .fill(.white.opacity(0.15))
+                                .frame(width: 1, height: 14)
+                        }
+                    }
+                    .frame(width: 60)
                 }
-                .padding(.trailing, 10)
+                Text("\(Int(volume * 100))%")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white)
             }
         }
-        .frame(width: 200, height: 36)
+        .frame(width: 150, height: 32)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(.ultraThinMaterial.opacity(0.6))
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
-                // Gạch ngang
-                VStack(spacing: 3) {
-                    ForEach(0..<5) { _ in
-                        RoundedRectangle(cornerRadius: 0.5)
-                            .fill(.white.opacity(0.15))
-                            .frame(width: 16, height: 1.5)
-                    }
-                }
-            }
+            Capsule()
+                .fill(.ultraThinMaterial.opacity(0.6))
+                .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(Capsule())
         .padding(.top, 60)
         Spacer()
     }
