@@ -69,6 +69,7 @@ struct LibraryView: View {
                 MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode, posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0).environmentObject(appState)
         }
     }
+    }
     
     var emptyIcon: String {
         switch selectedTab {
