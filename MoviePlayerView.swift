@@ -87,12 +87,8 @@ struct MoviePlayerView: View {
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
     let lx = v.startLocation.x
     let screenW = UIScreen.main.bounds.width
-    let margin: CGFloat = 30
-    
-    // Chỉ nhận vuốt trong vùng giữa (có margin 2 bên)
-    if lx < margin || lx > screenW - margin { return }
-    
     let dy = -v.translation.height / 2
+    
     if lx < screenW / 2 {
         let newBrightness = min(max(brightness + dy / 400, 0.01), 1.0)
         if abs(newBrightness - brightness) > 0.005 {
@@ -127,57 +123,29 @@ struct MoviePlayerView: View {
             
            if (showVolumeSlider || showBrightnessSlider) && showControls {
     VStack {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             if showBrightnessSlider {
                 Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.yellow)
-                // Slider brightness
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.1)).frame(width: 60, height: 4)
-                    Capsule().fill(.yellow.opacity(0.7)).frame(width: 60 * brightness, height: 4)
-                    // Gạch dọc di chuyển
-                    HStack(spacing: 2) {
-                        ForEach(0..<10) { i in
-                            RoundedRectangle(cornerRadius: 0.3)
-                                .fill(.white.opacity(0.15))
-                                .frame(width: 1, height: 14)
-                        }
-                    }
-                    .frame(width: 60)
+                    .font(.system(size: 11)).foregroundColor(.yellow)
+                // Gạch dọc chạy lên/xuống
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.1)).frame(width: 3, height: 24)
+                    RoundedRectangle(cornerRadius: 2).fill(.yellow.opacity(0.7)).frame(width: 3, height: max(2, 24 * brightness))
                 }
-                Text("\(Int(brightness * 100))%")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white)
             } else if showVolumeSlider {
                 Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-                // Slider volume
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.1)).frame(width: 60, height: 4)
-                    Capsule().fill(.white.opacity(0.6)).frame(width: 60 * CGFloat(volume), height: 4)
-                    HStack(spacing: 2) {
-                        ForEach(0..<10) { i in
-                            RoundedRectangle(cornerRadius: 0.3)
-                                .fill(.white.opacity(0.15))
-                                .frame(width: 1, height: 14)
-                        }
-                    }
-                    .frame(width: 60)
+                    .font(.system(size: 11)).foregroundColor(.white)
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.1)).frame(width: 3, height: 24)
+                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.6)).frame(width: 3, height: max(2, 24 * CGFloat(volume)))
                 }
-                Text("\(Int(volume * 100))%")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white)
             }
+            Text(showBrightnessSlider ? "\(Int(brightness * 100))" : "\(Int(volume * 100))")
+                .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(.white)
         }
-        .frame(width: 150, height: 32)
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial.opacity(0.6))
-                .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
-        )
-        .clipShape(Capsule())
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(Capsule().fill(.ultraThinMaterial.opacity(0.5)).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.4)))
         .padding(.top, 60)
         Spacer()
     }
