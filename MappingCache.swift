@@ -26,7 +26,6 @@ final class MappingCache {
         37854: "dao-hai-tac",
         23868: "doraemon-tuyen-tap-moi-nhat",
         14091: "tham-tu-lung-danh-conan",
-        46261: "hoi-phap-su",
     ]
     
     static let directSlugs: [String: String] = [
@@ -34,12 +33,27 @@ final class MappingCache {
         "111110_2": "dao-hai-tac-live-action-phan-2",
         "222624_1": "gintama-thay-ginpachi-o-lop-3z",
         "46261_1": "hoi-phap-su",
+"46261_2": "hoi-phap-su",
+"46261_3": "hoi-phap-su",
+"46261_4": "hoi-phap-su",
+"46261_5": "hoi-phap-su",
+"46261_6": "hoi-phap-su",
+"46261_7": "hoi-phap-su",
+"46261_8": "hoi-phap-su",
         "4607_1": "mat-tich-phan-1",
 "4607_2": "mat-tich-phan-2",
 "4607_3": "mat-tich-phan-3",
 "4607_4": "mat-tich-phan-4",
 "4607_5": "mat-tich-phan-5",
 "4607_6": "mat-tich-phan-6",
+"18165_1": "nhat-ky-ma-ca-rong-phan-1",
+"18165_2": "nhat-ky-ma-ca-rong-phan-2",
+"18165_3": "nhat-ky-ma-ca-rong-phan-3",
+"18165_4": "nhat-ky-ma-ca-rong-phan-4",
+"18165_5": "nhat-ky-ma-ca-rong-phan-5",
+"18165_6": "nhat-ky-ma-ca-rong-phan-6",
+"18165_7": "nhat-ky-ma-ca-rong-phan-7",
+"18165_8": "nhat-ky-ma-ca-rong-phan-8",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
