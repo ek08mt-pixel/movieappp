@@ -191,47 +191,38 @@ final class NguonCService {
         guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
         do {
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let movie = json["movie"] as? [String: Any] {
+                
+                var embedURL: URL?
+                
                 if let s = season, let e = episode {
                     if let episodes = movie["episodes"] as? [[String: Any]] {
                         for server in episodes {
                             if let items = server["items"] as? [[String: Any]] {
                                 for item in items {
-                                    if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed), (name.lowercased() == "full" || Int(name) == e) {
-                                        // Extract m3u8 from embed
-                                        Task {
-                                            do {
-                                                let streamURL = try await NguonCExtractor.extractStreamURL(from: embedURL)
-                                                completion(.success(streamURL))
-                                            } catch {
-                                                // Fallback: dùng WebView extractor
-                                                let extractor = StreamExtractorWebView()
-                                                extractor.extract(from: embedURL) { url in
-                                                    if let url = url {
-                                                        completion(.success(url))
-                                                    } else {
-                                                        completion(.failure(StreamServiceError.noStreamURL))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        return
+                                    if let name = item["name"] as? String, let embed = item["embed"] as? String, (name.lowercased() == "full" || Int(name) == e) {
+                                        embedURL = URL(string: embed)
+                                        break
                                     }
                                 }
                             }
                         }
                     }
-                    completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
                 } else {
-                    if let embed = movie["embed"] as? String, let embedURL = URL(string: embed) {
-                        Task {
-                            do {
-                                let streamURL = try await NguonCExtractor.extractStreamURL(from: embedURL)
-                                completion(.success(streamURL))
-                            } catch {
-                                completion(.failure(StreamServiceError.noStreamURL))
-                            }
+                    if let embed = movie["embed"] as? String { embedURL = URL(string: embed) }
+                }
+                
+                guard let embed = embedURL else { completion(.failure(StreamServiceError.noStreamURL)); return }
+                
+                // Dùng WebView extractor (ổn định hơn)
+                DispatchQueue.main.async {
+                    let extractor = StreamExtractorWebView()
+                    extractor.extract(from: embed) { streamURL in
+                        if let url = streamURL {
+                            completion(.success(url))
+                        } else {
+                            completion(.success(embed)) // Fallback: trả embed URL
                         }
-                    } else { completion(.failure(StreamServiceError.noStreamURL)) }
+                    }
                 }
             } else { completion(.failure(StreamServiceError.noData)) }
         } catch { completion(.failure(error)) }
