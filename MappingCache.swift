@@ -185,31 +185,58 @@ final class NguonCService {
     }
     
     private func fetchDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let url = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let movie = json["movie"] as? [String: Any] {
-                    if let s = season, let e = episode {
-                        if let episodes = movie["episodes"] as? [[String: Any]] {
-                            for server in episodes {
-                                if let items = server["items"] as? [[String: Any]] {
-                                    for item in items {
-                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed), (name.lowercased() == "full" || Int(name) == e) { completion(.success(embedURL)); return }
+    guard let url = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
+    URLSession.shared.dataTask(with: url) { data, _, error in
+        if let error = error { completion(.failure(error)); return }
+        guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let movie = json["movie"] as? [String: Any] {
+                if let s = season, let e = episode {
+                    if let episodes = movie["episodes"] as? [[String: Any]] {
+                        for server in episodes {
+                            if let items = server["items"] as? [[String: Any]] {
+                                for item in items {
+                                    if let name = item["name"] as? String, let embed = item["embed"] as? String, let embedURL = URL(string: embed), (name.lowercased() == "full" || Int(name) == e) {
+                                        // Extract m3u8 from embed
+                                        Task {
+                                            do {
+                                                let streamURL = try await NguonCExtractor.extractStreamURL(from: embedURL)
+                                                completion(.success(streamURL))
+                                            } catch {
+                                                // Fallback: dùng WebView extractor
+                                                let extractor = StreamExtractorWebView()
+                                                extractor.extract(from: embedURL) { url in
+                                                    if let url = url {
+                                                        completion(.success(url))
+                                                    } else {
+                                                        completion(.failure(StreamServiceError.noStreamURL))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        return
                                     }
                                 }
                             }
                         }
-                        completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
-                    } else {
-                        if let embed = movie["embed"] as? String, let embedURL = URL(string: embed) { completion(.success(embedURL)) }
-                        else { completion(.failure(StreamServiceError.noStreamURL)) }
                     }
-                } else { completion(.failure(StreamServiceError.noData)) }
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
+                    completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
+                } else {
+                    if let embed = movie["embed"] as? String, let embedURL = URL(string: embed) {
+                        Task {
+                            do {
+                                let streamURL = try await NguonCExtractor.extractStreamURL(from: embedURL)
+                                completion(.success(streamURL))
+                            } catch {
+                                completion(.failure(StreamServiceError.noStreamURL))
+                            }
+                        }
+                    } else { completion(.failure(StreamServiceError.noStreamURL)) }
+                }
+            } else { completion(.failure(StreamServiceError.noData)) }
+        } catch { completion(.failure(error)) }
+    }.resume()
+}
     
     private func searchFilms(keyword: String, completion: @escaping (Result<[NguonCFilm], Error>) -> Void) {
         guard let query = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseSearchURL)?keyword=\(query)") else { completion(.failure(StreamServiceError.invalidURL)); return }
