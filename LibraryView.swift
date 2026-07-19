@@ -34,7 +34,7 @@ struct LibraryView: View {
                     .padding(.horizontal, 20).padding(.top, 8)
                     
                     
-                    } else if currentMovies.isEmpty {
+                    if currentMovies.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: emptyIcon).font(.system(size: 50)).foregroundColor(.gray)
                             Text(emptyText).foregroundColor(.gray)
@@ -67,12 +67,6 @@ struct LibraryView: View {
             .fullScreenCover(item: $playMovie) { movie in
                 let p = appState.watchProgressList.first { $0.movieId == movie.id }
                 MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode, posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0).environmentObject(appState)
-            }
-            .fullScreenCover(item: $playDownloadedMovie) { movie in
-                if let url = movie.localPlayURL {
-                    DownloadedPlayerView(url: url, title: movie.title)
-                }
-            }
         }
     }
     
