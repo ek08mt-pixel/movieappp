@@ -4,14 +4,26 @@ import WebKit
 struct NguonCPlayerView: View {
     let embedURL: URL
     let episodeName: String
+    var servers: [(String, URL)] = []
     @Environment(\.dismiss) var dismiss
     @State private var isLoading = true
+    @State private var currentURL: URL
+    @State private var showServerPicker = false
+    @State private var currentServerName = ""
+    
+    init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
+        self.embedURL = embedURL
+        self.episodeName = episodeName
+        self.servers = servers
+        _currentURL = State(initialValue: embedURL)
+        _currentServerName = State(initialValue: servers.first?.0 ?? "")
+    }
     
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            NguonCWebView(url: embedURL)
+            NguonCWebView(url: currentURL)
                 .ignoresSafeArea()
             
             if isLoading {
@@ -24,36 +36,57 @@ struct NguonCPlayerView: View {
             
             VStack {
                 HStack {
-                    Button {
-                        dismiss()
-                    } label: {
+                    Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                             .padding(12)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial.opacity(0.4))
-                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
-                            )
+                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4))
+                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
                     }
                     Spacer()
-                    Text(episodeName)
-                        .font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
+                    Text(episodeName).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
                     Spacer()
-                    Spacer().frame(width: 44)
+                    if !servers.isEmpty {
+                        Button { showServerPicker = true } label: {
+                            Image(systemName: "list.bullet").font(.system(size: 16)).foregroundColor(.white).padding(8)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        }
+                    } else {
+                        Spacer().frame(width: 44)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 50)
+                .padding(.horizontal, 16).padding(.top, 50)
                 Spacer()
+            }
+            
+            if showServerPicker {
+                Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showServerPicker = false }
+                VStack(spacing: 10) {
+                    Text("Chọn server").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                    ForEach(servers, id: \.0) { name, url in
+                        Button {
+                            currentURL = url
+                            currentServerName = name
+                            showServerPicker = false
+                            isLoading = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { isLoading = false }
+                        } label: {
+                            Text(name).font(.system(size: 13))
+                                .foregroundColor(currentServerName == name ? .black : .white)
+                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(RoundedRectangle(cornerRadius: 8)
+                                    .fill(currentServerName == name ? Color.white : Color.white.opacity(0.08)))
+                        }
+                    }
+                }
+                .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5))
+                .frame(width: 240)
             }
         }
         .statusBarHidden()
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                isLoading = false
-            }
-        }
+        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { isLoading = false } }
     }
 }
 
@@ -69,9 +102,7 @@ struct NguonCWebView: UIViewRepresentable {
         pref.allowsContentJavaScript = true
         config.defaultWebpagePreferences = pref
         
-        // JS nhẹ: chỉ tự động play, không ẩn gì cả
-        let script = WKUserScript(
-            source: """
+        let script = WKUserScript(source: """
             setTimeout(function() {
                 var video = document.querySelector('video');
                 if (video) {
@@ -81,10 +112,7 @@ struct NguonCWebView: UIViewRepresentable {
                     video.play();
                 }
             }, 1500);
-            """,
-            injectionTime: .atDocumentEnd,
-            forMainFrameOnly: false
-        )
+            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
         
         let wv = WKWebView(frame: .zero, configuration: config)
@@ -97,7 +125,6 @@ struct NguonCWebView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
-    
     func makeCoordinator() -> Coordinator { Coordinator() }
     
     class Coordinator: NSObject, WKNavigationDelegate {
@@ -105,7 +132,6 @@ struct NguonCWebView: UIViewRepresentable {
             if navigationAction.targetFrame == nil { decisionHandler(.cancel); return }
             decisionHandler(.allow)
         }
-        
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("""
                 var video = document.querySelector('video');
