@@ -27,6 +27,7 @@ final class MappingCache {
         23868: "doraemon-tuyen-tap-moi-nhat",
         14091: "tham-tu-lung-danh-conan",
         46261: "hoi-phap-su-phan-1",
+        80611: "linh-hon-bac-phan-1",
     ]
     
     static let directSlugs: [String: String] = [
@@ -415,6 +416,16 @@ final class PhimAPIService {
     case 2: effectiveEp = 48 + ep
     case 3: effectiveEp = 96 + ep
     case 4: effectiveEp = 150 + ep
+    default: effectiveEp = ep
+    }
+}
+    if tmdbID == 80611 {
+    switch targetSeason {
+    case 1: effectiveEp = ep
+    case 2: effectiveEp = 49 + ep
+    case 3: effectiveEp = 99 + ep
+    case 4: effectiveEp = 150 + ep
+    case 5: effectiveEp = 201 + ep
     default: effectiveEp = ep
     }
 }
