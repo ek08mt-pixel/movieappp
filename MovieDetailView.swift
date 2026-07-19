@@ -205,17 +205,7 @@ struct MovieDetailView: View {
                                                                         .font(.system(size: 18))
                                                                 }
                                                             }
-                                                            
-                                                            EpisodeDownloadButton(
-                                                                movieId: movie.id,
-                                                                title: movie.title,
-                                                                posterPath: movie.posterPath,
-                                                                mediaType: movie.mediaType,
-                                                                season: ep.seasonNumber,
-                                                                episode: ep.episodeNumber,
-                                                                episodeName: ep.name
-                                                            )
-                                                        }
+                                                        
                                                         .padding(.vertical, 6)
                                                     }
                                                 }
