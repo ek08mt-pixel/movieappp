@@ -113,7 +113,7 @@ struct MoviePlayerView: View {
                     }
                 )
             
-           if (showVolumeSlider || showBrightnessSlider) && showControls {
+           if showVolumeSlider || showBrightnessSlider {
     VStack {
         Capsule()
             .fill(.ultraThinMaterial.opacity(0.5))
@@ -139,6 +139,7 @@ struct MoviePlayerView: View {
                 }
                 .padding(.horizontal, 10)
             )
+            .padding(.top, 90)
         Spacer()
     }
 }
