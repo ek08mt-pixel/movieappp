@@ -26,6 +26,7 @@ final class MappingCache {
         37854: "dao-hai-tac",
         23868: "doraemon-tuyen-tap-moi-nhat",
         14091: "tham-tu-lung-danh-conan",
+        46261: "hoi-phap-su-phan-1",
     ]
     
     static let directSlugs: [String: String] = [
@@ -444,18 +445,14 @@ final class PhimAPIService {
                 if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
                     effectiveEp = ep
                     if tmdbID == 46261 {
-                        switch targetSeason {
-                        case 1: effectiveEp = ep
-                        case 2: effectiveEp = 48 + ep
-                        case 3: effectiveEp = 96 + ep
-                        case 4: effectiveEp = 150 + ep
-                        case 5: effectiveEp = 175 + ep
-                        case 6: effectiveEp = 226 + ep
-                        case 7: effectiveEp = 265 + ep
-                        case 8: effectiveEp = 277 + ep
-                        default: effectiveEp = ep
-                        }
-                    }
+    switch targetSeason {
+    case 1: effectiveEp = ep
+    case 2: effectiveEp = 48 + ep
+    case 3: effectiveEp = 96 + ep
+    case 4: effectiveEp = 150 + ep
+    default: effectiveEp = ep
+    }
+}
                 } else {
                     effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep
                 }
