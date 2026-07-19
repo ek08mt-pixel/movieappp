@@ -90,27 +90,19 @@ struct MoviePlayerView: View {
     let dy = -v.translation.height / 2
     
     if lx < screenW / 2 {
-        let newBrightness = min(max(brightness + dy / 400, 0.01), 1.0)
-        if abs(newBrightness - brightness) > 0.005 {
-            brightness = newBrightness
-            UIScreen.main.brightness = brightness
-            showBrightnessSlider = true
-            showVolumeSlider = false
-            resetBrightnessTimer()
-            let impact = UIImpactFeedbackGenerator(style: .light)
-            impact.impactOccurred()
-        }
+        let newBrightness = min(max(brightness + dy / 350, 0.01), 1.0)
+        brightness = newBrightness
+        UIScreen.main.brightness = brightness
+        showBrightnessSlider = true
+        showVolumeSlider = false
+        resetBrightnessTimer()
     } else {
-        let newVolume = min(max(volume + Float(dy / 400), 0), 1.0)
-        if abs(newVolume - volume) > 0.005 {
-            volume = newVolume
-            player.volume = volume
-            showVolumeSlider = true
-            showBrightnessSlider = false
-            resetVolumeTimer()
-            let impact = UIImpactFeedbackGenerator(style: .light)
-            impact.impactOccurred()
-        }
+        let newVolume = min(max(volume + Float(dy / 350), 0), 1.0)
+        volume = newVolume
+        player.volume = volume
+        showVolumeSlider = true
+        showBrightnessSlider = false
+        resetVolumeTimer()
     }
 })
                 .overlay(
@@ -123,30 +115,30 @@ struct MoviePlayerView: View {
             
            if (showVolumeSlider || showBrightnessSlider) && showControls {
     VStack {
-        HStack(spacing: 4) {
-            if showBrightnessSlider {
-                Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
-                    .font(.system(size: 11)).foregroundColor(.yellow)
-                // Gạch dọc chạy lên/xuống
-                ZStack(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.1)).frame(width: 3, height: 24)
-                    RoundedRectangle(cornerRadius: 2).fill(.yellow.opacity(0.7)).frame(width: 3, height: max(2, 24 * brightness))
+        Capsule()
+            .fill(.ultraThinMaterial.opacity(0.5))
+            .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.4))
+            .frame(width: 120, height: 32)
+            .overlay(
+                HStack(spacing: 6) {
+                    if showBrightnessSlider {
+                        Image(systemName: "sun.max.fill").font(.system(size: 11)).foregroundColor(.yellow)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(.yellow.opacity(0.6))
+                            .frame(width: 3, height: max(2, 22 * brightness))
+                            .animation(.easeInOut(duration: 0.15), value: brightness)
+                    } else if showVolumeSlider {
+                        Image(systemName: volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill").font(.system(size: 11)).foregroundColor(.white)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(.white.opacity(0.6))
+                            .frame(width: 3, height: max(2, 22 * CGFloat(volume)))
+                            .animation(.easeInOut(duration: 0.15), value: volume)
+                    }
+                    Text(showBrightnessSlider ? "\(Int(brightness * 100))%" : "\(Int(volume * 100))%")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(.white)
                 }
-            } else if showVolumeSlider {
-                Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
-                    .font(.system(size: 11)).foregroundColor(.white)
-                ZStack(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.1)).frame(width: 3, height: 24)
-                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.6)).frame(width: 3, height: max(2, 24 * CGFloat(volume)))
-                }
-            }
-            Text(showBrightnessSlider ? "\(Int(brightness * 100))" : "\(Int(volume * 100))")
-                .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(.white)
-        }
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .background(Capsule().fill(.ultraThinMaterial.opacity(0.5)).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.4)))
-        .padding(.top, 60)
+                .padding(.horizontal, 10)
+            )
         Spacer()
     }
 }
