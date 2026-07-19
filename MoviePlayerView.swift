@@ -84,7 +84,31 @@ struct MoviePlayerView: View {
                     forcePortraitWithDelay()
                 }
                 .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else { toggleControls() } }
-                .gesture(DragGesture(minimumDistance: 0).onChanged { v in let lx = v.startLocation.x; let w = UIScreen.main.bounds.width; let dy = -v.translation.height; let dx = abs(v.translation.width); let vd = abs(v.translation.height); if vd > dx * 1.5 { if lx < w / 2 { brightness = min(max(brightness + dy / 500, 0.01), 1.0); UIScreen.main.brightness = brightness; showBrightnessSlider = true; resetBrightnessTimer() } else { volume = min(max(volume + Float(dy / 500), 0), 1.0); player.volume = volume; showVolumeSlider = true; resetVolumeTimer() } } })
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+    let lx = v.startLocation.x
+    let dy = -v.translation.height / 3
+    if lx < UIScreen.main.bounds.width / 2 {
+        let newBrightness = min(max(brightness + dy / 400, 0.01), 1.0)
+        if abs(newBrightness - brightness) > 0.01 {
+            brightness = newBrightness
+            UIScreen.main.brightness = brightness
+            showBrightnessSlider = true
+            resetBrightnessTimer()
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }
+    } else {
+        let newVolume = min(max(volume + Float(dy / 400), 0), 1.0)
+        if abs(newVolume - volume) > 0.01 {
+            volume = newVolume
+            player.volume = volume
+            showVolumeSlider = true
+            resetVolumeTimer()
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }
+    }
+})
                 .overlay(
                     HStack {
                         Color.clear.frame(width: UIScreen.main.bounds.width * 0.25).contentShape(Rectangle()).onTapGesture(count: 2) { seek(-10) }
@@ -93,33 +117,55 @@ struct MoviePlayerView: View {
                     }
                 )
             
-            if showVolumeSlider && showControls {
-                HStack { Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill")).font(.system(size: 16)).foregroundColor(.white)
-                        ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)).frame(width: 36, height: 140).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                            RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.6)).frame(width: 36, height: max(8, 140 * CGFloat(volume)))
-                            VStack(spacing: 6) { ForEach(0..<8) { _ in RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.2)).frame(width: 20, height: 2) } }.frame(width: 36, height: 140)
-                        }.clipShape(RoundedRectangle(cornerRadius: 12))
-                        Text("\(Int(volume * 100))%").font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.6))
-                    }.padding(.trailing, 12).padding(.vertical, 50)
+           if showVolumeSlider || showBrightnessSlider {
+    VStack {
+        HStack(spacing: 0) {
+            if showBrightnessSlider {
+                HStack(spacing: 6) {
+                    Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.yellow)
+                    Text("\(Int(brightness * 100))%")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white)
+                }
+                .padding(.leading, 10)
+            }
+            Spacer()
+            if showVolumeSlider {
+                HStack(spacing: 6) {
+                    Text("\(Int(volume * 100))%")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white)
+                    Image(systemName: volume == 0 ? "speaker.slash.fill" : (volume > 0.5 ? "speaker.wave.3.fill" : "speaker.wave.1.fill"))
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                }
+                .padding(.trailing, 10)
+            }
+        }
+        .frame(width: 200, height: 36)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(.ultraThinMaterial.opacity(0.6))
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
+                // Gạch ngang
+                VStack(spacing: 3) {
+                    ForEach(0..<5) { _ in
+                        RoundedRectangle(cornerRadius: 0.5)
+                            .fill(.white.opacity(0.15))
+                            .frame(width: 16, height: 1.5)
+                    }
                 }
             }
-            if showBrightnessSlider && showControls {
-                HStack {
-                    VStack(spacing: 8) {
-                        Image(systemName: brightness > 0.5 ? "sun.max.fill" : "sun.min.fill").font(.system(size: 16)).foregroundColor(.white)
-                        ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3)).frame(width: 36, height: 140).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                            RoundedRectangle(cornerRadius: 12).fill(.yellow.opacity(0.6)).frame(width: 36, height: max(8, 140 * brightness))
-                            VStack(spacing: 6) { ForEach(0..<8) { _ in RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.2)).frame(width: 20, height: 2) } }.frame(width: 36, height: 140)
-                        }.clipShape(RoundedRectangle(cornerRadius: 12))
-                        Text("\(Int(brightness * 100))%").font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.6))
-                    }.padding(.leading, 12).padding(.vertical, 50)
-                    Spacer()
-                }
-            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .padding(.top, 60)
+        Spacer()
+    }
+}
             
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
