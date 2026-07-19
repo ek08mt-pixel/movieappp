@@ -401,7 +401,7 @@ final class PhimAPIService {
                 var totalEpsInFirstServer = 0
                 if let firstServer = episodes.first, let serverData = firstServer["server_data"] as? [[String: Any]] { totalEpsInFirstServer = serverData.count }
                 
-                let effectiveEp: Int
+                var effectiveEp: Int
                 if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
                     effectiveEp = ep
                     if tmdbID == 46261 {
