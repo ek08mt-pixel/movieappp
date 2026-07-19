@@ -223,41 +223,6 @@ final class NguonCService {
     }
 }
 
-// MARK: - Stravo Service
-final class StravoService {
-    static let shared = StravoService()
-    private let cache = MappingCache.shared
-    private init() {}
-    
-    func fetchStream(imdbID: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let urlString: String
-        if let s = season, let e = episode {
-            urlString = "https://stravo-clfk.onrender.com/auto/stream/series/\(imdbID):\(s):\(e).json"
-            if let cached = cache.getStravoURL(imdbID: imdbID, season: s, episode: e), let url = URL(string: cached) { completion(.success(url)); return }
-        } else { urlString = "https://stravo-clfk.onrender.com/auto/stream/movie/\(imdbID).json" }
-        guard let url = URL(string: urlString) else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let detail = json["detail"] as? String { completion(.failure(StreamServiceError.notFound(detail: detail))); return }
-                    if let streams = json["streams"] as? [[String: Any]], let streamURLString = streams.first?["url"] as? String, let streamURL = URL(string: streamURLString) {
-                        if let s = season, let e = episode { self.cache.setStravoURL(imdbID: imdbID, season: s, episode: e, url: streamURLString) }
-                        completion(.success(streamURL)); return
-                    }
-                    if let streamURLString = json["url"] as? String, let streamURL = URL(string: streamURLString) {
-                        if let s = season, let e = episode { self.cache.setStravoURL(imdbID: imdbID, season: s, episode: e, url: streamURLString) }
-                        completion(.success(streamURL)); return
-                    }
-                }
-                completion(.failure(StreamServiceError.noStreamURL))
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
-}
-
 // MARK: - VSMOV Service
 final class VSMOVService {
     static let shared = VSMOVService()
@@ -497,60 +462,6 @@ final class PhimAPIService {
         if let exactName = searchItems.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         if isSeries { return searchItems.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return searchItems.first(where: { isSingleType($0["type"] as? String ?? "") })
-    }
-}
-
-// MARK: - Sofaflix Service (Emew 2)
-final class SofaflixService {
-    static let shared = SofaflixService()
-    private let cache = MappingCache.shared
-    private let baseURL = "https://sofaflix.baby"
-    private init() {}
-    
-    func fetchStream(imdbID: String, tmdbID: Int, title: String, mediaType: String?, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let s = season ?? 1; let ep = episode ?? 1
-        let isSeries = (mediaType == "tv") || (season != nil)
-        let type = isSeries ? "tv" : "movie"
-        if let cached = cache.getSofaflixURL(tmdbID: tmdbID, season: s, episode: ep), let url = URL(string: cached) { completion(.success(url)); return }
-        guard let tmdbURL = URL(string: "\(baseURL)/api/tmdb/\(type)/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? Bool == true {
-                    let phimType = (json["movie"] as? [String: Any])?["type"] as? String ?? "single"
-                    if let streamURL = self.extractStreamURL(from: json, phimType: phimType, season: season, episode: episode) {
-                        self.cache.setSofaflixURL(tmdbID: tmdbID, season: s, episode: ep, url: streamURL.absoluteString)
-                        completion(.success(streamURL)); return
-                    }
-                    completion(.failure(StreamServiceError.noStreamURL))
-                } else { completion(.failure(StreamServiceError.noData)) }
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
-    
-    private func extractStreamURL(from json: [String: Any], phimType: String, season: Int?, episode: Int?) -> URL? {
-        if isSeriesType(phimType) {
-            let targetSeason = season ?? 1; let ep = episode ?? 1
-            if let episodes = json["episodes"] as? [[String: Any]] {
-                for server in episodes {
-                    if let serverData = server["server_data"] as? [[String: Any]] {
-                        for epItem in serverData {
-                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: ep) { return streamURL }
-                        }
-                    }
-                }
-            }
-        } else {
-            if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return streamURL }
-            let movie = json["movie"] as? [String: Any]
-            if let m = movie {
-                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return streamURL }
-                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return streamURL }
-            }
-        }
-        return nil
     }
 }
 
