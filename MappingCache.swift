@@ -664,4 +664,3 @@ final class OphimService {
             } catch { completion(.failure(error)) }
         }.resume()
     }
-}
