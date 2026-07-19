@@ -10,7 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3" }
+enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3", ophim="Emew 4" }
 
 struct CastDevice: Identifiable {
     let id = UUID(); let name: String; let icon: String; let type: CastDeviceType
