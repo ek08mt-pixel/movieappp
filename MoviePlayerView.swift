@@ -139,7 +139,7 @@ struct MoviePlayerView: View {
                 }
                 .padding(.horizontal, 10)
             )
-            .padding(.top, 90)
+            .padding(.top, 75)
         Spacer()
     }
 }
