@@ -33,6 +33,7 @@ final class MappingCache {
         "111110_1": "dao-hai-tac-live-action-phan-1",
         "111110_2": "dao-hai-tac-live-action-phan-2",
         "222624_1": "gintama-thay-ginpachi-o-lop-3z",
+        "46261_1": "hoi-phap-su",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
