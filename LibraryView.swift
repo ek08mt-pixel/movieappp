@@ -9,14 +9,12 @@ struct LibraryView: View {
     enum LibraryTab: String, CaseIterable {
         case watched = "Vừa xem"
         case saved = "Đã lưu"
-        case downloaded = "Đã tải"
     }
     
     var currentMovies: [Movie] {
         switch selectedTab {
         case .saved: return appState.favorites
         case .watched: return appState.watchHistory
-        case .downloaded: return []
         }
     }
     
@@ -82,14 +80,12 @@ struct LibraryView: View {
         switch selectedTab {
         case .watched: return "eye.slash"
         case .saved: return "bookmark.slash"
-        case .downloaded: return "arrow.down.circle.slash"
         }
     }
     var emptyText: String {
         switch selectedTab {
         case .watched: return "Chưa có phim đã xem"
         case .saved: return "Chưa có phim đã lưu"
-        case .downloaded: return "Chưa có phim đã tải"
         }
     }
     
