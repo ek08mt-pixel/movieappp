@@ -103,7 +103,7 @@ struct ExploreView: View {
         }
         .task { loadData() }
     }
-    
+}
     func loadData() {
         Task {
             staffMovies = (try? await APIService.shared.topRated())?.filter { !($0.adult ?? false) } ?? []
