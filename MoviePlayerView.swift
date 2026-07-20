@@ -162,9 +162,28 @@ struct MoviePlayerView: View {
                 
                 VStack { Spacer()
                     VStack(spacing: 2) {
-                        ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.15)).frame(height: 5); Capsule().fill(.white.opacity(0.8)).frame(width: max(5, (UIScreen.main.bounds.width - UIScreen.main.bounds.width * 0.3) * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5) }.frame(height: 20).contentShape(Rectangle()).highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in let w = UIScreen.main.bounds.width - UIScreen.main.bounds.width * 0.3; let r = min(max(v.location.x / w, 0), 1); currentTime = r * duration; isSeeking = true; seekPreviewTime = currentTime; showSeekPreview = true; generateSeekPreview(at: currentTime) }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false; showSeekPreview = false })
-                        HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
-                    }.padding(.horizontal, UIScreen.main.bounds.width * 0.15)
+    GeometryReader { geo in
+        ZStack(alignment: .leading) {
+            Capsule().fill(.white.opacity(0.15)).frame(height: 5)
+            Capsule().fill(.white.opacity(0.8)).frame(width: max(5, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5)
+        }
+        .frame(height: 20)
+        .contentShape(Rectangle())
+        .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in
+            let r = min(max(v.location.x / geo.size.width, 0), 1)
+            currentTime = r * duration
+            isSeeking = true
+            seekPreviewTime = currentTime
+            showSeekPreview = true
+        }.onEnded { _ in
+            player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600))
+            isSeeking = false
+            showSeekPreview = false
+        })
+    }
+    .frame(height: 20)
+    HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
+}.padding(.horizontal, UIScreen.main.bounds.width * 0.15)
                     HStack(spacing: 0) {
                         HStack(spacing: 12) {
                             Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
