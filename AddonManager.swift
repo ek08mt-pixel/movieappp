@@ -186,19 +186,31 @@ class AddonManager: ObservableObject {
     // Lấy stream từ addon
     func fetchStream(from addon: SavedAddon, metaId: String, mediaType: String? = nil) async throws -> [AddonStream] {
     let type = (mediaType == "tv") ? "series" : "movie"
-    let urlString = "\(addon.url)stream/\(type)/\(metaId).json"
     
-    guard let url = URL(string: urlString) else {
-        throw NSError(domain: "", code: -1)
+    // Thử nhiều format ID
+    let idFormats = [
+        metaId,                                          // tt123456 (IMDB)
+        metaId.replacingOccurrences(of: "tt", with: ""), // 123456
+        "kitsu:\(metaId)"                                // kitsu format
+    ]
+    
+    for idFormat in idFormats {
+        let urlString = "\(addon.url)stream/\(type)/\(idFormat).json"
+        guard let url = URL(string: urlString) else { continue }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { continue }
+            let streamResponse = try JSONDecoder().decode(AddonStreamResponse.self, from: data)
+            if !streamResponse.streams.isEmpty {
+                return streamResponse.streams
+            }
+        } catch {
+            continue
+        }
     }
     
-    let (data, response) = try await URLSession.shared.data(from: url)
-    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-        throw NSError(domain: "", code: -4, userInfo: [NSLocalizedDescriptionKey: "Addon không có stream cho phim này"])
-    }
-    
-    let streamResponse = try JSONDecoder().decode(AddonStreamResponse.self, from: data)
-    return streamResponse.streams
+    throw NSError(domain: "", code: -4, userInfo: [NSLocalizedDescriptionKey: "Addon không có stream cho phim này"])
 }
     
     func fetchBestStream(metaId: String, mediaType: String? = nil) async throws -> URL? {
@@ -208,7 +220,7 @@ class AddonManager: ObservableObject {
         for addon in enabledAddons {
             group.addTask {
                 guard let streams = try? await self.fetchStream(from: addon, metaId: metaId, mediaType: mediaType),
-                      let bestStream = streams.first(where: { $0.url != nil && ($0.behaviorHints?.notWebReady != true) }),
+                      let bestStream = streams.first(where: { $0.url != nil && !($0.url?.hasSuffix(".m3u8") == false && $0.url?.contains(".mkv") == true) }),
                       let urlString = bestStream.url,
                       let url = URL(string: urlString) else {
                     return nil
@@ -224,7 +236,7 @@ class AddonManager: ObservableObject {
             }
         }
         
-        throw StreamError.noStreamAvailable
+        return nil
     }
 }
     
