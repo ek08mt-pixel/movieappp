@@ -183,8 +183,7 @@ class AddonManager: ObservableObject {
         return response.metas
     }
     
-    // Lấy stream từ addon
-    func fetchStream(from addon: SavedAddon, metaId: String, mediaType: String? = nil) async throws -> [AddonStream] {
+    func fetchStream(from addon: SavedAddon, metaId: String, title: String, mediaType: String? = nil) async throws -> [AddonStream] {
     let type = (mediaType == "tv") ? "series" : "movie"
     let urlString = "\(addon.url)stream/\(type)/\(metaId).json"
     
@@ -193,19 +192,11 @@ class AddonManager: ObservableObject {
     }
     
     var request = URLRequest(url: url)
-    request.timeoutInterval = 15
+    request.timeoutInterval = 10
     
     let (data, response) = try await URLSession.shared.data(for: request)
-    guard let httpResponse = response as? HTTPURLResponse else {
-        throw NSError(domain: "", code: -4)
-    }
-    
-    // Torrentio trả về 500 nếu không có stream, không phải lỗi thật
-    if httpResponse.statusCode == 500 {
-        throw NSError(domain: "", code: -4)
-    }
-    
-    guard httpResponse.statusCode == 200 else {
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
         throw NSError(domain: "", code: -4)
     }
     
@@ -213,40 +204,43 @@ class AddonManager: ObservableObject {
     return streamResponse.streams
 }
 
-func fetchBestStream(metaId: String, mediaType: String? = nil) async throws -> URL? {
+func resolveStream(from addon: SavedAddon, metaId: String, title: String, mediaType: String? = nil) async throws -> URL? {
+    let streams = try await fetchStream(from: addon, metaId: metaId, title: title, mediaType: mediaType)
+    
+    for stream in streams {
+        guard let urlString = stream.url, !urlString.isEmpty else { continue }
+        
+        // Direct HTTP stream
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            if urlString.contains("info_hash") || urlString.contains("bt:") { continue }
+            return URL(string: urlString)
+        }
+        
+        // Magnet link → convert qua WebtorIO
+        if urlString.hasPrefix("magnet:") {
+            do {
+                let extractor = WebtorIOExtractor()
+                return try await extractor.extractStream(from: urlString)
+            } catch {
+                continue
+            }
+        }
+    }
+    
+    return nil
+}
+
+func fetchBestStream(metaId: String, title: String, mediaType: String? = nil) async throws -> URL? {
     let enabledAddons = addons.filter { $0.enabled }
     
-    return try await withThrowingTaskGroup(of: URL?.self) { group in
-        for addon in enabledAddons {
-            group.addTask {
-                do {
-                    let streams = try await self.fetchStream(from: addon, metaId: metaId, mediaType: mediaType)
-                    // Tìm stream đầu tiên có URL hợp lệ
-                    if let bestStream = streams.first(where: { s in
-                        guard let url = s.url, !url.isEmpty else { return false }
-                        return url.hasPrefix("http://") || url.hasPrefix("https://") || url.hasPrefix("magnet:")
-                    }),
-                    let urlString = bestStream.url {
-                        // Nếu là magnet link thì bỏ qua
-                        if urlString.hasPrefix("magnet:") { return nil }
-                        return URL(string: urlString)
-                    }
-                } catch {
-                    return nil
-                }
-                return nil
-            }
+    for addon in enabledAddons {
+        if let url = try? await resolveStream(from: addon, metaId: metaId, title: title, mediaType: mediaType) {
+            return url
         }
-        
-        for try await result in group {
-            if let url = result {
-                group.cancelAll()
-                return url
-            }
-        }
-        
-        return nil
     }
+    
+    return nil
+}
 }
     
     // Lấy tất cả catalog từ tất cả addon
