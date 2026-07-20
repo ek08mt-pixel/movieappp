@@ -4,7 +4,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       
@@ -15,7 +15,7 @@ jobs:
           echo "Files: $SWIFT_FILES"
           
           xcrun -sdk iphoneos swiftc \
-            -target arm64-apple-ios16.0 \
+            -target arm64-apple-ios26.0 \
             -O \
             -framework SwiftUI \
             -framework UIKit \
@@ -80,7 +80,7 @@ jobs:
               <string>UIInterfaceOrientationLandscapeLeft</string>
               <string>UIInterfaceOrientationLandscapeRight</string>
           </array>
-          <key>MinimumOSVersion</key><string>16.0</string>
+          <key>MinimumOSVersion</key><string>26.0</string>
           <key>NSAppTransportSecurity</key>
           <dict>
               <key>NSAllowsArbitraryLoads</key><true/>
