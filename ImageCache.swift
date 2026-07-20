@@ -5,7 +5,7 @@ class ImageCache {
     private var cache = NSCache<NSString, UIImage>()
     private var runningRequests: Set<String> = []
     private let lock = NSLock()
-    private let session: URLSession
+    let session: URLSession
     
     init() {
         cache.countLimit = 400
@@ -108,7 +108,7 @@ struct CachedAsyncImage: View {
         var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 5)
         request.setValue("image/jpeg,image/png,image/webp", forHTTPHeaderField: "Accept")
         
-        guard let (data, _) = try? await URLSession.shared.data(for: request),
+        guard let (data, _) = try? await ImageCache.shared.session.data(for: request),
               let img = UIImage(data: data) else { return nil }
         
         let resized = img.resized(to: targetSize)
