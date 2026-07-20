@@ -3,139 +3,140 @@ import SwiftUI
 // MARK: - MainTabView
 struct MainTabView: View {
     @State private var selectedTab = 0
-    @State private var searchText = ""
+    @State private var showSearch = false
     @State private var homeID = UUID()
     @State private var exploreID = UUID()
     @State private var watchTogetherID = UUID()
     @State private var libraryID = UUID()
     @State private var showWatchTogetherRoom = false
+    @State private var tabBarVisible = true
+    @State private var lastScrollOffset: CGFloat = 0
     @StateObject private var ostManager = OSTManager.shared
     @StateObject private var watchService = WatchTogetherService.shared
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeView()
-                    .id(homeID)
-                    .tabItem { Label("Home", systemImage: "house.fill") }
-                    .tag(0)
-                
-                ExploreView()
-                    .id(exploreID)
-                    .tabItem { Label("Explore", systemImage: "safari.fill") }
-                    .tag(1)
-                
-                WatchTogetherRoomView()
-                    .id(watchTogetherID)
-                    .tabItem { Label("Watch", systemImage: "person.3.fill") }
-                    .tag(2)
-                
-                LibraryView()
-                    .id(libraryID)
-                    .tabItem { Label("Library", systemImage: "rectangle.stack.fill") }
-                    .tag(3)
+            // Content
+            ZStack {
+                HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
+                ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
+                WatchTogetherRoomView().id(watchTogetherID).opacity(selectedTab == 2 ? 1 : 0)
+                LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
-            .tabBarMinimizeBehavior(.onScrollDown)
-            .tabViewBottomAccessory {
-                HStack {
-                    // MiniPlayer bên trái nếu đang phát OST
-                    if ostManager.isPlaying {
-                        miniPlayerCompact
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                    }
-                    
-                    Spacer()
-                    
-                    // Button Search bên phải
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(10)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                    }
-                    .sheet(isPresented: .constant(false)) {
-                        SearchView()
-                    }
+            
+            // MiniPlayer + TabBar
+            VStack(spacing: 0) {
+                // MiniPlayer OST
+                if ostManager.isPlaying && !showWatchTogetherRoom {
+                    MiniPlayerView()
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 4)
-            }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
-            .onSubmit(of: .search) {
-                // Mở SearchView với query
-            }
-            .onChange(of: selectedTab) { tab in
-                if tab == 0 { homeID = UUID() }
-                else if tab == 1 { exploreID = UUID() }
-                else if tab == 2 { watchTogetherID = UUID() }
-                else if tab == 3 { libraryID = UUID() }
+                
+                // Bottom Accessory (nhạc mini + search)
+                if !showWatchTogetherRoom {
+                    HStack(spacing: 12) {
+                        // Tab bar chính
+                        HStack(spacing: 0) {
+                            TabButton(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
+                                if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
+                            }
+                            TabButton(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
+                                if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
+                            }
+                            TabButton(icon: "person.3.fill", label: "Watch", isSelected: selectedTab == 2) {
+                                if selectedTab == 2 { watchTogetherID = UUID() } else { selectedTab = 2 }
+                            }
+                            TabButton(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
+                                if selectedTab == 3 { libraryID = UUID() } else { selectedTab = 3 }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial.opacity(0.6))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(.white.opacity(0.12), lineWidth: 0.5)
+                                )
+                                .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+                        )
+                        
+                        // Nút Search
+                        Button {
+                            showSearch = true
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(.white.opacity(0.8))
+                                .frame(width: 48, height: 48)
+                                .background(
+                                    Circle()
+                                        .fill(.ultraThinMaterial.opacity(0.6))
+                                        .overlay(
+                                            Circle()
+                                                .stroke(.white.opacity(0.12), lineWidth: 0.5)
+                                        )
+                                        .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .offset(y: tabBarVisible ? 0 : 120)
+                    .animation(.interpolatingSpring(stiffness: 300, damping: 25), value: tabBarVisible)
+                    .transition(.move(edge: .bottom))
+                }
             }
         }
+        .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
+        .animation(.spring(response: 0.35), value: ostManager.isPlaying)
+        .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
         .onChange(of: watchService.isInRoom) { inRoom in
             withAnimation { showWatchTogetherRoom = inRoom }
         }
     }
+}
+
+// MARK: - Tab Button (iOS 26 style)
+struct TabButton: View {
+    let icon: String
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isPressed = false
     
-    // MiniPlayer compact cho tabViewBottomAccessory
-    var miniPlayerCompact: some View {
+    var body: some View {
         Button {
-            ostManager.showOSTView = true
-        } label: {
-            HStack(spacing: 6) {
-                if let poster = ostManager.currentPoster, let url = URL(string: "https://image.tmdb.org/t/p/w200\(poster)") {
-                    CachedAsyncImage(url: url)
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 24, height: 36)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                } else {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.ultraThinMaterial.opacity(0.5))
-                        .frame(width: 24, height: 36)
-                        .overlay(Image(systemName: "music.note").font(.system(size: 8)).foregroundColor(.white.opacity(0.6)))
-                }
-                
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(ostManager.currentTrack)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    Text(ostManager.currentMovie)
-                        .font(.system(size: 8))
-                        .foregroundColor(.white.opacity(0.5))
-                        .lineLimit(1)
-                }
-                .frame(width: 80, alignment: .leading)
-                
-                Button {
-                    ostManager.togglePlayback?()
-                } label: {
-                    Image(systemName: ostManager.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white)
-                        .frame(width: 20, height: 20)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                }
-                
-                Button {
-                    withAnimation { ostManager.stopPlayback?() }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundColor(.white.opacity(0.5))
-                        .frame(width: 14, height: 14)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.2)))
-                }
+            withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = false }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.9)))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.5))
+            action()
+        } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    if isSelected {
+                        Capsule()
+                            .fill(.white.opacity(0.25))
+                            .frame(width: 52, height: 32)
+                    }
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
+                        .scaleEffect(isSelected ? 1.0 : 0.9)
+                }
+                Text(label)
+                    .font(.system(size: 10, weight: isSelected ? .medium : .regular))
+            }
+            .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+            .frame(width: 64)
         }
-        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.9 : 1.0)
+        .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
 }
