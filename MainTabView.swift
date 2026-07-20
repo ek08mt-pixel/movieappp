@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - MainTabView
+// MARK: - MainTabView với Liquid Animation
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
@@ -10,7 +10,6 @@ struct MainTabView: View {
     @State private var libraryID = UUID()
     @State private var showWatchTogetherRoom = false
     @State private var tabBarVisible = true
-    @State private var lastScrollOffset: CGFloat = 0
     @StateObject private var ostManager = OSTManager.shared
     @StateObject private var watchService = WatchTogetherService.shared
     
@@ -24,9 +23,9 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            // MiniPlayer + TabBar
+            // Bottom
             VStack(spacing: 0) {
-                // MiniPlayer OST
+                // MiniPlayer
                 if ostManager.isPlaying && !showWatchTogetherRoom {
                     MiniPlayerView()
                         .padding(.horizontal, 16)
@@ -34,66 +33,16 @@ struct MainTabView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
-                // Bottom Accessory (nhạc mini + search)
+                // Tab Bar
                 if !showWatchTogetherRoom {
-                    HStack(spacing: 12) {
-                        // Tab bar chính
-                        HStack(spacing: 0) {
-                            TabButton(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
-                                if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
-                            }
-                            TabButton(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
-                                if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
-                            }
-                            TabButton(icon: "person.3.fill", label: "Watch", isSelected: selectedTab == 2) {
-                                if selectedTab == 2 { watchTogetherID = UUID() } else { selectedTab = 2 }
-                            }
-                            TabButton(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
-                                if selectedTab == 3 { libraryID = UUID() } else { selectedTab = 3 }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 4)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial.opacity(0.6))
-                                .overlay(
-                                    Capsule()
-                                        .stroke(.white.opacity(0.12), lineWidth: 0.5)
-                                )
-                                .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
-                        )
-                        
-                        // Nút Search
-                        Button {
-                            showSearch = true
-                        } label: {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
-                                .frame(width: 48, height: 48)
-                                .background(
-                                    Circle()
-                                        .fill(.ultraThinMaterial.opacity(0.6))
-                                        .overlay(
-                                            Circle()
-                                                .stroke(.white.opacity(0.12), lineWidth: 0.5)
-                                        )
-                                        .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-                    .offset(y: tabBarVisible ? 0 : 120)
-                    .animation(.interpolatingSpring(stiffness: 300, damping: 25), value: tabBarVisible)
-                    .transition(.move(edge: .bottom))
+                    LiquidTabBar(selectedTab: $selectedTab)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
                 }
             }
         }
-        .ignoresSafeArea(.keyboard)
-        .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
         .animation(.spring(response: 0.35), value: ostManager.isPlaying)
+        .animation(.spring(response: 0.35), value: showWatchTogetherRoom)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
         .onChange(of: watchService.isInRoom) { inRoom in
@@ -102,44 +51,66 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Tab Button (iOS 26 style)
-struct TabButton: View {
-    let icon: String
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
-    @State private var isPressed = false
+// MARK: - Liquid Tab Bar
+struct LiquidTabBar: View {
+    @Binding var selectedTab: Int
+    @State private var animationProgress: CGFloat = 0
+    @State private var previousTab: Int = 0
+    
+    private let items: [(icon: String, label: String)] = [
+        ("house.fill", "Home"),
+        ("safari.fill", "Explore"),
+        ("person.3.fill", "Watch"),
+        ("rectangle.stack.fill", "Library")
+    ]
     
     var body: some View {
-        Button {
-            withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = false }
-            }
-            action()
-        } label: {
-            VStack(spacing: 3) {
-                ZStack {
-                    if isSelected {
-                        Capsule()
-                            .fill(.white.opacity(0.25))
-                            .frame(width: 52, height: 32)
+        GeometryReader { geometry in
+            let tabWidth = (geometry.size.width - 24) / CGFloat(items.count)
+            let circleSize: CGFloat = 44
+            let selectedX = tabWidth * CGFloat(selectedTab) + tabWidth / 2
+            
+            ZStack {
+                // Background
+                Capsule(style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                
+                // Liquid blob animation
+                Capsule(style: .continuous)
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 72, height: 40)
+                    .position(x: selectedX, y: 25)
+                    .animation(.interpolatingSpring(stiffness: 300, damping: 25), value: selectedTab)
+                
+                // Tab items
+                HStack(spacing: 0) {
+                    ForEach(0..<items.count, id: \.self) { index in
+                        Button {
+                            previousTab = selectedTab
+                            selectedTab = index
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: items[index].icon)
+                                    .font(.system(size: 18, weight: selectedTab == index ? .semibold : .regular))
+                                    .scaleEffect(selectedTab == index ? 1.0 : 0.85)
+                                Text(items[index].label)
+                                    .font(.system(size: 10, weight: selectedTab == index ? .medium : .regular))
+                                    .opacity(selectedTab == index ? 1 : 0.5)
+                            }
+                            .foregroundColor(.white)
+                            .frame(width: tabWidth)
+                        }
                     }
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
-                        .scaleEffect(isSelected ? 1.0 : 0.9)
                 }
-                Text(label)
-                    .font(.system(size: 10, weight: isSelected ? .medium : .regular))
+                .padding(.vertical, 8)
             }
-            .foregroundColor(isSelected ? .white : .white.opacity(0.45))
-            .frame(width: 64)
+            .frame(height: 60)
         }
-        .scaleEffect(isPressed ? 0.9 : 1.0)
-        .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .frame(height: 60)
     }
 }
+
 // MARK: - MiniPlayerView (OST)
 struct MiniPlayerView: View {
     @StateObject private var ostManager = OSTManager.shared
