@@ -16,35 +16,38 @@ class GoogleSignInService: NSObject, ASWebAuthenticationPresentationContextProvi
     }
     
     func signIn(completion: @escaping (GoogleUser?) -> Void) {
-        let scope = "email%20profile%20openid"
-        let authURL = "https://accounts.google.com/o/oauth2/v2/auth?client_id=\(clientID)&redirect_uri=\(redirectURI)&response_type=code&scope=\(scope)&access_type=offline&prompt=consent"
-        
-        guard let url = URL(string: authURL) else {
+    let scope = "email%20profile%20openid"
+    let authURL = "https://accounts.google.com/o/oauth2/v2/auth?client_id=\(clientID)&redirect_uri=\(redirectURI)&response_type=code&scope=\(scope)&access_type=offline&prompt=consent"
+    
+    guard let url = URL(string: authURL) else {
+        completion(nil)
+        return
+    }
+    
+    let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "https") { callbackURL, error in
+        guard let callbackURL = callbackURL, error == nil else {
+            completion(nil)
+            return
+        }
+        guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+              let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
             completion(nil)
             return
         }
         
-        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "com.emmew.app") { callbackURL, error in
-            guard let callbackURL = callbackURL, error == nil,
-                  let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
-                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+        self.exchangeCodeForToken(code: code) { token in
+            guard let token = token else {
                 completion(nil)
                 return
             }
-            
-            self.exchangeCodeForToken(code: code) { token in
-                guard let token = token else {
-                    completion(nil)
-                    return
-                }
-                self.fetchUserInfo(token: token, completion: completion)
-            }
+            self.fetchUserInfo(token: token, completion: completion)
         }
-        
-        session.presentationContextProvider = self
-        session.prefersEphemeralWebBrowserSession = false
-        session.start()
     }
+    
+    session.presentationContextProvider = self
+    session.prefersEphemeralWebBrowserSession = true
+    session.start()
+}
     
     private func exchangeCodeForToken(code: String, completion: @escaping (String?) -> Void) {
         let url = URL(string: "https://oauth2.googleapis.com/token")!
