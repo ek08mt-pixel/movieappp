@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - MainTabView với Liquid Animation
+// MARK: - MainTabView
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
@@ -9,13 +9,13 @@ struct MainTabView: View {
     @State private var watchTogetherID = UUID()
     @State private var libraryID = UUID()
     @State private var showWatchTogetherRoom = false
-    @State private var tabBarVisible = true
     @StateObject private var ostManager = OSTManager.shared
     @StateObject private var watchService = WatchTogetherService.shared
     
+    init() { UITabBar.appearance().isHidden = true }
+    
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Content
             ZStack {
                 HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
                 ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
@@ -23,91 +23,52 @@ struct MainTabView: View {
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            // Bottom
-            VStack(spacing: 0) {
-                // MiniPlayer
-                if ostManager.isPlaying && !showWatchTogetherRoom {
-                    MiniPlayerView()
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom {
+                VStack {
+                    MiniPlayerView().padding(.top, 8)
+                    Spacer()
                 }
-                
-                // Tab Bar
-                if !showWatchTogetherRoom {
-                    LiquidTabBar(selectedTab: $selectedTab)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            
+            if !showWatchTogetherRoom {
+                HStack(spacing: 10) {
+                    HStack(spacing: 31) {
+                        LiquidTabIcon(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
+                            if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
+                        }
+                        LiquidTabIcon(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
+                            if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
+                        }
+                        LiquidTabIcon(icon: "person.3.fill", label: "Watch", isSelected: selectedTab == 2) {
+                            if selectedTab == 2 { watchTogetherID = UUID() } else { selectedTab = 2 }
+                        }
+                        LiquidTabIcon(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
+                            if selectedTab == 3 { libraryID = UUID() } else { selectedTab = 3 }
+                        }
+                    }
+                    .padding(.vertical, 12).padding(.horizontal, 24)
+                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                    
+                    Button { showSearch = true } label: {
+                        Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .medium)).foregroundColor(.white.opacity(0.7)).padding(.vertical, 21).padding(.horizontal, 19)
+                            .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                    }
                 }
+                .padding(.bottom, 10)
+                .transition(.move(edge: .bottom))
             }
         }
-        .animation(.spring(response: 0.35), value: ostManager.isPlaying)
-        .animation(.spring(response: 0.35), value: showWatchTogetherRoom)
+        .ignoresSafeArea(.keyboard)
+        .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
         .onChange(of: watchService.isInRoom) { inRoom in
             withAnimation { showWatchTogetherRoom = inRoom }
         }
-    }
-}
-
-// MARK: - Liquid Tab Bar
-struct LiquidTabBar: View {
-    @Binding var selectedTab: Int
-    @State private var animationProgress: CGFloat = 0
-    @State private var previousTab: Int = 0
-    
-    private let items: [(icon: String, label: String)] = [
-        ("house.fill", "Home"),
-        ("safari.fill", "Explore"),
-        ("person.3.fill", "Watch"),
-        ("rectangle.stack.fill", "Library")
-    ]
-    
-    var body: some View {
-        GeometryReader { geometry in
-            let tabWidth = (geometry.size.width - 24) / CGFloat(items.count)
-            let circleSize: CGFloat = 44
-            let selectedX = tabWidth * CGFloat(selectedTab) + tabWidth / 2
-            
-            ZStack {
-                // Background
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-                
-                // Liquid blob animation
-                Capsule(style: .continuous)
-                    .fill(.white.opacity(0.2))
-                    .frame(width: 72, height: 40)
-                    .position(x: selectedX, y: 25)
-                    .animation(.interpolatingSpring(stiffness: 300, damping: 25), value: selectedTab)
-                
-                // Tab items
-                HStack(spacing: 0) {
-                    ForEach(0..<items.count, id: \.self) { index in
-                        Button {
-                            previousTab = selectedTab
-                            selectedTab = index
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: items[index].icon)
-                                    .font(.system(size: 18, weight: selectedTab == index ? .semibold : .regular))
-                                    .scaleEffect(selectedTab == index ? 1.0 : 0.85)
-                                Text(items[index].label)
-                                    .font(.system(size: 10, weight: selectedTab == index ? .medium : .regular))
-                                    .opacity(selectedTab == index ? 1 : 0.5)
-                            }
-                            .foregroundColor(.white)
-                            .frame(width: tabWidth)
-                        }
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            .frame(height: 60)
+        .onChange(of: selectedTab) { tab in
+            if tab == 2 && watchService.isInRoom { showWatchTogetherRoom = true }
         }
-        .frame(height: 60)
     }
 }
 
@@ -179,5 +140,33 @@ struct MiniPlayerView: View {
                 HStack(spacing: 2) { Rectangle().fill(.white).frame(width: 1.5, height: 4); Rectangle().fill(.white).frame(width: 1.5, height: 2); Rectangle().fill(.white).frame(width: 1.5, height: 5) }.cornerRadius(0.5)
             }
         }.shadow(color: .white.opacity(0.2), radius: 3)
+    }
+}
+
+// MARK: - LiquidTabIcon
+struct LiquidTabIcon: View {
+    let icon: String; let label: String; let isSelected: Bool; let action: () -> Void
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button {
+            withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = false } }
+            action()
+        } label: {
+            ZStack {
+                if isSelected {
+                    Capsule().fill(.white.opacity(0.2)).frame(width: 74, height: 54).overlay(Capsule().fill(.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.3))
+                }
+                VStack(spacing: 2) {
+                    Image(systemName: icon).font(.system(size: isSelected ? 16 : 18, weight: isSelected ? .semibold : .regular))
+                    Text(label).font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .medium : .regular))
+                }
+                .foregroundColor(isSelected ? .white : .white.opacity(0.45))
+            }
+            .scaleEffect(isPressed ? 0.92 : 1.0)
+            .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        }
     }
 }
