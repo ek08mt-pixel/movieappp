@@ -8,7 +8,7 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
     private var timer: Timer?
     private var retryCount = 0
     private let maxRetries = 5
-    private var hash: String = ""
+    private var torrentHash: String = ""
     private var serviceIndex = 0
     
     private let services = [
@@ -21,7 +21,7 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
         guard let infoHash = infoHash(from: magnetLink) else {
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Magnet link không hợp lệ"])
         }
-        self.hash = infoHash
+        self.torrentHash = infoHash
         
         return try await withCheckedThrowingContinuation { continuation in
             self.completion = { url in
@@ -43,7 +43,7 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
             return
         }
         
-        let urlString = services[serviceIndex] + hash
+        let urlString = services[serviceIndex] + torrentHash
         guard let url = URL(string: urlString) else {
             serviceIndex += 1
             tryNextService()
