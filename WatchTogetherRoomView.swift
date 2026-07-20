@@ -17,13 +17,6 @@ struct WatchPlayerVC: UIViewControllerRepresentable {
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) {}
 }
 
-// MARK: - Fake Room Model
-struct FakeRoom: Identifiable {
-    let id = UUID()
-    var roomName: String; var movieTitle: String; var viewerCount: Int
-    var avatars: [String]; var isPrivate: Bool; var posterPath: String?; var currentTime: String
-}
-
 // MARK: - Flying Emoji Model
 struct FlyingEmoji: Identifiable {
     let id = UUID(); let emoji: String; var offsetY: CGFloat = 0; var opacity: Double = 1; var xOffset: CGFloat
@@ -59,23 +52,7 @@ struct WatchTogetherRoomView: View {
     @State private var isLoadingSeasons = false
     @State private var seasonError: String?
     @State private var posterImage: UIImage?
-    @State private var refreshTimer: Timer?
     @State private var showYouTubeSearch = false
-    
-    @State private var fakeRooms: [FakeRoom] = [
-        FakeRoom(roomName: "Deadpool nè", movieTitle: "Deadpool & Wolverine", viewerCount: 6, avatars: ["🐱","🐶","🐰","🐻","🐼","🐨"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "01:12:45"),
-        FakeRoom(roomName: "kinh dị", movieTitle: "The Nun II", viewerCount: 3, avatars: ["🦊","🐸","🐵"], isPrivate: true, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:32:18"),
-        FakeRoom(roomName: "⚡ Marvel Marathon", movieTitle: "Avengers: Endgame", viewerCount: 6, avatars: ["🐱","🐼","🐨","🐯","🦊","🐙"], isPrivate: false, posterPath: "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", currentTime: "02:45:10"),
-        FakeRoom(roomName: "Hàn xẻnggg ", movieTitle: "Parasite", viewerCount: 4, avatars: ["🐶","🐰","🐷","🐹"], isPrivate: false, posterPath: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", currentTime: "01:05:33"),
-        FakeRoom(roomName: "Rock & Movie", movieTitle: "Bohemian Rhapsody", viewerCount: 4, avatars: ["🐻","🐼","🐨","🐯"], isPrivate: true, posterPath: "/lHu1wtNaczFPgfDvJflLyh1HdxH.jpg", currentTime: "00:58:22"),
-        FakeRoom(roomName: " cấm vào ", movieTitle: "Dune: Part Two", viewerCount: 5, avatars: ["🦊","🐸","🐵","🐮","🐷"], isPrivate: false, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", currentTime: "01:42:08"),
-        FakeRoom(roomName: "babixinhiu ", movieTitle: "Deadpool 3", viewerCount: 6, avatars: ["🐹","🐭","🦄","🐙","🐱","🐶"], isPrivate: false, posterPath: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", currentTime: "00:22:55"),
-        FakeRoom(roomName: "ghost stories", movieTitle: "A Quiet Place", viewerCount: 3, avatars: ["🐰","🐻","🐼"], isPrivate: true, posterPath: "/nAU74GmpUk7t5iklEp3bufwDq4n.jpg", currentTime: "00:47:12"),
-        FakeRoom(roomName: "🎥 Indie ", movieTitle: "Everything Everywhere", viewerCount: 2, avatars: ["🐨","🐯"], isPrivate: false, posterPath: "/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", currentTime: "01:28:40"),
-        FakeRoom(roomName: "🇯🇵 Animu", movieTitle: "Spirited Away", viewerCount: 4, avatars: ["🦊","🐸","🐵","🐮"], isPrivate: false, posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", currentTime: "01:55:00"),
-        FakeRoom(roomName: "🔥 Hot Hòn Họt", movieTitle: "John Wick 4", viewerCount: 5, avatars: ["🐷","🐹","🐭","🦄","🐙"], isPrivate: false, posterPath: "/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg", currentTime: "00:15:30"),
-        FakeRoom(roomName: "Romcom", movieTitle: "How to Lose a Guy", viewerCount: 3, avatars: ["🐮","🐷","🐹"], isPrivate: false, posterPath: "/5gzzkR7y3hnY8AD1wXjCnVlHba5.jpg", currentTime: "00:38:55"),
-    ]
     
     var displayTitle: String {
         if currentMovieTitle.isEmpty { return "Chọn phim" }
@@ -93,172 +70,106 @@ struct WatchTogetherRoomView: View {
             if showEpisodePanel { episodePopupOverlay }
         }
         .toolbar(.hidden, for: .tabBar)
-        .onAppear { showControls = true; resetControlsTimer(); startFakeRoomRefresh()
+        .onAppear { showControls = true; resetControlsTimer()
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { n in if let frame = n.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect { keyboardHeight = frame.height } }
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in keyboardHeight = 0 }
         }
-        .onDisappear { refreshTimer?.invalidate(); controlsTimer?.invalidate(); forcePortrait() }
+        .onDisappear { controlsTimer?.invalidate(); forcePortrait() }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in let o = UIDevice.current.orientation; isLandscape = o == .landscapeLeft || o == .landscapeRight }
         .onChange(of: service.isInRoom) { inRoom in if !inRoom { forcePortrait() } }
     }
     
     func forcePortrait() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)); isLandscape = false }
-    func startFakeRoomRefresh() { refreshTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { _ in withAnimation(.easeInOut(duration: 0.5)) { for _ in 0..<3 { let idx = Int.random(in: 0..<fakeRooms.count); fakeRooms[idx].roomName = ["ai đoá ai đóa","gigi ngungục","ziku","Music & Movie","📺 Series Addict","bò cinema","newjeans neverdie","🔥 Trending Now","Hidden Gems","hanpham","🌴 Tropical Night","siu anh hùng"].randomElement() ?? fakeRooms[idx].roomName; fakeRooms[idx].movieTitle = ["Barbie","The Batman","Spider-Man","Joker","Inception","Tenet","Dunkirk","Memento","La La Land","Whiplash","Get Out","Us"].randomElement() ?? fakeRooms[idx].movieTitle; fakeRooms[idx].viewerCount = Int.random(in: 2...6); let m = Int.random(in: 0...120); let s = Int.random(in: 0...59); fakeRooms[idx].currentTime = String(format: "%02d:%02d:%02d", m/60, m, s) } } } }
     
     // MARK: - Lobby
-var lobbyView: some View {
-    ZStack(alignment: .bottomTrailing) {
-        // Background đen tối hơn
-        Color.black.opacity(0.85)
-            .background(.ultraThinMaterial)
-            .ignoresSafeArea()
-        
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    // Back
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
+    var lobbyView: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.85)
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Text("EMMEW")
+                        .font(.system(size: 32, weight: .heavy))
                         .foregroundColor(.white)
-                        .padding(10)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                    Spacer()
                 }
+                .padding(.top, 52)
+                .padding(.bottom, 16)
+                
                 Spacer()
-                Text("EMMEW")
-                    .font(.system(size: 32, weight: .heavy))
-                    .foregroundColor(.white)
-                Spacer()
-                Circle().fill(.clear).frame(width: 36)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 52)
-            .padding(.bottom, 16)
-            
-            // Search bar fake - blur mạnh
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16))
-                    .foregroundColor(.white.opacity(0.5))
-                Text("Search")
-                    .font(.system(size: 16))
-                    .foregroundColor(.white.opacity(0.5))
-                Spacer()
-            }
-            .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(.ultraThinMaterial.opacity(0.7))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.12), lineWidth: 0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 16)
-            
-            ScrollView {
-                VStack(spacing: 12) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "globe.americas.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.8))
-                        Text("Public")
-                            .font(.system(size: 16, weight: .bold))
+                
+                // MARK: - Khu vực tạo phòng & nhập mã
+                VStack(spacing: 16) {
+                    // Thanh text tạo phòng
+                    HStack(spacing: 12) {
+                        TextField("Nhập tên phòng...", text: $roomName)
+                            .font(.system(size: 16))
                             .foregroundColor(.white)
-                        Spacer()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.6)))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                        
+                        Button {
+                            let name = roomName.trimmingCharacters(in: .whitespaces)
+                            let finalName = name.isEmpty ? "Phòng" : name
+                            service.createRoom(roomName: finalName, userName: "User") { _ in }
+                            roomName = ""
+                            isInputFocused = false
+                        } label: {
+                            Text("Tạo")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(0.2)))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.3), lineWidth: 0.5))
+                        }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
                     
-                    ForEach(fakeRooms) { room in
-                        fakeRoomCard(room)
+                    // Thanh text nhập mã phòng
+                    HStack(spacing: 12) {
+                        TextField("Nhập mã phòng...", text: $joinCode)
+                            .font(.system(size: 16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.6)))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                        
+                        Button {
+                            let code = joinCode.trimmingCharacters(in: .whitespaces)
+                            guard !code.isEmpty else { return }
+                            service.joinRoom(code: code, userName: "User") { _ in }
+                            joinCode = ""
+                            isInputFocused = false
+                        } label: {
+                            Text("Vào")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 16).fill(.green.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.green.opacity(0.5), lineWidth: 0.5))
+                        }
+                        .disabled(joinCode.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .opacity(joinCode.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 140)
-            }
-        }
-        
-        // Nút + trắng hoàn toàn, to hơn, dấu + mỏng trong suốt
-        Button {
-            service.createRoom(roomName: "Phòng", userName: "User") { _ in }
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 36, weight: .thin))
-                .foregroundColor(.white.opacity(0.8))
-                .frame(width: 80, height: 80)
-                .background(Circle().fill(.white))
-                .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 0.5))
-        }
-        .padding(.trailing, 40)
-        .padding(.bottom, 130)
-    }
-    .ignoresSafeArea()
-    .toolbar(.hidden, for: .tabBar)
-}
-
-func fakeRoomCard(_ room: FakeRoom) -> some View {
-    HStack(spacing: 0) {
-        // Poster + icon hãng phim
-        ZStack(alignment: .topTrailing) {
-            if let path = room.posterPath, let url = URL(string: "https://image.tmdb.org/t/p/w300\(path)") {
-                CachedAsyncImage(url: url)
-                    .aspectRatio(16/9, contentMode: .fill)
-                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            } else {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(.ultraThinMaterial.opacity(0.35))
-                    .frame(width: UIScreen.main.bounds.width * 0.4, height: 84)
-                    .overlay(Image(systemName: "play.circle.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.7)))
-            }
-            
-            // Icon hãng phim blur nhỏ góc phải
-            let icons = ["play.rectangle.fill", "play.tv.fill", "play.display", "play.square.fill"]
-            Image(systemName: icons.randomElement() ?? "play.rectangle.fill")
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.5))
-                .padding(4)
-                .background(.ultraThinMaterial.opacity(0.5))
-                .clipShape(Circle())
-                .padding(4)
-        }
-        
-        // Khung blur mạnh dính liền poster
-        VStack(spacing: 0) {
-            Text(room.movieTitle)
-                .font(.system(size: 13, weight: .light))
-                .foregroundColor(.white)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-                .padding(.horizontal, 8)
-            
-            Spacer()
-            
-            HStack(spacing: 6) {
-                ForEach(room.avatars.prefix(4), id: \.self) { av in
-                    Text(av)
-                        .font(.system(size: 14))
-                        .frame(width: 30, height: 30)
-                        .background(Circle().fill(.ultraThinMaterial.opacity(0.6)))
-                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+                
                 Spacer()
             }
-            .padding(.bottom, 4)
-            .padding(.horizontal, 8)
-            
-            // Thanh tiến trình có đoạn trắng đậm
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(height: 1.5)
-                Rectangle()
-                    .fill(.white.opacity(0.5))
-                    .frame(width: UIScreen.main.bounds.width * 0.25, height: 1.5)
-            }
         }
-        .frame(height: 84)
-        .background(.ultraThinMaterial.opacity(0.7))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .ignoresSafeArea()
+        .toolbar(.hidden, for: .tabBar)
+        .contentShape(Rectangle())
+        .onTapGesture { isInputFocused = false }
     }
-}
     
     // MARK: - In Room
     var inRoomView: some View {
