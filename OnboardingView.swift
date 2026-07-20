@@ -1,5 +1,98 @@
 import SwiftUI
 import PhotosUI
+import AuthenticationServices
+
+// MARK: - Google Sign-In Service
+class GoogleSignInService: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = GoogleSignInService()
+    
+    private let clientID = "1061753109498-js6p8j75lg95m051stn6su5qgn713bo2.apps.googleusercontent.com"
+    private let redirectURI = "https://oauth2redirect.com/callback"
+    
+    struct GoogleUser {
+        let email: String
+        let name: String
+        let avatarURL: String?
+    }
+    
+    func signIn(completion: @escaping (GoogleUser?) -> Void) {
+        let scope = "email%20profile%20openid"
+        let authURL = "https://accounts.google.com/o/oauth2/v2/auth?client_id=\(clientID)&redirect_uri=\(redirectURI)&response_type=code&scope=\(scope)&access_type=offline&prompt=consent"
+        
+        guard let url = URL(string: authURL) else {
+            completion(nil)
+            return
+        }
+        
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "com.emmew.app") { callbackURL, error in
+            guard let callbackURL = callbackURL, error == nil,
+                  let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+                completion(nil)
+                return
+            }
+            
+            self.exchangeCodeForToken(code: code) { token in
+                guard let token = token else {
+                    completion(nil)
+                    return
+                }
+                self.fetchUserInfo(token: token, completion: completion)
+            }
+        }
+        
+        session.presentationContextProvider = self
+        session.prefersEphemeralWebBrowserSession = false
+        session.start()
+    }
+    
+    private func exchangeCodeForToken(code: String, completion: @escaping (String?) -> Void) {
+        let url = URL(string: "https://oauth2.googleapis.com/token")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        
+        let body = "code=\(code)&client_id=\(clientID)&redirect_uri=\(redirectURI)&grant_type=authorization_code"
+        req.httpBody = body.data(using: .utf8)
+        
+        URLSession.shared.dataTask(with: req) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let token = json["access_token"] as? String else {
+                completion(nil)
+                return
+            }
+            completion(token)
+        }.resume()
+    }
+    
+    private func fetchUserInfo(token: String, completion: @escaping (GoogleUser?) -> Void) {
+        let url = URL(string: "https://www.googleapis.com/oauth2/v3/userinfo")!
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: req) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                completion(nil)
+                return
+            }
+            
+            let email = json["email"] as? String ?? ""
+            let name = json["name"] as? String ?? email.components(separatedBy: "@").first ?? ""
+            let avatarURL = json["picture"] as? String
+            
+            let user = GoogleUser(email: email, name: name, avatarURL: avatarURL)
+            completion(user)
+        }.resume()
+    }
+    
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first ?? UIWindow()
+    }
+}
 
 // MARK: - Onboarding Manager
 class OnboardingManager: ObservableObject {
@@ -12,23 +105,36 @@ class OnboardingManager: ObservableObject {
     @Published var recommendedMovies: [Movie] = []
     
     func completeOnboarding(appState: AppState? = nil) {
-    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-    if !email.isEmpty, let appState = appState {
-        appState.email = email
-        appState.isLoggedIn = true
-        // Đồng bộ avatar từ onboarding vào appState
-        if let firstProfile = profiles.first(where: { $0 != nil }), let imageData = firstProfile?.jpegData(compressionQuality: 0.7) {
-            appState.avatarImageData = imageData
-            appState.selectedAvatar = ""
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        if let appState = appState {
+            // Google user info
+            if let googleName = UserDefaults.standard.string(forKey: "googleName"),
+               let googleEmail = UserDefaults.standard.string(forKey: "googleEmail") {
+                appState.email = googleEmail
+                appState.nickname = googleName
+                appState.isLoggedIn = true
+                if let googleAvatar = UserDefaults.standard.string(forKey: "googleAvatar") {
+                    appState.telegramAvatarURL = googleAvatar
+                }
+                UserDefaults.standard.removeObject(forKey: "googleName")
+                UserDefaults.standard.removeObject(forKey: "googleEmail")
+                UserDefaults.standard.removeObject(forKey: "googleAvatar")
+            } else if !email.isEmpty {
+                appState.email = email
+                appState.isLoggedIn = true
+                if appState.nickname.isEmpty {
+                    let nameFromEmail = email.components(separatedBy: "@").first ?? ""
+                    appState.nickname = nameFromEmail.replacingOccurrences(of: "[._-]", with: " ", options: .regularExpression).capitalized
+                }
+            }
+            // Đồng bộ avatar từ onboarding vào appState
+            if let firstProfile = profiles.first(where: { $0 != nil }), let imageData = firstProfile?.jpegData(compressionQuality: 0.7) {
+                appState.avatarImageData = imageData
+                appState.selectedAvatar = ""
+            }
+            appState.save()
         }
-        // Lấy tên từ email (phần trước @)
-        if appState.nickname.isEmpty {
-            let nameFromEmail = email.components(separatedBy: "@").first ?? ""
-            appState.nickname = nameFromEmail.replacingOccurrences(of: "[._-]", with: " ", options: .regularExpression).capitalized
-        }
-        appState.save()
     }
-}
     
     func resetOnboarding() {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
@@ -40,23 +146,23 @@ class OnboardingManager: ObservableObject {
     }
     
     func fetchRecommendations() async {
-    guard !selectedMovies.isEmpty else { return }
-    let genreIds = selectedMovies.compactMap { $0.genreIds }.flatMap { $0 }
-    let uniqueGenres = Array(Set(genreIds)).prefix(3)
-    
-    var allMovies: [Movie] = []
-    for genreId in uniqueGenres {
-        if let movies = try? await APIService.shared.moviesByGenre(genreId: genreId, page: 1) {
-            let filtered = movies.filter { m in !selectedMovies.contains(where: { $0.id == m.id }) && !(m.adult ?? false) }
-            allMovies.append(contentsOf: filtered)
+        guard !selectedMovies.isEmpty else { return }
+        let genreIds = selectedMovies.compactMap { $0.genreIds }.flatMap { $0 }
+        let uniqueGenres = Array(Set(genreIds)).prefix(3)
+        
+        var allMovies: [Movie] = []
+        for genreId in uniqueGenres {
+            if let movies = try? await APIService.shared.moviesByGenre(genreId: genreId, page: 1) {
+                let filtered = movies.filter { m in !selectedMovies.contains(where: { $0.id == m.id }) && !(m.adult ?? false) }
+                allMovies.append(contentsOf: filtered)
+            }
+        }
+        
+        let shuffled = Array(Set(allMovies)).shuffled()
+        await MainActor.run {
+            self.recommendedMovies = Array(shuffled.prefix(9))
         }
     }
-    
-    let shuffled = Array(Set(allMovies)).shuffled()
-    await MainActor.run {
-        self.recommendedMovies = Array(shuffled.prefix(9))
-    }
-}
 }
 
 // MARK: - Main Onboarding View
@@ -146,6 +252,7 @@ extension View {
 struct WelcomeStep: View {
     @ObservedObject var om: OnboardingManager
     @State private var showEmail = false
+    @State private var isGoogleSigningIn = false
     
     var body: some View {
         VStack(spacing: 32) {
@@ -218,13 +325,32 @@ struct WelcomeStep: View {
                     .foregroundColor(.white.opacity(0.5))
                 
                 Button {
-                    withAnimation { om.currentStep = 1 }
+                    isGoogleSigningIn = true
+                    GoogleSignInService.shared.signIn { googleUser in
+                        DispatchQueue.main.async {
+                            isGoogleSigningIn = false
+                            guard let user = googleUser else { return }
+                            om.email = user.email
+                            UserDefaults.standard.set(user.name, forKey: "googleName")
+                            UserDefaults.standard.set(user.email, forKey: "googleEmail")
+                            if let avatar = user.avatarURL {
+                                UserDefaults.standard.set(avatar, forKey: "googleAvatar")
+                            }
+                            withAnimation { om.currentStep = 4 }
+                        }
+                    }
                 } label: {
                     HStack(spacing: 10) {
                         Spacer()
-                        Image(systemName: "g.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.red)
+                        if isGoogleSigningIn {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "g.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.red)
+                        }
                         Text("Continue with Google")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.white)
@@ -233,6 +359,7 @@ struct WelcomeStep: View {
                     .padding(.vertical, 14)
                     .glassCard()
                 }
+                .disabled(isGoogleSigningIn)
                 
                 Button {
                     withAnimation { om.currentStep = 1 }
@@ -451,7 +578,6 @@ struct GoodChoiceStep: View {
                 .foregroundColor(.white)
                 .padding(.bottom, 20)
             
-            // Selected movies row
             HStack(spacing: 12) {
                 ForEach(Array(om.selectedMovies.prefix(3))) { movie in
                     CachedAsyncImage(url: movie.posterURL)
@@ -470,7 +596,6 @@ struct GoodChoiceStep: View {
                 .padding(.horizontal, 40)
                 .padding(.bottom, 20)
             
-            // Recommendations
             if isLoading {
                 HStack(spacing: 12) {
                     ForEach(0..<3) { i in
