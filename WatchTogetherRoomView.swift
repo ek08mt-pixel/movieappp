@@ -101,7 +101,6 @@ struct WatchTogetherRoomView: View {
                 
                 Spacer()
                 
-                // MARK: - Khu vực tạo phòng & nhập mã
                 VStack(spacing: 16) {
                     // Thanh text tạo phòng
                     HStack(spacing: 12) {
@@ -143,7 +142,7 @@ struct WatchTogetherRoomView: View {
                         Button {
                             let code = joinCode.trimmingCharacters(in: .whitespaces)
                             guard !code.isEmpty else { return }
-                            service.joinRoom(code: code, userName: "User") { _ in }
+                            service.joinRoom(code: code, userName: "User") { success, error in }
                             joinCode = ""
                             isInputFocused = false
                         } label: {
