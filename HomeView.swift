@@ -103,30 +103,32 @@ struct HomeView: View {
                             }.padding(.top, 50).padding(.leading, 16)
                         }
                         .overlay(alignment: .topTrailing) {
-                            NavigationLink(destination: ProfileView()) {
-    ZStack {
-        Circle()
-            .fill(.ultraThinMaterial)
-            .frame(width: 36, height: 36)
-            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
-        
-        if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+    NavigationLink(destination: ProfileView()) {
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
                 .frame(width: 36, height: 36)
-                .clipShape(Circle())
-        } else if let telegramURL = appState.telegramAvatarURL, let url = URL(string: telegramURL) {
-            CachedAsyncImage(url: url)
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 36, height: 36)
-                .clipShape(Circle())
-        } else {
-            Image(systemName: appState.selectedAvatar)
-                .foregroundColor(.white.opacity(0.7))
-                .font(.system(size: 16))
+                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+            
+            if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 36, height: 36)
+                    .clipShape(Circle())
+            } else if let telegramURL = appState.telegramAvatarURL, let url = URL(string: telegramURL) {
+                CachedAsyncImage(url: url)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 36, height: 36)
+                    .clipShape(Circle())
+            } else {
+                Image(systemName: appState.selectedAvatar)
+                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 16))
+            }
         }
     }
+    .padding(.top, 50).padding(.trailing, 16)
 }
                         .overlay(alignment: .bottom) {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom).frame(height: 40).allowsHitTesting(false)
