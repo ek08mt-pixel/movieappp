@@ -86,95 +86,65 @@ struct WatchTogetherRoomView: View {
     // MARK: - Lobby
     var lobbyView: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.12),
-                    Color(red: 0.02, green: 0.02, blue: 0.06),
-                    Color.black
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Background xám đen
+            Color(red: 0.06, green: 0.06, blue: 0.08)
+                .ignoresSafeArea()
             
-            // Overlay pattern dots
-            GeometryReader { geo in
-                ForEach(0..<40, id: \.self) { i in
-                    let x = CGFloat(((i * 173 + 41) % Int(geo.size.width)))
-                    let y = CGFloat(((i * 97 + 23) % Int(geo.size.height)))
-                    Circle()
-                        .fill(.white.opacity(0.03))
-                        .frame(width: 2, height: 2)
-                        .position(x: x, y: y)
-                }
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            // Lớp noise nhẹ
+            Rectangle()
+                .fill(.ultraThinMaterial.opacity(0.15))
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Spacer()
                 
-                // Logo & tagline
-                VStack(spacing: 6) {
+                // Logo
+                VStack(spacing: 4) {
                     Text("EMMEW")
-                        .font(.system(size: 42, weight: .black, design: .rounded))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color(red: 0.7, green: 0.75, blue: 1.0), Color(red: 0.45, green: 0.5, blue: 0.85)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .font(.system(size: 40, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
                     
                     Text("Xem cùng bạn bè, mọi lúc mọi nơi")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.4))
-                        .tracking(1.2)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.35))
+                        .tracking(1.5)
                 }
-                .padding(.bottom, 48)
+                .padding(.bottom, 44)
                 
-                // Card chứa 2 thanh
-                VStack(spacing: 20) {
-                    // Thanh tạo phòng
-                    VStack(spacing: 12) {
+                // Card liquid glass
+                VStack(spacing: 24) {
+                    // Tạo phòng
+                    VStack(spacing: 10) {
                         HStack {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(red: 0.7, green: 0.75, blue: 1.0))
-                            Text("TẠO PHÒNG MỚI")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 11))
                                 .foregroundColor(.white.opacity(0.5))
-                                .tracking(2)
+                            Text("TẠO PHÒNG")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.35))
+                                .tracking(2.5)
                             Spacer()
                         }
                         .padding(.horizontal, 4)
                         
-                        HStack(spacing: 10) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.4))
-                                TextField("Tên phòng của bạn...", text: $roomName)
+                        HStack(spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "film")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.white.opacity(0.3))
+                                TextField("Tên phòng...", text: $roomName)
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
                                     .foregroundColor(.white)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 15)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
                             .background(
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(.white.opacity(0.06))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 18)
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [.white.opacity(0.15), .white.opacity(0.05)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 0.5
-                                            )
-                                    )
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.white.opacity(0.04))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(.white.opacity(0.08), lineWidth: 0.5)
                             )
                             
                             Button {
@@ -185,54 +155,51 @@ struct WatchTogetherRoomView: View {
                                 isInputFocused = false
                             } label: {
                                 Image(systemName: "arrow.right")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 48, height: 48)
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(width: 44, height: 44)
                                     .background(
                                         Circle()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [Color(red: 0.5, green: 0.55, blue: 0.9), Color(red: 0.35, green: 0.4, blue: 0.75)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
+                                            .fill(.white)
                                     )
-                                    .shadow(color: Color(red: 0.4, green: 0.45, blue: 0.8).opacity(0.4), radius: 8, y: 2)
                             }
                         }
                     }
                     
                     // Divider
-                    HStack(spacing: 12) {
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 0.5)
-                        Text("hoặc")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.3))
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 0.5)
+                    HStack(spacing: 14) {
+                        Rectangle()
+                            .fill(.white.opacity(0.06))
+                            .frame(height: 0.5)
+                        Circle()
+                            .fill(.white.opacity(0.1))
+                            .frame(width: 3, height: 3)
+                        Rectangle()
+                            .fill(.white.opacity(0.06))
+                            .frame(height: 0.5)
                     }
                     
-                    // Thanh nhập mã
-                    VStack(spacing: 12) {
+                    // Tham gia phòng
+                    VStack(spacing: 10) {
                         HStack {
                             Image(systemName: "key")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(red: 0.6, green: 0.9, blue: 0.7))
-                            Text("THAM GIA BẰNG MÃ")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .font(.system(size: 11))
                                 .foregroundColor(.white.opacity(0.5))
-                                .tracking(2)
+                            Text("THAM GIA BẰNG MÃ")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.35))
+                                .tracking(2.5)
                             Spacer()
                         }
                         .padding(.horizontal, 4)
                         
-                        HStack(spacing: 10) {
-                            HStack(spacing: 10) {
+                        HStack(spacing: 8) {
+                            HStack(spacing: 8) {
                                 Image(systemName: "number")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.4))
-                                TextField("Nhập mã 6 chữ số...", text: $joinCode)
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.white.opacity(0.3))
+                                TextField("Mã 6 chữ số...", text: $joinCode)
+                                    .font(.system(size: 15, weight: .medium, design: .monospaced))
                                     .foregroundColor(.white)
                                     .keyboardType(.numberPad)
                                     .onChange(of: joinCode) { newVal in
@@ -240,26 +207,15 @@ struct WatchTogetherRoomView: View {
                                         joinError = nil
                                     }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 15)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
                             .background(
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(.white.opacity(0.06))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 18)
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [.white.opacity(0.15), .white.opacity(0.05)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 0.5
-                                            )
-                                    )
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.white.opacity(0.04))
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 18)
-                                    .stroke(joinError != nil ? Color.red.opacity(0.5) : Color.clear, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(joinError != nil ? Color.red.opacity(0.4) : .white.opacity(0.08), lineWidth: 0.5)
                             )
                             
                             Button {
@@ -267,55 +223,54 @@ struct WatchTogetherRoomView: View {
                             } label: {
                                 if isJoining {
                                     ProgressView()
-                                        .tint(.white)
-                                        .frame(width: 48, height: 48)
+                                        .tint(.black)
+                                        .frame(width: 44, height: 44)
                                 } else {
                                     Image(systemName: "arrow.right")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 48, height: 48)
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.black)
+                                        .frame(width: 44, height: 44)
                                         .background(
                                             Circle()
-                                                .fill(
-                                                    LinearGradient(
-                                                        colors: [Color(red: 0.35, green: 0.75, blue: 0.5), Color(red: 0.2, green: 0.6, blue: 0.35)],
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    )
-                                                )
+                                                .fill(.white.opacity(joinCode.count < 6 ? 0.3 : 1.0))
                                         )
-                                        .shadow(color: Color(red: 0.2, green: 0.65, blue: 0.4).opacity(0.4), radius: 8, y: 2)
                                 }
                             }
                             .disabled(joinCode.count < 6 || isJoining)
-                            .opacity(joinCode.count < 6 || isJoining ? 0.4 : 1)
                         }
                         
-                        // Error message
+                        // Error
                         if let error = joinError {
-                            HStack(spacing: 6) {
-                                Image(systemName: "exclamationmark.triangle.fill")
+                            HStack(spacing: 5) {
+                                Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 10))
                                 Text(error)
                                     .font(.system(size: 11, weight: .medium, design: .rounded))
                             }
-                            .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.35))
+                            .foregroundColor(Color(red: 0.95, green: 0.3, blue: 0.25))
                             .padding(.horizontal, 4)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
                 }
-                .padding(24)
+                .padding(22)
                 .background(
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(.white.opacity(0.03))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(.white.opacity(0.08), lineWidth: 0.5)
-                        )
-                        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                    RoundedRectangle(cornerRadius: 26)
+                        .fill(.ultraThinMaterial.opacity(0.25))
                 )
-                .padding(.horizontal, 20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.12), .white.opacity(0.03)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+                .shadow(color: .black.opacity(0.4), radius: 30, y: 15)
+                .padding(.horizontal, 24)
                 
                 Spacer()
                 Spacer()
@@ -342,7 +297,7 @@ struct WatchTogetherRoomView: View {
                 isInputFocused = false
             } else {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    joinError = "Không tìm thấy phòng với mã này. Kiểm tra lại nhé!"
+                    joinError = "Không tìm thấy phòng. Kiểm tra lại mã nhé!"
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     withAnimation { joinError = nil }
