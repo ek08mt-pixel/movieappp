@@ -12,13 +12,23 @@ class OnboardingManager: ObservableObject {
     @Published var recommendedMovies: [Movie] = []
     
     func completeOnboarding(appState: AppState? = nil) {
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        if !email.isEmpty, let appState = appState {
-            appState.email = email
-            appState.isLoggedIn = true
-            appState.save()
+    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+    if !email.isEmpty, let appState = appState {
+        appState.email = email
+        appState.isLoggedIn = true
+        // Đồng bộ avatar từ onboarding vào appState
+        if let firstProfile = profiles.first(where: { $0 != nil }), let imageData = firstProfile?.jpegData(compressionQuality: 0.7) {
+            appState.avatarImageData = imageData
+            appState.selectedAvatar = ""
         }
+        // Lấy tên từ email (phần trước @)
+        if appState.nickname.isEmpty {
+            let nameFromEmail = email.components(separatedBy: "@").first ?? ""
+            appState.nickname = nameFromEmail.replacingOccurrences(of: "[._-]", with: " ", options: .regularExpression).capitalized
+        }
+        appState.save()
     }
+}
     
     func resetOnboarding() {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
