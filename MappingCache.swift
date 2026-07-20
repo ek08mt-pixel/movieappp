@@ -221,10 +221,9 @@ final class NguonCService {
                 DispatchQueue.main.async {
                     let extractor = StreamExtractorWebView()
                     extractor.extract(from: embed) { streamURL in
-                        if let url = streamURL {
-                            completion(.success(url))
+                        if let url = streamURL { completion(.success(URL(string: proxyStreamURL(url.absoluteString))!)) }
                         } else {
-                            completion(.success(embed)) // Fallback: trả embed URL
+                            completion(.success(URL(string: proxyStreamURL(embed.absoluteString))!))
                         }
                     }
                 }
@@ -291,7 +290,7 @@ final class VSMOVService {
                                     for ep in serverData {
                                         if let name = ep["name"] as? String, let link = ep["link_embed"] as? String, matchEpisode(name: name, target: e) {
                                             let m3u8 = link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
-                                            if let streamURL = URL(string: m3u8) { completion(.success(streamURL)); return }
+                                            if let streamURL = URL(string: proxyStreamURL(m3u8)) { completion(.success(streamURL)); return }
                                         }
                                     }
                                 }
@@ -299,7 +298,7 @@ final class VSMOVService {
                         }
                         completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
                     } else {
-                        if let urlStr = json["url"] as? String, let streamURL = URL(string: urlStr) { completion(.success(streamURL)) }
+                        if let urlStr = json["url"] as? String, let streamURL = URL(string: proxyStreamURL(urlStr)) { completion(.success(streamURL)) }
                         else if let m3u8 = json["m3u8"] as? String, let streamURL = URL(string: m3u8) { completion(.success(streamURL)) }
                         else { completion(.failure(StreamServiceError.noStreamURL)) }
                     }
@@ -472,7 +471,7 @@ final class PhimAPIService {
             if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
             let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
             if let m = movie {
-                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+                if let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: proxyStreamURL(linkM3u8))
                 if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
             }
         }
@@ -560,9 +559,9 @@ final class OphimService {
                         if let serverData = server["server_data"] as? [[String: Any]] {
                             for epItem in serverData {
                                 if let name = epItem["name"] as? String,
-                                   let linkM3u8 = epItem["link_m3u8"] as? String,
-                                   let streamURL = URL(string: linkM3u8),
-                                   matchEpisode(name: name, target: episode) {
+   let linkM3u8 = epItem["link_m3u8"] as? String,
+   let streamURL = URL(string: proxyStreamURL(linkM3u8)),
+   matchEpisode(name: name, target: episode) {
                                     completion(.success(streamURL))
                                     return
                                 }
