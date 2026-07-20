@@ -103,7 +103,58 @@ struct HomeView: View {
                             }.padding(.top, 50).padding(.leading, 16)
                         }
                         .overlay(alignment: .topTrailing) {
-    NavigationLink(destination: ProfileView()) {
+    Menu {
+        // Header
+        Section {
+            NavigationLink(destination: ProfileView()) {
+                HStack {
+                    if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    } else if let telegramURL = appState.telegramAvatarURL, let url = URL(string: telegramURL) {
+                        CachedAsyncImage(url: url)
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: appState.selectedAvatar)
+                            .font(.system(size: 18))
+                            .frame(width: 36, height: 36)
+                    }
+                    
+                    VStack(alignment: .leading) {
+                        Text(appState.nickname.isEmpty ? "User" : appState.nickname)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                        Text(appState.email)
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+        
+        // Add-ons
+        Section {
+            NavigationLink(destination: AddonListView()) {
+                HStack {
+                    Text("🧩")
+                        .font(.system(size: 16))
+                    Text("Add-ons")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text("\(AddonManager.shared.addons.filter(\.enabled).count) đang bật")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+    } label: {
         ZStack {
             Circle()
                 .fill(.ultraThinMaterial)
