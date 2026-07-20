@@ -186,69 +186,54 @@ class AddonManager: ObservableObject {
     // Lấy stream từ addon
     func fetchStream(from addon: SavedAddon, metaId: String, mediaType: String? = nil) async throws -> [AddonStream] {
     let type = (mediaType == "tv") ? "series" : "movie"
+    let urlString = "\(addon.url)stream/\(type)/\(metaId).json"
     
-    // Thử nhiều format ID
-    let idFormats = [
-        metaId,                                          // tt123456 (IMDB)
-        metaId.replacingOccurrences(of: "tt", with: ""), // 123456
-        "kitsu:\(metaId)"                                // kitsu format
-    ]
-    
-    for idFormat in idFormats {
-        let urlString = "\(addon.url)stream/\(type)/\(idFormat).json"
-        guard let url = URL(string: urlString) else { continue }
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { continue }
-            let streamResponse = try JSONDecoder().decode(AddonStreamResponse.self, from: data)
-            if !streamResponse.streams.isEmpty {
-                return streamResponse.streams
-            }
-        } catch {
-            continue
-        }
+    guard let url = URL(string: urlString) else {
+        throw NSError(domain: "", code: -1)
     }
     
-    throw NSError(domain: "", code: -4, userInfo: [NSLocalizedDescriptionKey: "Addon không có stream cho phim này"])
-}
+    var request = URLRequest(url: url)
+    request.timeoutInterval = 15
     
-    func fetchBestStream(movieTitle: String, movieYear: String? = nil, mediaType: String? = nil) async throws -> URL? {
+    let (data, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw NSError(domain: "", code: -4)
+    }
+    
+    // Torrentio trả về 500 nếu không có stream, không phải lỗi thật
+    if httpResponse.statusCode == 500 {
+        throw NSError(domain: "", code: -4)
+    }
+    
+    guard httpResponse.statusCode == 200 else {
+        throw NSError(domain: "", code: -4)
+    }
+    
+    let streamResponse = try JSONDecoder().decode(AddonStreamResponse.self, from: data)
+    return streamResponse.streams
+}
+
+func fetchBestStream(metaId: String, mediaType: String? = nil) async throws -> URL? {
     let enabledAddons = addons.filter { $0.enabled }
     
     return try await withThrowingTaskGroup(of: URL?.self) { group in
         for addon in enabledAddons {
             group.addTask {
-                // Cách 1: Query thẳng bằng title
-                let type = (mediaType == "tv") ? "series" : "movie"
-                
-                // Encode title cho URL
-                let encodedTitle = movieTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? movieTitle
-                
-                // Thử search catalog của addon
-                if let catalogs = addon.manifest.catalogs {
-                    for catalog in catalogs {
-                        let searchURL = "\(addon.url)catalog/\(type)/\(catalog.id)/search=\(encodedTitle).json"
-                        guard let url = URL(string: searchURL) else { continue }
-                        
-                        if let (data, _) = try? await URLSession.shared.data(from: url),
-                           let response = try? JSONDecoder().decode(AddonCatalogResponse.self, from: data),
-                           let meta = response.metas.first(where: { $0.name.lowercased().contains(movieTitle.lowercased()) }) {
-                            
-                            // Tìm stream cho meta này
-                            let streamURL = "\(addon.url)stream/\(type)/\(meta.id).json"
-                            if let sURL = URL(string: streamURL),
-                               let (sData, _) = try? await URLSession.shared.data(from: sURL),
-                               let sResponse = try? JSONDecoder().decode(AddonStreamResponse.self, from: sData),
-                               let firstStream = sResponse.streams.first(where: { $0.url != nil }),
-                               let streamURLString = firstStream.url,
-                               let finalURL = URL(string: streamURLString) {
-                                return finalURL
-                            }
-                        }
+                do {
+                    let streams = try await self.fetchStream(from: addon, metaId: metaId, mediaType: mediaType)
+                    // Tìm stream đầu tiên có URL hợp lệ
+                    if let bestStream = streams.first(where: { s in
+                        guard let url = s.url, !url.isEmpty else { return false }
+                        return url.hasPrefix("http://") || url.hasPrefix("https://") || url.hasPrefix("magnet:")
+                    }),
+                    let urlString = bestStream.url {
+                        // Nếu là magnet link thì bỏ qua
+                        if urlString.hasPrefix("magnet:") { return nil }
+                        return URL(string: urlString)
                     }
+                } catch {
+                    return nil
                 }
-                
                 return nil
             }
         }
