@@ -47,6 +47,7 @@ class OnboardingManager: ObservableObject {
         self.recommendedMovies = Array(shuffled.prefix(9))
     }
 }
+}
 
 // MARK: - Main Onboarding View
 struct OnboardingView: View {
