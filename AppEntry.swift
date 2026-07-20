@@ -164,11 +164,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+// MARK: - App Entry
 @main
 struct AppEntry: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject var appState = AppState()
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
+    @State private var showSplash = true
     
     init() {
         UIApplication.shared.isNetworkActivityIndicatorVisible = false
@@ -176,29 +178,36 @@ struct AppEntry: App {
     
     var body: some Scene {
         WindowGroup {
-            if hasCompletedOnboarding {
-                MainTabView()
-                    .environmentObject(appState)
-                    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                        Task {
-                            await NotificationManager.shared.autoCheckFromAppState(appState)
+            ZStack {
+                if showSplash {
+                    SplashView(showSplash: $showSplash)
+                        .environmentObject(appState)
+                        .transition(.opacity)
+                } else if hasCompletedOnboarding {
+                    MainTabView()
+                        .environmentObject(appState)
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                            Task {
+                                await NotificationManager.shared.autoCheckFromAppState(appState)
+                            }
                         }
-                    }
-                    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenMovieFromNotification"))) { notification in
-                        if let movieId = notification.userInfo?["movieId"] as? Int {
-                            appState.notificationMovieId = movieId
-                            appState.showNotificationMovie = true
+                        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenMovieFromNotification"))) { notification in
+                            if let movieId = notification.userInfo?["movieId"] as? Int {
+                                appState.notificationMovieId = movieId
+                                appState.showNotificationMovie = true
+                            }
                         }
-                    }
-                    .sheet(isPresented: $appState.showNotificationMovie) {
-                        if let movieId = appState.notificationMovieId {
-                            MovieDetailView(movie: Movie(id: movieId, title: "", overview: "", posterPath: nil, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: nil))
+                        .sheet(isPresented: $appState.showNotificationMovie) {
+                            if let movieId = appState.notificationMovieId {
+                                MovieDetailView(movie: Movie(id: movieId, title: "", overview: "", posterPath: nil, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: nil))
+                            }
                         }
-                    }
-            } else {
-                OnboardingView(appState: appState)
-                    .environmentObject(appState)
+                } else {
+                    OnboardingView(appState: appState)
+                        .environmentObject(appState)
+                }
             }
+            .animation(.easeInOut(duration: 0.5), value: showSplash)
         }
     }
 }
