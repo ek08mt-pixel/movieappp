@@ -577,3 +577,7 @@ final class OphimService {
         }.resume()
     }
 }
+// MARK: - Stream Proxy
+func proxyStreamURL(_ originalURL: String) -> String {
+    return "https://emmewchamchi.pnbhan99.workers.dev/?url=\(originalURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? originalURL)"
+}
