@@ -361,16 +361,16 @@ struct HomeView: View {
                     .padding(6)
                     
                     GeometryReader { geo in
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(.white.opacity(0.3))
-                            .frame(height: 2)
-                            .overlay(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(.blue)
-                                    .frame(width: geo.size.width * CGFloat(prog.progress), height: 2)
-                            }
-                    }
-                    .frame(height: 2)
+    RoundedRectangle(cornerRadius: 1)
+        .fill(.white.opacity(0.15))
+        .frame(height: 3)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(.white.opacity(0.6))
+                .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
+        }
+}
+.frame(height: 3)
                 }
             }
             .frame(width: 200, height: 112)
