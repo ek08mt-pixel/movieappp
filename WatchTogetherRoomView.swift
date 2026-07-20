@@ -52,7 +52,9 @@ struct WatchTogetherRoomView: View {
     @State private var isLoadingSeasons = false
     @State private var seasonError: String?
     @State private var posterImage: UIImage?
-    @State private var showYouTubeSearch = false
+    @State private var isJoining = false
+    @State private var joinError: String?
+    @State private var showJoinError = false
     
     var displayTitle: String {
         if currentMovieTitle.isEmpty { return "Chọn phim" }
@@ -83,84 +85,239 @@ struct WatchTogetherRoomView: View {
     
     // MARK: - Lobby
     var lobbyView: some View {
-        ZStack(alignment: .bottom) {
-            Color.black.opacity(0.85)
-                .background(.ultraThinMaterial)
-                .ignoresSafeArea()
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.05, green: 0.05, blue: 0.12),
+                    Color(red: 0.02, green: 0.02, blue: 0.06),
+                    Color.black
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            // Overlay pattern dots
+            GeometryReader { geo in
+                ForEach(0..<40, id: \.self) { i in
+                    let x = CGFloat(((i * 173 + 41) % Int(geo.size.width)))
+                    let y = CGFloat(((i * 97 + 23) % Int(geo.size.height)))
+                    Circle()
+                        .fill(.white.opacity(0.03))
+                        .frame(width: 2, height: 2)
+                        .position(x: x, y: y)
+                }
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
             
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Text("EMMEW")
-                        .font(.system(size: 32, weight: .heavy))
-                        .foregroundColor(.white)
-                    Spacer()
-                }
-                .padding(.top, 52)
-                .padding(.bottom, 16)
-                
                 Spacer()
                 
-                VStack(spacing: 16) {
-                    // Thanh text tạo phòng
-                    HStack(spacing: 12) {
-                        TextField("Nhập tên phòng...", text: $roomName)
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.6)))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                // Logo & tagline
+                VStack(spacing: 6) {
+                    Text("EMMEW")
+                        .font(.system(size: 42, weight: .black, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 0.7, green: 0.75, blue: 1.0), Color(red: 0.45, green: 0.5, blue: 0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    Text("Xem cùng bạn bè, mọi lúc mọi nơi")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.4))
+                        .tracking(1.2)
+                }
+                .padding(.bottom, 48)
+                
+                // Card chứa 2 thanh
+                VStack(spacing: 20) {
+                    // Thanh tạo phòng
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(red: 0.7, green: 0.75, blue: 1.0))
+                            Text("TẠO PHÒNG MỚI")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.5))
+                                .tracking(2)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
                         
-                        Button {
-                            let name = roomName.trimmingCharacters(in: .whitespaces)
-                            let finalName = name.isEmpty ? "Phòng" : name
-                            service.createRoom(roomName: finalName, userName: "User") { _ in }
-                            roomName = ""
-                            isInputFocused = false
-                        } label: {
-                            Text("Tạo")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 14)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(0.2)))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.3), lineWidth: 0.5))
+                        HStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.4))
+                                TextField("Tên phòng của bạn...", text: $roomName)
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 15)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(.white.opacity(0.06))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.white.opacity(0.15), .white.opacity(0.05)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 0.5
+                                            )
+                                    )
+                            )
+                            
+                            Button {
+                                let name = roomName.trimmingCharacters(in: .whitespaces)
+                                let finalName = name.isEmpty ? "Phòng \(Int.random(in: 100...999))" : name
+                                service.createRoom(roomName: finalName, userName: "User") { _ in }
+                                roomName = ""
+                                isInputFocused = false
+                            } label: {
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 48, height: 48)
+                                    .background(
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(red: 0.5, green: 0.55, blue: 0.9), Color(red: 0.35, green: 0.4, blue: 0.75)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                    )
+                                    .shadow(color: Color(red: 0.4, green: 0.45, blue: 0.8).opacity(0.4), radius: 8, y: 2)
+                            }
                         }
                     }
                     
-                    // Thanh text nhập mã phòng
+                    // Divider
                     HStack(spacing: 12) {
-                        TextField("Nhập mã phòng...", text: $joinCode)
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.6)))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                        
-                        Button {
-                            let code = joinCode.trimmingCharacters(in: .whitespaces)
-                            guard !code.isEmpty else { return }
-                            service.joinRoom(code: code, userName: "User") { success, error in }
-                            joinCode = ""
-                            isInputFocused = false
-                        } label: {
-                            Text("Vào")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 14)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(.green.opacity(0.4)))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.green.opacity(0.5), lineWidth: 0.5))
+                        Rectangle().fill(.white.opacity(0.08)).frame(height: 0.5)
+                        Text("hoặc")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.3))
+                        Rectangle().fill(.white.opacity(0.08)).frame(height: 0.5)
+                    }
+                    
+                    // Thanh nhập mã
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "key")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(red: 0.6, green: 0.9, blue: 0.7))
+                            Text("THAM GIA BẰNG MÃ")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.5))
+                                .tracking(2)
+                            Spacer()
                         }
-                        .disabled(joinCode.trimmingCharacters(in: .whitespaces).isEmpty)
-                        .opacity(joinCode.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
+                        .padding(.horizontal, 4)
+                        
+                        HStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "number")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.4))
+                                TextField("Nhập mã 6 chữ số...", text: $joinCode)
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .keyboardType(.numberPad)
+                                    .onChange(of: joinCode) { newVal in
+                                        joinCode = String(newVal.filter { $0.isNumber }.prefix(6))
+                                        joinError = nil
+                                    }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 15)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(.white.opacity(0.06))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.white.opacity(0.15), .white.opacity(0.05)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 0.5
+                                            )
+                                    )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(joinError != nil ? Color.red.opacity(0.5) : Color.clear, lineWidth: 1)
+                            )
+                            
+                            Button {
+                                joinRoom()
+                            } label: {
+                                if isJoining {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .frame(width: 48, height: 48)
+                                } else {
+                                    Image(systemName: "arrow.right")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 48, height: 48)
+                                        .background(
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [Color(red: 0.35, green: 0.75, blue: 0.5), Color(red: 0.2, green: 0.6, blue: 0.35)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                        )
+                                        .shadow(color: Color(red: 0.2, green: 0.65, blue: 0.4).opacity(0.4), radius: 8, y: 2)
+                                }
+                            }
+                            .disabled(joinCode.count < 6 || isJoining)
+                            .opacity(joinCode.count < 6 || isJoining ? 0.4 : 1)
+                        }
+                        
+                        // Error message
+                        if let error = joinError {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 10))
+                                Text(error)
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                            }
+                            .foregroundColor(Color(red: 1.0, green: 0.35, blue: 0.35))
+                            .padding(.horizontal, 4)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .padding(24)
+                .background(
+                    RoundedRectangle(cornerRadius: 28)
+                        .fill(.white.opacity(0.03))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28)
+                                .stroke(.white.opacity(0.08), lineWidth: 0.5)
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                )
+                .padding(.horizontal, 20)
                 
+                Spacer()
                 Spacer()
             }
         }
@@ -168,6 +325,30 @@ struct WatchTogetherRoomView: View {
         .toolbar(.hidden, for: .tabBar)
         .contentShape(Rectangle())
         .onTapGesture { isInputFocused = false }
+    }
+    
+    func joinRoom() {
+        let code = joinCode.trimmingCharacters(in: .whitespaces)
+        guard code.count == 6 else {
+            withAnimation(.easeOut(duration: 0.2)) { joinError = "Mã phòng phải có đúng 6 chữ số" }
+            return
+        }
+        isJoining = true
+        joinError = nil
+        service.joinRoom(code: code, userName: "User") { success, roomName in
+            isJoining = false
+            if success {
+                joinCode = ""
+                isInputFocused = false
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    joinError = "Không tìm thấy phòng với mã này. Kiểm tra lại nhé!"
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation { joinError = nil }
+                }
+            }
+        }
     }
     
     // MARK: - In Room
@@ -190,7 +371,6 @@ struct WatchTogetherRoomView: View {
         }
         .sheet(isPresented: $showViewerPanel) { viewerPanel.presentationDetents([.medium]) }
         .sheet(isPresented: $showSearchMovie) { SearchView(onSelectMovie: { movie in loadMovieForRoom(movie) }) }
-        .sheet(isPresented: $showYouTubeSearch) { YouTubeSearchView() }
         .onAppear { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in let newTime = t.seconds; if newTime.isFinite { currentTime = newTime }; if let d = player.currentItem?.duration, d.isNumeric, d.seconds.isFinite { duration = d.seconds } } }
         .onChange(of: service.remoteState?.timestamp) { _ in handleRemoteState() }
         .onChange(of: player.rate) { newRate in if service.isInRoom && service.isHost { service.sendPlaybackState(action: newRate > 0 ? "play" : "pause", time: currentTime) } }
@@ -252,9 +432,6 @@ struct WatchTogetherRoomView: View {
                             }
                         }
                         .padding(5).background(Capsule().fill(.ultraThinMaterial.opacity(0.5)))
-                    }
-                    Button { showYouTubeSearch = true } label: {
-                        Image(systemName: "play.rectangle.fill").font(.system(size: 12)).foregroundColor(.red).padding(6).background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                     }
                 }
             }
