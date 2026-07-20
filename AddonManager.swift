@@ -84,19 +84,62 @@ class AddonManager: ObservableObject {
     }
     
     func fetchManifest(from urlString: String) async throws -> AddonManifest {
-        let baseURL = urlString.hasSuffix("/") ? urlString : urlString + "/"
-        guard let url = URL(string: baseURL + "manifest.json") else {
-            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
-        }
-        
-        let (data, response) = try await URLSession.shared.data(from: url)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw NSError(domain: "", code: -2, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy manifest.json"])
-        }
-        
-        let manifest = try JSONDecoder().decode(AddonManifest.self, from: data)
-        return manifest
+    var baseURL = urlString
+    
+    // Nếu URL đã có manifest.json thì dùng trực tiếp
+    if !urlString.contains("manifest.json") {
+        baseURL = urlString.hasSuffix("/") ? urlString + "manifest.json" : urlString + "/manifest.json"
     }
+    
+    guard let url = URL(string: baseURL) else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
+    }
+    
+    let (data, response) = try await URLSession.shared.data(from: url)
+    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        throw NSError(domain: "", code: -2, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy manifest.json"])
+    }
+    
+    // Parse linh hoạt - bỏ qua field lỗi
+    let decoder = JSONDecoder()
+    do {
+        let manifest = try decoder.decode(AddonManifest.self, from: data)
+        return manifest
+    } catch {
+        // Thử parse thủ công
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let id = json["id"] as? String ?? UUID().uuidString
+            let name = json["name"] as? String ?? "Unknown"
+            let version = json["version"] as? String ?? "0.0.0"
+            let description = json["description"] as? String
+            let logo = json["logo"] as? String
+            let idPrefixes = json["idPrefixes"] as? [String]
+            let resources = json["resources"] as? [String]
+            let types = json["types"] as? [String]
+            let behaviorHints = json["behaviorHints"] as? [String: String]
+            
+            var catalogs: [AddonCatalog]? = nil
+            if let cats = json["catalogs"] as? [[String: Any]] {
+                catalogs = cats.compactMap { cat in
+                    guard let type = cat["type"] as? String,
+                          let catId = cat["id"] as? String,
+                          let catName = cat["name"] as? String else { return nil }
+                    var extras: [AddonExtra]? = nil
+                    if let extraArr = cat["extra"] as? [[String: Any]] {
+                        extras = extraArr.compactMap { extra in
+                            guard let extraName = extra["name"] as? String else { return nil }
+                            return AddonExtra(name: extraName, options: extra["options"] as? [String], isRequired: extra["isRequired"] as? Bool)
+                        }
+                    }
+                    return AddonCatalog(type: type, id: catId, name: catName, extra: extras)
+                }
+            }
+            
+            return AddonManifest(id: id, name: name, version: version, description: description, idPrefixes: idPrefixes, catalogs: catalogs, resources: resources, types: types, logo: logo, behaviorHints: behaviorHints)
+        }
+        throw NSError(domain: "", code: -3, userInfo: [NSLocalizedDescriptionKey: "Không parse được manifest.json"])
+    }
+}
     
     func addAddon(url: String, manifest: AddonManifest) {
         let baseURL = url.hasSuffix("/") ? url : url + "/"
