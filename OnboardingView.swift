@@ -9,6 +9,7 @@ class OnboardingManager: ObservableObject {
     @Published var selectedMovies: [Movie] = []
     @Published var email = ""
     @Published var profiles: [UIImage?] = [nil, nil, nil]
+    @Published var recommendedMovies: [Movie] = []
     
     func completeOnboarding(appState: AppState? = nil) {
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
@@ -25,6 +26,26 @@ class OnboardingManager: ObservableObject {
         selectedMovies = []
         email = ""
         profiles = [nil, nil, nil]
+        recommendedMovies = []
+    }
+    
+    func fetchRecommendations() async {
+        guard !selectedMovies.isEmpty else { return }
+        let genreIds = selectedMovies.compactMap { $0.genreIds }.flatMap { $0 }
+        let uniqueGenres = Array(Set(genreIds)).prefix(3)
+        
+        var allMovies: [Movie] = []
+        for genreId in uniqueGenres {
+            if let movies = try? await APIService.shared.discoverByGenre(genreId: genreId) {
+                let filtered = movies.filter { m in !selectedMovies.contains(where: { $0.id == m.id }) && !(m.adult ?? false) }
+                allMovies.append(contentsOf: filtered)
+            }
+        }
+        
+        let shuffled = Array(Set(allMovies)).shuffled()
+        await MainActor.run {
+            self.recommendedMovies = Array(shuffled.prefix(9))
+        }
     }
 }
 
@@ -302,7 +323,7 @@ struct MoviePickerStep: View {
     @State private var popularMovies: [Movie] = []
     @State private var searchResults: [Movie] = []
     
-    let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+    let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var displayMovies: [Movie] {
         searchText.isEmpty ? popularMovies : searchResults
@@ -334,7 +355,7 @@ struct MoviePickerStep: View {
                 .padding(.horizontal, 24)
                 
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 8) {
+                    LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(displayMovies.prefix(12)) { movie in
                             let isSelected = om.selectedMovies.contains(where: { $0.id == movie.id })
                             Button {
@@ -344,37 +365,33 @@ struct MoviePickerStep: View {
                                     om.selectedMovies.append(movie)
                                 }
                             } label: {
-                                ZStack {
+                                ZStack(alignment: .bottomTrailing) {
                                     CachedAsyncImage(url: movie.posterURL)
                                         .aspectRatio(2/3, contentMode: .fill)
                                         .frame(height: 160)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(isSelected ? Color.white.opacity(0.3) : Color.clear)
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(isSelected ? Color.white.opacity(0.35) : Color.clear)
                                         )
                                     
                                     if isSelected {
-                                        RoundedRectangle(cornerRadius: 8)
+                                        RoundedRectangle(cornerRadius: 10)
                                             .stroke(.white, lineWidth: 3)
                                         
-                                        VStack {
-                                            Spacer()
-                                            HStack {
-                                                Spacer()
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(.system(size: 24))
-                                                    .foregroundColor(.white)
-                                                    .padding(6)
-                                            }
-                                        }
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 26))
+                                            .foregroundColor(.white)
+                                            .padding(8)
+                                            .background(Circle().fill(.black.opacity(0.4)))
+                                            .padding(6)
                                     }
                                 }
                                 .frame(height: 160)
                             }
                         }
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 20)
                     .padding(.bottom, 100)
                 }
             }
@@ -383,6 +400,7 @@ struct MoviePickerStep: View {
             
             Button {
                 withAnimation { om.currentStep = 3 }
+                Task { await om.fetchRecommendations() }
             } label: {
                 Text("Next")
                     .font(.system(size: 16, weight: .semibold))
@@ -411,7 +429,8 @@ struct MoviePickerStep: View {
 // MARK: - Step 3: Good Choice!
 struct GoodChoiceStep: View {
     @ObservedObject var om: OnboardingManager
-    @State private var showStars = false
+    @State private var isLoading = true
+    let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -420,37 +439,57 @@ struct GoodChoiceStep: View {
             Text("Good choice!")
                 .font(.system(size: 30, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.bottom, 30)
+                .padding(.bottom, 20)
             
-            HStack(spacing: 16) {
+            // Selected movies row
+            HStack(spacing: 12) {
                 ForEach(Array(om.selectedMovies.prefix(3))) { movie in
                     CachedAsyncImage(url: movie.posterURL)
                         .aspectRatio(2/3, contentMode: .fill)
-                        .frame(width: 100, height: 150)
+                        .frame(width: 90, height: 135)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: .white.opacity(0.2), radius: 10)
+                        .shadow(color: .white.opacity(0.15), radius: 8)
                 }
             }
+            .padding(.bottom, 24)
             
             Text("We'll recommend movies based on your taste")
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
-                .padding(.top, 20)
                 .padding(.horizontal, 40)
+                .padding(.bottom, 20)
             
-            HStack(spacing: 12) {
-                ForEach(0..<3) { i in
-                    Image(systemName: "triangle.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                        .opacity(showStars ? 1 : 0.3)
-                        .scaleEffect(showStars ? 1 : 0.5)
-                        .rotationEffect(.degrees(180))
-                        .animation(.easeInOut(duration: 0.6).delay(Double(i) * 0.2).repeatForever(autoreverses: true), value: showStars)
+            // Recommendations
+            if isLoading {
+                HStack(spacing: 12) {
+                    ForEach(0..<3) { i in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .opacity(0.4 + Double(i) * 0.3)
+                            .scaleEffect(1.0 + 0.1 * Double(i))
+                    }
                 }
+                .padding(.bottom, 12)
+                Text("Đang tìm phim cho bạn...")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.4))
+            } else if !om.recommendedMovies.isEmpty {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(om.recommendedMovies) { movie in
+                            CachedAsyncImage(url: movie.posterURL)
+                                .aspectRatio(2/3, contentMode: .fill)
+                                .frame(height: 140)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .shadow(color: .white.opacity(0.1), radius: 4)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+                .frame(maxHeight: 300)
             }
-            .padding(.top, 12)
             
             Spacer()
             
@@ -467,7 +506,12 @@ struct GoodChoiceStep: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 50)
         }
-        .onAppear { showStars = true }
+        .onAppear {
+            isLoading = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation { isLoading = false }
+            }
+        }
     }
 }
 
