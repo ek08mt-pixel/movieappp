@@ -30,22 +30,21 @@ class OnboardingManager: ObservableObject {
     }
     
     func fetchRecommendations() async {
-        guard !selectedMovies.isEmpty else { return }
-        let genreIds = selectedMovies.compactMap { $0.genreIds }.flatMap { $0 }
-        let uniqueGenres = Array(Set(genreIds)).prefix(3)
-        
-        var allMovies: [Movie] = []
-        for genreId in uniqueGenres {
-            if let movies = try? await APIService.shared.discoverByGenre(genreId: genreId) {
-                let filtered = movies.filter { m in !selectedMovies.contains(where: { $0.id == m.id }) && !(m.adult ?? false) }
-                allMovies.append(contentsOf: filtered)
-            }
+    guard !selectedMovies.isEmpty else { return }
+    let genreIds = selectedMovies.compactMap { $0.genreIds }.flatMap { $0 }
+    let uniqueGenres = Array(Set(genreIds)).prefix(3)
+    
+    var allMovies: [Movie] = []
+    for genreId in uniqueGenres {
+        if let movies = try? await APIService.shared.moviesByGenre(genreId: genreId, page: 1) {
+            let filtered = movies.filter { m in !selectedMovies.contains(where: { $0.id == m.id }) && !(m.adult ?? false) }
+            allMovies.append(contentsOf: filtered)
         }
-        
-        let shuffled = Array(Set(allMovies)).shuffled()
-        await MainActor.run {
-            self.recommendedMovies = Array(shuffled.prefix(9))
-        }
+    }
+    
+    let shuffled = Array(Set(allMovies)).shuffled()
+    await MainActor.run {
+        self.recommendedMovies = Array(shuffled.prefix(9))
     }
 }
 
