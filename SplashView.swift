@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SplashView: View {
     @EnvironmentObject var appState: AppState
-    @State private var showMain = false
+    @Binding var showSplash: Bool
     @State private var isBlocked = false
     @State private var blockTitle = ""
     @State private var blockMessage = ""
@@ -60,8 +60,6 @@ struct SplashView: View {
                     Spacer()
                     Text("emew © 2026").font(.caption).foregroundColor(.gray.opacity(0.5))
                 }
-            } else {
-                MainTabView().environmentObject(appState)
             }
         }
         .task { await checkConfig() }
@@ -98,7 +96,10 @@ struct SplashView: View {
     
     func proceedToApp() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 0.5)) { showMain = true; isLoading = false }
+            withAnimation(.easeInOut(duration: 0.5)) {
+                isLoading = false
+                showSplash = false
+            }
         }
     }
 }
