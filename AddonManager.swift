@@ -70,6 +70,7 @@ struct SavedAddon: Codable, Identifiable {
     var enabled: Bool
     var addedDate: Date
 }
+}
 
 // MARK: - Addon Manager
 class AddonManager: ObservableObject {
