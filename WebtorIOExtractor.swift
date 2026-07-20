@@ -7,12 +7,21 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
     private var foundURL: URL?
     private var timer: Timer?
     private var retryCount = 0
-    private let maxRetries = 3
+    private let maxRetries = 5
+    private var hash: String = ""
+    private var serviceIndex = 0
+    
+    private let services = [
+        "https://webtor.io/show/",
+        "https://btor2.xyz/torrent/",
+        "https://webtor.cc/player?hash="
+    ]
     
     func extractStream(from magnetLink: String) async throws -> URL {
-        guard let hash = infoHash(from: magnetLink) else {
+        guard let infoHash = infoHash(from: magnetLink) else {
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Magnet link không hợp lệ"])
         }
+        self.hash = infoHash
         
         return try await withCheckedThrowingContinuation { continuation in
             self.completion = { url in
@@ -21,12 +30,33 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
             }
             
             DispatchQueue.main.async {
-                self.loadWebtor(hash: hash)
+                self.serviceIndex = 0
+                self.tryNextService()
             }
         }
     }
     
-    private func loadWebtor(hash: String) {
+    private func tryNextService() {
+        guard serviceIndex < services.count else {
+            cleanup()
+            completion?(nil)
+            return
+        }
+        
+        let urlString = services[serviceIndex] + hash
+        guard let url = URL(string: urlString) else {
+            serviceIndex += 1
+            tryNextService()
+            return
+        }
+        
+        retryCount = 0
+        loadWebView(url: url)
+    }
+    
+    private func loadWebView(url: URL) {
+        cleanup()
+        
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
@@ -41,11 +71,9 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
             rootVC.view.addSubview(wv)
         }
         
-        let urlString = "https://webtor.io/show/\(hash)"
-        wv.load(URLRequest(url: URL(string: urlString)!))
+        wv.load(URLRequest(url: url))
         
-        // Timeout 15s
-        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { [weak self] _ in
             self?.tryExtractVideo()
         }
     }
@@ -54,15 +82,17 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
         let js = """
         (function() {
             var v = document.querySelector('video');
-            if (v && v.src) return v.src;
+            if (v && v.src && (v.src.includes('.m3u8') || v.src.includes('.mp4') || v.src.includes('blob:') || v.src.includes('http'))) return v.src;
             var sources = document.querySelectorAll('source');
             for (var i = 0; i < sources.length; i++) {
                 if (sources[i].src && (sources[i].src.includes('.m3u8') || sources[i].src.includes('.mp4'))) {
                     return sources[i].src;
                 }
             }
-            var iframe = document.querySelector('iframe');
-            if (iframe && iframe.src) return iframe.src;
+            var iframes = document.querySelectorAll('iframe');
+            for (var j = 0; j < iframes.length; j++) {
+                if (iframes[j].src && iframes[j].src.includes('http')) return iframes[j].src;
+            }
             return '';
         })();
         """
@@ -70,8 +100,7 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
         webView?.evaluateJavaScript(js) { [weak self] result, _ in
             guard let self = self else { return }
             if let urlStr = result as? String, !urlStr.isEmpty,
-               let url = URL(string: urlStr),
-               (urlStr.contains(".m3u8") || urlStr.contains(".mp4") || urlStr.contains("webtor")) {
+               let url = URL(string: urlStr) {
                 self.foundURL = url
                 self.cleanup()
                 self.completion?(url)
@@ -81,8 +110,9 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
                     self?.tryExtractVideo()
                 }
             } else {
-                self.cleanup()
-                self.completion?(nil)
+                // Thử service tiếp theo
+                self.serviceIndex += 1
+                self.tryNextService()
             }
         }
     }
@@ -97,6 +127,11 @@ class WebtorIOExtractor: NSObject, WKNavigationDelegate {
             return
         }
         decisionHandler(.allow)
+    }
+    
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        serviceIndex += 1
+        tryNextService()
     }
     
     private func infoHash(from magnet: String) -> String? {
