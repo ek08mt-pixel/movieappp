@@ -241,7 +241,6 @@ func fetchBestStream(metaId: String, title: String, mediaType: String? = nil) as
     
     return nil
 }
-}
     
     // Lấy tất cả catalog từ tất cả addon
     func fetchAllCatalogs(type: String = "movie") async -> [AddonMeta] {
