@@ -38,6 +38,9 @@ class ImageCache {
         runningRequests.insert(key)
     }
     
+    func clearCache() {
+    cache.removeAllObjects()
+}
     func unmarkRunning(_ key: String) {
         lock.lock(); defer { lock.unlock() }
         runningRequests.remove(key)
