@@ -248,11 +248,11 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
 
 func selectAudio(_ label: String) { 
     selectedAudioLabel = label
-    errorMessage = "Server: \(phimapiServers.joined(separator: ",")) | Chọn: \(label)"
     UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)")
     if selectedSource == .phimapi { 
-        selectedServerIndex = audioOptions().firstIndex(of: label) ?? 0
-        UserDefaults.standard.set(selectedServerIndex, forKey: "lastAudioIndex_\(movieId)")
+        let idx = audioOptions().firstIndex(of: label) ?? 0
+        selectedServerIndex = idx
+        UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)")
         let st = currentTime
         loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) 
     }
