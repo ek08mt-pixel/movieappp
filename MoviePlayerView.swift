@@ -54,7 +54,7 @@ struct MoviePlayerView: View {
     @State private var isScreenLocked = false
     @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
     @State private var phimapiServers: [String] = []
-    @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
+    @State private var selectedServerIndex: Int = 0
     @State private var selectedAudioLabel: String = UserDefaults.standard.string(forKey: "lastAudioLabel_\(0)") ?? "Original"
     @State private var selectedVideoGravity: VideoGravityMode = .fit
     @State private var selectedQuality: String = "Auto"; @State private var currentStreamURL: URL?
@@ -76,7 +76,7 @@ struct MoviePlayerView: View {
     player.play(); player.volume = volume
     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
     forceLandscape()
-    if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
+    selectedServerIndex = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(movieId)")
     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
 }
                 .onDisappear {
