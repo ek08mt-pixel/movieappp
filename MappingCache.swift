@@ -544,7 +544,8 @@ final class OnflixService {
         completion(.success(streamURL))
     }.resume()
 }
-
+}
+  }
 // MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
