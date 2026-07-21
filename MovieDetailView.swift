@@ -52,32 +52,7 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        ratingsBar
-                        
-                        // Server Selector
-                        if vm.isLoadingServers {
-                            HStack { Spacer(); ProgressView().tint(.white); Spacer() }
-                        } else if !vm.serverList.isEmpty {
-                            HStack(spacing: 8) {
-                                ForEach(Array(vm.serverList.enumerated()), id: \.element.name) { index, server in
-                                    Button {
-                                        selectedServer = server.name
-                                        playSeason = nil; playEpisode = nil
-                                        presentPlayer(serverIndex: index)
-                                    } label: {
-                                        VStack(spacing: 2) {
-                                            Text(server.name).font(.system(size: 11, weight: .medium))
-                                            Text(server.qualities).font(.system(size: 8)).foregroundColor(.gray).lineLimit(1)
-                                        }
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity).padding(.vertical, 6)
-                                        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
-                                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                                    }
-                                }
-                            }
-                        }
-                        
+        
                         HStack(spacing: 10) {
                             Button { playSeason = nil; playEpisode = nil; presentPlayer() } label: {
                                 Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
