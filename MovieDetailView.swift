@@ -163,8 +163,7 @@ struct MovieDetailView: View {
         mediaType: playerMediaType,
         seasonNumber: playSeason,
         episodeNumber: playEpisode,
-        posterURL: movie.posterURL,
-        selectedServerIndex: serverIndex  // ← THÊM
+        posterURL: movie.posterURL
     ).environmentObject(appState)
     let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
     hosting.modalPresentationStyle = .fullScreen
