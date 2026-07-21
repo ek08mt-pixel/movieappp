@@ -228,7 +228,6 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     func audioOptions() -> [String] { if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }; return ["Vietsub", "Lồng Tiếng", "Original"] }
 func selectAudio(_ label: String) { selectedAudioLabel = label; UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)"); if selectedSource == .phimapi, let idx = phimapiServers.firstIndex(of: label) { selectedServerIndex = idx; UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)"); let st = currentTime; loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) }; showAudioPopup = false }
 }
-} 
 
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
