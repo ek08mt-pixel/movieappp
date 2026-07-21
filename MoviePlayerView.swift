@@ -242,7 +242,8 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     }.padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 260) 
 }
     func audioOptions() -> [String] { 
-    return ["Vietsub", "Lồng tiếng", "Thuyết minh"]
+    if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }
+    return ["Vietsub", "Lồng Tiếng", "Thuyết minh"] 
 }
 
 func selectAudio(_ label: String) { 
