@@ -17,7 +17,7 @@ struct MovieDetailView: View {
     @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
-    @State private var selectedServer = "Vietsub"
+    
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
