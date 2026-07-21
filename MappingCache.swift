@@ -438,12 +438,6 @@ final class OphimService {
     private let baseURL = "https://ophim1.com/v1/api"
     private init() {}
     
-    func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    final class OphimService {
-    static let shared = OphimService()
-    private let baseURL = "https://ophim1.com/v1/api"
-    private init() {}
-    
     func fetchStream(title: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         let ep = episode ?? 1
         let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
@@ -508,7 +502,7 @@ final class OphimService {
         }.resume()
     }
 }
-}
+
 // MARK: - Onflix Service
 final class OnflixService {
     static let shared = OnflixService()
@@ -516,57 +510,50 @@ final class OnflixService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    let urlString = "\(baseURL)/phim/\(slug)"
-    guard let url = URL(string: urlString) else {
-        completion(.failure(StreamServiceError.invalidURL))
-        return
-    }
-    
-    URLSession.streamSession.dataTask(with: url) { data, _, error in
-        if let error = error { completion(.failure(error)); return }
-        guard let data = data, let html = String(data: data, encoding: .utf8) else {
-            completion(.failure(StreamServiceError.noData))
+        let urlString = "\(baseURL)/phim/\(slug)"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(StreamServiceError.invalidURL))
             return
         }
         
-        // Thử nhiều pattern
-        let patterns = [
-            #""link_m3u8":"([^"]+)""#,
-            #"https?:\/\/[^"'\s]+\.m3u8[^"'\s]*"#,
-            #"https?:\/\/[^"'\s]+onflixstream[^"'\s]*"#,
-            #"https?:\/\/[^"'\s]+kkphimplayer[^"'\s]*"#,
-            #"https?:\/\/[^"'\s]+opstream[^"'\s]*"#,
-            #"https?:\/\/[^"'\s]+onflix\.xyz[^"'\s]*"#
-        ]
-        
-        for pattern in patterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern),
-                  let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-                  let range = Range(match.range(at: 0), in: html) else { continue }
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(.failure(StreamServiceError.noData))
+                return
+            }
             
-            var m3u8URL = String(html[range])
-                .replacingOccurrences(of: "\\u0026", with: "&")
-                .replacingOccurrences(of: "\\/", with: "/")
-                .replacingOccurrences(of: "&amp;", with: "&")
+            let patterns = [
+                #""link_m3u8":"([^"]+)""#,
+                #"https?:\/\/[^"'\s]+\.m3u8[^"'\s]*"#,
+                #"https?:\/\/[^"'\s]+onflixstream[^"'\s]*"#,
+                #"https?:\/\/[^"'\s]+kkphimplayer[^"'\s]*"#,
+                #"https?:\/\/[^"'\s]+opstream[^"'\s]*"#,
+                #"https?:\/\/[^"'\s]+onflix\.xyz[^"'\s]*"#
+            ]
             
-            // Bỏ dấu " nếu có
-            m3u8URL = m3u8URL.replacingOccurrences(of: "\"", with: "")
+            for pattern in patterns {
+                guard let regex = try? NSRegularExpression(pattern: pattern),
+                      let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                      let range = Range(match.range(at: 0), in: html) else { continue }
+                
+                var m3u8URL = String(html[range])
+                    .replacingOccurrences(of: "\\u0026", with: "&")
+                    .replacingOccurrences(of: "\\/", with: "/")
+                    .replacingOccurrences(of: "&amp;", with: "&")
+                    .replacingOccurrences(of: "\"", with: "")
+                
+                if let streamURL = URL(string: m3u8URL) {
+                    completion(.success(streamURL))
+                    return
+                }
+            }
             
-            guard let streamURL = URL(string: m3u8URL) else { continue }
-            completion(.success(streamURL))
-            return
-        }
-        
-        completion(.failure(StreamServiceError.noStreamURL))
-    }.resume()
-}
-    
-    func searchMovie(query: String, completion: @escaping (Result<[(title: String, slug: String, year: Int)], Error>) -> Void) {
-        // Onflix dùng Next.js, không có search API public
-        // Tạm thời dùng mapping từ tên phim
-        completion(.success([]))
+            completion(.failure(StreamServiceError.noStreamURL))
+        }.resume()
     }
 }
+
 // MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
@@ -600,9 +587,4 @@ final class InternationalEmbedService {
             }
         }
     }
-}
-private class WKNavigationDelegateWrapper: NSObject, WKNavigationDelegate {
-    let onFinish: (WKWebView) -> Void
-    init(onFinish: @escaping (WKWebView) -> Void) { self.onFinish = onFinish }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { onFinish(webView) }
 }
