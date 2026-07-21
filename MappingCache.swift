@@ -496,6 +496,7 @@ final class OphimService {
 }
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
+    private let workerURL = "https://emmewchamchi.pnbhan99.workers.dev"
     private init() {}
     
     func fetchStream(imdbID: String, completion: @escaping (Result<URL, Error>) -> Void) {
@@ -512,7 +513,10 @@ final class InternationalEmbedService {
             completion(.failure(StreamServiceError.noStreamURL))
             return
         }
-        guard let url = URL(string: providers[index]) else {
+        let raw = providers[index]
+        let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? raw
+        let proxyURL = "\(workerURL)/?url=\(encoded)"
+        guard let url = URL(string: proxyURL) else {
             tryNext(providers, index: index + 1, completion: completion)
             return
         }
