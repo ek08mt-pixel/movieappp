@@ -228,18 +228,6 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     func audioOptions() -> [String] { 
     return ["Vietsub", "Lồng tiếng", "Thuyết minh"]
 }
-func selectAudio(_ label: String) { 
-    selectedAudioLabel = label
-    UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)")
-    if selectedSource == .phimapi { 
-        let idx = ["Vietsub", "Lồng tiếng", "Thuyết minh"].firstIndex(of: label) ?? 0
-        selectedServerIndex = idx
-        UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)")
-        let st = currentTime
-        loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) 
-    }
-    showAudioPopup = false 
-}
 
 func selectAudio(_ label: String) { 
     selectedAudioLabel = label
