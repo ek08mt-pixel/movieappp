@@ -295,7 +295,8 @@ struct InfoPopupView: View {
                 }
                 .padding(.horizontal, 16).padding(.bottom, 16)
             }
-            .frame(width: 300, maxHeight: 400)
+            .frame(width: 300)
+.frame(maxHeight: 400)
             .background(RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.12)))
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.5), radius: 20)
