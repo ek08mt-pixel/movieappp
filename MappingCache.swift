@@ -494,3 +494,36 @@ final class OphimService {
         }.resume()
     }
 }
+final class InternationalEmbedService {
+    static let shared = InternationalEmbedService()
+    private init() {}
+    
+    func fetchStream(imdbID: String, completion: @escaping (Result<URL, Error>) -> Void) {
+        let providers: [String] = [
+            "https://embed.su/embed/movie/\(imdbID)",
+            "https://vidsrc.to/embed/movie/\(imdbID)",
+            "https://www.2embed.cc/embed/\(imdbID)"
+        ]
+        tryNext(providers, index: 0, completion: completion)
+    }
+    
+    private func tryNext(_ providers: [String], index: Int, completion: @escaping (Result<URL, Error>) -> Void) {
+        guard index < providers.count else {
+            completion(.failure(StreamServiceError.noStreamURL))
+            return
+        }
+        guard let url = URL(string: providers[index]) else {
+            tryNext(providers, index: index + 1, completion: completion)
+            return
+        }
+        let extractor = EmbedExtractor()
+        Task {
+            do {
+                let streamURL = try await extractor.extractM3U8(from: url)
+                completion(.success(streamURL))
+            } catch {
+                self.tryNext(providers, index: index + 1, completion: completion)
+            }
+        }
+    }
+}
