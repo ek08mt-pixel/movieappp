@@ -510,30 +510,39 @@ final class OnflixService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let urlString = "\(baseURL)/xem-phim/\(slug)/vietsub-sn/vietsub/FULL"
-        guard let url = URL(string: urlString) else {
-            completion(.failure(StreamServiceError.invalidURL))
+    let urlString = "\(baseURL)/phim/\(slug)"
+    guard let url = URL(string: urlString) else {
+        completion(.failure(StreamServiceError.invalidURL))
+        return
+    }
+    
+    URLSession.streamSession.dataTask(with: url) { data, _, error in
+        if let error = error { completion(.failure(error)); return }
+        guard let data = data, let html = String(data: data, encoding: .utf8) else {
+            completion(.failure(StreamServiceError.noData))
             return
         }
         
-        DispatchQueue.main.async {
-            let extractor = EmbedExtractor()
-            Task {
-                do {
-                    let streamURL = try await extractor.extractM3U8(from: url)
-                    completion(.success(streamURL))
-                } catch {
-                    let movieURL = URL(string: "\(self.baseURL)/phim/\(slug)")!
-                    do {
-                        let fallbackURL = try await extractor.extractM3U8(from: movieURL)
-                        completion(.success(fallbackURL))
-                    } catch {
-                        completion(.failure(StreamServiceError.noStreamURL))
-                    }
-                }
-            }
+        // Parse link_m3u8 từ JSON trong self.__next_f.push
+        let pattern = #""link_m3u8":"([^"\\]+)""#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else {
+            completion(.failure(StreamServiceError.noStreamURL))
+            return
         }
-    }
+        
+        var m3u8 = String(html[range])
+            .replacingOccurrences(of: "\\u0026", with: "&")
+            .replacingOccurrences(of: "\\/", with: "/")
+        
+        guard let streamURL = URL(string: m3u8) else {
+            completion(.failure(StreamServiceError.noStreamURL))
+            return
+        }
+        
+        completion(.success(streamURL))
+    }.resume()
 }
 
 // MARK: - International Embed Service
