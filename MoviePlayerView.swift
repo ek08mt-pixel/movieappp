@@ -253,6 +253,7 @@ func selectAudio(_ label: String) {
         let idx = audioOptions().firstIndex(of: label) ?? 0
         selectedServerIndex = idx
         UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)")
+        UserDefaults.standard.removeObject(forKey: "phimapi_stream_cache")
         let st = currentTime
         loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) 
     }
