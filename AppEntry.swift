@@ -170,10 +170,19 @@ struct AppEntry: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject var appState = AppState()
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
+    @AppStorage("userTheme") var userTheme: String = "dark"
     @State private var showSplash = true
     
     init() {
         UIApplication.shared.isNetworkActivityIndicatorVisible = false
+    }
+    
+    var colorScheme: ColorScheme? {
+        switch userTheme {
+        case "light": return .light
+        case "system": return nil
+        default: return .dark
+        }
     }
     
     var body: some Scene {
@@ -186,6 +195,7 @@ struct AppEntry: App {
                 } else if hasCompletedOnboarding {
                     MainTabView()
                         .environmentObject(appState)
+                        .preferredColorScheme(colorScheme)
                         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                             Task {
                                 await NotificationManager.shared.autoCheckFromAppState(appState)
