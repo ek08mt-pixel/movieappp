@@ -360,9 +360,10 @@ struct CastSheetView: View {
 }
 
 struct CastRemoteView: View {
-    let movieTitle: String; let episodeInfo: String; var posterURL: URL?; let castDeviceName: String
+     let movieTitle: String; let episodeInfo: String; var posterURL: URL?; let castDeviceName: String
     let player: AVPlayer; @Binding var currentTime: Double; @Binding var duration: Double; @Binding var isCasting: Bool
     @Environment(\.dismiss) var dismiss
+    @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @State private var isPlaying = true; @State private var selectedAudio = "Vietsub"; @State private var showAudioMenu = false; @State private var showInfo = false
     var body: some View { ZStack { LinearGradient(colors: [Color(white: 0.12), Color(white: 0.04), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea().overlay(.ultraThinMaterial.opacity(0.05)); VStack(spacing: 0) { HStack { HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 6, height: 6).overlay(Circle().fill(Color.green.opacity(0.4)).frame(width: 12, height: 12).scaleEffect(isPlaying ? 1.5 : 1).opacity(isPlaying ? 0.6 : 0).animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isPlaying)); Text("Đang phát trên \(castDeviceName)").font(.system(size: 11)).foregroundColor(.white.opacity(0.6)) }; Spacer(); Button { stopCasting() } label: { Text("Ngắt kết nối").font(.system(size: 11, weight: .medium)).foregroundColor(.red.opacity(0.8)).padding(.horizontal, 12).padding(.vertical, 5).background(Capsule().fill(.white.opacity(0.1))) } }.padding(.horizontal, 20).padding(.top, 50); Spacer()
         VStack(spacing: 16) { if let url = posterURL { CachedAsyncImage(url: url).aspectRatio(2 / 3, contentMode: .fit).frame(height: 220).clipShape(RoundedRectangle(cornerRadius: 20)).shadow(color: .white.opacity(0.15), radius: 20, y: -5).overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.15), lineWidth: 1)) }; VStack(spacing: 4) { Text(movieTitle).font(.system(size: 20, weight: .bold, design: .serif)).foregroundColor(.white).multilineTextAlignment(.center); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 12)).foregroundColor(.white.opacity(0.5)) } }.padding(.horizontal, 40) }
