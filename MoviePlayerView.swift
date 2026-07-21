@@ -226,7 +226,17 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     var settingsPopup: some View { VStack(spacing: 8) { Text("Cài đặt").font(.system(size: 13, weight: .bold)).foregroundColor(.white); Text("Nguồn phát").font(.system(size: 10)).foregroundColor(.white.opacity(0.5)); HStack(spacing: 6) { ForEach(MovieSource.allCases, id: \.self) { src in Button { selectedSource = src; showSettings = false; loadStream() } label: { Text(src.rawValue).font(.system(size: 10)).foregroundColor(selectedSource == src ? .white : .white.opacity(0.5)).padding(.horizontal, 8).padding(.vertical, 5).background(Capsule().fill(selectedSource == src ? .white.opacity(0.15) : .clear)) } } }; Divider().background(Color.white.opacity(0.1)); Text("Chất lượng").font(.system(size: 10)).foregroundColor(.white.opacity(0.5)); HStack(spacing: 4) { ForEach(availableQualities, id: \.self) { q in Button { applyQuality(q); showSettings = false } label: { Text(q).font(.system(size: 9)).foregroundColor(selectedQuality == q ? .white : .white.opacity(0.5)).fixedSize(horizontal: true, vertical: false).padding(.horizontal, 6).padding(.vertical, 4).background(Capsule().fill(selectedQuality == q ? .white.opacity(0.15) : .clear)) } } }; Divider().background(Color.white.opacity(0.1)); HStack(spacing: 6) { ForEach(["0.5x", "1.0x", "1.5x", "2.0x"], id: \.self) { s in Button { player.rate = Float(s.replacingOccurrences(of: "x", with: "")) ?? 1.0; showSettings = false } label: { Text(s).font(.system(size: 10)).foregroundColor(.white.opacity(0.7)).padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(.white.opacity(0.1))) } } } }.padding(12).background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.4)).frame(width: 220) }
     var audioPopup: some View { VStack(spacing: 10) { Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white); ForEach(audioOptions(), id: \.self) { aud in Button { selectAudio(aud) } label: { Text(aud).font(.system(size: 13)).foregroundColor(aud == selectedAudioLabel ? .black : .white).frame(maxWidth: .infinity).padding(.vertical, 10).background(RoundedRectangle(cornerRadius: 8).fill(aud == selectedAudioLabel ? .white : Color.white.opacity(0.08))) } } }.padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240) }
     func audioOptions() -> [String] { if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }; return ["Vietsub", "Lồng Tiếng", "Original"] }
-    func selectAudio(_ label: String) { selectedAudioLabel = label; UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)"); if selectedSource == .phimapi, let idx = phimapiServers.firstIndex(of: label) { selectedServerIndex = idx; UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)"); let st = currentTime; loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st) }; showAudioPopup = false }
+    func selectAudio(_ label: String) {
+    selectedAudioLabel = label
+    UserDefaults.standard.set(label, forKey: "lastAudioLabel_\(movieId)")
+    if selectedSource == .phimapi {
+        let idx = phimapiServers.firstIndex(where: { $0.localizedCaseInsensitiveContains(label) }) ?? 0
+        selectedServerIndex = idx
+        UserDefaults.standard.set(idx, forKey: "lastAudioIndex_\(movieId)")
+        let st = currentTime
+        loadStream(season: seasonNumber, episode: episodeNumber, resumeAt: st)
+    }
+    showAudioPopup = false
 }
 
 struct CastSheetView: View {
