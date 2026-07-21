@@ -138,22 +138,20 @@ struct HomeView: View {
             }
         }
         
-        // Add-ons
-        Section {
-            NavigationLink(destination: AddonListView()) {
-                HStack {
-                    Text("🧩")
-                        .font(.system(size: 16))
-                    Text("Add-ons")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                    Spacer()
-                    Text("\(AddonManager.shared.addons.filter(\.enabled).count) đang bật")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray)
-                }
-            }
+        // Settings
+Section {
+    NavigationLink(destination: SettingsView()) {
+        HStack {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.white.opacity(0.7))
+            Text("Cài đặt")
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+            Spacer()
         }
+    }
+}
     } label: {
         ZStack {
             Circle()
