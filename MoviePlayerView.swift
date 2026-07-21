@@ -76,7 +76,11 @@ struct MoviePlayerView: View {
     player.play(); player.volume = volume
     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
     forceLandscape()
-    if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
+    if let saved = UserDefaults.standard.value(forKey: "selectedServerIndex_\(movieId)") as? Int, saved > 0 {
+        selectedServerIndex = saved
+    } else if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int {
+        selectedServerIndex = i
+    }
     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
 }
                 .onDisappear {
