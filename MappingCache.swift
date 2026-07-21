@@ -502,7 +502,54 @@ final class OphimService {
         }.resume()
     }
 }
-
+// MARK: - Onflix Service
+final class OnflixService {
+    static let shared = OnflixService()
+    private let baseURL = "https://onflix.lol"
+    private init() {}
+    
+    func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+        let urlString = "\(baseURL)/phim/\(slug)"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
+        
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(.failure(StreamServiceError.noData))
+                return
+            }
+            
+            // Parse link_m3u8 từ JSON trong HTML
+            let pattern = #""link_m3u8":"([^"]+)""#
+            guard let regex = try? NSRegularExpression(pattern: pattern),
+                  let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                  let range = Range(match.range(at: 1), in: html) else {
+                completion(.failure(StreamServiceError.noStreamURL))
+                return
+            }
+            
+            let m3u8URL = String(html[range])
+                .replacingOccurrences(of: "\\u0026", with: "&")
+                .replacingOccurrences(of: "\\/", with: "/")
+            
+            guard let streamURL = URL(string: m3u8URL) else {
+                completion(.failure(StreamServiceError.noStreamURL))
+                return
+            }
+            
+            completion(.success(streamURL))
+        }.resume()
+    }
+    
+    func searchMovie(query: String, completion: @escaping (Result<[(title: String, slug: String, year: Int)], Error>) -> Void) {
+        // Onflix dùng Next.js, không có search API public
+        // Tạm thời dùng mapping từ tên phim
+        completion(.success([]))
+    }
+}
 // MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
