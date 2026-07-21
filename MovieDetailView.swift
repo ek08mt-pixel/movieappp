@@ -47,16 +47,23 @@ struct MovieDetailView: View {
                             }
                         }
                         ratingsBar
-                        HStack(spacing: 8) {
-                            InfoBadge(label: "Vietsub", quality: "UHD")
-                            InfoBadge(label: "Lồng tiếng", quality: "FHD")
-                            InfoBadge(label: "Thuyết minh", quality: "4K")
-                        }
+                        if !vm.serverList.isEmpty {
+    HStack(spacing: 8) {
+        ForEach(vm.serverList.prefix(3), id: \.name) { server in
+            InfoBadge(label: server.name, quality: server.qualities)
+        }
+    }
+}
                         HStack(spacing: 10) {
                             Button { playSeason = nil; playEpisode = nil; presentPlayer() } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) }; appState.save() } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button { if appState.watchedMovies.contains(where: { $0.id == movie.id }) { appState.watchedMovies.removeAll { $0.id == movie.id } } else { appState.watchedMovies.append(movie) }; appState.save() } label: { Label(appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "Đã xem" : "Đánh dấu đã xem", systemImage: appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "checkmark.circle.fill" : "checkmark.circle").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                         }
+                        if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
+                        if !vm.collectionMovies.isEmpty { VStack(alignment: .leading, spacing: 10) { Text("Cùng series").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 12) { ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in NavigationLink(destination: MovieDetailView(movie: part)) { VStack(spacing: 6) { CachedAsyncImage(url: part.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)); Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100) } } } } } } }
+                        if !vm.seasons.isEmpty { VStack(alignment: .leading, spacing: 12) { Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white); ForEach(vm.seasons) { season in HStack { if let url = season.posterURL { CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6)) } else { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60) }; VStack(alignment: .leading, spacing: 2) { Text(season.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white); Text("\(season.episodeCount) tập").font(.system(size: 11)).foregroundColor(.gray) }; Spacer() }.padding(.vertical, 4) } } }
+                        if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
+                        if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
                     }.padding(.horizontal, 20)
                     Spacer().frame(height: 100)
                 }
@@ -75,15 +82,37 @@ struct MovieDetailView: View {
         topVC.present(hosting, animated: true)
     }
     
-    var ratingsBar: some View { EmptyView() }
+    var ratingsBar: some View {
+        let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
+        guard hasAnyRating else { return AnyView(EmptyView()) }
+        return AnyView(HStack(spacing: 0) {
+            if let tmdb = ratings.tmdb { ratingItem(icon: "t.square.fill", color: .yellow, value: tmdb) }
+            if ratings.tmdb != nil && (ratings.imdb != nil || ratings.rottenTomatoes != nil) { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }
+            if let imdb = ratings.imdb { ratingItem(icon: "i.square.fill", color: .orange, value: imdb) }
+            if ratings.imdb != nil && ratings.rottenTomatoes != nil { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }
+            if let rt = ratings.rottenTomatoes { ratingItem(icon: "r.square.fill", color: .red, value: rt) }
+        }.padding(.horizontal, 14).padding(.vertical, 10).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1))))
+    }
     
-    func fetchRatings() async {}
+    func ratingItem(icon: String, color: Color, value: String) -> some View { HStack(spacing: 6) { Image(systemName: icon).font(.system(size: 16)).foregroundColor(color); Text(value).font(.system(size: 12, weight: .bold)).foregroundColor(.white) }.frame(maxWidth: .infinity) }
+    
+    func fetchRatings() async {
+        let imdbID: String
+        if movie.mediaType == "tv" { imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? "" }
+        else { let (data, _) = try! await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? "" }
+        guard !imdbID.isEmpty else { return }
+        let tmdbScore: String? = movie.voteAverage > 0 ? String(format: "%.1f/10", movie.voteAverage) : nil
+        var imdbRating: String? = nil; var rtRating: String? = nil
+        if !imdbID.isEmpty { let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=3c3cfb9e"; if let url = URL(string: omdbURL), let (data, _) = try? await URLSession.shared.data(from: url), let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] { if let imdbScore = json["imdbRating"] as? String, imdbScore != "N/A" { imdbRating = "\(imdbScore)/10" }; if let ratings = json["Ratings"] as? [[String: Any]] { for rating in ratings { if let source = rating["Source"] as? String, source == "Rotten Tomatoes", let value = rating["Value"] as? String { rtRating = value } } } } }
+        await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) }
+    }
 }
 
 struct InfoBadge: View {
     let label: String; let quality: String
     var body: some View { VStack(spacing: 2) { Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.7)); Text(quality).font(.system(size: 8)).foregroundColor(.gray) }.padding(.horizontal, 8).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.05))).overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(0.1), lineWidth: 0.5)) }
 }
+
 struct MovieImagesView: View {
     let images: [URL]; let title: String
     @Environment(\.dismiss) var dismiss
