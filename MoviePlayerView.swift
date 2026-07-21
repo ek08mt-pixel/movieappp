@@ -238,6 +238,7 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     }
     showAudioPopup = false
 }
+} 
 
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
