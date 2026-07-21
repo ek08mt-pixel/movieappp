@@ -18,7 +18,6 @@ struct MovieDetailView: View {
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
     @State private var selectedServer = "Vietsub"
- 
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -55,46 +54,25 @@ struct MovieDetailView: View {
                         
                         ratingsBar
                         
-                        // Server Selector - bấm vào xem luôn
-if vm.isLoadingServers {
-    HStack { Spacer(); ProgressView().tint(.white); Spacer() }
-} else if !vm.serverList.isEmpty {
-    HStack(spacing: 8) {
-        ForEach(Array(vm.serverList.enumerated()), id: \.element.name) { index, server in
-            Button {
-                selectedServer = server.name
-                // Tìm server index trong player
-                playSeason = nil; playEpisode = nil
-                presentPlayer(serverIndex: index)
-            } label: {
-                VStack(spacing: 2) {
-                    Text(server.name)
-                        .font(.system(size: 11, weight: .medium))
-                    Text(server.qualities)
-                        .font(.system(size: 8))
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15), lineWidth: 0.5))
-            }
-        }
-    }
-}
-                                if let selected = vm.serverList.first(where: { $0.name == selectedServer }) {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 6) {
-                                            ForEach(selected.qualities, id: \.self) { quality in
-                                                Button {
-                                                    selectedQuality = quality
-                                                } label: {
-                                                    Text(quality).font(.system(size: 10, weight: .medium)).foregroundColor(selectedQuality == quality ? .black : .white).padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(selectedQuality == quality ? .white : .white.opacity(0.1)))
-                                                }
-                                            }
+                        // Server Selector
+                        if vm.isLoadingServers {
+                            HStack { Spacer(); ProgressView().tint(.white); Spacer() }
+                        } else if !vm.serverList.isEmpty {
+                            HStack(spacing: 8) {
+                                ForEach(Array(vm.serverList.enumerated()), id: \.element.name) { index, server in
+                                    Button {
+                                        selectedServer = server.name
+                                        playSeason = nil; playEpisode = nil
+                                        presentPlayer(serverIndex: index)
+                                    } label: {
+                                        VStack(spacing: 2) {
+                                            Text(server.name).font(.system(size: 11, weight: .medium))
+                                            Text(server.qualities).font(.system(size: 8)).foregroundColor(.gray).lineLimit(1)
                                         }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                                        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
+                                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15), lineWidth: 0.5))
                                     }
                                 }
                             }
@@ -138,9 +116,7 @@ if vm.isLoadingServers {
                                 }
                                 ForEach(vm.seasons) { season in
                                     VStack(spacing: 0) {
-                                        Button {
-                                            withAnimation { expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber; if expandedSeason == season.seasonNumber { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } } }
-                                        } label: {
+                                        Button { withAnimation { expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber; if expandedSeason == season.seasonNumber { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } } } } label: {
                                             HStack {
                                                 if let url = season.posterURL { CachedAsyncImage(url: url, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6)) }
                                                 else { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60).overlay(Image(systemName: "tv").foregroundColor(.white.opacity(0.5))) }
@@ -161,9 +137,7 @@ if vm.isLoadingServers {
                             }
                         }
                         
-                        if !vm.images.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.white) }; ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } }
-                        }
+                        if !vm.images.isEmpty { VStack(alignment: .leading, spacing: 10) { HStack { Text("Hình ảnh").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); Spacer(); Button("Xem tất cả") { showImages = true }.font(.system(size: 12)).foregroundColor(.white) }; ScrollView(.horizontal) { HStack(spacing: 8) { ForEach(vm.images.prefix(8), id: \.self) { u in CachedAsyncImage(url: u, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(width: 180, height: 100).clipShape(RoundedRectangle(cornerRadius: 10)) } } } } }
                         if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL, size: .detail).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
                         if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { LazyHStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.3), radius: 4); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
                     }.padding(.horizontal, 20)
@@ -182,19 +156,12 @@ if vm.isLoadingServers {
     }
     
     func presentPlayer(serverIndex: Int = 0) {
-    guard let topVC = UIApplication.topViewController() else { return }
-    let moviePlayer = MoviePlayerView(
-        movieId: movie.id,
-        movieTitle: movie.originalTitle ?? movie.title,
-        mediaType: playerMediaType,
-        seasonNumber: playSeason,
-        episodeNumber: playEpisode,
-        posterURL: movie.posterURL
-    ).environmentObject(appState)
-    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-    hosting.modalPresentationStyle = .fullScreen
-    topVC.present(hosting, animated: true)
-}
+        guard let topVC = UIApplication.topViewController() else { return }
+        let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+    }
     
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
