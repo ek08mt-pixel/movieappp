@@ -70,7 +70,11 @@ struct MovieDetailView: View {
             }.ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
-        .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType); await fetchRatings() }
+        .task {
+    await vm.load(movieId: movie.id, mediaType: movie.mediaType)
+    await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
+    await fetchRatings()
+}
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
     }
     
