@@ -241,7 +241,7 @@ func selectAudio(_ label: String) {
     }
     showAudioPopup = false 
 }
-
+}
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
     let player: AVPlayer; @Environment(\.dismiss) var dismiss
