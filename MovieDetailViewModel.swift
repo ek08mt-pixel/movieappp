@@ -69,16 +69,16 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func detectQualityString(_ name: String) -> String {
-        var qualities: [String] = []
-        if name.contains("4K") || name.contains("2160") { qualities.append(contentsOf: ["4K", "2160p"]) }
-        if name.contains("2880") { qualities.append("2880p") }
-        if name.contains("1440") { qualities.append("1440p") }
-        if name.contains("1080") { qualities.append("1080p") }
-        if name.contains("720") { qualities.append("720p") }
-        if name.contains("480") { qualities.append("480p") }
-        if qualities.isEmpty { qualities = ["1080p", "720p"] }
-        return qualities.joined(separator: " • ")
-    }
+    var qualities: [String] = []
+    if name.contains("4K") || name.contains("2160") { qualities.append("4K") }
+    if name.contains("2880") { qualities.append("UHD") }
+    if name.contains("1440") { qualities.append("QHD") }
+    if name.contains("1080") { qualities.append("FHD") }
+    if name.contains("720") { qualities.append("HD") }
+    if name.contains("480") { qualities.append("SD") }
+    if qualities.isEmpty { qualities = ["FHD", "HD"] }
+    return qualities.joined(separator: " • ")
+}
     
     func getVideoURL(movieId: Int, mediaType: String?, season: Int?, episode: Int?, title: String = "") async -> URL? {
         let cacheKey = "\(movieId)_\(mediaType ?? "movie")_S\(season ?? 0)E\(episode ?? 0)"
