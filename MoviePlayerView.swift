@@ -36,6 +36,7 @@ struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     var resumeTime: Double = 0
+    var selectedServerIndex: Int = 0
     @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
