@@ -18,7 +18,7 @@ struct MovieDetailView: View {
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
     @State private var selectedServer = "Vietsub"
-    @State private var selectedQuality = "1080p"
+ 
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -55,28 +55,35 @@ struct MovieDetailView: View {
                         
                         ratingsBar
                         
-                        // Server + Quality Selector
-                        if vm.isLoadingServers {
-                            HStack { Spacer(); ProgressView().tint(.white); Spacer() }
-                        } else if !vm.serverList.isEmpty {
-                            VStack(spacing: 8) {
-                                HStack(spacing: 8) {
-                                    ForEach(vm.serverList, id: \.name) { server in
-                                        Button {
-                                            selectedServer = server.name
-                                            selectedQuality = server.qualities.first ?? "1080p"
-                                        } label: {
-                                            VStack(spacing: 2) {
-                                                Text(server.name).font(.system(size: 11, weight: .medium))
-                                                Text(server.qualities.joined(separator: " • ")).font(.system(size: 8)).foregroundColor(.gray).lineLimit(1)
-                                            }
-                                            .foregroundColor(selectedServer == server.name ? .white : .white.opacity(0.5))
-                                            .frame(maxWidth: .infinity).padding(.vertical, 6)
-                                            .background(RoundedRectangle(cornerRadius: 8).fill(selectedServer == server.name ? .white.opacity(0.15) : .white.opacity(0.05)))
-                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(selectedServer == server.name ? .white.opacity(0.3) : .white.opacity(0.1), lineWidth: 0.5))
-                                        }
-                                    }
-                                }
+                        // Server Selector - bấm vào xem luôn
+if vm.isLoadingServers {
+    HStack { Spacer(); ProgressView().tint(.white); Spacer() }
+} else if !vm.serverList.isEmpty {
+    HStack(spacing: 8) {
+        ForEach(Array(vm.serverList.enumerated()), id: \.element.name) { index, server in
+            Button {
+                selectedServer = server.name
+                // Tìm server index trong player
+                playSeason = nil; playEpisode = nil
+                presentPlayer(serverIndex: index)
+            } label: {
+                VStack(spacing: 2) {
+                    Text(server.name)
+                        .font(.system(size: 11, weight: .medium))
+                    Text(server.qualities)
+                        .font(.system(size: 8))
+                        .foregroundColor(.gray)
+                        .lineLimit(1)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15), lineWidth: 0.5))
+            }
+        }
+    }
+}
                                 if let selected = vm.serverList.first(where: { $0.name == selectedServer }) {
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 6) {
@@ -174,13 +181,20 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showBookingSheet) { NavigationStack { WebView(urlString: "https://www.google.com/search?q=đặt+vé+xem+phim+\(movie.title.replacingOccurrences(of: " ", with: "+"))").ignoresSafeArea().toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Đóng") { showBookingSheet = false } } } } }
     }
     
-    func presentPlayer() {
-        guard let topVC = UIApplication.topViewController() else { return }
-        let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState)
-        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-        hosting.modalPresentationStyle = .fullScreen
-        topVC.present(hosting, animated: true)
-    }
+    func presentPlayer(serverIndex: Int = 0) {
+    guard let topVC = UIApplication.topViewController() else { return }
+    let moviePlayer = MoviePlayerView(
+        movieId: movie.id,
+        movieTitle: movie.originalTitle ?? movie.title,
+        mediaType: playerMediaType,
+        seasonNumber: playSeason,
+        episodeNumber: playEpisode,
+        posterURL: movie.posterURL
+    ).environmentObject(appState)
+    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+    hosting.modalPresentationStyle = .fullScreen
+    topVC.present(hosting, animated: true)
+}
     
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
