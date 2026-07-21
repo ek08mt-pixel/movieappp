@@ -510,47 +510,29 @@ final class OnflixService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let urlString = "\(baseURL)/phim/\(slug)"
-        guard let url = URL(string: urlString) else {
-            completion(.failure(StreamServiceError.invalidURL))
-            return
-        }
-        
-        URLSession.streamSession.dataTask(with: url) { data, _, error in
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(StreamServiceError.noData))
-                return
-            }
-            
-            let patterns = [
-                #""link_m3u8":"([^"]+)""#,
-                #"https?:\/\/[^"'\s]+\.m3u8[^"'\s]*"#,
-                #"https?:\/\/[^"'\s]+onflixstream[^"'\s]*"#,
-                #"https?:\/\/[^"'\s]+kkphimplayer[^"'\s]*"#,
-                #"https?:\/\/[^"'\s]+opstream[^"'\s]*"#,
-                #"https?:\/\/[^"'\s]+onflix\.xyz[^"'\s]*"#
-            ]
-            
-            for pattern in patterns {
-                guard let regex = try? NSRegularExpression(pattern: pattern),
-                      let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-                      let range = Range(match.range(at: 0), in: html) else { continue }
-                
-                var m3u8URL = String(html[range])
-                    .replacingOccurrences(of: "\\u0026", with: "&")
-                    .replacingOccurrences(of: "\\/", with: "/")
-                    .replacingOccurrences(of: "&amp;", with: "&")
-                    .replacingOccurrences(of: "\"", with: "")
-                
-                if let streamURL = URL(string: m3u8URL) {
-                    completion(.success(streamURL))
-                    return
+    let urlString = "\(baseURL)/xem-phim/\(slug)/vietsub-sn/vietsub/FULL"
+    guard let url = URL(string: urlString) else {
+        completion(.failure(StreamServiceError.invalidURL))
+        return
+    }
+    
+    DispatchQueue.main.async {
+        let extractor = EmbedExtractor()
+        Task {
+            do {
+                let streamURL = try await extractor.extractM3U8(from: url)
+                completion(.success(streamURL))
+            } catch {
+                // Fallback: thử URL phim
+                let movieURL = URL(string: "\(self.baseURL)/phim/\(slug)")!
+                do {
+                    let fallbackURL = try await extractor.extractM3U8(from: movieURL)
+                    completion(.success(fallbackURL))
+                } catch {
+                    completion(.failure(StreamServiceError.noStreamURL))
                 }
             }
-            
-            completion(.failure(StreamServiceError.noStreamURL))
-        }.resume()
+        }
     }
 }
 
