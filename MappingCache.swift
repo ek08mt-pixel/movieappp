@@ -1,8 +1,16 @@
 import Foundation
 
-// MARK: - Stream Proxy
-func proxyStreamURL(_ originalURL: String) -> String {
-    return "https://emmewchamchi.pnbhan99.workers.dev/?url=\(originalURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? originalURL)"
+// MARK: - URLSession with Safari User-Agent
+extension URLSession {
+    static let streamSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpAdditionalHeaders = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "vi-VN,vi;q=0.9"
+        ]
+        return URLSession(configuration: config)
+    }()
 }
 
 // MARK: - MappingCache
@@ -154,7 +162,7 @@ final class NguonCService {
     
     private func fetchDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
@@ -176,7 +184,7 @@ final class NguonCService {
                         if let embed = movie["embed"] as? String { embedURL = URL(string: embed) }
                     }
                     guard let embed = embedURL else { completion(.failure(StreamServiceError.noStreamURL)); return }
-                    completion(.success(URL(string: proxyStreamURL(embed.absoluteString))!))
+                    completion(.success(embed))
                 } else { completion(.failure(StreamServiceError.noData)) }
             } catch { completion(.failure(error)) }
         }.resume()
@@ -184,7 +192,7 @@ final class NguonCService {
     
     private func searchFilms(keyword: String, completion: @escaping (Result<[NguonCFilm], Error>) -> Void) {
         guard let query = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseSearchURL)?keyword=\(query)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
@@ -210,7 +218,7 @@ final class VSMOVService {
     func fetchStream(imdbID: String, title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
         if let cachedSlug = cache.getVSMOVSlug(imdbID: imdbID) { fetchVSMOVDetail(slug: cachedSlug, season: season, episode: episode, completion: completion); return }
         guard let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: "\(baseSearchURL)?keyword=\(query)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        URLSession.streamSession.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
@@ -228,7 +236,7 @@ final class VSMOVService {
     
     private func fetchVSMOVDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "https://vsmov.com/api/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
@@ -240,7 +248,7 @@ final class VSMOVService {
                                     for ep in serverData {
                                         if let name = ep["name"] as? String, let link = ep["link_embed"] as? String, matchEpisode(name: name, target: e) {
                                             let m3u8 = link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
-                                            if let streamURL = URL(string: proxyStreamURL(m3u8)) { completion(.success(streamURL)); return }
+                                            if let streamURL = URL(string: m3u8) { completion(.success(streamURL)); return }
                                         }
                                     }
                                 }
@@ -248,8 +256,8 @@ final class VSMOVService {
                         }
                         completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
                     } else {
-                        if let urlStr = json["url"] as? String, let streamURL = URL(string: proxyStreamURL(urlStr)) { completion(.success(streamURL)) }
-                        else if let m3u8 = json["m3u8"] as? String, let streamURL = URL(string: proxyStreamURL(m3u8)) { completion(.success(streamURL)) }
+                        if let urlStr = json["url"] as? String, let streamURL = URL(string: urlStr) { completion(.success(streamURL)) }
+                        else if let m3u8 = json["m3u8"] as? String, let streamURL = URL(string: m3u8) { completion(.success(streamURL)) }
                         else { completion(.failure(StreamServiceError.noStreamURL)) }
                     }
                 } else { completion(.failure(StreamServiceError.noStreamURL)) }
@@ -283,7 +291,7 @@ final class PhimAPIService {
         }
         
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: tmdbURL) { [weak self] data, _, error in
+        URLSession.streamSession.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
@@ -319,7 +327,7 @@ final class PhimAPIService {
         
         func fetchPage(_ page: Int, accumulatedItems: [[String: Any]], done: @escaping ([[String: Any]]) -> Void) {
             guard let url = URL(string: "\(baseURL)/v1/api/tim-kiem?keyword=\(query)&limit=20&page=\(page)") else { done(accumulatedItems); return }
-            URLSession.shared.dataTask(with: url) { data, _, error in
+            URLSession.streamSession.dataTask(with: url) { data, _, error in
                 guard let data = data,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       json["status"] as? String == "success",
@@ -347,7 +355,7 @@ final class PhimAPIService {
     
     private func fetchBySlug(slug: String, season: Int?, episode: Int?, serverIndex: Int, tmdbID: Int, completion: @escaping (Result<(URL, [String]), Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        URLSession.streamSession.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
@@ -389,7 +397,7 @@ final class PhimAPIService {
                 for server in episodes {
                     if let serverData = server["server_data"] as? [[String: Any]] {
                         for epItem in serverData {
-                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: proxyStreamURL(linkM3u8)), matchEpisode(name: name, target: effectiveEp) {
+                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: effectiveEp) {
                                 return (streamURL, serverNames)
                             }
                         }
@@ -397,11 +405,11 @@ final class PhimAPIService {
                 }
             }
         } else {
-            if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: proxyStreamURL(linkM3u8)) { return (streamURL, serverNames) }
+            if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
             let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
             if let m = movie {
-                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: proxyStreamURL(linkM3u8)) { return (streamURL, serverNames) }
-                if let urlStr = m["url"] as? String, let streamURL = URL(string: proxyStreamURL(urlStr)) { return (streamURL, serverNames) }
+                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
             }
         }
         return (nil, serverNames)
@@ -434,7 +442,7 @@ final class OphimService {
         let ep = episode ?? 1
         let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
         guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: searchURL) { [weak self] data, _, error in
+        URLSession.streamSession.dataTask(with: searchURL) { [weak self] data, _, error in
             guard let self = self else { return }
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
@@ -467,7 +475,7 @@ final class OphimService {
     
     private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
@@ -480,7 +488,7 @@ final class OphimService {
                             for epItem in serverData {
                                 if let name = epItem["name"] as? String,
                                    let linkM3u8 = epItem["link_m3u8"] as? String,
-                                   let streamURL = URL(string: proxyStreamURL(linkM3u8)),
+                                   let streamURL = URL(string: linkM3u8),
                                    matchEpisode(name: name, target: episode) {
                                     completion(.success(streamURL))
                                     return
@@ -494,9 +502,10 @@ final class OphimService {
         }.resume()
     }
 }
+
+// MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
-    private let workerURL = "https://emmewchamchi.pnbhan99.workers.dev"
     private init() {}
     
     func fetchStream(imdbID: String, completion: @escaping (Result<URL, Error>) -> Void) {
@@ -513,10 +522,7 @@ final class InternationalEmbedService {
             completion(.failure(StreamServiceError.noStreamURL))
             return
         }
-        let raw = providers[index]
-        let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? raw
-        let proxyURL = "\(workerURL)/?url=\(encoded)"
-        guard let url = URL(string: proxyURL) else {
+        guard let url = URL(string: providers[index]) else {
             tryNext(providers, index: index + 1, completion: completion)
             return
         }
