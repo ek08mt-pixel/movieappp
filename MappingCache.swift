@@ -432,7 +432,7 @@ final class PhimAPIService {
     }
 }
 
-// MARK: - Ophim Service (New)
+// MARK: - Ophim Service
 final class OphimService {
     static let shared = OphimService()
     private let baseURL = "https://ophim1.com/v1/api"
@@ -510,26 +510,26 @@ final class OnflixService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    let urlString = "\(baseURL)/xem-phim/\(slug)/vietsub-sn/vietsub/FULL"
-    guard let url = URL(string: urlString) else {
-        completion(.failure(StreamServiceError.invalidURL))
-        return
-    }
-    
-    DispatchQueue.main.async {
-        let extractor = EmbedExtractor()
-        Task {
-            do {
-                let streamURL = try await extractor.extractM3U8(from: url)
-                completion(.success(streamURL))
-            } catch {
-                // Fallback: thử URL phim
-                let movieURL = URL(string: "\(self.baseURL)/phim/\(slug)")!
+        let urlString = "\(baseURL)/xem-phim/\(slug)/vietsub-sn/vietsub/FULL"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
+        
+        DispatchQueue.main.async {
+            let extractor = EmbedExtractor()
+            Task {
                 do {
-                    let fallbackURL = try await extractor.extractM3U8(from: movieURL)
-                    completion(.success(fallbackURL))
+                    let streamURL = try await extractor.extractM3U8(from: url)
+                    completion(.success(streamURL))
                 } catch {
-                    completion(.failure(StreamServiceError.noStreamURL))
+                    let movieURL = URL(string: "\(self.baseURL)/phim/\(slug)")!
+                    do {
+                        let fallbackURL = try await extractor.extractM3U8(from: movieURL)
+                        completion(.success(fallbackURL))
+                    } catch {
+                        completion(.failure(StreamServiceError.noStreamURL))
+                    }
                 }
             }
         }
