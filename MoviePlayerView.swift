@@ -10,7 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3", ophim="Emew 4", addon="🧩 Addon", intl="🌐 Quốc tế" }
+enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3", ophim="Emew 4", addon="🧩 Addon", intl="🌐 Quốc tế", onflix="🎬 Onflix" }
 
 struct CastDevice: Identifiable {
     let id = UUID(); let name: String; let icon: String; let type: CastDeviceType
@@ -323,6 +323,32 @@ case .addon:
                 saveHistory()
             case .failure(let error):
                 sourceStatus[.intl] = false
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
+    case .onflix:
+    let slug = movieTitle.lowercased()
+        .replacingOccurrences(of: " ", with: "-")
+        .replacingOccurrences(of: ":", with: "")
+        .replacingOccurrences(of: "(", with: "")
+        .replacingOccurrences(of: ")", with: "")
+    OnflixService.shared.fetchStream(title: movieTitle, slug: slug) { result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let url):
+                currentStreamURL = url
+                selectedQuality = detectQuality(from: url)
+                player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                player.play()
+                hasStartedPlaying = true
+                sourceStatus[.onflix] = true
+                isLoading = false
+                tryResume()
+                saveHistory()
+            case .failure(let error):
+                sourceStatus[.onflix] = false
                 errorMessage = error.localizedDescription
                 isLoading = false
             }
