@@ -156,6 +156,9 @@ struct MovieDetailView: View {
     }
     
     func presentPlayer(serverIndex: Int = 0) {
+    // Lưu serverIndex vào UserDefaults để MoviePlayerView đọc
+    UserDefaults.standard.set(serverIndex, forKey: "selectedServerIndex_\(movie.id)")
+    
     guard let topVC = UIApplication.topViewController() else { return }
     let moviePlayer = MoviePlayerView(
         movieId: movie.id,
