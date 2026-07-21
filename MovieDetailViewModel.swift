@@ -11,7 +11,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var seasonDetails: [Int: TVSeasonDetail] = [:]
     @Published var collectionMovies: [Movie] = []
     @Published var isLoading = false
-    @Published var serverList: [(name: String, qualities: [String])] = []
+   @Published var serverList: [(name: String, qualities: String)] = []
     @Published var isLoadingServers = false
     
     private var videoURLCache: [String: URL] = [:]
