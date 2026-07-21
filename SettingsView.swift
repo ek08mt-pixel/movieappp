@@ -271,30 +271,34 @@ struct InfoPopupView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { dismiss() }
             
             VStack(spacing: 0) {
                 HStack {
                     Text(title)
-                        .font(.headline).foregroundColor(.white)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
                     Spacer()
                     Button { dismiss() } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.5))
                     }
                 }
-                .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 16)
+                .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 10)
                 
                 ScrollView {
                     Text(content)
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.8))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 20)
                 }
+                .padding(.horizontal, 16).padding(.bottom, 16)
             }
+            .frame(width: 300, maxHeight: 400)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.12)))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.5), radius: 20)
         }
-        .ignoresSafeArea()
     }
 }
