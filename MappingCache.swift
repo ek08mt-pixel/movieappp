@@ -439,80 +439,75 @@ final class OphimService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    let urlString = "\(baseURL)/phim/\(slug)"
-    guard let url = URL(string: urlString) else {
-        completion(.failure(StreamServiceError.invalidURL))
-        return
-    }
+    final class OphimService {
+    static let shared = OphimService()
+    private let baseURL = "https://ophim1.com/v1/api"
+    private init() {}
     
-    // Dùng WebView để load trang, bắt JSON từ __NEXT_DATA__ hoặc self.__next_f.push
-    DispatchQueue.main.async {
-        let config = WKWebViewConfiguration()
-        let wv = WKWebView(frame: .zero, configuration: config)
-        wv.isHidden = true
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.view.addSubview(wv)
-        }
-        
-        var finished = false
-        
-        // Timeout 15s
-        DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
-            if !finished {
-                finished = true
-                wv.stopLoading()
-                wv.removeFromSuperview()
-                completion(.failure(StreamServiceError.noStreamURL))
-            }
-        }
-        
-        wv.navigationDelegate = WKNavigationDelegateWrapper { webView in
-            guard !finished else { return }
-            
-            let js = "document.body.innerText"
-            webView.evaluateJavaScript(js) { result, _ in
-                guard !finished else { return }
-                finished = true
-                wv.stopLoading()
-                wv.removeFromSuperview()
-                
-                if let html = result as? String {
-                    let patterns = [
-                        #""link_m3u8":"([^"]+)""#,
-                        #"https?:\/\/[^"'\s]+\.m3u8[^"'\s]*"#,
-                        #"https?:\/\/[^"'\s]+onflixstream[^"'\s]*"#,
-                        #"https?:\/\/[^"'\s]+kkphimplayer[^"'\s]*"#,
-                        #"https?:\/\/[^"'\s]+opstream[^"'\s]*"#,
-                        #"https?:\/\/[^"'\s]+onflix\.xyz[^"'\s]*"#
-                    ]
-                    
-                    for pattern in patterns {
-                        guard let regex = try? NSRegularExpression(pattern: pattern),
-                              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-                              let range = Range(match.range(at: 0), in: html) else { continue }
-                        
-                        var m3u8URL = String(html[range])
-                            .replacingOccurrences(of: "\\u0026", with: "&")
-                            .replacingOccurrences(of: "\\/", with: "/")
-                            .replacingOccurrences(of: "&amp;", with: "&")
-                            .replacingOccurrences(of: "\"", with: "")
-                        
-                        if let streamURL = URL(string: m3u8URL) {
-                            completion(.success(streamURL))
-                            return
+    func fetchStream(title: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+        let ep = episode ?? 1
+        let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else { completion(.failure(StreamServiceError.invalidURL)); return }
+        URLSession.streamSession.dataTask(with: searchURL) { [weak self] data, _, error in
+            guard let self = self else { return }
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let status = json["status"] as? String, status == "success",
+                   let dataObj = json["data"] as? [String: Any],
+                   let items = dataObj["items"] as? [[String: Any]] {
+                    var bestMatch: [String: Any]?
+                    let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+                    for item in items {
+                        let name = (item["name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+                        let origin = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+                        if origin == lowerTitle || name == lowerTitle { bestMatch = item; break }
+                    }
+                    if bestMatch == nil {
+                        for item in items {
+                            let name = (item["name"] as? String ?? "").lowercased()
+                            let origin = (item["origin_name"] as? String ?? "").lowercased()
+                            if origin.contains(lowerTitle) || name.contains(lowerTitle) || lowerTitle.contains(origin) { bestMatch = item; break }
                         }
                     }
-                    completion(.failure(StreamServiceError.noStreamURL))
-                } else {
-                    completion(.failure(StreamServiceError.noData))
-                }
-            }
-        }
-        
-        wv.load(URLRequest(url: url))
+                    if let slug = bestMatch?["slug"] as? String {
+                        self.fetchDetail(slug: slug, episode: ep, completion: completion)
+                    } else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
+                } else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
+            } catch { completion(.failure(error)) }
+        }.resume()
     }
+    
+    private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   json["status"] as? String == "success",
+                   let movie = json["data"] as? [String: Any],
+                   let episodes = movie["episodes"] as? [[String: Any]] {
+                    for server in episodes {
+                        if let serverData = server["server_data"] as? [[String: Any]] {
+                            for epItem in serverData {
+                                if let name = epItem["name"] as? String,
+                                   let linkM3u8 = epItem["link_m3u8"] as? String,
+                                   let streamURL = URL(string: linkM3u8),
+                                   matchEpisode(name: name, target: episode) {
+                                    completion(.success(streamURL))
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    completion(.failure(StreamServiceError.episodeNotFound(ep: "\(episode)")))
+                } else { completion(.failure(StreamServiceError.noData)) }
+            } catch { completion(.failure(error)) }
+        }.resume()
+    }
+}
 }
 // MARK: - Onflix Service
 final class OnflixService {
