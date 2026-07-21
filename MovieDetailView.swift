@@ -156,12 +156,20 @@ struct MovieDetailView: View {
     }
     
     func presentPlayer(serverIndex: Int = 0) {
-        guard let topVC = UIApplication.topViewController() else { return }
-        let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState)
-        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-        hosting.modalPresentationStyle = .fullScreen
-        topVC.present(hosting, animated: true)
-    }
+    guard let topVC = UIApplication.topViewController() else { return }
+    let moviePlayer = MoviePlayerView(
+        movieId: movie.id,
+        movieTitle: movie.originalTitle ?? movie.title,
+        mediaType: playerMediaType,
+        seasonNumber: playSeason,
+        episodeNumber: playEpisode,
+        posterURL: movie.posterURL,
+        selectedServerIndex: serverIndex  // ← THÊM
+    ).environmentObject(appState)
+    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+    hosting.modalPresentationStyle = .fullScreen
+    topVC.present(hosting, animated: true)
+}
     
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
