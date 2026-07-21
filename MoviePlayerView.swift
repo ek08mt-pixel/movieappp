@@ -10,7 +10,7 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3", ophim="Emew 4", addon="🧩 Addon" }
+enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3", ophim="Emew 4", addon="🧩 Addon", intl="🌐 Quốc tế" }
 
 struct CastDevice: Identifiable {
     let id = UUID(); let name: String; let icon: String; let type: CastDeviceType
@@ -306,6 +306,27 @@ case .addon:
         tryResume()
     }
     saveHistory()
+    case .intl:
+    InternationalEmbedService.shared.fetchStream(imdbID: imdbID) { result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let url):
+                currentStreamURL = url
+                selectedQuality = detectQuality(from: url)
+                player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                player.play()
+                hasStartedPlaying = true
+                sourceStatus[.intl] = true
+                isLoading = false
+                tryResume()
+                saveHistory()
+            case .failure(let error):
+                sourceStatus[.intl] = false
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
     } } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } } } }
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
     func fetchIMDB() async throws -> String { if let c = imdbIDCache { return c }; var id: String?; if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }; if id == nil || id?.isEmpty == true { let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; id = try? JSONDecoder().decode(E.self, from: data).imdb_id }; guard let f = id, !f.isEmpty else { throw StreamError.noStreamAvailable }; imdbIDCache = f; return f }
