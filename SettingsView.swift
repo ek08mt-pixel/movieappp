@@ -7,6 +7,9 @@ struct SettingsView: View {
     @AppStorage("userTheme") private var userTheme: String = "dark"
     @AppStorage("seekSeconds") private var seekSeconds: Double = 10
     @State private var showClearCacheAlert = false
+    @State private var showInfo = false
+    @State private var showTerms = false
+    @State private var showPrivacy = false
     
     private let appVersion = "1.0"
     private let buildNumber = "1"
@@ -44,50 +47,31 @@ struct SettingsView: View {
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 0) {
-                            // Ngôn ngữ
                             NavigationLink(destination: LanguageSelectionView()) {
                                 HStack {
-                                    Image(systemName: "globe")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .frame(width: 28)
-                                    Text("Ngôn ngữ")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.white)
+                                    Image(systemName: "globe").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
+                                    Text("Ngôn ngữ").font(.system(size: 15)).foregroundColor(.white)
                                     Spacer()
-                                    Text(LanguageManager.shared.currentLanguage.displayName)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.gray)
+                                    Text(LanguageManager.shared.currentLanguage.displayName).font(.system(size: 13)).foregroundColor(.gray)
+                                    Image(systemName: "chevron.right").font(.system(size: 12)).foregroundColor(.gray)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                                .padding(.horizontal, 16).padding(.vertical, 14)
                             }
                             
                             Divider().background(Color.white.opacity(0.08)).padding(.leading, 44)
                             
-                            // Theme
                             HStack {
-                                Image(systemName: "circle.lefthalf.filled")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white.opacity(0.6))
-                                    .frame(width: 28)
-                                Text("Theme")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
+                                Image(systemName: "circle.lefthalf.filled").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
+                                Text("Theme").font(.system(size: 15)).foregroundColor(.white)
                                 Spacer()
                                 Picker("", selection: $userTheme) {
                                     Text("Tối").tag("dark")
                                     Text("Sáng").tag("light")
                                     Text("Hệ thống").tag("system")
                                 }
-                                .pickerStyle(.segmented)
-                                .frame(width: 180)
+                                .pickerStyle(.segmented).frame(width: 180)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16).padding(.vertical, 12)
                         }
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.08), lineWidth: 0.5))
@@ -103,15 +87,9 @@ struct SettingsView: View {
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 0) {
-                            // Tua thời lượng
                             HStack {
-                                Image(systemName: "forward.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.6))
-                                    .frame(width: 28)
-                                Text("Thời lượng tua")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
+                                Image(systemName: "forward.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
+                                Text("Thời lượng tua").font(.system(size: 15)).foregroundColor(.white)
                                 Spacer()
                                 Picker("", selection: $seekSeconds) {
                                     Text("5s").tag(5.0)
@@ -121,11 +99,9 @@ struct SettingsView: View {
                                     Text("25s").tag(25.0)
                                     Text("30s").tag(30.0)
                                 }
-                                .pickerStyle(.menu)
-                                .tint(.white)
+                                .pickerStyle(.menu).tint(.white)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
+                            .padding(.horizontal, 16).padding(.vertical, 14)
                         }
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.08), lineWidth: 0.5))
@@ -141,25 +117,16 @@ struct SettingsView: View {
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 0) {
-                            // Xóa cache
                             Button {
                                 showClearCacheAlert = true
                             } label: {
                                 HStack {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.red.opacity(0.7))
-                                        .frame(width: 28)
-                                    Text("Xóa bộ nhớ đệm")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.white)
+                                    Image(systemName: "trash").font(.system(size: 16)).foregroundColor(.red.opacity(0.7)).frame(width: 28)
+                                    Text("Xóa bộ nhớ đệm").font(.system(size: 15)).foregroundColor(.white)
                                     Spacer()
-                                    Text(formatCacheSize())
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
+                                    Text(formatCacheSize()).font(.system(size: 13)).foregroundColor(.gray)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                                .padding(.horizontal, 16).padding(.vertical, 14)
                             }
                         }
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
@@ -176,97 +143,28 @@ struct SettingsView: View {
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 0) {
-                            // Info App
-                            Button {
-                                if let url = URL(string: "https://emew.page.link/about") {
-                                    UIApplication.shared.open(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "info.circle")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .frame(width: 28)
-                                    Text("Thông tin ứng dụng")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                            Button { showInfo = true } label: {
+                                settingRow(icon: "info.circle", title: "Thông tin ứng dụng")
                             }
-                            
                             Divider().background(Color.white.opacity(0.08)).padding(.leading, 44)
                             
-                            // Điều khoản
-                            Button {
-                                if let url = URL(string: "https://emew.page.link/terms") {
-                                    UIApplication.shared.open(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "doc.text")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .frame(width: 28)
-                                    Text("Điều khoản & Điều kiện")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                            Button { showTerms = true } label: {
+                                settingRow(icon: "doc.text", title: "Điều khoản & Điều kiện")
                             }
-                            
                             Divider().background(Color.white.opacity(0.08)).padding(.leading, 44)
                             
-                            // Chính sách bảo mật
-                            Button {
-                                if let url = URL(string: "https://emew.page.link/privacy") {
-                                    UIApplication.shared.open(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "hand.raised")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .frame(width: 28)
-                                    Text("Chính sách bảo mật")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                            Button { showPrivacy = true } label: {
+                                settingRow(icon: "hand.raised", title: "Chính sách bảo mật")
                             }
-                            
                             Divider().background(Color.white.opacity(0.08)).padding(.leading, 44)
                             
-                            // Version
                             HStack {
-                                Image(systemName: "apps.iphone")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white.opacity(0.6))
-                                    .frame(width: 28)
-                                Text("Phiên bản")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
+                                Image(systemName: "apps.iphone").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
+                                Text("Phiên bản").font(.system(size: 15)).foregroundColor(.white)
                                 Spacer()
-                                Text("EMCC \(appVersion) (\(buildNumber))")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.gray)
+                                Text("EMCC \(appVersion) (\(buildNumber))").font(.system(size: 13)).foregroundColor(.gray)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
+                            .padding(.horizontal, 16).padding(.vertical, 14)
                         }
                         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.3)))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.08), lineWidth: 0.5))
@@ -282,20 +180,121 @@ struct SettingsView: View {
             Button("Hủy", role: .cancel) { }
             Button("Xóa", role: .destructive) { clearCache() }
         } message: {
-            Text("Tất cả dữ liệu cache sẽ bị xóa. Dữ liệu quan trọng sẽ được giữ lại.")
+            Text("Tất cả dữ liệu cache sẽ bị xóa.")
+        }
+        .sheet(isPresented: $showInfo) {
+            InfoPopupView(title: "Thông tin ứng dụng", content: infoText)
+        }
+        .sheet(isPresented: $showTerms) {
+            InfoPopupView(title: "Điều khoản & Điều kiện", content: termsText)
+        }
+        .sheet(isPresented: $showPrivacy) {
+            InfoPopupView(title: "Chính sách bảo mật", content: privacyText)
         }
     }
     
+    func settingRow(icon: String, title: String) -> some View {
+        HStack {
+            Image(systemName: icon).font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
+            Text(title).font(.system(size: 15)).foregroundColor(.white)
+            Spacer()
+            Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.gray)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+    }
+    
     func formatCacheSize() -> String {
-        let cacheSize = URLCache.shared.currentDiskUsage
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: Int64(cacheSize))
+        URLCache.shared.removeAllCachedResponses()
+        return "0 KB"
     }
     
     func clearCache() {
         URLCache.shared.removeAllCachedResponses()
         ImageCache.shared.clearCache()
         UserDefaults.standard.removeObject(forKey: "phimapi_stream_cache")
+    }
+    
+    var infoText: String {
+        """
+        EMCC - Ứng dụng xem phim trực tuyến
+        
+        Phiên bản: \(appVersion) (\(buildNumber))
+        
+        © 2026 Emmew. All rights reserved.
+        
+        Phát triển bởi đội ngũ Emmew.
+        """
+    }
+    
+    var termsText: String {
+        """
+        ĐIỀU KHOẢN & ĐIỀU KIỆN
+        
+        1. Chấp nhận điều khoản
+        Bằng việc sử dụng ứng dụng EMCC, bạn đồng ý với các điều khoản này.
+        
+        2. Nội dung
+        Ứng dụng cung cấp nội dung phim từ các nguồn công khai trên internet.
+        
+        3. Sử dụng cá nhân
+        Ứng dụng chỉ dành cho mục đích sử dụng cá nhân, không thương mại.
+        
+        4. Bản quyền
+        Chúng tôi tôn trọng bản quyền. Nếu bạn là chủ sở hữu nội dung, vui lòng liên hệ.
+        """
+    }
+    
+    var privacyText: String {
+        """
+        CHÍNH SÁCH BẢO MẬT
+        
+        1. Thu thập dữ liệu
+        Chúng tôi chỉ lưu email và lịch sử xem của bạn trên thiết bị.
+        
+        2. Không chia sẻ
+        Dữ liệu của bạn không được chia sẻ với bên thứ ba.
+        
+        3. Bảo mật
+        Dữ liệu được lưu cục bộ và bảo vệ bởi hệ thống iOS.
+        
+        4. Xóa dữ liệu
+        Bạn có thể xóa dữ liệu bất kỳ lúc nào trong mục Cài đặt.
+        """
+    }
+}
+
+// MARK: - Info Popup
+struct InfoPopupView: View {
+    let title: String
+    let content: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                HStack {
+                    Text(title)
+                        .font(.headline).foregroundColor(.white)
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                }
+                .padding(.horizontal, 20).padding(.top, 50).padding(.bottom, 16)
+                
+                ScrollView {
+                    Text(content)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                }
+            }
+        }
+        .ignoresSafeArea()
     }
 }
