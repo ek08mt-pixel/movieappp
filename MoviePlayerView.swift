@@ -334,6 +334,9 @@ case .addon:
         .replacingOccurrences(of: ":", with: "")
         .replacingOccurrences(of: "(", with: "")
         .replacingOccurrences(of: ")", with: "")
+        .replacingOccurrences(of: "'", with: "")
+        .replacingOccurrences(of: "!", with: "")
+        .replacingOccurrences(of: "?", with: "")
     OnflixService.shared.fetchStream(title: movieTitle, slug: slug) { result in
         DispatchQueue.main.async {
             switch result {
