@@ -11,13 +11,14 @@ class MovieDetailViewModel: ObservableObject {
     @Published var seasonDetails: [Int: TVSeasonDetail] = [:]
     @Published var collectionMovies: [Movie] = []
     @Published var isLoading = false
+    @Published var serverList: [(name: String, qualities: [String])] = []
+    @Published var isLoadingServers = false
     
     private var videoURLCache: [String: URL] = [:]
     
     func load(movieId: Int, mediaType: String?) async {
         isLoading = true
         let type = mediaType ?? "movie"
-        
         if type == "tv" {
             seasons = await loadSeasonsDirectly(tvId: movieId)
         } else {
@@ -29,115 +30,94 @@ class MovieDetailViewModel: ObservableObject {
             }
         }
         isLoading = false
-        
         async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: type)
         async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: type)
         async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: type)
-        
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
     }
     
-    func getVideoURL(movieId: Int, mediaType: String?, season: Int?, episode: Int?, title: String = "") async -> URL? {
-        let cacheKey = "\(movieId)_\(mediaType ?? "movie")_S\(season ?? 0)E\(episode ?? 0)"
-        if let cached = videoURLCache[cacheKey] {
-            return cached
-        }
-        
-        let s = season ?? 1
-        let ep = episode ?? 1
-        let type = mediaType ?? "movie"
-        
+    func loadServers(movieId: Int, mediaType: String?, title: String) async {
+        isLoadingServers = true
         let imdbID: String
-        if type == "tv" {
+        if mediaType == "tv" {
             imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movieId)) ?? ""
         } else {
-            let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-            if let url = URL(string: urlString),
-               let (data, _) = try? await URLSession.shared.data(from: url) {
-                struct E: Codable { let imdb_id: String? }
-                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-            } else {
-                imdbID = ""
+            let (data, _) = try! await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!)
+            struct E: Codable { let imdb_id: String? }
+            imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+        }
+        guard !imdbID.isEmpty else {
+            await MainActor.run { isLoadingServers = false }
+            return
+        }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            PhimAPIService.shared.fetchStream(imdbID: imdbID, tmdbID: movieId, title: title, mediaType: mediaType, season: nil, episode: nil, serverIndex: 0) { result in
+                switch result {
+                case .success(let (_, servers)):
+                    var list: [(name: String, qualities: [String])] = []
+                    for s in servers {
+                        let qualities: [String]
+                        if s.contains("4K") || s.contains("2160") { qualities = ["4K", "1080p", "720p"] }
+                        else if s.contains("1080") { qualities = ["1080p", "720p"] }
+                        else if s.contains("720") { qualities = ["720p"] }
+                        else { qualities = ["1080p", "720p"] }
+                        list.append((name: s, qualities: qualities))
+                    }
+                    if list.isEmpty {
+                        list = [
+                            ("Vietsub", ["4K", "1080p", "720p"]),
+                            ("Lồng tiếng", ["1080p", "720p"]),
+                            ("Thuyết minh", ["1080p", "720p"])
+                        ]
+                    }
+                    DispatchQueue.main.async {
+                        self.serverList = list
+                        self.isLoadingServers = false
+                    }
+                case .failure:
+                    DispatchQueue.main.async {
+                        self.serverList = [
+                            ("Vietsub", ["4K", "1080p", "720p"]),
+                            ("Lồng tiếng", ["1080p", "720p"]),
+                            ("Thuyết minh", ["1080p", "720p"])
+                        ]
+                        self.isLoadingServers = false
+                    }
+                }
+                cont.resume()
             }
         }
-        
+    }
+    
+    func getVideoURL(movieId: Int, mediaType: String?, season: Int?, episode: Int?, title: String = "") async -> URL? {
+        let cacheKey = "\(movieId)_\(mediaType ?? "movie")_S\(season ?? 0)E\(episode ?? 0)"
+        if let cached = videoURLCache[cacheKey] { return cached }
+        let s = season ?? 1; let ep = episode ?? 1; let type = mediaType ?? "movie"
+        let imdbID: String
+        if type == "tv" { imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movieId)) ?? "" }
+        else {
+            let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
+            if let url = URL(string: urlString), let (data, _) = try? await URLSession.shared.data(from: url) {
+                struct E: Codable { let imdb_id: String? }
+                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+            } else { imdbID = "" }
+        }
         guard !imdbID.isEmpty else { return nil }
-        
-       return await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             OphimService.shared.fetchStream(title: title, season: s, episode: ep) { result in
                 switch result {
-                case .success(let url):
-                    self.videoURLCache[cacheKey] = url
-                    continuation.resume(returning: url)
-                case .failure:
-                    continuation.resume(returning: nil)
+                case .success(let url): self.videoURLCache[cacheKey] = url; continuation.resume(returning: url)
+                case .failure: continuation.resume(returning: nil)
                 }
             }
         }
     }
     
-    func getDebugInfo(movieId: Int, mediaType: String?, season: Int?, episode: Int?) async -> String {
-        let type = mediaType ?? "movie"
-        let s = season ?? 1
-        let ep = episode ?? 1
-        
-        var info = "TMDB ID: \(movieId)\nType: \(type)\nSeason: \(s)\nEpisode: \(ep)\n\n"
-        
-        let imdbID: String
-        if type == "tv" {
-            imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movieId)) ?? "N/A"
-        } else {
-            let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-            if let url = URL(string: urlString),
-               let (data, _) = try? await URLSession.shared.data(from: url) {
-                struct E: Codable { let imdb_id: String? }
-                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? "N/A"
-            } else {
-                imdbID = "N/A"
-            }
-        }
-        
-        info += "IMDB ID: \(imdbID)\n\n"
-        
-        let cacheKey = "\(movieId)_S\(s)E\(ep)_server0"
-        if let cached = MappingCache.shared.dict(for: "phimapi_stream_cache")[cacheKey] {
-            info += "PhimAPI cache: ✅\n\(cached.prefix(80))...\n"
-        } else {
-            info += "PhimAPI cache: ❌\n"
-        }
-        
-        if let cached = MappingCache.shared.getSofaflixURL(tmdbID: movieId, season: s, episode: ep) {
-            info += "Sofaflix cache: ✅\n\(cached.prefix(80))...\n"
-        } else {
-            info += "Sofaflix cache: ❌\n"
-        }
-        
-        guard !imdbID.isEmpty, imdbID != "N/A" else {
-            info += "\nKhông có IMDB ID để test"
-            return info
-        }
-        
-        return await withCheckedContinuation { continuation in
-            PhimAPIService.shared.fetchStream(
-                imdbID: imdbID,
-                tmdbID: movieId,
-                title: "test",
-                mediaType: type,
-                season: s,
-                episode: ep,
-                serverIndex: 0
-            ) { result in
-                switch result {
-                case .success(let (url, servers)):
-                    info += "\n✅ PhimAPI OK\nURL: \(url.absoluteString.prefix(100))...\nServers: \(servers.joined(separator: ", "))"
-                    continuation.resume(returning: info)
-                case .failure(let error):
-                    info += "\n❌ PhimAPI: \(error.localizedDescription)"
-                    continuation.resume(returning: info)
-                }
-            }
+    func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
+        if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
+            selectedSeason = detail; seasonDetails[seasonNumber] = detail
         }
     }
     
@@ -150,12 +130,5 @@ class MovieDetailViewModel: ObservableObject {
             let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
             return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
         } catch { return [] }
-    }
-    
-    func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
-        if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
-            selectedSeason = detail
-            seasonDetails[seasonNumber] = detail
-        }
     }
 }
