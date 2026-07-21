@@ -84,3 +84,14 @@ struct InfoBadge: View {
     let label: String; let quality: String
     var body: some View { VStack(spacing: 2) { Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.7)); Text(quality).font(.system(size: 8)).foregroundColor(.gray) }.padding(.horizontal, 8).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.05))).overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(0.1), lineWidth: 0.5)) }
 }
+struct MovieImagesView: View {
+    let images: [URL]; let title: String
+    @Environment(\.dismiss) var dismiss
+    var body: some View { ZStack { Color.black.opacity(0.95).ignoresSafeArea(); VStack(spacing: 0) { HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding(); TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always)) } } }
+}
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    func makeUIView(context: Context) -> WKWebView { let wv = WKWebView(); wv.backgroundColor = .black; wv.isOpaque = false; if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }; return wv }
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
