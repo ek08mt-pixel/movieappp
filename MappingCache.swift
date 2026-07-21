@@ -374,46 +374,51 @@ final class PhimAPIService {
     }
     
     private func extractStreamURLWithServers(from json: [String: Any], phimType: String, season: Int?, episode: Int?, serverIndex: Int, tmdbID: Int = 0) -> (url: URL?, servers: [String]) {
-        var serverNames: [String] = []
+    var serverNames: [String] = []
+    if let episodes = json["episodes"] as? [[String: Any]] {
+        for server in episodes { if let name = server["server_name"] as? String { serverNames.append(name) } }
+    }
+    
+    if isSeriesType(phimType) {
+        let targetSeason = season ?? 1; let ep = episode ?? 1
         if let episodes = json["episodes"] as? [[String: Any]] {
-            for server in episodes { if let name = server["server_name"] as? String { serverNames.append(name) } }
-        }
-        
-        if isSeriesType(phimType) {
-            let targetSeason = season ?? 1; let ep = episode ?? 1
-            if let episodes = json["episodes"] as? [[String: Any]] {
-                var totalEpsInFirstServer = 0
-                if let firstServer = episodes.first, let serverData = firstServer["server_data"] as? [[String: Any]] { totalEpsInFirstServer = serverData.count }
-                var effectiveEp: Int
-                if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
-                    effectiveEp = ep
-                    if tmdbID == 46261 {
-                        switch targetSeason { case 1: effectiveEp = ep; case 2: effectiveEp = 48 + ep; case 3: effectiveEp = 96 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
-                    }
-                    if tmdbID == 57041 {
-                        switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
-                    }
-                } else { effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep }
-                for server in episodes {
-                    if let serverData = server["server_data"] as? [[String: Any]] {
-                        for epItem in serverData {
-                            if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: effectiveEp) {
-                                return (streamURL, serverNames)
-                            }
-                        }
+            var totalEpsInFirstServer = 0
+            if let firstServer = episodes.first, let serverData = firstServer["server_data"] as? [[String: Any]] { totalEpsInFirstServer = serverData.count }
+            var effectiveEp: Int
+            if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
+                effectiveEp = ep
+                if tmdbID == 46261 {
+                    switch targetSeason { case 1: effectiveEp = ep; case 2: effectiveEp = 48 + ep; case 3: effectiveEp = 96 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
+                }
+                if tmdbID == 57041 {
+                    switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
+                }
+            } else { effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep }
+            
+            // CHỌN SERVER THEO INDEX
+            let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
+            if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]] {
+                for epItem in serverData {
+                    if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: effectiveEp) {
+                        return (streamURL, serverNames)
                     }
                 }
             }
-        } else {
-            if let episodes = json["episodes"] as? [[String: Any]], let firstEp = (episodes.first?["server_data"] as? [[String: Any]])?.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
-            let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
-            if let m = movie {
-                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
-                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
-            }
         }
-        return (nil, serverNames)
+    } else {
+        // CHỌN SERVER THEO INDEX
+        if let episodes = json["episodes"] as? [[String: Any]] {
+            let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
+            if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]], let firstEp = serverData.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+        }
+        let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
+        if let m = movie {
+            if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+            if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
+        }
     }
+    return (nil, serverNames)
+}
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
