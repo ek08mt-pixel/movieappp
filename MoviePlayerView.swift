@@ -227,12 +227,7 @@ case .onflix: let slug = movieTitle.lowercased().replacingOccurrences(of: " ", w
     var audioPopup: some View { VStack(spacing: 10) { Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white); ForEach(audioOptions(), id: \.self) { aud in Button { selectAudio(aud) } label: { Text(aud).font(.system(size: 13)).foregroundColor(aud == selectedAudioLabel ? .black : .white).frame(maxWidth: .infinity).padding(.vertical, 10).background(RoundedRectangle(cornerRadius: 8).fill(aud == selectedAudioLabel ? .white : Color.white.opacity(0.08))) } } }.padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240) }
     func audioOptions() -> [String] { 
     if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }
-    return ["Vietsub", "Lồng Tiếng", "Original"] 
-}
-
-func audioOptions() -> [String] { 
-    if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }
-    return ["Vietsub", "Lồng Tiếng", "Original"] 
+    return ["Vietsub", "Lồng Tiếng"] 
 }
     }
     showAudioPopup = false 
