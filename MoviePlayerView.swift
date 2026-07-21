@@ -78,6 +78,7 @@ struct MoviePlayerView: View {
     forceLandscape()
     selectedServerIndex = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(movieId)")
     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
+    loadStream()
 }
                 .onDisappear {
                     saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
@@ -230,7 +231,6 @@ Color.clear.frame(width: UIScreen.main.bounds.width * 0.25).contentShape(Rectang
             if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
         }
         .statusBarHidden()
-        .task { loadStream() }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName) } }
         .fullScreenCover(isPresented: $showRemoteControl) { CastRemoteView(movieTitle: movieTitle, episodeInfo: episodeInfo, posterURL: posterURL, castDeviceName: castDeviceName, player: player, currentTime: $currentTime, duration: $duration, isCasting: $isCasting) }
