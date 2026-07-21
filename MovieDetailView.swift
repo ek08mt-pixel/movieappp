@@ -17,7 +17,8 @@ struct MovieDetailView: View {
     @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
-    
+    @State private var selectedServer = "Vietsub"
+    @State private var selectedServerIndex = 0
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -65,6 +66,22 @@ struct MovieDetailView: View {
                         }
                         
                         ratingsBar
+                        
+                        // MARK: - Server Selector
+                        HStack(spacing: 6) {
+                            ServerButton(title: "Vietsub", quality: "1080p", isSelected: selectedServer == "Vietsub") {
+                                selectedServer = "Vietsub"
+                                selectedServerIndex = 0
+                            }
+                            ServerButton(title: "Lồng tiếng", quality: "720p", isSelected: selectedServer == "Lồng tiếng") {
+                                selectedServer = "Lồng tiếng"
+                                selectedServerIndex = 1
+                            }
+                            ServerButton(title: "Thuyết minh", quality: "1080p", isSelected: selectedServer == "Thuyết minh") {
+                                selectedServer = "Thuyết minh"
+                                selectedServerIndex = 2
+                            }
+                        }
                         
                         HStack(spacing: 10) {
                             Button { playSeason = nil; playEpisode = nil; presentPlayer() } label: {
@@ -205,10 +222,8 @@ struct MovieDetailView: View {
                                                                         .font(.system(size: 18))
                                                                 }
                                                             }
-                                                        
                                                         .padding(.vertical, 6)
                                                     }
-                                                }
                                                 }
                                             } else {
                                                 ProgressView().tint(.white).padding()
@@ -266,18 +281,13 @@ struct MovieDetailView: View {
     
     func searchAndJumpToEpisode(query: String) {
         guard let episodeNumber = Int(query), episodeNumber > 0 else { return }
-        
         var accumulatedEps = 0
         for season in vm.seasons {
             let count = season.episodeCount
             if episodeNumber <= accumulatedEps + count {
                 _ = episodeNumber - accumulatedEps
-                withAnimation {
-                    expandedSeason = season.seasonNumber
-                }
-                Task {
-                    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
-                }
+                withAnimation { expandedSeason = season.seasonNumber }
+                Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
                 return
             }
             accumulatedEps += count
@@ -287,28 +297,13 @@ struct MovieDetailView: View {
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
         guard hasAnyRating else { return AnyView(EmptyView()) }
-        
         return AnyView(
             HStack(spacing: 0) {
-                if let tmdb = ratings.tmdb {
-                    ratingItem(icon: "t.square.fill", color: .yellow, label: "TMDb", value: tmdb)
-                }
-                
-                if ratings.tmdb != nil && (ratings.imdb != nil || ratings.rottenTomatoes != nil) {
-                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
-                }
-                
-                if let imdb = ratings.imdb {
-                    ratingItem(icon: "i.square.fill", color: .orange, label: "IMDb", value: imdb)
-                }
-                
-                if ratings.imdb != nil && ratings.rottenTomatoes != nil {
-                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24)
-                }
-                
-                if let rt = ratings.rottenTomatoes {
-                    ratingItem(icon: "r.square.fill", color: .red, label: "RT", value: rt)
-                }
+                if let tmdb = ratings.tmdb { ratingItem(icon: "t.square.fill", color: .yellow, label: "TMDb", value: tmdb) }
+                if ratings.tmdb != nil && (ratings.imdb != nil || ratings.rottenTomatoes != nil) { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }
+                if let imdb = ratings.imdb { ratingItem(icon: "i.square.fill", color: .orange, label: "IMDb", value: imdb) }
+                if ratings.imdb != nil && ratings.rottenTomatoes != nil { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }
+                if let rt = ratings.rottenTomatoes { ratingItem(icon: "r.square.fill", color: .red, label: "RT", value: rt) }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             .frame(maxWidth: .infinity)
@@ -319,14 +314,9 @@ struct MovieDetailView: View {
     
     func ratingItem(icon: String, color: Color, label: String, value: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(color)
-            Text(value)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity)
+            Image(systemName: icon).font(.system(size: 16)).foregroundColor(color)
+            Text(value).font(.system(size: 12, weight: .bold)).foregroundColor(.white)
+        }.frame(maxWidth: .infinity)
     }
     
     func fetchRatings() async {
@@ -340,42 +330,55 @@ struct MovieDetailView: View {
                 imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
             } catch { return }
         }
-        
         guard !imdbID.isEmpty else { return }
-        
-        let tmdbScore: String? = {
-            if movie.voteAverage > 0 {
-                return String(format: "%.1f/10", movie.voteAverage)
-            }
-            return nil
-        }()
-        
+        let tmdbScore: String? = movie.voteAverage > 0 ? String(format: "%.1f/10", movie.voteAverage) : nil
         var imdbRating: String? = nil
         var rtRating: String? = nil
-        
         if !imdbID.isEmpty {
             let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=3c3cfb9e"
             if let url = URL(string: omdbURL),
                let (data, _) = try? await URLSession.shared.data(from: url),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                
-                if let imdbScore = json["imdbRating"] as? String, imdbScore != "N/A" {
-                    imdbRating = "\(imdbScore)/10"
-                }
-                
+                if let imdbScore = json["imdbRating"] as? String, imdbScore != "N/A" { imdbRating = "\(imdbScore)/10" }
                 if let ratings = json["Ratings"] as? [[String: Any]] {
                     for rating in ratings {
                         if let source = rating["Source"] as? String, source == "Rotten Tomatoes",
-                           let value = rating["Value"] as? String {
-                            rtRating = value
-                        }
+                           let value = rating["Value"] as? String { rtRating = value }
                     }
                 }
             }
         }
-        
-        await MainActor.run {
-            ratings = (tmdbScore, imdbRating, rtRating)
+        await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) }
+    }
+}
+
+// MARK: - Server Button
+struct ServerButton: View {
+    let title: String
+    let quality: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                Text(quality)
+                    .font(.system(size: 9))
+                    .foregroundColor(.gray)
+            }
+            .foregroundColor(isSelected ? .white : .white.opacity(0.5))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? .white.opacity(0.15) : .white.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? .white.opacity(0.3) : .white.opacity(0.1), lineWidth: 0.5)
+            )
         }
     }
 }
