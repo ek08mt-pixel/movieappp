@@ -545,7 +545,6 @@ final class OnflixService {
     }.resume()
 }
 }
-  }
 // MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
