@@ -120,20 +120,25 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-            setTimeout(function() {
-                var video = document.querySelector('video');
-                if (video) {
-                    video.setAttribute('playsinline', 'true');
-                    video.setAttribute('webkit-playsinline', 'true');
-                    video.controls = false;
-                    video.style.width = '100%';
-                    video.style.height = '100%';
-                    video.play();
-                }
-                var overlays = document.querySelectorAll('.jw-controls, .jw-icon, .jw-overlay, .jw-button-container, .vjs-control-bar, .plyr__controls, [class*="control"], [class*="button"], [class*="overlay"]');
-                for (var i = 0; i < overlays.length; i++) { overlays[i].style.display = 'none'; }
-            }, 1500);
-            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+    var style = document.createElement('style');
+    style.textContent = '*:not(video):not(source) { pointer-events: none !important; } body { background: black !important; }';
+    document.head.appendChild(style);
+    function setup() {
+        var video = document.querySelector('video');
+        if (video) {
+            video.controls = false;
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.play();
+        }
+    }
+    document.addEventListener('dblclick', function(e) { e.preventDefault(); });
+    document.addEventListener('click', function(e) { if (e.target.tagName !== 'VIDEO') { e.preventDefault(); e.stopPropagation(); } }, true);
+    setTimeout(setup, 1000);
+    setInterval(setup, 2000);
+    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
         
         let wv = WKWebView(frame: .zero, configuration: config)
