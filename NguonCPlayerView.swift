@@ -175,9 +175,6 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-    var style = document.createElement('style');
-    style.textContent = '* { -webkit-user-select: none !important; } .jw-wrapper, .jw-controls, .jw-icon, .jw-overlay, .vjs-control-bar, .plyr__controls, [class*="control-bar"], [class*="player-bar"], [class*="jw-"], [class*="vjs-"], [class*="plyr"] { display: none !important; } video::-webkit-media-controls { display: none !important; }';
-    document.head.appendChild(style);
     function setup() {
         var video = document.querySelector('video');
         if (video) {
@@ -186,17 +183,8 @@ struct NguonCWebView: UIViewRepresentable {
             video.setAttribute('webkit-playsinline', 'true');
             video.style.width = '100%';
             video.style.height = '100%';
-            video.style.position = 'fixed';
-            video.style.top = '0';
-            video.style.left = '0';
-            video.style.zIndex = '9999';
-            video.style.backgroundColor = 'black';
             video.play();
         }
-        document.body.style.margin = '0';
-        document.body.style.padding = '0';
-        document.body.style.backgroundColor = 'black';
-        document.body.style.overflow = 'hidden';
     }
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
     setTimeout(setup, 1000);
