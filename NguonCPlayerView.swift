@@ -231,30 +231,33 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-            function setup() {
-                var video = document.querySelector('video');
-                if (video) {
-                    video.controls = false;
-                    video.setAttribute('playsinline', 'true');
-                    video.setAttribute('webkit-playsinline', 'true');
-                    video.style.width = '100%';
-                    video.style.height = '100%';
-                    video.play();
-                }
-            }
-            document.addEventListener('dblclick', function(e) { e.preventDefault(); });
-            setTimeout(setup, 1000);
-            setInterval(function() {
-                var v = document.querySelector('video');
-                if (v) {
-                    window.webkit.messageHandlers.timeUpdate.postMessage({
-                        currentTime: v.currentTime,
-                        duration: v.duration || 1,
-                        paused: v.paused
-                    });
-                }
-            }, 500);
-            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+    var style = document.createElement('style');
+    style.textContent = '* { -webkit-touch-callout: none !important; } .jw-controls, .jw-icon, .jw-overlay, .vjs-control-bar, .plyr__controls, [class*="control-bar"], [class*="player-bar"], [class*="jw-"], [class*="vjs-"] { display: none !important; }';
+    document.head.appendChild(style);
+    function setup() {
+        var video = document.querySelector('video');
+        if (video) {
+            video.controls = false;
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.play();
+        }
+    }
+    document.addEventListener('dblclick', function(e) { e.preventDefault(); });
+    setTimeout(setup, 1000);
+    setInterval(function() {
+        var v = document.querySelector('video');
+        if (v) {
+            window.webkit.messageHandlers.timeUpdate.postMessage({
+                currentTime: v.currentTime,
+                duration: v.duration || 1,
+                paused: v.paused
+            });
+        }
+    }, 500);
+    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
         config.userContentController.add(context.coordinator, name: "timeUpdate")
         
@@ -268,7 +271,11 @@ struct NguonCWebView: UIViewRepresentable {
         return wv
     }
     
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+    if uiView.url != url {
+        uiView.load(URLRequest(url: url))
+    }
+}
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
