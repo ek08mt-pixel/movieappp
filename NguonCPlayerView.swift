@@ -13,6 +13,11 @@ struct NguonCPlayerView: View {
     @State private var isLandscape = false
     @State private var showControls = true
     @State private var controlsTimer: Timer?
+    @State private var isPlaying = true
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 1
+    @State private var showAudioPopup = false
+    @State private var selectedAudio = "Vietsub"
     
     init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
         self.embedURL = embedURL
@@ -26,7 +31,7 @@ struct NguonCPlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            NguonCWebView(url: currentURL)
+            NguonCWebView(url: currentURL, isPlaying: $isPlaying, currentTime: $currentTime, duration: $duration)
                 .ignoresSafeArea()
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
@@ -43,13 +48,12 @@ struct NguonCPlayerView: View {
             
             if showControls {
                 VStack {
+                    // Top bar
                     HStack {
                         Button { dismiss() } label: {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                .font(.system(size: 20, weight: .bold)).foregroundColor(.white)
+                                .padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                         }
                         Spacer()
                         Text(episodeName).font(.subheadline).foregroundColor(.white).lineLimit(1)
@@ -66,10 +70,100 @@ struct NguonCPlayerView: View {
                         }
                     }
                     .padding(.horizontal, 16).padding(.top, 50)
+                    
                     Spacer()
+                    
+                    // Bottom controls
+                    VStack(spacing: 8) {
+                        // Seek bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(.white.opacity(0.2)).frame(height: 4)
+                                Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
+                            }
+                        }.frame(height: 20)
+                        
+                        HStack {
+                            Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                            Spacer()
+                            Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                        }
+                        
+                        // Control buttons
+                        HStack(spacing: 50) {
+                            // Âm thanh
+                            Button { showAudioPopup = true } label: {
+                                VStack(spacing: 2) {
+                                    Image(systemName: "waveform").font(.system(size: 20))
+                                    Text(selectedAudio).font(.system(size: 9))
+                                }.foregroundColor(.white.opacity(0.8))
+                            }
+                            
+                            // Tua 10s
+                            Button {
+                                let newTime = max(currentTime - 10, 0)
+                                seekTo(newTime)
+                            } label: {
+                                Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
+                            }
+                            
+                            // Play/Pause
+                            Button {
+                                isPlaying.toggle()
+                                togglePlay()
+                            } label: {
+                                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 36)).foregroundColor(.white)
+                            }
+                            
+                            // Tua +10s
+                            Button {
+                                let newTime = min(currentTime + 10, duration)
+                                seekTo(newTime)
+                            } label: {
+                                Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
+                            }
+                            
+                            // Server list
+                            if !servers.isEmpty {
+                                Button { showServerPicker = true } label: {
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "list.bullet").font(.system(size: 20))
+                                        Text("Server").font(.system(size: 9))
+                                    }.foregroundColor(.white.opacity(0.8))
+                                }
+                            } else {
+                                Spacer().frame(width: 50)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20).padding(.bottom, 30)
+                    .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
                 }
             }
             
+            // Audio popup
+            if showAudioPopup {
+                Color.black.opacity(0.4).ignoresSafeArea().onTapGesture { showAudioPopup = false }
+                VStack(spacing: 8) {
+                    Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                    ForEach(["Vietsub", "Lồng tiếng", "Thuyết minh"], id: \.self) { audio in
+                        Button {
+                            selectedAudio = audio
+                            showAudioPopup = false
+                        } label: {
+                            Text(audio).font(.system(size: 13))
+                                .foregroundColor(selectedAudio == audio ? .black : .white)
+                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(selectedAudio == audio ? .white : Color.white.opacity(0.08)))
+                        }
+                    }
+                }
+                .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
+            }
+            
+            // Server picker
             if showServerPicker {
                 Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showServerPicker = false }
                 VStack(spacing: 10) {
@@ -105,10 +199,27 @@ struct NguonCPlayerView: View {
             withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
         }
     }
+    
+    func togglePlay() {
+        NguonCWebView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
+    }
+    
+    func seekTo(_ time: Double) {
+        NguonCWebView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(time); }")
+    }
+    
+    func formatTime(_ s: Double) -> String {
+        let m = Int(s) / 60; let sec = Int(s) % 60
+        return String(format: "%d:%02d", m, sec)
+    }
 }
 
 struct NguonCWebView: UIViewRepresentable {
     let url: URL
+    @Binding var isPlaying: Bool
+    @Binding var currentTime: Double
+    @Binding var duration: Double
+    static weak var activeWebView: WKWebView?
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -120,26 +231,32 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-    var style = document.createElement('style');
-    style.textContent = '*:not(video):not(source) { pointer-events: none !important; } body { background: black !important; }';
-    document.head.appendChild(style);
-    function setup() {
-        var video = document.querySelector('video');
-        if (video) {
-            video.controls = false;
-            video.setAttribute('playsinline', 'true');
-            video.setAttribute('webkit-playsinline', 'true');
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.play();
-        }
-    }
-    document.addEventListener('dblclick', function(e) { e.preventDefault(); });
-    document.addEventListener('click', function(e) { if (e.target.tagName !== 'VIDEO') { e.preventDefault(); e.stopPropagation(); } }, true);
-    setTimeout(setup, 1000);
-    setInterval(setup, 2000);
-    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+            function setup() {
+                var video = document.querySelector('video');
+                if (video) {
+                    video.controls = false;
+                    video.setAttribute('playsinline', 'true');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.play();
+                }
+            }
+            document.addEventListener('dblclick', function(e) { e.preventDefault(); });
+            setTimeout(setup, 1000);
+            setInterval(function() {
+                var v = document.querySelector('video');
+                if (v) {
+                    window.webkit.messageHandlers.timeUpdate.postMessage({
+                        currentTime: v.currentTime,
+                        duration: v.duration || 1,
+                        paused: v.paused
+                    });
+                }
+            }, 500);
+            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
+        config.userContentController.add(context.coordinator, name: "timeUpdate")
         
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.backgroundColor = .black
@@ -147,19 +264,32 @@ struct NguonCWebView: UIViewRepresentable {
         wv.scrollView.bounces = false
         wv.navigationDelegate = context.coordinator
         wv.load(URLRequest(url: url))
+        NguonCWebView.activeWebView = wv
         return wv
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var parent: NguonCWebView
+        init(parent: NguonCWebView) { self.parent = parent }
+        
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if navigationAction.targetFrame == nil { decisionHandler(.cancel); return }
             decisionHandler(.allow)
         }
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("var video = document.querySelector('video'); if (video) { video.play(); }")
+        }
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "timeUpdate", let dict = message.body as? [String: Any] {
+                DispatchQueue.main.async {
+                    self.parent.currentTime = dict["currentTime"] as? Double ?? 0
+                    self.parent.duration = dict["duration"] as? Double ?? 1
+                    self.parent.isPlaying = !(dict["paused"] as? Bool ?? false)
+                }
+            }
         }
     }
 }
