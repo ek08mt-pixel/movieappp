@@ -43,15 +43,16 @@ struct MovieDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
-                                if !vm.serverList.isEmpty {
-                                    HStack(spacing: 4) {
-                                        ForEach(vm.serverList.prefix(3), id: \.name) { server in
-                                            InfoBadge(label: server.name, quality: server.qualities)
-                                        }
-                                    }
-                                }
-                                HStack(spacing: 6) { Image(systemName: "star.fill").foregroundColor(.yellow).font(.caption); Text(movie.ratingText).foregroundColor(.white).font(.caption).bold(); Text("•").foregroundColor(.gray); Text(vm.detail?.genres?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
+                                HStack(spacing: 6) { Text(releaseDateText).foregroundColor(.gray).font(.caption); Text("•").foregroundColor(.gray); Text(vm.detail?.genres?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
                                 Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
+                            }
+                        }
+                        // InfoBadge dưới poster
+                        if !vm.serverList.isEmpty {
+                            HStack(spacing: 8) {
+                                ForEach(vm.serverList.prefix(3), id: \.name) { server in
+                                    InfoBadge(label: server.name, quality: server.qualities)
+                                }
                             }
                         }
                         ratingsBar
