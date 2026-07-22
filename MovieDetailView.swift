@@ -86,10 +86,15 @@ struct MovieDetailView: View {
         }
         .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
         .task {
-            await vm.load(movieId: movie.id, mediaType: movie.mediaType)
-            await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
-            await fetchRatings()
+    await vm.load(movieId: movie.id, mediaType: movie.mediaType)
+    await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
+    if movie.mediaType == "tv" {
+        for season in vm.seasons {
+            await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
         }
+    }
+    await fetchRatings()
+}
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
     }
     
