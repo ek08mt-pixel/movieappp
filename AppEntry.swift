@@ -32,6 +32,7 @@ struct KeychainHelper {
 struct WatchProgress: Codable, Equatable {
     let movieId: Int; let movieTitle: String; let posterPath: String?; let mediaType: String?
     var season: Int?; var episode: Int?; var currentTime: Double; var duration: Double; var lastWatched: Date
+    var source: String? = nil
     var progress: Double { guard duration > 0 else { return 0 }; return min(currentTime / duration, 1.0) }
 }
 
