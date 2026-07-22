@@ -25,6 +25,7 @@ struct FlyingEmoji: Identifiable {
 // MARK: - Main View
 struct WatchTogetherRoomView: View {
     @StateObject private var service = WatchTogetherService.shared
+    @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer()
     @State private var currentTime: Double = 0
     @State private var duration: Double = 1
