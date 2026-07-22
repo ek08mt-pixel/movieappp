@@ -22,7 +22,7 @@ struct NguonCPlayerView: View {
         self.episodeName = episodeName
         self.servers = servers
         _currentURL = State(initialValue: embedURL)
-        _currentServerName = State(initialValue: servers.first?.0 ?? "Vietsub")
+        _currentServerName = State(initialValue: servers.first?.0 ?? "")
     }
     
     var body: some View {
@@ -46,7 +46,10 @@ struct NguonCPlayerView: View {
             if showControls {
                 VStack {
                     HStack {
-                        Button { dismiss() } label: {
+                        Button { 
+                            NguonCWebView.activeWebView?.stopLoading()
+                            dismiss() 
+                        } label: {
                             Image(systemName: "chevron.left").font(.system(size: 20, weight: .bold)).foregroundColor(.white)
                                 .padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                         }
