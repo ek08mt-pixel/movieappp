@@ -44,6 +44,7 @@ struct Movie: Codable, Identifiable, Hashable {
 
 struct MovieDetail: Codable {
     let id: Int; let title: String; let overview: String?
+    let productionCompanies: [ProductionCompany]?
     let posterPath: String?; let backdropPath: String?
     let voteAverage: Double?; let releaseDate: String?
     let runtime: Int?; let genres: [Genre]?; let tagline: String?
@@ -139,4 +140,7 @@ struct NguonCFilmDetail: Codable {
 }
 struct NguonCEpisode: Codable, Identifiable {
     let id: Int; let name: String?; let slug: String?; let link: String?; let season: Int?; let episode: Int?
+}
+struct ProductionCompany: Codable {
+    let name: String
 }
