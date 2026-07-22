@@ -16,15 +16,14 @@ struct NguonCPlayerView: View {
     @State private var isPlaying = true
     @State private var currentTime: Double = 0
     @State private var duration: Double = 1
-    @State private var showAudioPopup = false
-    @State private var selectedAudio = "Vietsub"
+    
     
     init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
         self.embedURL = embedURL
         self.episodeName = episodeName
         self.servers = servers
         _currentURL = State(initialValue: embedURL)
-        _currentServerName = State(initialValue: servers.first?.0 ?? "")
+        _currentServerName = State(initialValue: servers.first?.0 ?? "Vietsub")
     }
     
     var body: some View {
@@ -88,16 +87,7 @@ struct NguonCPlayerView: View {
                             Spacer()
                             Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
                         }
-                        
-                        // Control buttons
-                        HStack(spacing: 50) {
-                            // Âm thanh
-                            Button { showAudioPopup = true } label: {
-                                VStack(spacing: 2) {
-                                    Image(systemName: "waveform").font(.system(size: 20))
-                                    Text(selectedAudio).font(.system(size: 9))
-                                }.foregroundColor(.white.opacity(0.8))
-                            }
+                    
                             
                             // Tua 10s
                             Button {
@@ -142,26 +132,6 @@ struct NguonCPlayerView: View {
                 }
             }
             
-            // Audio popup
-            if showAudioPopup {
-                Color.black.opacity(0.4).ignoresSafeArea().onTapGesture { showAudioPopup = false }
-                VStack(spacing: 8) {
-                    Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                    ForEach(["Vietsub", "Lồng tiếng", "Thuyết minh"], id: \.self) { audio in
-                        Button {
-                            selectedAudio = audio
-                            showAudioPopup = false
-                        } label: {
-                            Text(audio).font(.system(size: 13))
-                                .foregroundColor(selectedAudio == audio ? .black : .white)
-                                .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 8).fill(selectedAudio == audio ? .white : Color.white.opacity(0.08)))
-                        }
-                    }
-                }
-                .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
-            }
             
             // Server picker
             if showServerPicker {
@@ -231,9 +201,6 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-    var style = document.createElement('style');
-    style.textContent = '* { -webkit-touch-callout: none !important; } .jw-controls, .jw-icon, .jw-overlay, .vjs-control-bar, .plyr__controls, [class*="control-bar"], [class*="player-bar"], [class*="jw-"], [class*="vjs-"] { display: none !important; }';
-    document.head.appendChild(style);
     function setup() {
         var video = document.querySelector('video');
         if (video) {
@@ -242,8 +209,17 @@ struct NguonCWebView: UIViewRepresentable {
             video.setAttribute('webkit-playsinline', 'true');
             video.style.width = '100%';
             video.style.height = '100%';
+            video.style.position = 'fixed';
+            video.style.top = '0';
+            video.style.left = '0';
+            video.style.zIndex = '9999';
+            video.style.backgroundColor = 'black';
             video.play();
         }
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.backgroundColor = 'black';
+        document.body.style.overflow = 'hidden';
     }
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
     setTimeout(setup, 1000);
