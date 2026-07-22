@@ -103,16 +103,23 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-            setTimeout(function() {
-                var video = document.querySelector('video');
-                if (video) {
-                    video.setAttribute('playsinline', 'true');
-                    video.setAttribute('webkit-playsinline', 'true');
-                    video.controls = true;
-                    video.play();
-                }
-            }, 1500);
-            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+    setTimeout(function() {
+        var video = document.querySelector('video');
+        if (video) {
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.controls = false;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.play();
+        }
+        // Ẩn các nút overlay của trang web
+        var overlays = document.querySelectorAll('.jw-controls, .jw-icon, .jw-overlay, .jw-button-container, .vjs-control-bar, .plyr__controls, [class*="control"], [class*="button"], [class*="overlay"]');
+        for (var i = 0; i < overlays.length; i++) {
+            overlays[i].style.display = 'none';
+        }
+    }, 1500);
+    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
         
         let wv = WKWebView(frame: .zero, configuration: config)
