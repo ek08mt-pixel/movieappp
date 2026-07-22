@@ -7,6 +7,7 @@ class WatchTogetherService: ObservableObject {
     private var roomCode: String = ""
     var userId: String = ""
     private var userName: String = ""
+    var avatarBase64: String = ""
     private var timer: Timer?
     
     @Published var isInRoom = false
