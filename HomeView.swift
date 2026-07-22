@@ -497,22 +497,18 @@ Section {
     }
     
     func presentContinuePlayer() {
-        guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
-        
-        let moviePlayer = MoviePlayerView(
-            movieId: id,
-            movieTitle: continueMovieTitle,
-            mediaType: continueMediaType,
-            seasonNumber: continueSeason,
-            episodeNumber: continueEpisode,
-            posterURL: continuePosterURL,
-            resumeTime: continueCurrentTime
-        ).environmentObject(appState)
-        
-        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-        hosting.modalPresentationStyle = .fullScreen
-        topVC.present(hosting, animated: true)
-    }
+    guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
+    let prog = appState.watchProgressList.first(where: { $0.movieId == id })
+    let src: MovieSource = prog?.source == "Emew 1" ? .phimapi : prog?.source == "Emew 2" ? .nguonc : prog?.source == "Emew 3" ? .vsmov : .phimapi
+    let moviePlayer = MoviePlayerView(
+        movieId: id, movieTitle: continueMovieTitle,
+        mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode,
+        posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src
+    ).environmentObject(appState)
+    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+    hosting.modalPresentationStyle = .fullScreen
+    topVC.present(hosting, animated: true)
+}
     
     func formatRemaining(_ prog: WatchProgress) -> String {
         let remaining = max(prog.duration - prog.currentTime, 0)
