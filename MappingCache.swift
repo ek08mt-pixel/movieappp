@@ -135,7 +135,8 @@ final class NguonCService {
     
     func fetchStream(imdbID: String, title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
         if let cachedSlug = cache.getNguonCSlug(imdbID: imdbID) { fetchDetail(slug: cachedSlug, season: season, episode: episode, completion: completion); return }
-        searchFilms(keyword: title) { [weak self] result in
+        let searchTitle = season != nil ? "\(title) (Phần \(season!))" : title
+searchFilms(keyword: searchTitle) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let films): self.matchByDetail(films: films, imdbID: imdbID, season: season, episode: episode, completion: completion)
