@@ -499,7 +499,12 @@ Section {
     func presentContinuePlayer() {
     guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
     let prog = appState.watchProgressList.first(where: { $0.movieId == id })
-    let src: MovieSource = prog?.source == "Emew 1" ? .phimapi : prog?.source == "Emew 2" ? .nguonc : prog?.source == "Emew 3" ? .vsmov : .phimapi
+    let src: MovieSource
+if let source = prog?.source {
+    src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : source == "Emew 3" ? .vsmov : .phimapi
+} else {
+    src = .phimapi
+}
     let moviePlayer = MoviePlayerView(
         movieId: id, movieTitle: continueMovieTitle,
         mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode,
