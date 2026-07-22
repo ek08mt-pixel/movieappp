@@ -132,7 +132,7 @@ class WatchTogetherService: ObservableObject {
             guard let self = self, let data = data else { return }
             let parts = data.compactMap { _, value -> Participant? in
                 guard let dict = value as? [String: Any], let userId = dict["userId"] as? String, let userName = dict["userName"] as? String else { return nil }
-                return Participant(userId: userId, userName: userName, avatar: dict["avatar"] as? String ?? "🐱", isOnline: dict["isOnline"] as? Bool ?? true)
+                return Participant(userId: userId, userName: userName, avatar: dict["avatar"] as? String ?? "🐱", isOnline: dict["isOnline"] as? Bool ?? true, avatarBase64: dict["avatarBase64"] as? String)
             }
             DispatchQueue.main.async { self.participants = parts }
         }
