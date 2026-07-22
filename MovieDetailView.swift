@@ -96,12 +96,13 @@ HStack(spacing: 8) {
     }
     
     func presentPlayer() {
-        guard let topVC = UIApplication.topViewController() else { return }
-        let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL).environmentObject(appState)
-        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-        hosting.modalPresentationStyle = .fullScreen
-        topVC.present(hosting, animated: true)
-    }
+    guard let topVC = UIApplication.topViewController() else { return }
+    let src: MovieSource = selectedSource == "Emew 1" ? .phimapi : selectedSource == "Emew 2" ? .nguonc : .vsmov
+    let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src).environmentObject(appState)
+    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+    hosting.modalPresentationStyle = .fullScreen
+    topVC.present(hosting, animated: true)
+}
     
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
