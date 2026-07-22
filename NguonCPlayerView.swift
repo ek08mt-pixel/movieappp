@@ -17,7 +17,6 @@ struct NguonCPlayerView: View {
     @State private var currentTime: Double = 0
     @State private var duration: Double = 1
     
-    
     init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
         self.embedURL = embedURL
         self.episodeName = episodeName
@@ -40,18 +39,15 @@ struct NguonCPlayerView: View {
             if isLoading {
                 VStack(spacing: 16) {
                     ProgressView().tint(.white).scaleEffect(1.5)
-                    Text("Đang tải \(episodeName)...")
-                        .font(.caption).foregroundColor(.white.opacity(0.7))
+                    Text("Đang tải \(episodeName)...").font(.caption).foregroundColor(.white.opacity(0.7))
                 }
             }
             
             if showControls {
                 VStack {
-                    // Top bar
                     HStack {
                         Button { dismiss() } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .bold)).foregroundColor(.white)
+                            Image(systemName: "chevron.left").font(.system(size: 20, weight: .bold)).foregroundColor(.white)
                                 .padding(12).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                         }
                         Spacer()
@@ -64,17 +60,14 @@ struct NguonCPlayerView: View {
                             }
                         } label: {
                             Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white).padding(8)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                .foregroundColor(.white).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
                         }
                     }
                     .padding(.horizontal, 16).padding(.top, 50)
                     
                     Spacer()
                     
-                    // Bottom controls
                     VStack(spacing: 8) {
-                        // Seek bar
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 Capsule().fill(.white.opacity(0.2)).frame(height: 4)
@@ -87,34 +80,17 @@ struct NguonCPlayerView: View {
                             Spacer()
                             Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
                         }
-                    
-                            
-                            // Tua 10s
-                            Button {
-                                let newTime = max(currentTime - 10, 0)
-                                seekTo(newTime)
-                            } label: {
+                        
+                        HStack(spacing: 50) {
+                            Button { let newTime = max(currentTime - 10, 0); seekTo(newTime) } label: {
                                 Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
                             }
-                            
-                            // Play/Pause
-                            Button {
-                                isPlaying.toggle()
-                                togglePlay()
-                            } label: {
-                                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                    .font(.system(size: 36)).foregroundColor(.white)
+                            Button { isPlaying.toggle(); togglePlay() } label: {
+                                Image(systemName: isPlaying ? "pause.fill" : "play.fill").font(.system(size: 36)).foregroundColor(.white)
                             }
-                            
-                            // Tua +10s
-                            Button {
-                                let newTime = min(currentTime + 10, duration)
-                                seekTo(newTime)
-                            } label: {
+                            Button { let newTime = min(currentTime + 10, duration); seekTo(newTime) } label: {
                                 Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
                             }
-                            
-                            // Server list
                             if !servers.isEmpty {
                                 Button { showServerPicker = true } label: {
                                     VStack(spacing: 2) {
@@ -122,8 +98,6 @@ struct NguonCPlayerView: View {
                                         Text("Server").font(.system(size: 9))
                                     }.foregroundColor(.white.opacity(0.8))
                                 }
-                            } else {
-                                Spacer().frame(width: 50)
                             }
                         }
                     }
@@ -132,8 +106,6 @@ struct NguonCPlayerView: View {
                 }
             }
             
-            
-            // Server picker
             if showServerPicker {
                 Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showServerPicker = false }
                 VStack(spacing: 10) {
@@ -195,7 +167,6 @@ struct NguonCWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
-        
         let pref = WKWebpagePreferences()
         pref.allowsContentJavaScript = true
         config.defaultWebpagePreferences = pref
@@ -248,10 +219,11 @@ struct NguonCWebView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {
-    if uiView.url != url {
-        uiView.load(URLRequest(url: url))
+        if uiView.url != url {
+            uiView.load(URLRequest(url: url))
+        }
     }
-}
+    
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
