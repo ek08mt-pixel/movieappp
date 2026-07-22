@@ -17,6 +17,7 @@ struct MovieDetailView: View {
     @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
+    @State private var selectedSource = "Emew 1"
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -55,6 +56,20 @@ struct MovieDetailView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                         }
+                        // Server Selector
+HStack(spacing: 8) {
+    ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in
+        Button {
+            selectedSource = source
+        } label: {
+            Text(source)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(selectedSource == source ? .white : .white.opacity(0.5))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Capsule().fill(selectedSource == source ? .white.opacity(0.2) : .white.opacity(0.05)))
+        }
+    }
+}
                         HStack(spacing: 10) {
                             Button { playSeason = nil; playEpisode = nil; presentPlayer() } label: { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
                             Button { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) }; appState.save() } label: { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
