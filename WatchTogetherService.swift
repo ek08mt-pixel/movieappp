@@ -39,11 +39,11 @@ class WatchTogetherService: ObservableObject {
         let action: String; let time: Double; let timestamp: Double; let episodeNumber: Int?; let seasonNumber: Int?
     }
     
-    func createRoom(roomName: String, userName: String, completion: @escaping (String) -> Void) {
+    func createRoom(roomName: String, userName: String, avatar: String? = nil, completion: @escaping (String) -> Void) {
         self.userName = userName; self.userId = UUID().uuidString; self.isHost = true
         let code = String(format: "%06d", Int.random(in: 0...999999))
         self.roomCode = code; self.currentRoomCode = code; self.currentRoomName = roomName
-        let avatar = WatchTogetherService.defaultAvatars[abs(userId.hashValue) % WatchTogetherService.defaultAvatars.count]
+        let av = avatar ?? WatchTogetherService.defaultAvatars[abs(userId.hashValue) % WatchTogetherService.defaultAvatars.count]
         let roomData: [String: Any] = [
             "code": code, "roomName": roomName, "hostId": userId, "hostName": userName,
             "createdAt": Date().timeIntervalSince1970,
@@ -54,21 +54,21 @@ class WatchTogetherService: ObservableObject {
         }
     }
     
-    func joinRoom(code: String, userName: String, completion: @escaping (Bool, String?) -> Void) {
-        self.userName = userName; self.userId = UUID().uuidString; self.roomCode = code; self.isHost = false
-        get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
-            guard let self = self, let data = data, data["code"] != nil else { DispatchQueue.main.async { completion(false, nil) }; return }
-            let roomName = data["roomName"] as? String ?? ""
-            let avatar = WatchTogetherService.defaultAvatars[abs(self.userId.hashValue) % WatchTogetherService.defaultAvatars.count]
-            let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "avatar": avatar, "isOnline": true]
-            self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { success in
-                DispatchQueue.main.async {
-                    if success { self.currentRoomCode = code; self.currentRoomName = roomName; self.isInRoom = true; self.startListening(); completion(true, roomName) }
-                    else { completion(false, nil) }
-                }
+    func joinRoom(code: String, userName: String, avatar: String? = nil, completion: @escaping (Bool, String?) -> Void) {
+    self.userName = userName; self.userId = UUID().uuidString; self.roomCode = code; self.isHost = false
+    get(path: "rooms/\(code)/info") { [weak self] (data: [String: Any]?) in
+        guard let self = self, let data = data, data["code"] != nil else { DispatchQueue.main.async { completion(false, nil) }; return }
+        let roomName = data["roomName"] as? String ?? ""
+        let av = avatar ?? WatchTogetherService.defaultAvatars[abs(self.userId.hashValue) % WatchTogetherService.defaultAvatars.count]
+        let participant: [String: Any] = ["userId": self.userId, "userName": self.userName, "avatar": av, "isOnline": true]
+        self.put(path: "rooms/\(code)/info/participants/\(self.userId)", data: participant) { success in
+            DispatchQueue.main.async {
+                if success { self.currentRoomCode = code; self.currentRoomName = roomName; self.isInRoom = true; self.startListening(); completion(true, roomName) }
+                else { completion(false, nil) }
             }
         }
     }
+}
     
     func leaveRoom() {
         timer?.invalidate(); timer = nil
