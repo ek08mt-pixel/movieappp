@@ -284,29 +284,29 @@ service.createRoom(roomName: finalName, userName: userName, avatar: appState.sel
     }
     
     func joinRoom() {
-        let code = joinCode.trimmingCharacters(in: .whitespaces)
-        guard code.count == 6 else {
-            withAnimation(.easeOut(duration: 0.2)) { joinError = "Mã phòng phải có đúng 6 chữ số" }
-            return
-        }
-        isJoining = true
-        joinError = nil
-        let userName2 = appState.nickname.isEmpty ? "User" : appState.nickname
-service.joinRoom(code: code, userName: userName2, avatar: appState.selectedAvatar) { success, error in }
-            isJoining = false
-            if success {
-                joinCode = ""
-                isInputFocused = false
-            } else {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    joinError = "Không tìm thấy phòng. Kiểm tra lại mã nhé!"
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation { joinError = nil }
-                }
+    let code = joinCode.trimmingCharacters(in: .whitespaces)
+    guard code.count == 6 else {
+        withAnimation(.easeOut(duration: 0.2)) { joinError = "Mã phòng phải có đúng 6 chữ số" }
+        return
+    }
+    isJoining = true
+    joinError = nil
+    let userName2 = appState.nickname.isEmpty ? "User" : appState.nickname
+    service.joinRoom(code: code, userName: userName2, avatar: appState.selectedAvatar) { success, error in
+        isJoining = false
+        if success {
+            joinCode = ""
+            isInputFocused = false
+        } else {
+            withAnimation(.easeOut(duration: 0.2)) {
+                joinError = "Không tìm thấy phòng. Kiểm tra lại mã nhé!"
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation { joinError = nil }
             }
         }
     }
+}
     
     // MARK: - In Room
     var inRoomView: some View {
