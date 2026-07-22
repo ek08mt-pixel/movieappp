@@ -37,23 +37,24 @@ struct MovieDetailView: View {
                         CachedAsyncImage(url: movie.backdropURL, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(width: UIScreen.main.bounds.width, height: 320).clipped().overlay(LinearGradient(colors: [.clear, .clear, Color.black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
                         Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 20)
                     }
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.6), radius: 8).offset(y: -45)
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
-                                HStack(spacing: 6) { Text(releaseDateText).foregroundColor(.gray).font(.caption); Text("•").foregroundColor(.gray); Text(vm.detail?.genres?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
+                                HStack(spacing: 6) { Text(releaseDateText).foregroundColor(.gray).font(.caption); Text("•").foregroundColor(.gray); Text(vm.detail?.productionCompanies?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
                                 Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
                             }
                         }
-                        // InfoBadge dưới poster
+                        // InfoBadge sát dưới poster
                         if !vm.serverList.isEmpty {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 6) {
                                 ForEach(vm.serverList.prefix(3), id: \.name) { server in
                                     InfoBadge(label: server.name, quality: server.qualities)
                                 }
                             }
+                            .frame(maxWidth: .infinity, alignment: .center)
                         }
                         ratingsBar
                         HStack(spacing: 8) {
@@ -129,7 +130,7 @@ struct MovieDetailView: View {
 
 struct InfoBadge: View {
     let label: String; let quality: String
-    var body: some View { VStack(spacing: 2) { Text(label).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.7)); Text(quality).font(.system(size: 8)).foregroundColor(.gray) }.padding(.horizontal, 8).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(0.05))).overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(0.1), lineWidth: 0.5)) }
+    var body: some View { HStack(spacing: 4) { Text(label).font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.6)); Text(quality).font(.system(size: 7)).foregroundColor(.gray) }.padding(.horizontal, 6).padding(.vertical, 2).background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.05))).overlay(RoundedRectangle(cornerRadius: 4).stroke(.white.opacity(0.1), lineWidth: 0.5)) }
 }
 
 struct MovieImagesView: View {
