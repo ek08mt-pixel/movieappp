@@ -36,6 +36,7 @@ struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     var resumeTime: Double = 0
+    var initialSource: MovieSource = .phimapi
     @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
@@ -75,6 +76,7 @@ struct MoviePlayerView: View {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     forceLandscape()
+selectedSource = initialSource
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
