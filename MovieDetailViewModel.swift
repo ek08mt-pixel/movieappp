@@ -36,6 +36,11 @@ class MovieDetailViewModel: ObservableObject {
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
+    if type == "tv" {
+        for season in seasons {
+            await loadSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber)
+        }
+    }
     }
     
     func loadServers(movieId: Int, mediaType: String?, title: String) async {
@@ -105,10 +110,11 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
-        if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
-            selectedSeason = detail; seasonDetails[seasonNumber] = detail
-        }
+    if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
+        selectedSeason = detail; seasonDetails[seasonNumber] = detail
+        MappingCache.seasonEpisodeCounts["\(tvId)_\(seasonNumber)"] = detail.episodes.count
     }
+}
     
     private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
         let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
