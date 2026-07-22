@@ -175,6 +175,14 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
+    var style = document.createElement('style');
+    style.textContent = '.jw-controls, .jw-icon, .jw-overlay, .vjs-control-bar, .plyr__controls, [class*="control-bar"], [class*="player-bar"] { display: none !important; } video::-webkit-media-controls { display: none !important; }';
+    document.head.appendChild(style);
+    function hideAll() {
+        document.querySelectorAll('[class*="control"], [class*="player"], [class*="jw"], [class*="vjs"], [class*="plyr"], [class*="bar"], [class*="button"], [class*="icon"]').forEach(function(el) {
+            if (el.tagName !== 'VIDEO' && el.tagName !== 'SOURCE') el.style.display = 'none';
+        });
+    }
     function setup() {
         var video = document.querySelector('video');
         if (video) {
@@ -185,10 +193,12 @@ struct NguonCWebView: UIViewRepresentable {
             video.style.height = '100%';
             video.play();
         }
+        hideAll();
     }
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
     setTimeout(setup, 1000);
     setInterval(setup, 2000);
+    setInterval(hideAll, 1000);
     setInterval(function() {
         var v = document.querySelector('video');
         if (v) {
