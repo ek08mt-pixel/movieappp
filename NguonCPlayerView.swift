@@ -175,6 +175,9 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
+    var style = document.createElement('style');
+    style.textContent = '* { -webkit-user-select: none !important; } .jw-wrapper, .jw-controls, .jw-icon, .jw-overlay, .vjs-control-bar, .plyr__controls, [class*="control-bar"], [class*="player-bar"], [class*="jw-"], [class*="vjs-"], [class*="plyr"] { display: none !important; } video::-webkit-media-controls { display: none !important; }';
+    document.head.appendChild(style);
     function setup() {
         var video = document.querySelector('video');
         if (video) {
@@ -197,6 +200,7 @@ struct NguonCWebView: UIViewRepresentable {
     }
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
     setTimeout(setup, 1000);
+    setInterval(setup, 2000);
     setInterval(function() {
         var v = document.querySelector('video');
         if (v) {
@@ -222,10 +226,12 @@ struct NguonCWebView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        if uiView.url != url {
-            uiView.load(URLRequest(url: url))
-        }
+    if uiView.url?.absoluteString != url.absoluteString {
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        uiView.load(request)
     }
+}
     
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     
