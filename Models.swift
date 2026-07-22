@@ -52,7 +52,8 @@ struct MovieDetail: Codable {
     let numberOfSeasons: Int?; let numberOfEpisodes: Int?
     let seasons: [TVSeason]?
     enum CodingKeys: String, CodingKey {
-        case id, title, overview, runtime, tagline, genres, credits, seasons
+    case id, title, overview, runtime, tagline, genres, credits, seasons
+    case productionCompanies = "production_companies"
         case posterPath = "poster_path"; case backdropPath = "backdrop_path"
         case voteAverage = "vote_average"; case releaseDate = "release_date"
         case belongsToCollection = "belongs_to_collection"
