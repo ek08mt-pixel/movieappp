@@ -170,11 +170,15 @@ final class NguonCService {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let movie = json["movie"] as? [String: Any] {
                     var embedURL: URL?
                     if let s = season, let e = episode {
-                        if let episodes = movie["episodes"] as? [[String: Any]] {
-                            for server in episodes {
+    if let episodes = movie["episodes"] as? [[String: Any]] {
+        var effectiveEp = e
+        if let firstServer = episodes.first, let items = firstServer["items"] as? [[String: Any]], items.count > 100 {
+            effectiveEp = (s - 1) * 49 + e
+        }
+        for server in episodes {
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
-                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, (name.lowercased() == "full" || Int(name) == e) {
+                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, matchEpisode(name: name, target: effectiveEp) {
                                             embedURL = URL(string: embed); break
                                         }
                                     }
