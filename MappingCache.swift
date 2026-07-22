@@ -133,10 +133,10 @@ final class NguonCService {
     private let baseSearchURL = "https://phim.nguonc.com/api/films/search"
     private init() {}
     
-    func fetchStream(imdbID: String, title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
+    func fetchStream(imdbID: String, title: String, season: Int? = nil, episode: Int? = nil, completion: @escaping (Result<(URL, [(String, URL)]), Error>) -> Void) {
         if let cachedSlug = cache.getNguonCSlug(imdbID: imdbID) { fetchDetail(slug: cachedSlug, season: season, episode: episode, completion: completion); return }
         let searchTitle = season != nil ? "\(title) (Phần \(season!))" : title
-searchFilms(keyword: searchTitle) { [weak self] result in
+        searchFilms(keyword: searchTitle) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let films): self.matchByDetail(films: films, imdbID: imdbID, season: season, episode: episode, completion: completion)
@@ -145,24 +145,24 @@ searchFilms(keyword: searchTitle) { [weak self] result in
         }
     }
     
-    private func matchByDetail(films: [NguonCFilm], imdbID: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        let group = DispatchGroup(); var foundURL: URL?; var foundError: Error?
+    private func matchByDetail(films: [NguonCFilm], imdbID: String, season: Int?, episode: Int?, completion: @escaping (Result<(URL, [(String, URL)]), Error>) -> Void) {
+        let group = DispatchGroup(); var foundResult: (URL, [(String, URL)])?; var foundError: Error?
         for film in films.prefix(5) {
             guard let slug = film.slug else { continue }
             group.enter()
             fetchDetail(slug: slug, season: season, episode: episode) { result in
-                switch result { case .success(let url): foundURL = url; case .failure(let error): if foundError == nil { foundError = error } }
+                switch result { case .success(let res): foundResult = res; case .failure(let error): if foundError == nil { foundError = error } }
                 group.leave()
             }
-            if foundURL != nil { break }
+            if foundResult != nil { break }
         }
         group.notify(queue: .main) {
-            if let url = foundURL { self.cache.setNguonCSlug(imdbID: imdbID, slug: films.first?.slug ?? ""); completion(.success(url)) }
+            if let res = foundResult { self.cache.setNguonCSlug(imdbID: imdbID, slug: films.first?.slug ?? ""); completion(.success(res)) }
             else { completion(.failure(foundError ?? StreamServiceError.noMatchFound(id: imdbID))) }
         }
     }
     
-    private func fetchDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+    private func fetchDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<(URL, [(String, URL)]), Error>) -> Void) {
         guard let url = URL(string: "https://phim.nguonc.com/api/film/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
@@ -170,13 +170,27 @@ searchFilms(keyword: searchTitle) { [weak self] result in
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any], json["status"] as? String == "success", let movie = json["movie"] as? [String: Any] {
                     var embedURL: URL?
+                    var serverList: [(String, URL)] = []
+                    
+                    if let episodes = movie["episodes"] as? [[String: Any]] {
+                        for server in episodes {
+                            if let serverName = server["server_name"] as? String,
+                               let items = server["items"] as? [[String: Any]],
+                               let firstItem = items.first,
+                               let firstEmbed = firstItem["embed"] as? String,
+                               let serverURL = URL(string: firstEmbed) {
+                                serverList.append((serverName, serverURL))
+                            }
+                        }
+                    }
+                    
                     if let s = season, let e = episode {
-    if let episodes = movie["episodes"] as? [[String: Any]] {
-        var effectiveEp = e
-        if let firstServer = episodes.first, let items = firstServer["items"] as? [[String: Any]], items.count > 100 {
-            effectiveEp = (s - 1) * 49 + e
-        }
-        for server in episodes {
+                        if let episodes = movie["episodes"] as? [[String: Any]] {
+                            var effectiveEp = e
+                            if let firstServer = episodes.first, let items = firstServer["items"] as? [[String: Any]], items.count > 100 {
+                                effectiveEp = (s - 1) * 49 + e
+                            }
+                            for server in episodes {
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
                                         if let name = item["name"] as? String, let embed = item["embed"] as? String, matchEpisode(name: name, target: effectiveEp) {
@@ -190,7 +204,7 @@ searchFilms(keyword: searchTitle) { [weak self] result in
                         if let embed = movie["embed"] as? String { embedURL = URL(string: embed) }
                     }
                     guard let embed = embedURL else { completion(.failure(StreamServiceError.noStreamURL)); return }
-                    completion(.success(embed))
+                    completion(.success((embed, serverList)))
                 } else { completion(.failure(StreamServiceError.noData)) }
             } catch { completion(.failure(error)) }
         }.resume()
