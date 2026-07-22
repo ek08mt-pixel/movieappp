@@ -23,6 +23,7 @@ final class MappingCache {
     private let stravoKey = "cache_stravo_mapping"
     private let phimapiKey = "cache_phimapi_mapping"
     private let sofaflixKey = "cache_sofaflix_mapping"
+    static var seasonEpisodeCounts: [String: Int] = [:]
     
     private let hardcodedSlugs: [String: String] = [
         "76669_1": "uu-tu-phan-1", "76669_2": "uu-tu-phan-2", "76669_3": "uu-tu-phan-3",
@@ -393,7 +394,17 @@ final class PhimAPIService {
                 if tmdbID == 57041 {
                     switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
                 }
-            } else { effectiveEp = (totalEpsInFirstServer > 100) ? ((targetSeason - 1) * 49 + ep) : ep }
+            } else if totalEpsInFirstServer > 100 {
+    var offset = 0
+    for s in 1..<targetSeason {
+        if let count = MappingCache.seasonEpisodeCounts["\(tmdbID)_\(s)"] {
+            offset += count
+        }
+    }
+    effectiveEp = offset + ep
+} else {
+    effectiveEp = ep
+}
             
             // CHỌN SERVER THEO INDEX
             let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
