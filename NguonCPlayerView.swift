@@ -22,7 +22,7 @@ struct NguonCPlayerView: View {
         self.episodeName = episodeName
         self.servers = servers
         _currentURL = State(initialValue: embedURL)
-        _currentServerName = State(initialValue: servers.first?.0 ?? "")
+        _currentServerName = State(initialValue: servers.first?.0 ?? "Vietsub")
     }
     
     var body: some View {
