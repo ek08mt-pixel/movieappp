@@ -152,7 +152,9 @@ struct WatchTogetherRoomView: View {
                                 let name = roomName.trimmingCharacters(in: .whitespaces)
                                 let finalName = name.isEmpty ? "Phòng \(Int.random(in: 100...999))" : name
                                 let userName = appState.nickname.isEmpty ? "User" : appState.nickname
-service.createRoom(roomName: finalName, userName: userName, avatar: appState.selectedAvatar) { _ in }
+let av = appState.selectedAvatar.isEmpty ? "🐱" : appState.selectedAvatar
+let av64 = appState.avatarImageData?.base64EncodedString() ?? ""
+service.createRoom(roomName: finalName, userName: userName, avatar: av, avatarBase64: av64) { _ in }
                                 roomName = ""
                                 isInputFocused = false
                             } label: {
@@ -293,7 +295,9 @@ service.createRoom(roomName: finalName, userName: userName, avatar: appState.sel
     isJoining = true
     joinError = nil
     let userName2 = appState.nickname.isEmpty ? "User" : appState.nickname
-    service.joinRoom(code: code, userName: userName2, avatar: appState.selectedAvatar) { success, error in
+let av = appState.selectedAvatar.isEmpty ? "🐱" : appState.selectedAvatar
+let av64 = appState.avatarImageData?.base64EncodedString() ?? ""
+service.joinRoom(code: code, userName: userName2, avatar: av, avatarBase64: av64) { success, error in
         isJoining = false
         if success {
             joinCode = ""
@@ -431,7 +435,13 @@ service.createRoom(roomName: finalName, userName: userName, avatar: appState.sel
     
     func sendReaction(_ emoji: String) { let fe = FlyingEmoji(emoji: emoji, xOffset: CGFloat.random(in: -50...50)); flyingEmojis.append(fe); withAnimation(.easeOut(duration: 1.0)) { if let idx = flyingEmojis.firstIndex(where: { $0.id == fe.id }) { flyingEmojis[idx].offsetY = -100; flyingEmojis[idx].opacity = 0 } }; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { flyingEmojis.removeAll { $0.id == fe.id } } }
     func shouldShowAvatar(at index: Int) -> Bool { if index == 0 { return true }; return service.messages[index].userId != service.messages[index - 1].userId }
-    func imessageBubble(_ msg: WatchTogetherService.ChatMessage, showAvatar: Bool) -> some View { let isMe = msg.userId == service.userId; return HStack(alignment: .bottom, spacing: 6) { if !isMe { if showAvatar { Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) } else { Color.clear.frame(width: 30, height: 30) } } else { Spacer() }; VStack(alignment: isMe ? .trailing : .leading, spacing: 2) { if showAvatar { Text(msg.userName).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) }; Text(msg.text).font(.system(size: 14)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(isMe ? 0.5 : 0.3))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(isMe ? 0.15 : 0.08), lineWidth: 0.5)) }; if isMe { if showAvatar { Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) } else { Color.clear.frame(width: 30, height: 30) } } else { Spacer() } } }
+    func imessageBubble(_ msg: WatchTogetherService.ChatMessage, showAvatar: Bool) -> some View { let isMe = msg.userId == service.userId; return HStack(alignment: .bottom, spacing: 6) { if !isMe { if showAvatar {
+    if let b64 = msg.avatarBase64, !b64.isEmpty, let data = Data(base64Encoded: b64), let uiImage = UIImage(data: data) {
+        Image(uiImage: uiImage).resizable().aspectRatio(contentMode: .fill).frame(width: 30, height: 30).clipShape(Circle())
+    } else {
+        Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5)))
+    }
+} else { Color.clear.frame(width: 30, height: 30) } } else { Spacer() }; VStack(alignment: isMe ? .trailing : .leading, spacing: 2) { if showAvatar { Text(msg.userName).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) }; Text(msg.text).font(.system(size: 14)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 16).fill(Material.ultraThinMaterial.opacity(isMe ? 0.5 : 0.3))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(isMe ? 0.15 : 0.08), lineWidth: 0.5)) }; if isMe { if showAvatar { Text(msg.avatar).font(.system(size: 16)).frame(width: 30, height: 30).background(Circle().fill(Material.ultraThinMaterial.opacity(0.5))) } else { Color.clear.frame(width: 30, height: 30) } } else { Spacer() } } }
     func sendImessage() { let t = watchMessage.trimmingCharacters(in: .whitespaces); guard !t.isEmpty else { return }; service.sendMessage(text: t); watchMessage = ""; isInputFocused = false }
     func seek(_ s: Double) { let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t; if service.isHost { service.sendPlaybackState(action: "seek", time: t) } }
     func formatTime(_ s: Double) -> String { let ts = Int(max(0, s)); let h = ts / 3600; let m = (ts % 3600) / 60; let sec = ts % 60; if h > 0 { return String(format: "%d:%02d:%02d", h, m, sec) }; return String(format: "%02d:%02d", m, sec) }
