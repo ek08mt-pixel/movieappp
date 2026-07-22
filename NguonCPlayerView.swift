@@ -11,6 +11,8 @@ struct NguonCPlayerView: View {
     @State private var showServerPicker = false
     @State private var currentServerName = ""
     @State private var isLandscape = false
+    @State private var showControls = true
+    @State private var controlsTimer: Timer?
     
     init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
         self.embedURL = embedURL
@@ -26,6 +28,10 @@ struct NguonCPlayerView: View {
             
             NguonCWebView(url: currentURL)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() }
+                    resetControlsTimer()
+                }
             
             if isLoading {
                 VStack(spacing: 16) {
@@ -35,41 +41,33 @@ struct NguonCPlayerView: View {
                 }
             }
             
-            VStack {
-                HStack {
-    Button { dismiss() } label: {
-        Image(systemName: "chevron.left")
-            .font(.system(size: 20, weight: .bold))
-            .foregroundColor(.white)
-            .padding(12)
-            .background(Circle().fill(.ultraThinMaterial.opacity(0.4))
-                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
-    }
-    Spacer()
-    Text(episodeName).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
-    Spacer()
-    Button {
-        isLandscape.toggle()
-        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            ws.requestGeometryUpdate(.iOS(interfaceOrientations: isLandscape ? .portrait : .landscapeRight))
-        }
-    } label: {
-        Image(systemName: "rotate.right")
-            .font(.system(size: 16, weight: .bold))
-            .foregroundColor(.white).padding(8)
-            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-    }
-    if !servers.isEmpty {
-        Button { showServerPicker = true } label: {
-            Image(systemName: "list.bullet").font(.system(size: 16)).foregroundColor(.white).padding(8)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-        }
-    } else {
-        Spacer().frame(width: 44)
-    }
-}
-                .padding(.horizontal, 16).padding(.top, 50)
-                Spacer()
+            if showControls {
+                VStack {
+                    HStack {
+                        Button { dismiss() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        }
+                        Spacer()
+                        Text(episodeName).font(.subheadline).foregroundColor(.white).lineLimit(1)
+                        Spacer()
+                        Button {
+                            isLandscape.toggle()
+                            if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                ws.requestGeometryUpdate(.iOS(interfaceOrientations: isLandscape ? .portrait : .landscapeRight))
+                            }
+                        } label: {
+                            Image(systemName: "rotate.right").font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white).padding(8)
+                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.top, 50)
+                    Spacer()
+                }
             }
             
             if showServerPicker {
@@ -78,27 +76,34 @@ struct NguonCPlayerView: View {
                     Text("Chọn server").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
                     ForEach(servers, id: \.0) { name, url in
                         Button {
-                            currentURL = url
-                            currentServerName = name
-                            showServerPicker = false
+                            currentURL = url; currentServerName = name; showServerPicker = false
                             isLoading = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { isLoading = false }
                         } label: {
                             Text(name).font(.system(size: 13))
                                 .foregroundColor(currentServerName == name ? .black : .white)
                                 .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 8)
-                                    .fill(currentServerName == name ? Color.white : Color.white.opacity(0.08)))
+                                .background(RoundedRectangle(cornerRadius: 8).fill(currentServerName == name ? Color.white : Color.white.opacity(0.08)))
                         }
                     }
                 }
                 .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5))
-                .frame(width: 240)
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
             }
         }
         .statusBarHidden()
-        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { isLoading = false } }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { isLoading = false }
+            showControls = true
+            resetControlsTimer()
+        }
+    }
+    
+    func resetControlsTimer() {
+        controlsTimer?.invalidate()
+        controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
+        }
     }
 }
 
@@ -115,23 +120,20 @@ struct NguonCWebView: UIViewRepresentable {
         config.defaultWebpagePreferences = pref
         
         let script = WKUserScript(source: """
-    setTimeout(function() {
-        var video = document.querySelector('video');
-        if (video) {
-            video.setAttribute('playsinline', 'true');
-            video.setAttribute('webkit-playsinline', 'true');
-            video.controls = false;
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.play();
-        }
-        // Ẩn các nút overlay của trang web
-        var overlays = document.querySelectorAll('.jw-controls, .jw-icon, .jw-overlay, .jw-button-container, .vjs-control-bar, .plyr__controls, [class*="control"], [class*="button"], [class*="overlay"]');
-        for (var i = 0; i < overlays.length; i++) {
-            overlays[i].style.display = 'none';
-        }
-    }, 1500);
-    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+            setTimeout(function() {
+                var video = document.querySelector('video');
+                if (video) {
+                    video.setAttribute('playsinline', 'true');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.controls = false;
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.play();
+                }
+                var overlays = document.querySelectorAll('.jw-controls, .jw-icon, .jw-overlay, .jw-button-container, .vjs-control-bar, .plyr__controls, [class*="control"], [class*="button"], [class*="overlay"]');
+                for (var i = 0; i < overlays.length; i++) { overlays[i].style.display = 'none'; }
+            }, 1500);
+            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         config.userContentController.addUserScript(script)
         
         let wv = WKWebView(frame: .zero, configuration: config)
@@ -152,10 +154,7 @@ struct NguonCWebView: UIViewRepresentable {
             decisionHandler(.allow)
         }
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("""
-                var video = document.querySelector('video');
-                if (video) { video.play(); }
-            """)
+            webView.evaluateJavaScript("var video = document.querySelector('video'); if (video) { video.play(); }")
         }
     }
 }
