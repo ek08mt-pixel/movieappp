@@ -150,7 +150,8 @@ struct WatchTogetherRoomView: View {
                             Button {
                                 let name = roomName.trimmingCharacters(in: .whitespaces)
                                 let finalName = name.isEmpty ? "Phòng \(Int.random(in: 100...999))" : name
-                                service.createRoom(roomName: finalName, userName: "User") { _ in }
+                                let userName = appState.nickname.isEmpty ? "User" : appState.nickname
+service.createRoom(roomName: finalName, userName: userName, avatar: appState.selectedAvatar) { _ in }
                                 roomName = ""
                                 isInputFocused = false
                             } label: {
@@ -290,7 +291,8 @@ struct WatchTogetherRoomView: View {
         }
         isJoining = true
         joinError = nil
-        service.joinRoom(code: code, userName: "User") { success, roomName in
+        let userName2 = appState.nickname.isEmpty ? "User" : appState.nickname
+service.joinRoom(code: code, userName: userName2, avatar: appState.selectedAvatar) { success, error in }
             isJoining = false
             if success {
                 joinCode = ""
