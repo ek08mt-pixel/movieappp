@@ -10,6 +10,7 @@ struct NguonCPlayerView: View {
     @State private var currentURL: URL
     @State private var showServerPicker = false
     @State private var currentServerName = ""
+    @State private var isLandscape = false
     
     init(embedURL: URL, episodeName: String, servers: [(String, URL)] = []) {
         self.embedURL = embedURL
@@ -36,26 +37,37 @@ struct NguonCPlayerView: View {
             
             VStack {
                 HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(12)
-                            .background(Circle().fill(.ultraThinMaterial.opacity(0.4))
-                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
-                    }
-                    Spacer()
-                    Text(episodeName).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
-                    Spacer()
-                    if !servers.isEmpty {
-                        Button { showServerPicker = true } label: {
-                            Image(systemName: "list.bullet").font(.system(size: 16)).foregroundColor(.white).padding(8)
-                                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-                        }
-                    } else {
-                        Spacer().frame(width: 44)
-                    }
-                }
+    Button { dismiss() } label: {
+        Image(systemName: "chevron.left")
+            .font(.system(size: 20, weight: .bold))
+            .foregroundColor(.white)
+            .padding(12)
+            .background(Circle().fill(.ultraThinMaterial.opacity(0.4))
+                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5)))
+    }
+    Spacer()
+    Text(episodeName).font(.subheadline).fontWeight(.medium).foregroundColor(.white).lineLimit(1)
+    Spacer()
+    Button {
+        isLandscape.toggle()
+        if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            ws.requestGeometryUpdate(.iOS(interfaceOrientations: isLandscape ? .portrait : .landscapeRight))
+        }
+    } label: {
+        Image(systemName: "rotate.right")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundColor(.white).padding(8)
+            .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+    }
+    if !servers.isEmpty {
+        Button { showServerPicker = true } label: {
+            Image(systemName: "list.bullet").font(.system(size: 16)).foregroundColor(.white).padding(8)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+        }
+    } else {
+        Spacer().frame(width: 44)
+    }
+}
                 .padding(.horizontal, 16).padding(.top, 50)
                 Spacer()
             }
