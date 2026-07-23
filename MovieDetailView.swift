@@ -43,6 +43,7 @@ struct MovieDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
                                 Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
+                                Text("ID: \(movie.id) Slug: \(MappingCache.hasDirectSlug(tmdbID: movie.id, season: 1) ? "YES" : "NO")").font(.system(size: 8)).foregroundColor(.gray)
                                 HStack(spacing: 6) { Text(releaseDateText).foregroundColor(.gray).font(.caption); Text("•").foregroundColor(.gray); Text(vm.detail?.productionCompanies?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
                                 Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
                             }
