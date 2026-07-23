@@ -72,7 +72,7 @@ final class MappingCache {
 "1408_7": "bac-si-house-phan-7",
 "1408_8": "bac-si-house-phan-8",
 "1639_3": "giai-cuu-the-gioi-phan-3",
-"1639_4": "giai-cuu-the-gioi-phan-4","1110034": "quai-vat-bien", "128098_1": "phong-van-ma-ca-rong-phan-1",
+"1639_4": "giai-cuu-the-gioi-phan-4","1110034_1": "quai-vat-bien", "128098_1": "phong-van-ma-ca-rong-phan-1",
 "128098_2": "phong-van-ma-ca-rong-phan-2","1981_1": "phep-thuat-phan-1",
  "1981_2": "phep-thuat-phan-2", 
  "1981_3": "phep-thuat-phan-3",
@@ -350,7 +350,10 @@ final class PhimAPIService {
             fallbackSearch(title: title, tmdbID: tmdbID, mediaType: mediaType, season: s, episode: ep, serverIndex: serverIndex, completion: completion)
             return
         }
-        
+        if !isSeries, let directSlug = MappingCache.getDirectSlug(tmdbID: tmdbID, season: 1) {
+    fetchBySlug(slug: directSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
+    return
+}
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.streamSession.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
