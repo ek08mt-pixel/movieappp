@@ -58,9 +58,10 @@ final class MappingCache {
         "57041_3": "linh-hon-bac-phan-1", "57041_4": "linh-hon-bac-phan-1", "57041_5": "linh-hon-bac-phan-5",
         "2942_1": "vuong-trieu-tudors-phan-1", "2942_2": "vuong-trieu-tudors-phan-2",
         "2942_3": "vuong-trieu-tudors-phan-3", "2942_4": "vuong-trieu-tudors-phan-4",
-        "234500_2": "cua-hang-sat-thu-phan-2", "3729": "gia-dinh-la-so-1-phan-1",
-"83518": "gia-dinh-la-so-1-phan-2",
-"88131": "gia-dinh-la-so-1-phan-3",
+        "215072_2": "cua-hang-sat-thu-phan-2","215072_1": "cua-hang-sat-thu-phan-1",
+         "3729_1": "gia-dinh-la-so-1-phan-1",
+"83518_1": "gia-dinh-la-so-1-phan-2",
+"88131_1": "gia-dinh-la-so-1-phan-3",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
