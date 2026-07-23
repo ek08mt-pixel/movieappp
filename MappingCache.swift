@@ -38,13 +38,13 @@ final class MappingCache {
     
     static let directSlugs: [String: String] = [
         "111110_1": "dao-hai-tac-live-action-phan-1", "111110_2": "dao-hai-tac-live-action-phan-2",
-        "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1",
+        "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1","215522_1": "chung-ta-la-nhung-ke-doi-tra",
         "46261_2": "hoi-phap-su-phan-1", "46261_3": "hoi-phap-su-phan-1", "46261_4": "hoi-phap-su-phan-1",
         "46261_5": "hoi-phap-su-phan-2", "46261_6": "hoi-phap-su-phan-3", "46261_7": "hoi-phap-su-phan-3",
-        "46261_8": "hoi-phap-su-phan-4", "4607_1": "mat-tich-phan-1", "4607_2": "mat-tich-phan-2",
-        "4607_3": "mat-tich-phan-3", "4607_4": "mat-tich-phan-4", "4607_5": "mat-tich-phan-5",
-        "4607_6": "mat-tich-phan-6", "18165_1": "nhat-ky-ma-ca-rong-phan-1",
-        "18165_2": "nhat-ky-ma-ca-rong-phan-2", "18165_3": "nhat-ky-ma-ca-rong-phan-3",
+        "46261_8": "hoi-phap-su-phan-4", "4607_1": "mat-tich-phan-1", "4607_2": "mat-tich-phan-2","91239_3": "gia-toc-bridgerton-phan-3",
+        "4607_3": "mat-tich-phan-3", "4607_4": "mat-tich-phan-4", "4607_5": "mat-tich-phan-5","91239_2": "gia-toc-bridgerton-phan-2",
+        "4607_6": "mat-tich-phan-6", "18165_1": "nhat-ky-ma-ca-rong-phan-1","91239_1": "gia-toc-bridgerton-phan-1","91239_4": "gia-toc-bridgerton-phan-4",
+        "18165_2": "nhat-ky-ma-ca-rong-phan-2", "18165_3": "nhat-ky-ma-ca-rong-phan-3","10866_1": "tro-dua-chet-nguoi-2001","259074_1": "tro-dua-chet-nguoi-3",
         "18165_4": "nhat-ky-ma-ca-rong-phan-4", "18165_5": "nhat-ky-ma-ca-rong-phan-5",
         "18165_6": "nhat-ky-ma-ca-rong-phan-6", "18165_7": "nhat-ky-ma-ca-rong-phan-7",
         "18165_8": "nhat-ky-ma-ca-rong-phan-8", "124364_1": "thi-tran-ac-mong-hoi-chuong-la-phan-1",
