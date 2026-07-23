@@ -116,6 +116,7 @@ private func extractSeasonFromOriginName(_ originName: String) -> Int? {
 }
 private func matchEpisode(name: String, target: Int) -> Bool {
     let n = name.trimmingCharacters(in: .whitespaces)
+    if n == String(format: "Tập %03d", target) { return true }
     if n == String(format: "Tập %02d", target) { return true }
     if n == String(format: "Tập %d", target) { return true }
     if n == "\(target)" { return true }
