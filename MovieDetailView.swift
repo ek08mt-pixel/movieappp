@@ -2,8 +2,8 @@ import SwiftUI
 import WebKit
 import UIKit
 
-struct MovieDetailView: View {
-    let movie: Movie
+struct MovieDetailView: View {  
+    let movie: Movie 
     var showBooking: Bool = false
     @StateObject private var vm = MovieDetailViewModel()
     @EnvironmentObject var appState: AppState
