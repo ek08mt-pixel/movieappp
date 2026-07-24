@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 import UIKit
 
-struct MovieDetailView: View {
+struct MovieDetailViewNew: View {
     let movie: Movie
     var showBooking: Bool = false
     @StateObject private var vm = MovieDetailViewModel()
