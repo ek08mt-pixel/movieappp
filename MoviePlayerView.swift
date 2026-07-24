@@ -37,7 +37,7 @@ struct MoviePlayerView: View {
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     var resumeTime: Double = 0
     var initialSource: MovieSource = .phimapi
-    var directURL: URL? = nil
+    @State var directURL: URL? = nil
     @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
@@ -217,13 +217,13 @@ selectedSource = initialSource
     func stopCasting() { isCasting = false; castDeviceName = ""; EmmewCastManager.shared.stopCasting() }
     func closeOverlay() { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { overlayOffset = UIScreen.main.bounds.height }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { showOverlay = false } }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); forcePortraitWithDelay(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
-    mutating func prevEpisode() { 
+    func prevEpisode() { 
     guard let ep = episodeNumber, ep > 1 else { return }
     directURL = nil
     autoNextTriggered = false; showNextEpisodePopup = false
     loadStream(season: seasonNumber, episode: ep - 1) 
 }
-    mutating func nextEpisode() { 
+    func nextEpisode() { 
     guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
     directURL = nil
     showNextEpisodePopup = false; autoNextTriggered = true
