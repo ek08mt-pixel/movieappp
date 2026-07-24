@@ -187,7 +187,7 @@ struct MovieDetailView: View {
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                ForEach(Array(vm.seasons.enumerated()), id: \.element.id) { _, season in
+                                ForEach(vm.seasons, id: \.id) { season in
                                     VStack(spacing: 0) {
                                         Button {
                                             withAnimation {
