@@ -521,6 +521,17 @@ func fetchRawEpisodes(slug: String, completion: @escaping ([[String: Any]]?) -> 
         completion(episodes)
     }.resume()
 }
+func fetchRawEpisodes(slug: String, completion: @escaping ([[String: Any]]?) -> Void) {
+    guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(nil); return }
+    URLSession.streamSession.dataTask(with: url) { data, _, error in
+        guard let data = data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let episodes = json["episodes"] as? [[String: Any]] else {
+            completion(nil); return
+        }
+        completion(episodes)
+    }.resume()
+}
 // MARK: - Ophim Service
 final class OphimService {
     static let shared = OphimService()
