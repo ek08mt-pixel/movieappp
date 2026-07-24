@@ -77,11 +77,15 @@ struct MoviePlayerView: View {
                 .onAppear {
                    if let url = directURL {
     currentStreamURL = url
+    selectedQuality = detectQuality(from: url)
     player.replaceCurrentItem(with: AVPlayerItem(url: url))
     player.play()
     hasStartedPlaying = true
     isLoading = false
-    return
+    sourceStatus[selectedSource] = true
+    saveHistory()
+} else {
+    loadStream()
 }
                      player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
@@ -195,7 +199,7 @@ selectedSource = initialSource
             if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
         }
         .statusBarHidden()
-        .task { loadStream() }
+        .task { if directURL == nil { loadStream() } }
         .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
         .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName, servers: nguonCServers) } }
         .fullScreenCover(isPresented: $showRemoteControl) { CastRemoteView(movieTitle: movieTitle, episodeInfo: episodeInfo, posterURL: posterURL, castDeviceName: castDeviceName, player: player, currentTime: $currentTime, duration: $duration, isCasting: $isCasting) }
