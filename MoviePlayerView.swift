@@ -217,13 +217,13 @@ selectedSource = initialSource
     func stopCasting() { isCasting = false; castDeviceName = ""; EmmewCastManager.shared.stopCasting() }
     func closeOverlay() { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { overlayOffset = UIScreen.main.bounds.height }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { showOverlay = false } }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); forcePortraitWithDelay(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
-    func prevEpisode() { 
+    mutating func prevEpisode() { 
     guard let ep = episodeNumber, ep > 1 else { return }
     directURL = nil
     autoNextTriggered = false; showNextEpisodePopup = false
     loadStream(season: seasonNumber, episode: ep - 1) 
 }
-    func nextEpisode() { 
+    mutating func nextEpisode() { 
     guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
     directURL = nil
     showNextEpisodePopup = false; autoNextTriggered = true
