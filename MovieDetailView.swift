@@ -1,0 +1,87 @@
+import SwiftUI
+import WebKit
+import UIKit
+
+struct MovieDetailView: View {
+    let movie: Movie
+    var showBooking: Bool = false
+    @StateObject private var vm = MovieDetailViewModel()
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    @State private var showBookingSheet = false
+    @State private var showFullOverview = false
+    @State private var showImages = false
+    @State private var playSeason: Int? = nil
+    @State private var playEpisode: Int? = nil
+    @State private var expandedSeason: Int? = nil
+    @State private var ratings: (tmdb: String?, imdb: String?, rottenTomatoes: String?) = (nil, nil, nil)
+    @State private var episodeSearchText = ""
+    @State private var showEpisodeSearch = false
+    @State private var selectedSource = "Emew 1"
+    
+    var releaseDateText: String { movie.releaseDate ?? movie.yearText }
+    var playerMediaType: String? { if let mt = movie.mediaType { return mt }; if playSeason != nil || playEpisode != nil { return "tv" }; return nil }
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            GeometryReader { geo in CachedAsyncImage(url: movie.backdropURL, size: .backdrop).aspectRatio(contentMode: .fill).frame(width: geo.size.width, height: geo.size.height + 100).blur(radius: 60).overlay(Color.black.opacity(0.55)).ignoresSafeArea() }
+            ScrollView {
+                VStack(spacing: 0) {
+                    ZStack(alignment: .topLeading) {
+                        CachedAsyncImage(url: movie.backdropURL, size: .backdrop).aspectRatio(16/9, contentMode: .fill).frame(width: UIScreen.main.bounds.width, height: 320).clipped().overlay(LinearGradient(colors: [.clear, .clear, Color.black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                        Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 24, weight: .bold)).foregroundColor(.white).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.3)).overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))) }.padding(.top, 54).padding(.leading, 20)
+                    }
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .top, spacing: 14) {
+                            CachedAsyncImage(url: movie.posterURL, size: .detail).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)).shadow(color: .black.opacity(0.6), radius: 8).offset(y: -45)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Spacer().frame(height: 8)
+                                Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
+                                HStack(spacing: 6) { Text(releaseDateText).foregroundColor(.gray).font(.caption); Text("•").foregroundColor(.gray); Text(vm.detail?.productionCompanies?.first?.name ?? "N/A").foregroundColor(.gray).font(.caption) }
+                                Button { showFullOverview.toggle() } label: { Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview).font(.system(size: 13)).foregroundColor(.gray).lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading) }
+                            }
+                        }
+                        if !vm.serverList.isEmpty { HStack(spacing: 6) { ForEach(vm.serverList.prefix(3), id: \.name) { server in InfoBadge(label: server.name, quality: server.qualities) } }.frame(maxWidth: .infinity, alignment: .center) }
+                        ratingsBar
+                        HStack(spacing: 8) { ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in Button { selectedSource = source } label: { Text(source).font(.system(size: 10, weight: .medium)).foregroundColor(selectedSource == source ? .white : .white.opacity(0.5)).padding(.horizontal, 10).padding(.vertical, 5).background(Capsule().fill(selectedSource == source ? .white.opacity(0.2) : .white.opacity(0.05))) } } }.frame(maxWidth: .infinity, alignment: .center)
+                        HStack(spacing: 10) {
+                            Button(action: handlePlayButton) { Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                            Button(action: toggleFavorite) { Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                            Button(action: toggleWatched) { Label(appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "Đã xem" : "Đánh dấu đã xem", systemImage: appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "checkmark.circle.fill" : "checkmark.circle").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold)) }
+                        }
+                        if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
+                        if !vm.collectionMovies.isEmpty { VStack(alignment: .leading, spacing: 10) { Text("Cùng series").font(.title3).fontWeight(.bold).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 12) { ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in NavigationLink(destination: MovieDetailView(movie: part)) { VStack(spacing: 6) { CachedAsyncImage(url: part.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 100, height: 150).clipShape(RoundedRectangle(cornerRadius: 10)); Text(part.title).font(.system(size: 10)).foregroundColor(.white).lineLimit(2).frame(width: 100) } } } } } } }
+                        if !vm.seasons.isEmpty { VStack(alignment: .leading, spacing: 12) { Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white); ForEach(vm.seasons) { season in VStack(spacing: 0) { Button { withAnimation { expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber; if expandedSeason == season.seasonNumber { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } } } } label: { HStack { if let url = season.posterURL { CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6)) } else { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60) }; VStack(alignment: .leading, spacing: 2) { Text(season.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white); Text("\(season.episodeCount) tập").font(.system(size: 11)).foregroundColor(.gray) }; Spacer(); Image(systemName: expandedSeason == season.seasonNumber ? "chevron.up" : "chevron.down").foregroundColor(.gray) }.padding(.vertical, 8) }
+                            if expandedSeason == season.seasonNumber {
+                                if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
+                                    if vm.sourceEpisodes.isEmpty { ProgressView().tint(.white).padding().onAppear { vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug) } }
+                                    else { LazyVStack(spacing: 6) { ForEach(vm.sourceEpisodes) { ep in Button { playSeason = season.seasonNumber; playEpisode = ep.episodeNumber; presentPlayer() } label: { HStack(spacing: 10) { RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4))); VStack(alignment: .leading, spacing: 2) { Text(ep.name).font(.system(size: 11, weight: .bold)).foregroundColor(.white); Text(ep.serverName).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1) }; Spacer(); Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6)) }.padding(.vertical, 4) } } } }
+                                } else { ProgressView().tint(.white).padding().onAppear { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } } }
+                            }
+                        } } }
+                        if !vm.actors.isEmpty { Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 16) { ForEach(vm.actors.prefix(15)) { a in NavigationLink(destination: ActorDetailView(actor: a)) { VStack(spacing: 6) { CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle()); Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 60) } } } } } }
+                        if !vm.similar.isEmpty { Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white); ScrollView(.horizontal) { HStack(spacing: 12) { ForEach(vm.similar.prefix(12)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { VStack(spacing: 6) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10)); Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120) } } } } } }
+                    }.padding(.horizontal, 20)
+                    Spacer().frame(height: 100)
+                }
+            }.ignoresSafeArea(edges: .top)
+        }
+        .navigationBarHidden(true).toolbar(.hidden, for: .tabBar)
+        .task { await vm.load(movieId: movie.id, mediaType: movie.mediaType); await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title); if movie.mediaType == "tv" { for season in vm.seasons { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } }; await fetchRatings() }
+        .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
+    }
+    
+    func handlePlayButton() { if !vm.seasons.isEmpty || MappingCache.hasDirectSlug(tmdbID: movie.id, season: 1) { playSeason = 1; playEpisode = 1 } else { playSeason = nil; playEpisode = nil }; presentPlayer() }
+    func toggleFavorite() { if appState.favorites.contains(where: { $0.id == movie.id }) { appState.favorites.removeAll { $0.id == movie.id } } else { appState.favorites.append(movie) }; appState.save() }
+    func toggleWatched() { if appState.watchedMovies.contains(where: { $0.id == movie.id }) { appState.watchedMovies.removeAll { $0.id == movie.id } } else { appState.watchedMovies.append(movie) }; appState.save() }
+    func presentPlayer() { guard let topVC = UIApplication.topViewController() else { return }; let src: MovieSource = selectedSource == "Emew 1" ? .phimapi : selectedSource == "Emew 2" ? .nguonc : .vsmov; let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src).environmentObject(appState); let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer)); hosting.modalPresentationStyle = .fullScreen; topVC.present(hosting, animated: true) }
+    
+    var ratingsBar: some View { let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil; guard hasAnyRating else { return AnyView(EmptyView()) }; return AnyView(HStack(spacing: 0) { if let tmdb = ratings.tmdb { ratingItem(icon: "t.square.fill", color: .yellow, value: tmdb) }; if ratings.tmdb != nil && (ratings.imdb != nil || ratings.rottenTomatoes != nil) { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }; if let imdb = ratings.imdb { ratingItem(icon: "i.square.fill", color: .orange, value: imdb) }; if ratings.imdb != nil && ratings.rottenTomatoes != nil { Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 24) }; if let rt = ratings.rottenTomatoes { ratingItem(icon: "r.square.fill", color: .red, value: rt) } }.padding(.horizontal, 14).padding(.vertical, 10).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.3))).overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1)))) }
+    func ratingItem(icon: String, color: Color, value: String) -> some View { HStack(spacing: 6) { Image(systemName: icon).font(.system(size: 16)).foregroundColor(color); Text(value).font(.system(size: 12, weight: .bold)).foregroundColor(.white) }.frame(maxWidth: .infinity) }
+    func fetchRatings() async { let imdbID: String; if movie.mediaType == "tv" { imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movie.id)) ?? "" } else { let (data, _) = try! await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movie.id)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? "" }; guard !imdbID.isEmpty else { return }; let tmdbScore: String? = movie.voteAverage > 0 ? String(format: "%.1f/10", movie.voteAverage) : nil; var imdbRating: String? = nil; var rtRating: String? = nil; if !imdbID.isEmpty { let omdbURL = "https://www.omdbapi.com/?i=\(imdbID)&apikey=3c3cfb9e"; if let url = URL(string: omdbURL), let (data, _) = try? await URLSession.shared.data(from: url), let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] { if let imdbScore = json["imdbRating"] as? String, imdbScore != "N/A" { imdbRating = "\(imdbScore)/10" }; if let ratings = json["Ratings"] as? [[String: Any]] { for rating in ratings { if let source = rating["Source"] as? String, source == "Rotten Tomatoes", let value = rating["Value"] as? String { rtRating = value } } } } }; await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) } }
+}
+
+struct InfoBadge: View { let label: String; let quality: String; var body: some View { HStack(spacing: 4) { Text(label).font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.6)); Text(quality).font(.system(size: 7)).foregroundColor(.gray) }.padding(.horizontal, 6).padding(.vertical, 2).background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.05))).overlay(RoundedRectangle(cornerRadius: 4).stroke(.white.opacity(0.1), lineWidth: 0.5)) } }
+struct MovieImagesView: View { let images: [URL]; let title: String; @Environment(\.dismiss) var dismiss; var body: some View { ZStack { Color.black.opacity(0.95).ignoresSafeArea(); VStack(spacing: 0) { HStack { Text(title).font(.headline).foregroundColor(.white); Spacer(); Button("Đóng") { dismiss() }.foregroundColor(.gray) }.padding(); TabView { ForEach(images, id: \.self) { url in CachedAsyncImage(url: url).aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16) } }.tabViewStyle(.page(indexDisplayMode: .always)) } } } }
+struct WebView: UIViewRepresentable { let urlString: String; func makeUIView(context: Context) -> WKWebView { let wv = WKWebView(); wv.backgroundColor = .black; wv.isOpaque = false; if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }; return wv }; func updateUIView(_ uiView: WKWebView, context: Context) {} }
