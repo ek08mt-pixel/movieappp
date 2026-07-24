@@ -73,7 +73,7 @@ struct MovieDetailView: View {
                                 Text(movie.title)
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.white)
-                                    Text("Slug: \(MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) ?? "nil") | Ep: \(vm.sourceEpisodes.count)").font(.system(size: 8)).foregroundColor(.gray)
+                                Text("Slug: \(MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) ?? "nil") | Ep: \(vm.sourceEpisodes.count)").font(.system(size: 8)).foregroundColor(.gray)
                                 Text("ID: \(movie.id) Season: \(vm.seasons.first?.seasonNumber ?? 0)").font(.system(size: 8)).foregroundColor(.gray)
                                 HStack(spacing: 6) {
                                     Text(releaseDateText).foregroundColor(.gray).font(.caption)
@@ -230,37 +230,47 @@ struct MovieDetailView: View {
                                                         vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
                                                     }
                                                 } else {
-    if let detail = vm.selectedSeason, detail.seasonNumber == season.seasonNumber {
-        LazyVStack(spacing: 6) {
-            ForEach(detail.episodes) { ep in
-                Button {
-                    playSeason = ep.seasonNumber
-                    playEpisode = ep.episodeNumber
-                    presentPlayer()
-                } label: {
-                    HStack(spacing: 10) {
-                        if let still = ep.stillURL {
-                            CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else {
-                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                                                    if let detail = vm.selectedSeason, detail.seasonNumber == season.seasonNumber {
+                                                        LazyVStack(spacing: 6) {
+                                                            ForEach(detail.episodes) { ep in
+                                                                Button {
+                                                                    playSeason = ep.seasonNumber
+                                                                    playEpisode = ep.episodeNumber
+                                                                    presentPlayer()
+                                                                } label: {
+                                                                    HStack(spacing: 10) {
+                                                                        if let still = ep.stillURL {
+                                                                            CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                                        } else {
+                                                                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                                                                        }
+                                                                        VStack(alignment: .leading, spacing: 2) {
+                                                                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                                                                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                                                                            if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
+                                                                        }
+                                                                        Spacer()
+                                                                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
+                                                                    }.padding(.vertical, 4)
+                                                                }
+                                                            }
+                                                        }
+                                                    } else {
+                                                        ProgressView().tint(.white).padding().onAppear {
+                                                            Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                ProgressView().tint(.white).padding().onAppear {
+                                                    Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                            if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
-                        }
-                        Spacer()
-                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                    }.padding(.vertical, 4)
-                }
-            }
-        }
-    } else {
-        ProgressView().tint(.white).padding().onAppear {
-            Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
-                                                    }
-                                                    }
-                                                    }
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal) {
@@ -359,13 +369,13 @@ struct MovieDetailView: View {
     }
     
     func presentPlayer(directURL: URL? = nil) {
-    guard let topVC = UIApplication.topViewController() else { return }
-    let src: MovieSource = selectedSource == "Emew 1" ? .phimapi : selectedSource == "Emew 2" ? .nguonc : .vsmov
-    let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src, directURL: directURL).environmentObject(appState)
-    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-    hosting.modalPresentationStyle = .fullScreen
-    topVC.present(hosting, animated: true)
-}
+        guard let topVC = UIApplication.topViewController() else { return }
+        let src: MovieSource = selectedSource == "Emew 1" ? .phimapi : selectedSource == "Emew 2" ? .nguonc : .vsmov
+        let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src, directURL: directURL).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+    }
     
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
