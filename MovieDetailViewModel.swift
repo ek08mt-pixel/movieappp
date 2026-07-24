@@ -118,7 +118,8 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
-    PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
+     self.sourceEpisodes = []
+     PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
         guard let self = self, let episodes = episodes else { return }
         var epList: [SourceEpisode] = []
         for server in episodes {
