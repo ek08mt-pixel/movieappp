@@ -346,6 +346,9 @@ struct MovieDetailView: View {
                     await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
                 }
             }
+            if MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) == nil {
+                vm.autoFindSlug(tmdbID: movie.id, title: movie.title, year: movie.yearText, season: 1)
+            }
             await fetchRatings()
         }
         .sheet(isPresented: $showImages) {
