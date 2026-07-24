@@ -236,28 +236,27 @@ struct MovieDetailView: View {
     playSeason = season.seasonNumber
     playEpisode = ep.episodeNumber
     presentPlayer(directURL: URL(string: ep.linkM3u8))
+} label: {
+    HStack(spacing: 10) {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(.ultraThinMaterial)
+            .frame(width: 80, height: 45)
+            .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+        VStack(alignment: .leading, spacing: 2) {
+            Text(ep.name)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.white)
+            Text(ep.serverName)
+                .font(.system(size: 10))
+                .foregroundColor(.gray)
+                .lineLimit(1)
+        }
+        Spacer()
+        Image(systemName: "play.circle")
+            .foregroundColor(.white.opacity(0.6))
+    }
+    .padding(.vertical, 4)
 }
-                                                            } label: {
-                                                                HStack(spacing: 10) {
-                                                                    RoundedRectangle(cornerRadius: 6)
-                                                                        .fill(.ultraThinMaterial)
-                                                                        .frame(width: 80, height: 45)
-                                                                        .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                                                                    VStack(alignment: .leading, spacing: 2) {
-                                                                        Text(ep.name)
-                                                                            .font(.system(size: 11, weight: .bold))
-                                                                            .foregroundColor(.white)
-                                                                        Text(ep.serverName)
-                                                                            .font(.system(size: 10))
-                                                                            .foregroundColor(.gray)
-                                                                            .lineLimit(1)
-                                                                    }
-                                                                    Spacer()
-                                                                    Image(systemName: "play.circle")
-                                                                        .foregroundColor(.white.opacity(0.6))
-                                                                }
-                                                                .padding(.vertical, 4)
-                                                            }
                                                         }
                                                     }
                                                 }
