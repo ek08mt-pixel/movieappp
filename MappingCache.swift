@@ -36,7 +36,7 @@ final class MappingCache {
         14091: "tham-tu-lung-danh-conan", 46261: "hoi-phap-su-phan-1", 57041: "linh-hon-bac-phan-1",
     ]
     
-    static let directSlugs: [String: String] = [
+    static var directSlugs: [String: String] = [
         "111110_1": "dao-hai-tac-live-action-phan-1", "111110_2": "dao-hai-tac-live-action-phan-2",
         "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1","215522_1": "chung-ta-la-nhung-ke-doi-tra",
         "46261_2": "hoi-phap-su-phan-1", "46261_3": "hoi-phap-su-phan-1", "46261_4": "hoi-phap-su-phan-1",
@@ -103,7 +103,10 @@ final class MappingCache {
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
     static func getDirectSlug(tmdbID: Int, season: Int = 1) -> String? { directSlugs["\(tmdbID)_\(season)"] }
     static func isLongRunningAnime(tmdbID: Int) -> Bool { animeSlugs[tmdbID] != nil }
-    static func hasDirectSlug(tmdbID: Int, season: Int = 1) -> Bool { directSlugs["\(tmdbID)_\(season)"] != nil }
+   static func addDirectSlug(tmdbID: Int, season: Int, slug: String) {
+    directSlugs["\(tmdbID)_\(season)"] = slug
+}
+     static func hasDirectSlug(tmdbID: Int, season: Int = 1) -> Bool { directSlugs["\(tmdbID)_\(season)"] != nil }
     
     private init() {}
     
