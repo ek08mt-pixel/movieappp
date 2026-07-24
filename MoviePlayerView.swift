@@ -77,6 +77,10 @@ struct MoviePlayerView: View {
                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     forceLandscape()
+                    let testKey = "\(movieId)_S\(seasonNumber ?? 1)_E\(episodeNumber ?? 1)_server0"
+if let _ = MappingCache.shared.dict(for: "phimapi_stream_cache")[testKey] {
+    errorMessage = "Cached: \(testKey)"
+}
 selectedSource = initialSource
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
