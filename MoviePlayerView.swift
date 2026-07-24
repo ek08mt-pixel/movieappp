@@ -37,6 +37,7 @@ struct MoviePlayerView: View {
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
     var resumeTime: Double = 0
     var initialSource: MovieSource = .phimapi
+    var directURL: URL? = nil
     @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
@@ -74,7 +75,15 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear {
-                    player.play(); player.volume = volume
+                   if let url = directURL {
+    currentStreamURL = url
+    player.replaceCurrentItem(with: AVPlayerItem(url: url))
+    player.play()
+    hasStartedPlaying = true
+    isLoading = false
+    return
+}
+                     player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     forceLandscape()
                     let testKey = "\(movieId)_S\(seasonNumber ?? 1)_E\(episodeNumber ?? 1)_server0"
