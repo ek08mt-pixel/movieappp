@@ -118,25 +118,28 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
-        PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
-            guard let self = self, let episodes = episodes else { return }
-            var epList: [SourceEpisode] = []
-            for server in episodes {
-                guard let serverName = server["server_name"] as? String,
-                      let serverData = server["server_data"] as? [[String: Any]] else { continue }
-                for ep in serverData {
-                    if let name = ep["name"] as? String,
-                       let linkM3u8 = ep["link_m3u8"] as? String {
-                        let epNum = Int(name.replacingOccurrences(of: "Tập ", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
-                        epList.append(SourceEpisode(name: name, episodeNumber: epNum, linkM3u8: linkM3u8, serverName: serverName))
-                    }
+    PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
+        guard let self = self, let episodes = episodes else { return }
+        var epList: [SourceEpisode] = []
+        for server in episodes {
+            guard let serverName = server["server_name"] as? String,
+                  let serverData = server["server_data"] as? [[String: Any]] else { continue }
+            for ep in serverData {
+                if let name = ep["name"] as? String,
+                   let linkM3u8 = ep["link_m3u8"] as? String {
+                    let epNum = Int(name.replacingOccurrences(of: "Tập ", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                    epList.append(SourceEpisode(name: name, episodeNumber: epNum, linkM3u8: linkM3u8, serverName: serverName))
+                    // Cache link để player dùng
+                    let cacheKey = "\(tmdbID)_S\(season)_E\(epNum)_server0"
+                    MappingCache.shared.save([cacheKey: linkM3u8], for: "phimapi_stream_cache")
                 }
             }
-            DispatchQueue.main.async {
-                self.sourceEpisodes = epList
-            }
+        }
+        DispatchQueue.main.async {
+            self.sourceEpisodes = epList
         }
     }
+}
     
     private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
         let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
