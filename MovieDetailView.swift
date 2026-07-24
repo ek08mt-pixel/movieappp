@@ -68,14 +68,37 @@ struct MovieDetailView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                         HStack(spacing: 10) {
-                            Button(action: { handlePlayButton() }) {
-                                Label("Xem", systemImage: "play.fill").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            Button(action: handlePlayButton) {
+                                Label("Xem", systemImage: "play.fill")
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule())
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 12, weight: .semibold))
                             }
-                            Button(action: { toggleFavorite() }) {
-                                Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            Button(action: toggleFavorite) {
+                                Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu", 
+                                      systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus")
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule())
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 12, weight: .semibold))
                             }
-                            Button(action: { toggleWatched() }) {
-                                Label(appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "Đã xem" : "Đánh dấu đã xem", systemImage: appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "checkmark.circle.fill" : "checkmark.circle").frame(maxWidth: .infinity).padding(.vertical, 10).background(.ultraThinMaterial).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5)).clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            Button(action: toggleWatched) {
+                                Label(appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "Đã xem" : "Đánh dấu đã xem",
+                                      systemImage: appState.watchedMovies.contains(where: { $0.id == movie.id }) ? "checkmark.circle.fill" : "checkmark.circle")
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule())
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 12, weight: .semibold))
                             }
                         }
                         if let r = vm.detail?.runtime, r > 0 { HStack(spacing: 12) { Label("\(r) phút", systemImage: "clock.fill").font(.system(size: 11)).foregroundColor(.gray); if let g = vm.detail?.genres, !g.isEmpty { Text(g.prefix(3).map{$0.name}.joined(separator: " • ")).font(.system(size: 11)).foregroundColor(.gray) } } }
@@ -135,6 +158,7 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
     }
     
+    // MARK: - Actions
     func handlePlayButton() {
         if !vm.seasons.isEmpty || MappingCache.hasDirectSlug(tmdbID: movie.id, season: 1) {
             playSeason = 1
@@ -173,6 +197,7 @@ struct MovieDetailView: View {
         topVC.present(hosting, animated: true)
     }
     
+    // MARK: - Ratings
     var ratingsBar: some View {
         let hasAnyRating = ratings.tmdb != nil || ratings.imdb != nil || ratings.rottenTomatoes != nil
         guard hasAnyRating else { return AnyView(EmptyView()) }
