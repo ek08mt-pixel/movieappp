@@ -251,31 +251,32 @@ struct MovieDetailView: View {
             }
         }
     } else {
-        if let detail = vm.seasonDetails[season.seasonNumber] {
-            LazyVStack(spacing: 6) {
-                ForEach(detail.episodes) { ep in
-                    Button {
-                        playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
-                        presentPlayer()
-                    } label: {
-                        HStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                            }
-                            Spacer(); Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                        }.padding(.vertical, 4)
-                    }
+    if let detail = vm.seasonDetails[season.seasonNumber] {
+        LazyVStack(spacing: 6) {
+            ForEach(detail.episodes) { ep in
+                Button {
+                    playSeason = ep.seasonNumber
+                    playEpisode = ep.episodeNumber
+                    presentPlayer()
+                } label: {
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                        }
+                        Spacer()
+                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
+                    }.padding(.vertical, 4)
                 }
             }
-        } else {
-            ProgressView().tint(.white).padding() 
         }
-        }
+    } else {
+        ProgressView().tint(.white).padding()
     }
-}
-                        if !vm.actors.isEmpty {
+} // <-- Chỉ 1 dấu } này đóng if expandedSeason
+
+if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal) {
                                 HStack(spacing: 16) {
