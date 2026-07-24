@@ -270,7 +270,8 @@ struct MovieDetailView: View {
                 }
             }
         } else {
-            ProgressView().tint(.white).padding()
+            ProgressView().tint(.white).padding() 
+        }
         }
     }
 }
