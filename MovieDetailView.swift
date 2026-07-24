@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+
 struct MovieDetailView: View {
     let movie: Movie
     var showBooking: Bool = false
