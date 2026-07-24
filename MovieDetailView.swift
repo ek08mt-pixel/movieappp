@@ -259,13 +259,6 @@ struct MovieDetailView: View {
         ProgressView().tint(.white).padding().onAppear {
             Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
                                                     }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal) {
