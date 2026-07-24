@@ -13,6 +13,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var serverList: [(name: String, qualities: String)] = []
     @Published var isLoadingServers = false
+    @Published var sourceEpisodes: [SourceEpisode] = []
     
     private var videoURLCache: [String: URL] = [:]
     
@@ -125,5 +126,34 @@ class MovieDetailViewModel: ObservableObject {
             let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
             return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
         } catch { return [] }
+    }
+}
+
+struct SourceEpisode: Identifiable {
+    let id = UUID()
+    let name: String
+    let episodeNumber: Int
+    let linkM3u8: String
+    let serverName: String
+}
+
+func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
+    PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
+        guard let self = self, let episodes = episodes else { return }
+        var epList: [SourceEpisode] = []
+        for server in episodes {
+            guard let serverName = server["server_name"] as? String,
+                  let serverData = server["server_data"] as? [[String: Any]] else { continue }
+            for ep in serverData {
+                if let name = ep["name"] as? String,
+                   let linkM3u8 = ep["link_m3u8"] as? String {
+                    let epNum = Int(name.replacingOccurrences(of: "Tập ", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                    epList.append(SourceEpisode(name: name, episodeNumber: epNum, linkM3u8: linkM3u8, serverName: serverName))
+                }
+            }
+        }
+        DispatchQueue.main.async {
+            self.sourceEpisodes = epList
+        }
     }
 }
