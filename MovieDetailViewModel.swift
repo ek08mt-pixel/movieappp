@@ -37,11 +37,11 @@ class MovieDetailViewModel: ObservableObject {
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
-    if type == "tv" {
-        for season in seasons {
-            await loadSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber)
+        if type == "tv" {
+            for season in seasons {
+                await loadSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber)
+            }
         }
-    }
     }
     
     func loadServers(movieId: Int, mediaType: String?, title: String) async {
@@ -75,16 +75,16 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func detectQualityString(_ name: String) -> String {
-    var qualities: [String] = []
-    if name.contains("4K") || name.contains("2160") { qualities.append("4K") }
-    if name.contains("2880") { qualities.append("UHD") }
-    if name.contains("1440") { qualities.append("QHD") }
-    if name.contains("1080") { qualities.append("FHD") }
-    if name.contains("720") { qualities.append("HD") }
-    if name.contains("480") { qualities.append("SD") }
-    if qualities.isEmpty { qualities = ["FHD", "HD"] }
-    return qualities.joined(separator: " • ")
-}
+        var qualities: [String] = []
+        if name.contains("4K") || name.contains("2160") { qualities.append("4K") }
+        if name.contains("2880") { qualities.append("UHD") }
+        if name.contains("1440") { qualities.append("QHD") }
+        if name.contains("1080") { qualities.append("FHD") }
+        if name.contains("720") { qualities.append("HD") }
+        if name.contains("480") { qualities.append("SD") }
+        if qualities.isEmpty { qualities = ["FHD", "HD"] }
+        return qualities.joined(separator: " • ")
+    }
     
     func getVideoURL(movieId: Int, mediaType: String?, season: Int?, episode: Int?, title: String = "") async -> URL? {
         let cacheKey = "\(movieId)_\(mediaType ?? "movie")_S\(season ?? 0)E\(episode ?? 0)"
@@ -111,33 +111,13 @@ class MovieDetailViewModel: ObservableObject {
     }
     
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
-    if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
-        selectedSeason = detail; seasonDetails[seasonNumber] = detail
-        MappingCache.seasonEpisodeCounts["\(tvId)_\(seasonNumber)"] = detail.episodes.count
+        if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
+            selectedSeason = detail; seasonDetails[seasonNumber] = detail
+            MappingCache.seasonEpisodeCounts["\(tvId)_\(seasonNumber)"] = detail.episodes.count
+        }
     }
-}
     
-    private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
-        let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
-        guard let url = URL(string: urlString) else { return [] }
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            struct TVDetailResponse: Codable { let seasons: [TVSeason]? }
-            let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
-            return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
-        } catch { return [] }
-    }
-}
-
-struct SourceEpisode: Identifiable {
-    let id = UUID()
-    let name: String
-    let episodeNumber: Int
-    let linkM3u8: String
-    let serverName: String
-}
-
-func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
+    func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
         PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
             guard let self = self, let episodes = episodes else { return }
             var epList: [SourceEpisode] = []
@@ -157,4 +137,23 @@ func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
             }
         }
     }
+    
+    private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
+        let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
+        guard let url = URL(string: urlString) else { return [] }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct TVDetailResponse: Codable { let seasons: [TVSeason]? }
+            let response = try JSONDecoder().decode(TVDetailResponse.self, from: data)
+            return response.seasons?.filter { $0.seasonNumber > 0 } ?? []
+        } catch { return [] }
+    }
+}
+
+struct SourceEpisode: Identifiable {
+    let id = UUID()
+    let name: String
+    let episodeNumber: Int
+    let linkM3u8: String
+    let serverName: String
 }
