@@ -142,6 +142,39 @@ class MovieDetailViewModel: ObservableObject {
     }
 }
     
+    func autoFindSlug(tmdbID: Int, title: String, year: String, season: Int) {
+    let searchQuery = "\(title) \(year)"
+    guard let query = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+          let url = URL(string: "https://phimapi.com/v1/api/tim-kiem?keyword=\(query)&limit=5") else { return }
+    
+    URLSession.streamSession.dataTask(with: url) { [weak self] data, _, _ in
+        guard let self = self, let data = data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              json["status"] as? String == "success",
+              let dataObj = json["data"] as? [String: Any],
+              let items = dataObj["items"] as? [[String: Any]] else { return }
+        
+        // Tìm phim khớp tên + năm
+        for item in items {
+            let name = item["name"] as? String ?? ""
+            let originName = item["origin_name"] as? String ?? ""
+            let itemYear = item["year"] as? Int ?? 0
+            let slug = item["slug"] as? String ?? ""
+            
+            if !slug.isEmpty && (name.contains(title) || originName.contains(title) || title.contains(name.prefix(10))) {
+                // Lưu vào directSlugs
+                var slugs = MappingCache.directSlugs
+                slugs["\(tmdbID)_\(season)"] = slug
+                // Cập nhật static var (cần cách khác)
+                DispatchQueue.main.async {
+                    // Reload source episodes
+                    self.loadSourceEpisodes(tmdbID: tmdbID, season: season, slug: slug)
+                }
+                return
+            }
+        }
+    }.resume()
+}
     private func loadSeasonsDirectly(tvId: Int) async -> [TVSeason] {
         let urlString = "https://api.themoviedb.org/3/tv/\(tvId)?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US"
         guard let url = URL(string: urlString) else { return [] }
