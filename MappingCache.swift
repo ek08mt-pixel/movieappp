@@ -38,66 +38,26 @@ final class MappingCache {
     
     static let directSlugs: [String: String] = [
         "111110_1": "dao-hai-tac-live-action-phan-1", "111110_2": "dao-hai-tac-live-action-phan-2",
-        "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1","215522_1": "chung-ta-la-nhung-ke-doi-tra",
+        "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1",
         "46261_2": "hoi-phap-su-phan-1", "46261_3": "hoi-phap-su-phan-1", "46261_4": "hoi-phap-su-phan-1",
         "46261_5": "hoi-phap-su-phan-2", "46261_6": "hoi-phap-su-phan-3", "46261_7": "hoi-phap-su-phan-3",
-        "46261_8": "hoi-phap-su-phan-4", "4607_1": "mat-tich-phan-1", "4607_2": "mat-tich-phan-2","91239_3": "gia-toc-bridgerton-phan-3",
-        "4607_3": "mat-tich-phan-3", "4607_4": "mat-tich-phan-4", "4607_5": "mat-tich-phan-5","91239_2": "gia-toc-bridgerton-phan-2",
-        "4607_6": "mat-tich-phan-6", "18165_1": "nhat-ky-ma-ca-rong-phan-1","91239_1": "gia-toc-bridgerton-phan-1","91239_4": "gia-toc-bridgerton-phan-4",
-        "18165_2": "nhat-ky-ma-ca-rong-phan-2", "18165_3": "nhat-ky-ma-ca-rong-phan-3","10866_1": "tro-dua-chet-nguoi-2001","259074_1": "tro-dua-chet-nguoi-3",
-        "18165_4": "nhat-ky-ma-ca-rong-phan-4", "18165_5": "nhat-ky-ma-ca-rong-phan-5","1413_1": "truyen-kinh-di-my-phan-1-murder-house","1413_2": "truyen-kinh-di-my-phan-2-asylum",
-        "18165_6": "nhat-ky-ma-ca-rong-phan-6", "18165_7": "nhat-ky-ma-ca-rong-phan-7","1413_3": "truyen-kinh-di-my-phan-3-coven","1413_4": "truyen-kinh-di-my-phan-4-freak-show",
-        "18165_8": "nhat-ky-ma-ca-rong-phan-8", "124364_1": "thi-tran-ac-mong-hoi-chuong-la-phan-1","1413_5": "truyen-kinh-di-my-phan-5-hotel",
-        "124364_2": "thi-tran-ac-mong-hoi-chuong-la-phan-2", "124364_3": "thi-tran-ac-mong-hoi-chuong-la-phan-3","1413_6": "truyen-kinh-di-my-phan-6-roanoke",
-        "124364_4": "thi-tran-ac-mong-hoi-chuong-la-phan-4", "1668_1": "nhung-nguoi-ban-phan-1","1413_7": "truyen-kinh-di-my-phan-7-cult",
-        "1668_2": "nhung-nguoi-ban-phan-2", "1668_3": "nhung-nguoi-ban-phan-3", "1668_4": "nhung-nguoi-ban-phan-4","1413_8": "truyen-kinh-di-my-phan-8-apocalypse",
-        "1668_5": "nhung-nguoi-ban-phan-5", "1668_6": "nhung-nguoi-ban-phan-6", "1668_7": "nhung-nguoi-ban-phan-7","1413_9": "truyen-kinh-di-my-phan-9-1984",
-        "1668_8": "nhung-nguoi-ban-phan-8", "1668_9": "nhung-nguoi-ban-phan-9", "1668_10": "nhung-nguoi-ban-phan-10","1413_10": "truyen-kinh-di-my-phan-10-double-feature",
-        "103411_1": "mau-va-nuoc-phan-1", "103411_2": "mau-va-nuoc-phan-2", "103411_3": "mau-va-nuoc-phan-3","1413_11": "truyen-kinh-di-my-phan-11-nyc",
-        "103411_4": "mau-va-nuoc-phan-4", "57041_1": "linh-hon-bac-phan-1", "57041_2": "linh-hon-bac-phan-1","1413_12": "truyen-kinh-di-my-phan-12-delicate",
+        "46261_8": "hoi-phap-su-phan-4", "4607_1": "mat-tich-phan-1", "4607_2": "mat-tich-phan-2",
+        "4607_3": "mat-tich-phan-3", "4607_4": "mat-tich-phan-4", "4607_5": "mat-tich-phan-5",
+        "4607_6": "mat-tich-phan-6", "18165_1": "nhat-ky-ma-ca-rong-phan-1",
+        "18165_2": "nhat-ky-ma-ca-rong-phan-2", "18165_3": "nhat-ky-ma-ca-rong-phan-3",
+        "18165_4": "nhat-ky-ma-ca-rong-phan-4", "18165_5": "nhat-ky-ma-ca-rong-phan-5",
+        "18165_6": "nhat-ky-ma-ca-rong-phan-6", "18165_7": "nhat-ky-ma-ca-rong-phan-7",
+        "18165_8": "nhat-ky-ma-ca-rong-phan-8", "124364_1": "thi-tran-ac-mong-hoi-chuong-la-phan-1",
+        "124364_2": "thi-tran-ac-mong-hoi-chuong-la-phan-2", "124364_3": "thi-tran-ac-mong-hoi-chuong-la-phan-3",
+        "124364_4": "thi-tran-ac-mong-hoi-chuong-la-phan-4", "1668_1": "nhung-nguoi-ban-phan-1",
+        "1668_2": "nhung-nguoi-ban-phan-2", "1668_3": "nhung-nguoi-ban-phan-3", "1668_4": "nhung-nguoi-ban-phan-4",
+        "1668_5": "nhung-nguoi-ban-phan-5", "1668_6": "nhung-nguoi-ban-phan-6", "1668_7": "nhung-nguoi-ban-phan-7",
+        "1668_8": "nhung-nguoi-ban-phan-8", "1668_9": "nhung-nguoi-ban-phan-9", "1668_10": "nhung-nguoi-ban-phan-10",
+        "103411_1": "mau-va-nuoc-phan-1", "103411_2": "mau-va-nuoc-phan-2", "103411_3": "mau-va-nuoc-phan-3",
+        "103411_4": "mau-va-nuoc-phan-4", "57041_1": "linh-hon-bac-phan-1", "57041_2": "linh-hon-bac-phan-1",
         "57041_3": "linh-hon-bac-phan-1", "57041_4": "linh-hon-bac-phan-1", "57041_5": "linh-hon-bac-phan-5",
-        "2942_1": "vuong-trieu-tudors-phan-1", "2942_2": "vuong-trieu-tudors-phan-2","286801": "quai-vat-cau-chuyen-cua-ed-gein",
-        "2942_3": "vuong-trieu-tudors-phan-3", "2942_4": "vuong-trieu-tudors-phan-4","225634_1": "quai-vat-cau-chuyen-ve-lyle-va-erik-menendez",
-        "215072_2": "cua-hang-sat-thu-phan-2","215072_1": "cua-hang-sat-thu-phan-1","1001414_1": "pho-fear-nu-hoang-da-hoi",
-         "3729_1": "gia-dinh-la-so-1-phan-1","591273_1": "pho-fear-phan-1-1994","591274_1": "pho-fear-phan-2-1978","591275_1": "pho-fear-phan-3-1666",
-"83518_2": "gia-dinh-la-so-1-phan-2","290856_1": "luc-luong-marshals","299167_1": "trang-trai-dutton","75758_3": "lac-ngoai-khong-gian-phan-3",
-"88131_3": "gia-dinh-la-so-1-phan-3","119988_1": "nguoi-vo-toi-1","75758_1": "lac-ngoai-khong-gian-phan-1","75758_2": "lac-ngoai-khong-gian-phan-2",
-"283304_1": "ngoi-nha-nho-tren-thao-nguyen", "1639_1": "giai-cuu-the-gioi-phan-1","92916_1": "marianne",
-"1639_2": "giai-cuu-the-gioi-phan-2","1408_1": "bac-si-house-phan-1","4247_1": "phim-kinh-di-hai-my-1",
-"1408_2": "bac-si-house-phan-2","46838_1": "ky-nghi-kinh-hoang-2010","4248_1": "phim-kinh-di-hai-my-2",
-"1408_3": "bac-si-house-phan-3","323262_1": "ky-nghi-kinh-hoang-2016", "4256_1": "phim-kinh-di-hai-my-3",
-"1408_4": "bac-si-house-phan-4","4257_1": "phim-kinh-di-hai-my-4","4258_1": "phim-kinh-di-hai-my-5",
-"1408_5": "bac-si-house-phan-5","1273221_1": "lien-khuc-phim-kinh-di-6",
-"1408_6": "bac-si-house-phan-6",
-"1408_7": "bac-si-house-phan-7",
-"1408_8": "bac-si-house-phan-8",
-"1639_3": "giai-cuu-the-gioi-phan-3",
-"1639_4": "giai-cuu-the-gioi-phan-4","1110034_1": "quai-vat-bien", "128098_1": "phong-van-ma-ca-rong-phan-1",
-"128098_2": "phong-van-ma-ca-rong-phan-2","1981_1": "phep-thuat-phan-1",
- "1981_2": "phep-thuat-phan-2", 
- "1981_3": "phep-thuat-phan-3",
- "1981_4": "phep-thuat-phan-4",
-"1981_5": "phep-thuat-phan-5",
-"1981_6": "phep-thuat-phan-6",
- "1981_7": "phep-thuat-phan-7",
- "1981_8": "phep-thuat-phan-8",
-"1412_1": "mui-ten-xanh-phan-1",
-"1412_2": "mui-ten-xanh-phan-2",
-"1412_3": "mui-ten-xanh-phan-3",
-"1412_4": "mui-ten-xanh-phan-4",
-"1412_5": "mui-ten-xanh-phan-5",
-"1412_6": "mui-ten-xanh-phan-6",
-"1412_7": "mui-ten-xanh-phan-7",
-"1412_8": "mui-ten-xanh-phan-8",
-"1973_1": "24-gio-chong-khung-bo-phan-1",
-"1973_2": "24-gio-chong-khung-bo-phan-2",
-"1973_3": "24-gio-chong-khung-bo-phan-3",
-"1973_4": "24-gio-chong-khung-bo-phan-4",
-"1973_5": "24-gio-chong-khung-bo-phan-5",
-"1973_6": "24-gio-chong-khung-bo-phan-6",
-"1973_7": "24-gio-chong-khung-bo-phan-7",
-"1973_8": "24-gio-chong-khung-bo-phan-8",
-"1973_9": "24-gio-chong-khung-bo-phan-9",
+        "2942_1": "vuong-trieu-tudors-phan-1", "2942_2": "vuong-trieu-tudors-phan-2",
+        "2942_3": "vuong-trieu-tudors-phan-3", "2942_4": "vuong-trieu-tudors-phan-4",
     ]
     
     static func getAnimeSlug(tmdbID: Int) -> String? { animeSlugs[tmdbID] }
@@ -227,10 +187,7 @@ final class NguonCService {
                     
                     if let s = season, let e = episode {
                         if let episodes = movie["episodes"] as? [[String: Any]] {
-                            var effectiveEp = e
-                            if let firstServer = episodes.first, let items = firstServer["items"] as? [[String: Any]], items.count > 100 {
-                                effectiveEp = (s - 1) * 49 + e
-                            }
+                            let effectiveEp = e
                             for server in episodes {
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
@@ -351,9 +308,9 @@ final class PhimAPIService {
             return
         }
         if !isSeries, let directSlug = MappingCache.getDirectSlug(tmdbID: tmdbID, season: 1) {
-    fetchBySlug(slug: directSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
-    return
-}
+            fetchBySlug(slug: directSlug, season: season, episode: episode, serverIndex: serverIndex, tmdbID: tmdbID, completion: completion)
+            return
+        }
         guard let tmdbURL = URL(string: "\(baseURL)/tmdb/movie/\(tmdbID)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.streamSession.dataTask(with: tmdbURL) { [weak self] data, _, error in
             guard let self = self else { return }
@@ -438,61 +395,71 @@ final class PhimAPIService {
     }
     
     private func extractStreamURLWithServers(from json: [String: Any], phimType: String, season: Int?, episode: Int?, serverIndex: Int, tmdbID: Int = 0) -> (url: URL?, servers: [String]) {
-    var serverNames: [String] = []
-    if let episodes = json["episodes"] as? [[String: Any]] {
-        for server in episodes { if let name = server["server_name"] as? String { serverNames.append(name) } }
-    }
-    
-    if isSeriesType(phimType) {
-        let targetSeason = season ?? 1; let ep = episode ?? 1
+        var serverNames: [String] = []
         if let episodes = json["episodes"] as? [[String: Any]] {
-            var totalEpsInFirstServer = 0
-            if let firstServer = episodes.first, let serverData = firstServer["server_data"] as? [[String: Any]] { totalEpsInFirstServer = serverData.count }
-            var effectiveEp: Int
-            if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
-                effectiveEp = ep
-                if tmdbID == 46261 {
-                    switch targetSeason { case 1: effectiveEp = ep; case 2: effectiveEp = 48 + ep; case 3: effectiveEp = 96 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
-                }
-                if tmdbID == 57041 {
-                    switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
-                }
-            } else if totalEpsInFirstServer > 100 {
-    var offset = 0
-    for s in 1..<targetSeason {
-        if let count = MappingCache.seasonEpisodeCounts["\(tmdbID)_\(s)"] {
-            offset += count
+            for server in episodes { if let name = server["server_name"] as? String { serverNames.append(name) } }
         }
-    }
-    effectiveEp = offset + ep
-} else {
-    effectiveEp = ep
-}
-            
-            // CHỌN SERVER THEO INDEX
-            let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
-            if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]] {
-                for epItem in serverData {
-                    if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: effectiveEp) {
-                        return (streamURL, serverNames)
+        
+        if isSeriesType(phimType) {
+            let targetSeason = season ?? 1; let ep = episode ?? 1
+            if let episodes = json["episodes"] as? [[String: Any]] {
+                var totalEpsInFirstServer = 0
+                if let firstServer = episodes.first, let serverData = firstServer["server_data"] as? [[String: Any]] { totalEpsInFirstServer = serverData.count }
+                var effectiveEp: Int
+                if MappingCache.isLongRunningAnime(tmdbID: tmdbID) {
+                    effectiveEp = ep
+                    if tmdbID == 46261 {
+                        switch targetSeason { case 1: effectiveEp = ep; case 2: effectiveEp = 48 + ep; case 3: effectiveEp = 96 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
+                    }
+                    if tmdbID == 57041 {
+                        switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
+                    }
+                } else if totalEpsInFirstServer > 100 {
+                    var offset = 0
+                    for s in 1..<targetSeason {
+                        if let count = MappingCache.seasonEpisodeCounts["\(tmdbID)_\(s)"] {
+                            offset += count
+                        }
+                    }
+                    effectiveEp = offset + ep
+                } else {
+                    effectiveEp = ep
+                }
+                
+                let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
+                if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]] {
+                    for epItem in serverData {
+                        if let name = epItem["name"] as? String, let linkM3u8 = epItem["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8), matchEpisode(name: name, target: effectiveEp) {
+                            return (streamURL, serverNames)
+                        }
                     }
                 }
             }
+        } else {
+            if let episodes = json["episodes"] as? [[String: Any]] {
+                let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
+                if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]], let firstEp = serverData.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+            }
+            let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
+            if let m = movie {
+                if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
+                if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
+            }
         }
-    } else {
-        // CHỌN SERVER THEO INDEX
-        if let episodes = json["episodes"] as? [[String: Any]] {
-            let serverToUse = (serverIndex < episodes.count) ? episodes[serverIndex] : episodes.first
-            if let server = serverToUse, let serverData = server["server_data"] as? [[String: Any]], let firstEp = serverData.first, let linkM3u8 = firstEp["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
-        }
-        let movie = json["movie"] as? [String: Any] ?? json["item"] as? [String: Any]
-        if let m = movie {
-            if let linkM3u8 = m["link_m3u8"] as? String, let streamURL = URL(string: linkM3u8) { return (streamURL, serverNames) }
-            if let urlStr = m["url"] as? String, let streamURL = URL(string: urlStr) { return (streamURL, serverNames) }
-        }
+        return (nil, serverNames)
     }
-    return (nil, serverNames)
-}
+    
+    func fetchRawEpisodes(slug: String, completion: @escaping ([[String: Any]]?) -> Void) {
+        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(nil); return }
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let episodes = json["episodes"] as? [[String: Any]] else {
+                completion(nil); return
+            }
+            completion(episodes)
+        }.resume()
+    }
     
     private func findBestMatch(items: [[String: Any]], tmdbID: Int, title: String, mediaType: String?, season: Int?) -> [String: Any]? {
         let isSeries = (mediaType == "tv") || (season != nil)
@@ -510,28 +477,7 @@ final class PhimAPIService {
         return searchItems.first(where: { isSingleType($0["type"] as? String ?? "") })
     }
 }
-func fetchRawEpisodes(slug: String, completion: @escaping ([[String: Any]]?) -> Void) {
-    guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(nil); return }
-    URLSession.streamSession.dataTask(with: url) { data, _, error in
-        guard let data = data,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let episodes = json["episodes"] as? [[String: Any]] else {
-            completion(nil); return
-        }
-        completion(episodes)
-    }.resume()
-}
-func fetchRawEpisodes(slug: String, completion: @escaping ([[String: Any]]?) -> Void) {
-    guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(nil); return }
-    URLSession.streamSession.dataTask(with: url) { data, _, error in
-        guard let data = data,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let episodes = json["episodes"] as? [[String: Any]] else {
-            completion(nil); return
-        }
-        completion(episodes)
-    }.resume()
-}
+
 // MARK: - Ophim Service
 final class OphimService {
     static let shared = OphimService()
@@ -610,41 +556,41 @@ final class OnflixService {
     private init() {}
     
     func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-    let urlString = "\(baseURL)/phim/\(slug)"
-    guard let url = URL(string: urlString) else {
-        completion(.failure(StreamServiceError.invalidURL))
-        return
+        let urlString = "\(baseURL)/phim/\(slug)"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(StreamServiceError.invalidURL))
+            return
+        }
+        
+        URLSession.streamSession.dataTask(with: url) { data, _, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(.failure(StreamServiceError.noData))
+                return
+            }
+            
+            let pattern = #""link_m3u8":"([^"\\]+)""#
+            guard let regex = try? NSRegularExpression(pattern: pattern),
+                  let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                  let range = Range(match.range(at: 1), in: html) else {
+                completion(.failure(StreamServiceError.noStreamURL))
+                return
+            }
+            
+            var m3u8 = String(html[range])
+                .replacingOccurrences(of: "\\u0026", with: "&")
+                .replacingOccurrences(of: "\\/", with: "/")
+            
+            guard let streamURL = URL(string: m3u8) else {
+                completion(.failure(StreamServiceError.noStreamURL))
+                return
+            }
+            
+            completion(.success(streamURL))
+        }.resume()
     }
-    
-    URLSession.streamSession.dataTask(with: url) { data, _, error in
-        if let error = error { completion(.failure(error)); return }
-        guard let data = data, let html = String(data: data, encoding: .utf8) else {
-            completion(.failure(StreamServiceError.noData))
-            return
-        }
-        
-        // Parse link_m3u8 từ JSON trong self.__next_f.push
-        let pattern = #""link_m3u8":"([^"\\]+)""#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-              let range = Range(match.range(at: 1), in: html) else {
-            completion(.failure(StreamServiceError.noStreamURL))
-            return
-        }
-        
-        var m3u8 = String(html[range])
-            .replacingOccurrences(of: "\\u0026", with: "&")
-            .replacingOccurrences(of: "\\/", with: "/")
-        
-        guard let streamURL = URL(string: m3u8) else {
-            completion(.failure(StreamServiceError.noStreamURL))
-            return
-        }
-        
-        completion(.success(streamURL))
-    }.resume()
 }
-}
+
 // MARK: - International Embed Service
 final class InternationalEmbedService {
     static let shared = InternationalEmbedService()
