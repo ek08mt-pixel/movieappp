@@ -455,7 +455,18 @@ final class PhimAPIService {
                         switch targetSeason { case 2: effectiveEp = 49 + ep; case 3: effectiveEp = 99 + ep; case 4: effectiveEp = 150 + ep; default: effectiveEp = ep }
                     }
                 } else if totalEpsInFirstServer > 100 {
-                    var offset = 0
+    if MappingCache.hasDirectSlug(tmdbID: tmdbID, season: targetSeason) {
+        effectiveEp = ep
+    } else {
+        var offset = 0
+        for s in 1..<targetSeason {
+            if let count = MappingCache.seasonEpisodeCounts["\(tmdbID)_\(s)"] {
+                offset += count
+            }
+        }
+        effectiveEp = offset + ep
+    }
+}
                     for s in 1..<targetSeason {
                         if let count = MappingCache.seasonEpisodeCounts["\(tmdbID)_\(s)"] {
                             offset += count
