@@ -225,48 +225,55 @@ struct MovieDetailView: View {
                                             }
                                             .padding(.vertical, 8)
                                         }
-                                        if expandedSeason == season.seasonNumber {
-                                            if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
-                                                if vm.sourceEpisodes.isEmpty {
-                                                    ProgressView().tint(.white).padding().onAppear {
-                                                        vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
-                                                    }
-                                                } else {
-                                                    if let detail = vm.seasonDetails[season.seasonNumber] {
-                                                        LazyVStack(spacing: 6) {
-                                                            ForEach(detail.episodes) { ep in
-                                                                Button {
-                                                                    playSeason = ep.seasonNumber
-                                                                    playEpisode = ep.episodeNumber
-                                                                    presentPlayer()
-                                                                } label: {
-                                                                    HStack(spacing: 10) {
-                                                                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                                                                        VStack(alignment: .leading, spacing: 2) {
-                                                                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                                                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                                                        }
-                                                                        Spacer()
-                                                                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                                                                    }.padding(.vertical, 4)
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        ProgressView().tint(.white).padding()
-                                                            .onAppear { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } }
-                                                    }
-                                                }
-                                            } else {
-                                                ProgressView().tint(.white).padding().onAppear {
-                                                    Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                    if expandedSeason == season.seasonNumber {
+    if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
+        if vm.sourceEpisodes.isEmpty {
+            ProgressView().tint(.white).padding().onAppear {
+                vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
+            }
+        } else {
+            LazyVStack(spacing: 6) {
+                ForEach(vm.sourceEpisodes) { ep in
+                    Button {
+                        playSeason = season.seasonNumber; playEpisode = ep.episodeNumber
+                        presentPlayer(directURL: URL(string: ep.linkM3u8))
+                    } label: {
+                        HStack(spacing: 10) {
+                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ep.name).font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                                Text(ep.serverName).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
                             }
-                        }
+                            Spacer(); Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
+                        }.padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    } else {
+        if let detail = vm.seasonDetails[season.seasonNumber] {
+            LazyVStack(spacing: 6) {
+                ForEach(detail.episodes) { ep in
+                    Button {
+                        playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
+                        presentPlayer()
+                    } label: {
+                        HStack(spacing: 10) {
+                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                                Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                            }
+                            Spacer(); Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
+                        }.padding(.vertical, 4)
+                    }
+                }
+            }
+        } else {
+            ProgressView().tint(.white).padding()
+        }
+    }
+}
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal) {
