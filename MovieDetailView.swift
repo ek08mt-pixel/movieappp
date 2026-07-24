@@ -232,31 +232,31 @@ struct MovieDetailView: View {
                                                         vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
                                                     }
                                                 } else {
-                                                    if let detail = vm.selectedSeason, detail.seasonNumber == season.seasonNumber {
-                                                        LazyVStack(spacing: 6) {
-                                                            ForEach(detail.episodes) { ep in
-                                                                Button {
-                                                                    playSeason = ep.seasonNumber
-                                                                    playEpisode = ep.episodeNumber
-                                                                    presentPlayer()
-                                                                } label: {
-                                                                    HStack(spacing: 10) {
-                                                                        if let still = ep.stillURL {
-                                                                            CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
-                                                                        } else {
-                                                                            RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                                                                        }
-                                                                        VStack(alignment: .leading, spacing: 2) {
-                                                                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                                                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                                                            if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
-                                                                        }
-                                                                        Spacer()
-                                                                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                                                                    }.padding(.vertical, 4)
-                                                                }
-                                                            }
-                                                        }
+    if let detail = vm.seasonDetails[season.seasonNumber] {
+        LazyVStack(spacing: 6) {
+            ForEach(detail.episodes) { ep in
+                Button {
+                    playSeason = ep.seasonNumber
+                    playEpisode = ep.episodeNumber
+                    presentPlayer()
+                } label: {
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
+                            Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                        }
+                        Spacer()
+                        Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
+                    }.padding(.vertical, 4)
+                }
+            }
+        }
+    } else {
+        ProgressView().tint(.white).padding()
+            .onAppear { Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) } }
+    }
+}
                                                     } else {
                                                         ProgressView().tint(.white).padding().onAppear {
                                                             Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
