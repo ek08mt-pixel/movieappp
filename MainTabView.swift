@@ -6,11 +6,9 @@ struct MainTabView: View {
     @State private var showSearch = false
     @State private var homeID = UUID()
     @State private var exploreID = UUID()
-    @State private var watchTogetherID = UUID()
+    @State private var profileID = UUID()
     @State private var libraryID = UUID()
-    @State private var showWatchTogetherRoom = false
     @StateObject private var ostManager = OSTManager.shared
-    @StateObject private var watchService = WatchTogetherService.shared
     
     init() { UITabBar.appearance().isHidden = true }
     
@@ -19,11 +17,11 @@ struct MainTabView: View {
             ZStack {
                 HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
                 ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
-                WatchTogetherRoomView().id(watchTogetherID).opacity(selectedTab == 2 ? 1 : 0)
+                ProfileView().id(profileID).opacity(selectedTab == 2 ? 1 : 0)
                 LibraryView().id(libraryID).opacity(selectedTab == 3 ? 1 : 0)
             }
             
-            if ostManager.isPlaying && selectedTab != 3 && !showWatchTogetherRoom {
+            if ostManager.isPlaying && selectedTab != 3 {
                 VStack {
                     MiniPlayerView().padding(.top, 8)
                     Spacer()
@@ -31,44 +29,35 @@ struct MainTabView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
             
-            if !showWatchTogetherRoom {
-                HStack(spacing: 10) {
-                    HStack(spacing: 31) {
-                        LiquidTabIcon(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
-                            if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
-                        }
-                        LiquidTabIcon(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
-                            if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
-                        }
-                        LiquidTabIcon(icon: "person.3.fill", label: "Watch", isSelected: selectedTab == 2) {
-                            if selectedTab == 2 { watchTogetherID = UUID() } else { selectedTab = 2 }
-                        }
-                        LiquidTabIcon(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
-                            if selectedTab == 3 { libraryID = UUID() } else { selectedTab = 3 }
-                        }
+            HStack(spacing: 10) {
+                HStack(spacing: 31) {
+                    LiquidTabIcon(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
+                        if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                     }
-                    .padding(.vertical, 12).padding(.horizontal, 24)
-                    .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
-                    
-                    Button { showSearch = true } label: {
-                        Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .medium)).foregroundColor(.white.opacity(0.7)).padding(.vertical, 21).padding(.horizontal, 19)
-                            .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                    LiquidTabIcon(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
+                        if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
+                    }
+                    LiquidTabIcon(icon: "person.fill", label: "Cá nhân", isSelected: selectedTab == 2) {
+                        if selectedTab == 2 { profileID = UUID() } else { selectedTab = 2 }
+                    }
+                    LiquidTabIcon(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
+                        if selectedTab == 3 { libraryID = UUID() } else { selectedTab = 3 }
                     }
                 }
-                .padding(.bottom, 10)
-                .transition(.move(edge: .bottom))
+                .padding(.vertical, 12).padding(.horizontal, 24)
+                .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                
+                Button { showSearch = true } label: {
+                    Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .medium)).foregroundColor(.white.opacity(0.7)).padding(.vertical, 21).padding(.horizontal, 19)
+                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                }
             }
+            .padding(.bottom, 10)
         }
         .ignoresSafeArea(.keyboard)
-        .animation(.spring(response: 0.4), value: showWatchTogetherRoom)
+        .animation(.spring(response: 0.4), value: selectedTab)
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
-        .onChange(of: watchService.isInRoom) { inRoom in
-            withAnimation { showWatchTogetherRoom = inRoom }
-        }
-        .onChange(of: selectedTab) { tab in
-            if tab == 2 && watchService.isInRoom { showWatchTogetherRoom = true }
-        }
     }
 }
 
