@@ -12,60 +12,66 @@ struct AchievementHeroCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
-            // 1. Avatar Hexagon - Thu nhỏ để cân đối
+            // Avatar Hexagon
             ZStack {
+                // Outer Glow (Lớp sáng lan tỏa)
                 HexagonShape()
-                    .stroke(Color.white.opacity(0.2), lineWidth: 4)
-                    .blur(radius: 10)
-                    .frame(width: 80, height: 88)
+                    .stroke(Color.white.opacity(0.25), lineWidth: 6)
+                    .blur(radius: 12)
+                    .frame(width: 82, height: 90)
                 
+                // Inner Base
                 HexagonShape()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.08, green: 0.08, blue: 0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                    .fill(Color.black.opacity(0.6)) // Làm nền tối cho Avatar
+                    .frame(width: 82, height: 90)
+                
+                // Viền chính
+                HexagonShape()
+                    .stroke(
+                        LinearGradient(colors: [Color.white.opacity(0.8), Color.white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 1.5
                     )
-                    .frame(width: 80, height: 88)
+                    .frame(width: 82, height: 90)
                 
+                // Inner Glow (Lớp viền mờ bên trong)
                 HexagonShape()
-                    .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
-                    .frame(width: 80, height: 88)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 3)
+                    .blur(radius: 3)
+                    .frame(width: 82, height: 90)
                 
-                // Icon
+                // Icon (Sẽ thay bằng SVG sau)
                 Image(systemName: "cat.fill")
-                    .font(.system(size: 34))
+                    .font(.system(size: 34, weight: .bold))
                     .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 2)
             }
             
-            // 2. Text Info
+            // Text Info
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Lv. 12")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.black.opacity(0.5)))
-                    Spacer()
-                }
+                // Level Badge
+                Text("Lv. 12")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.black.opacity(0.5)))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                 
                 Text("Pro Watcher")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 
                 Text("Top 18% người xem tích cực")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
                 
                 Spacer().frame(height: 4)
                 
-                // 3. Progress Bar
+                // Progress Bar
                 VStack(alignment: .leading, spacing: 4) {
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.12))
+                            .fill(Color.white.opacity(0.15))
                             .frame(height: 4)
                         Capsule()
                             .fill(Color.white)
@@ -90,13 +96,29 @@ struct AchievementHeroCard: View {
         }
         .padding(24)
         .background(
+            // 1. Lớp nền Glassmorphism
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color(red: 0.1, green: 0.1, blue: 0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.5), radius: 10, x: 0, y: 8)
+                .fill(.ultraThinMaterial.opacity(0.4)) // Nền kính mờ
+                .environment(\.colorScheme, .dark) // Ép chế độ Dark cho material
         )
+        .overlay(
+            // 2. Viền ngoài siêu mỏng (White Blur đứt đoạn)
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.3), location: 0.0),
+                            .init(color: .white.opacity(0.05), location: 0.3),
+                            .init(color: .white.opacity(0.0), location: 0.7),
+                            .init(color: .white.opacity(0.15), location: 1.0)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        )
+        // 3. Bóng đổ để tách khỏi nền
+        .shadow(color: .black.opacity(0.5), radius: 15, x: 0, y: 10)
     }
 }
