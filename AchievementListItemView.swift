@@ -19,8 +19,8 @@ struct AchievementListItemView: View {
                     .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
                     .frame(width: 48, height: 48)
                 
-                // Icon Shape (Đã được scale và căn giữa)
-                AnyView(item.iconShape)
+                // Icon Shape (Đã được scale và căn giữa) - SỬA LỖI DÙNG AnyShape
+                AnyShape(item.iconShape)
                     .fill(Color.white)
                     .frame(width: 22, height: 22)
             }
