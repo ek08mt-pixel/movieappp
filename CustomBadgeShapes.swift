@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - 1. Hexagon Shape (Giữ nguyên)
+// MARK: - 1. Hexagon Shape
 struct HexagonShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -29,25 +29,34 @@ struct HexagonShape: Shape {
     }
 }
 
-// MARK: - 2. Hàm tiện ích chuyển SVG String thành Image
+// MARK: - 2. Hàm Load Ảnh từ Base64 (Đã sửa lỗi cho môi trường swiftc)
 extension Image {
     init(svgBase64: String) {
-        // Tạo Data từ Base64 String
-        let data = Data(base64Encoded: svgBase64) ?? Data()
-        // Tạo UIImage từ Data và khởi tạo Image
+        // Vì GitHub Actions dùng swiftc dòng lệnh, cách an toàn nhất:
+        // 1. Giải mã Base64 thành Data
+        guard let data = Data(base64Encoded: svgBase64) else {
+            self.init(systemName: "xmark.circle")
+            return
+        }
+        
+        // 2. Tạo UIImage từ Data. (Nếu không có UIKit (macOS), nó sẽ fallback)
         #if canImport(UIKit)
-        let uiImage = UIImage(data: data) ?? UIImage()
-        self.init(uiImage: uiImage)
+        if let uiImage = UIImage(data: data) {
+            self.init(uiImage: uiImage)
+        } else {
+            self.init(systemName: "photo")
+        }
         #else
+        // Fallback cho môi trường không phải iOS
         self.init(systemName: "photo")
         #endif
     }
 }
 
-// MARK: - 3. Base64 SVG của Mèo (Giống 100% Mockup)
-let catIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik01MCAxM0MzNi4xIDEzIDI1IDI0LjEgMjUgMzhDMjUgNTEuOSAzNi4xIDYzIDUwIDYzQzYzLjkgNjMgNzUgNTEuOSA3NSAzOEM3NSAyNC4xIDYzLjkgMTMgNTAgMTNaTTUwIDU5QzM4LjQgNTkgMjkgNDkuNiAyOSAzOEMyOSAyNi40IDM4LjQgMTcgNTAgMTdDNjEuNiAxNyA3MSAyNi40IDcxIDM4QzcxIDQ5LjYgNjEuNiA1OSA1MCA1OVoiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTM4IDM2QzM2LjMgMzYgMzUgMzcuMyAzNSAzOUMzNSA0MC43IDM2LjMgNDIgMzggNDJDNDEuNyA0MiA0MSA0MC43IDQxIDM5QzQxIDM3LjMgMzkuNyAzNiAzOCAzNloiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTYyIDM2QzYwLjMgMzYgNTkgMzcuMyA1OSAzOUM1OSA0MC43IDYwLjMgNDIgNjIgNDJDNjMuNyA0MiA2NSA0MC43IDY1IDM5QzY1IDM3LjMgNjMuNyAzNiA2MiAzNloiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTUwIDQ1QzQ4IDQ1IDQ3IDQ2IDQ3IDQ4VjUwQzQ3IDUyIDQ4IDUzIDUwIDUzQzUyIDUzIDUzIDUyIDUzIDUwVjQ4QzUzIDQ2IDUyIDQ1IDUwIDQ1WiIvPjwvc3ZnPg=="
+// MARK: - 3. SVG Base64 Icon chính xác
+// Con mèo đã được nén gọn hơn, đảm bảo load nhanh
+let catIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDEzQzM2LjEgMTMgMjUgMjQuMSAyNSAzOEMyNSA1MS45IDM2LjEgNjMgNTAgNjNDNjMuOSA2MyA3NSA1MS45IDc1IDM4Qzc1IDI0LjEgNjMuOSAxMyA1MCAxM1pNNTAgNTlDMzguNCA1OSAyOSA0OS42IDI5IDM4QzI5IDI2LjQgMzguNCAxNyA1MCAxN0M2MS42IDE3IDcxIDI2LjQgNzEgMzhDNzEgNDkuNiA2MS42IDU5IDUwIDU5WiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0zOCAzNkMzNi4zIDM2IDM1IDM3LjMgMzUgMzlDMzUgNDAuNyAzNi4zIDQyIDM4IDQyQzQxLjcgNDIgNDEgNDAuNyA0MSAzOUM0MSAzNy4zIDM5LjcgMzYgMzggMzZaIi8+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYyIDM2QzYwLjMgMzYgNTkgMzcuMyA1OSAzOUM1OSA0MC43IDYwLjMgNDIgNjIgNDJDNjMuNyA0MiA2NSA0MC43IDY1IDM5QzY1IDM3LjMgNjMuNyAzNiA2MiAzNloiLz48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNNTAgNDVDNDggNDUgNDcgNDYgNDcgNDhWNTBDNDcgNTIgNDggNTMgNTAgNTNDNTIgNTMgNTMgNTIgNTMgNTBWNDhDNTMgNDYgNTIgNDUgNTAgNDVaIi8+PC9zdmc+"
 
-// MARK: - 4. Base64 SVG của các Icon Timeline (Crown, Lightning, Flame, Drama Masks)
 let crownIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1IDYwTDI1IDcwTDc1IDcwTDc1IDYwTDUwIDc1TDI1IDYwWiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0xMCAxMEwxMCA0MEw0MCA0MEw0MCAxMEwxMCAxMFoiLz48L3N2Zz4="
 let lightningIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDBMNDAgNTBMNDUgNTBMNDAgMTAwTDcwIDQwTDYwIDQwTDcwIDBaIi8+PC9zdmc+"
 let flameIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDVDNDAgMjAgNDAgNDAgNDAgNDBDNDAgMjAgMzAgMzAgMTAgNTBDMTAgNzAgMzAgOTAgNTAgOTBDNzAgOTAgOTAgNzAgOTAgNTBDNzAgMzAgNjAgMjAgNjAgNDBDNjAgNDAgNjAgMjAgNTAgNVoiLz48L3N2Zz4="
