@@ -18,8 +18,7 @@ struct AchievementHeroCard: View {
                 HexagonShape().fill(LinearGradient(colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.05)], startPoint: .top, endPoint: .bottom)).frame(width: 88, height: 96)
                 HexagonShape().stroke(LinearGradient(colors: [.white.opacity(0.9), .white.opacity(0.1), .white.opacity(0.0), .white.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5).frame(width: 88, height: 96)
                 
-                SVGIcon(svgString: catSVG)
-                    .frame(width: 40, height: 40)
+                CatShape().fill(Color.white).frame(width: 40, height: 40)
                 
                 Circle().fill(Color.white.opacity(0.7)).frame(width: 3, height: 3).offset(x: -42, y: -30)
                 Circle().fill(Color.white.opacity(0.4)).frame(width: 2, height: 2).offset(x: 38, y: -28)
