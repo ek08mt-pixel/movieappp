@@ -14,15 +14,15 @@ struct AchievementTimelineRow: View {
     private let badgeSize: CGFloat = 44
     private let spacing: CGFloat = 6
     
-    func iconForStage(_ title: String) -> any Shape {
+    func iconForStage(_ title: String) -> String {
         switch title {
-        case "Newbie": return CrownIcon()
-        case "Enthusiast": return LightningIcon()
-        case "Fanatic": return FlameIcon()
-        case "Pro Watcher": return ProCatIcon()
-        case "Master": return CrownIcon()
-        case "Legend": return CrownIcon()
-        default: return CrownIcon()
+        case "Newbie": return crownIconSVG
+        case "Enthusiast": return lightningIconSVG
+        case "Fanatic": return flameIconSVG
+        case "Pro Watcher": return catIconSVG
+        case "Master": return crownIconSVG
+        case "Legend": return crownIconSVG
+        default: return crownIconSVG
         }
     }
     
@@ -68,10 +68,12 @@ struct AchievementTimelineRow: View {
                                             .stroke(isActive ? Color.white : (isCompleted ? Color.white.opacity(0.3) : Color.white.opacity(0.05)), lineWidth: isActive ? 2 : 1)
                                             .frame(width: badgeSize, height: badgeSize + 4)
                                         
-                                        // Icon (Custom Shape)
-                                        AnyShape(iconForStage(stage.title))
-                                            .fill(isActive ? .white : (isCompleted ? .white.opacity(0.8) : .white.opacity(0.1)))
+                                        // Icon (Render từ Base64 String)
+                                        Image(svgBase64: iconForStage(stage.title))
+                                            .resizable()
+                                            .scaledToFit()
                                             .frame(width: 18, height: 18)
+                                            .opacity(isActive ? 1.0 : (isCompleted ? 0.8 : 0.1))
                                         
                                         if isActive {
                                             HexagonShape()
