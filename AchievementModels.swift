@@ -13,10 +13,10 @@ enum Rank: String, CaseIterable, Codable {
     
     var shortName: String {
         switch self {
-        case .newbie: return "Newbie"
-        case .explorer: return "Explorer"
-        case .movieFan: return "Movie Fan"
-        case .enthusiast: return "Enthusiast"
+        case .newbie: return "NEWBIE"
+        case .explorer: return "EXPLORER"
+        case .movieFan: return "FAN"
+        case .enthusiast: return "ENTHUSIAST"
         case .proWatcher: return "PRO"
         case .master: return "MASTER"
         case .legend: return "LEGEND"
@@ -47,19 +47,6 @@ enum Rank: String, CaseIterable, Codable {
         case .master: return 5000
         case .legend: return 10000
         case .mythic: return 20000
-        }
-    }
-    
-    var badgeEmoji: String {
-        switch self {
-        case .newbie: return "🐱"
-        case .explorer: return "😺"
-        case .movieFan: return "😸"
-        case .enthusiast: return "😼"
-        case .proWatcher: return "😎"
-        case .master: return "👑"
-        case .legend: return "🌟"
-        case .mythic: return "🔥"
         }
     }
     
@@ -120,7 +107,6 @@ struct AchievementTier: Codable, Identifiable {
     let achievementId: String
     let tier: Int
     let name: String
-    let icon: String
     let requirement: Int
     let description: String
     let vibe: String
@@ -134,7 +120,6 @@ struct AchievementDefinition: Codable, Identifiable {
     let id: String
     let category: AchievementCategory
     let title: String
-    let icon: String
     let tiers: [AchievementTier]
     
     func currentTier(progress: Int) -> AchievementTier? {
@@ -205,80 +190,80 @@ struct UserRankData: Codable {
     }
 }
 
-// MARK: - Achievement Data (Static Definitions)
+// MARK: - Achievement Data (Static Definitions - no emoji)
 struct AchievementData {
     static let all: [AchievementDefinition] = [
-        AchievementDefinition(id: "movie_buff", category: .watching, title: "Cày Phim", icon: "🎬", tiers: [
-            AchievementTier(achievementId: "movie_buff", tier: 1, name: "Mới tập cày", icon: "🐱", requirement: 10, description: "Xem 10 phim", vibe: "Chân ái vừa bắt đầu"),
-            AchievementTier(achievementId: "movie_buff", tier: 2, name: "Cày khá", icon: "😺", requirement: 50, description: "Xem 50 phim", vibe: "Đã biết mùi phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 3, name: "Cày xuyên đêm", icon: "😸", requirement: 100, description: "Xem 100 phim", vibe: "Ngủ làm gì khi còn phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 4, name: "Cày bất chấp", icon: "😼", requirement: 250, description: "Xem 250 phim", vibe: "Mưa bão cũng không ngăn được"),
-            AchievementTier(achievementId: "movie_buff", tier: 5, name: "Cày thủng nóc", icon: "😎", requirement: 500, description: "Xem 500 phim", vibe: "Server phim sợ bạn rồi"),
-            AchievementTier(achievementId: "movie_buff", tier: 6, name: "Cày xuyên không gian", icon: "👑", requirement: 1000, description: "Xem 1.000 phim", vibe: "Không gian 4 chiều cũng cày"),
-            AchievementTier(achievementId: "movie_buff", tier: 7, name: "Cày Vip Pro Max", icon: "🔥", requirement: 2500, description: "Xem 2.500 phim", vibe: "Bạn chính là phim")
+        AchievementDefinition(id: "movie_buff", category: .watching, title: "Cày Phim", tiers: [
+            AchievementTier(achievementId: "movie_buff", tier: 1, name: "Mới tập cày", requirement: 10, description: "Xem 10 phim", vibe: "Chân ái vừa bắt đầu"),
+            AchievementTier(achievementId: "movie_buff", tier: 2, name: "Cày khá", requirement: 50, description: "Xem 50 phim", vibe: "Đã biết mùi phim"),
+            AchievementTier(achievementId: "movie_buff", tier: 3, name: "Cày xuyên đêm", requirement: 100, description: "Xem 100 phim", vibe: "Ngủ làm gì khi còn phim"),
+            AchievementTier(achievementId: "movie_buff", tier: 4, name: "Cày bất chấp", requirement: 250, description: "Xem 250 phim", vibe: "Mưa bão cũng không ngăn được"),
+            AchievementTier(achievementId: "movie_buff", tier: 5, name: "Cày thủng nóc", requirement: 500, description: "Xem 500 phim", vibe: "Server phim sợ bạn rồi"),
+            AchievementTier(achievementId: "movie_buff", tier: 6, name: "Cày xuyên không gian", requirement: 1000, description: "Xem 1.000 phim", vibe: "Không gian 4 chiều cũng cày"),
+            AchievementTier(achievementId: "movie_buff", tier: 7, name: "Cày Vip Pro Max", requirement: 2500, description: "Xem 2.500 phim", vibe: "Bạn chính là phim")
         ]),
-        AchievementDefinition(id: "marathon", category: .streak, title: "Marathon", icon: "⚡", tiers: [
-            AchievementTier(achievementId: "marathon", tier: 1, name: "Chạy đà", icon: "🐱", requirement: 2, description: "2 phim liên tục", vibe: "Khởi động nhẹ"),
-            AchievementTier(achievementId: "marathon", tier: 2, name: "Chạy nước rút", icon: "😺", requirement: 5, description: "5 phim liên tục", vibe: "Pin còn 1% vẫn chiến"),
-            AchievementTier(achievementId: "marathon", tier: 3, name: "Chạy marathon", icon: "😼", requirement: 10, description: "10 phim liên tục", vibe: "Đã quên mùi ánh sáng mặt trời"),
-            AchievementTier(achievementId: "marathon", tier: 4, name: "Ultra Marathon", icon: "😎", requirement: 20, description: "20 phim liên tục", vibe: "Bạn là cỗ máy không cần ngủ"),
-            AchievementTier(achievementId: "marathon", tier: 5, name: "Marathon Huyền Thoại", icon: "🌟", requirement: 50, description: "50 phim liên tục", vibe: "Cơ thể bạn giờ là Netflix")
+        AchievementDefinition(id: "marathon", category: .streak, title: "Marathon", tiers: [
+            AchievementTier(achievementId: "marathon", tier: 1, name: "Chạy đà", requirement: 2, description: "2 phim liên tục", vibe: "Khởi động nhẹ"),
+            AchievementTier(achievementId: "marathon", tier: 2, name: "Chạy nước rút", requirement: 5, description: "5 phim liên tục", vibe: "Pin còn 1% vẫn chiến"),
+            AchievementTier(achievementId: "marathon", tier: 3, name: "Chạy marathon", requirement: 10, description: "10 phim liên tục", vibe: "Đã quên mùi ánh sáng mặt trời"),
+            AchievementTier(achievementId: "marathon", tier: 4, name: "Ultra Marathon", requirement: 20, description: "20 phim liên tục", vibe: "Bạn là cỗ máy không cần ngủ"),
+            AchievementTier(achievementId: "marathon", tier: 5, name: "Marathon Huyền Thoại", requirement: 50, description: "50 phim liên tục", vibe: "Cơ thể bạn giờ là Netflix")
         ]),
-        AchievementDefinition(id: "night_owl", category: .time, title: "Cú Đêm", icon: "🌙", tiers: [
-            AchievementTier(achievementId: "night_owl", tier: 1, name: "Cú non", icon: "🐱", requirement: 5, description: "Xem sau 22h 5 lần", vibe: "Mới tập thức đêm"),
-            AchievementTier(achievementId: "night_owl", tier: 2, name: "Cú trưởng thành", icon: "😺", requirement: 20, description: "Xem sau 22h 20 lần", vibe: "Đêm là nhà"),
-            AchievementTier(achievementId: "night_owl", tier: 3, name: "Cú chiến", icon: "😼", requirement: 50, description: "Xem sau 22h 50 lần", vibe: "Quên mất mặt trời mọc hướng nào"),
-            AchievementTier(achievementId: "night_owl", tier: 4, name: "Cú tinh anh", icon: "😎", requirement: 100, description: "Xem sau 22h 100 lần", vibe: "Cú đêm đỉnh cao"),
-            AchievementTier(achievementId: "night_owl", tier: 5, name: "Cú Vip Pro", icon: "🦉", requirement: 300, description: "Xem sau 22h 300 lần", vibe: "Bạn và bóng tối là một")
+        AchievementDefinition(id: "night_owl", category: .time, title: "Cú Đêm", tiers: [
+            AchievementTier(achievementId: "night_owl", tier: 1, name: "Cú non", requirement: 5, description: "Xem sau 22h 5 lần", vibe: "Mới tập thức đêm"),
+            AchievementTier(achievementId: "night_owl", tier: 2, name: "Cú trưởng thành", requirement: 20, description: "Xem sau 22h 20 lần", vibe: "Đêm là nhà"),
+            AchievementTier(achievementId: "night_owl", tier: 3, name: "Cú chiến", requirement: 50, description: "Xem sau 22h 50 lần", vibe: "Quên mất mặt trời mọc hướng nào"),
+            AchievementTier(achievementId: "night_owl", tier: 4, name: "Cú tinh anh", requirement: 100, description: "Xem sau 22h 100 lần", vibe: "Cú đêm đỉnh cao"),
+            AchievementTier(achievementId: "night_owl", tier: 5, name: "Cú Vip Pro", requirement: 300, description: "Xem sau 22h 300 lần", vibe: "Bạn và bóng tối là một")
         ]),
-        AchievementDefinition(id: "horror_expert", category: .genre, title: "Thợ Săn Ma", icon: "👻", tiers: [
-            AchievementTier(achievementId: "horror_expert", tier: 1, name: "Sợ nhưng vẫn xem", icon: "🐱", requirement: 10, description: "10 phim kinh dị", vibe: "Núp chăn nhưng không tắt"),
-            AchievementTier(achievementId: "horror_expert", tier: 2, name: "Gan thép", icon: "😼", requirement: 30, description: "30 phim kinh dị", vibe: "Ma còn sợ bạn"),
-            AchievementTier(achievementId: "horror_expert", tier: 3, name: "Thợ săn ma", icon: "😎", requirement: 50, description: "50 phim kinh dị", vibe: "Không con ma nào dám hù"),
-            AchievementTier(achievementId: "horror_expert", tier: 4, name: "Ma Vương", icon: "👑", requirement: 100, description: "100 phim kinh dị", vibe: "Bạn là trùm cuối")
+        AchievementDefinition(id: "horror_expert", category: .genre, title: "Thợ Săn Ma", tiers: [
+            AchievementTier(achievementId: "horror_expert", tier: 1, name: "Sợ nhưng vẫn xem", requirement: 10, description: "10 phim kinh dị", vibe: "Núp chăn nhưng không tắt"),
+            AchievementTier(achievementId: "horror_expert", tier: 2, name: "Gan thép", requirement: 30, description: "30 phim kinh dị", vibe: "Ma còn sợ bạn"),
+            AchievementTier(achievementId: "horror_expert", tier: 3, name: "Thợ săn ma", requirement: 50, description: "50 phim kinh dị", vibe: "Không con ma nào dám hù"),
+            AchievementTier(achievementId: "horror_expert", tier: 4, name: "Ma Vương", requirement: 100, description: "100 phim kinh dị", vibe: "Bạn là trùm cuối")
         ]),
-        AchievementDefinition(id: "comedy_king", category: .genre, title: "Vua Hài", icon: "😂", tiers: [
-            AchievementTier(achievementId: "comedy_king", tier: 1, name: "Cười mỉm", icon: "🐱", requirement: 10, description: "10 phim hài", vibe: "Mới cười nhẹ"),
-            AchievementTier(achievementId: "comedy_king", tier: 2, name: "Cười sảng khoái", icon: "😸", requirement: 30, description: "30 phim hài", vibe: "Cơ bụng đã săn chắc"),
-            AchievementTier(achievementId: "comedy_king", tier: 3, name: "Cười ra nước mắt", icon: "😎", requirement: 50, description: "50 phim hài", vibe: "Hàng xóm tưởng bạn điên"),
-            AchievementTier(achievementId: "comedy_king", tier: 4, name: "Vua Hài", icon: "👑", requirement: 100, description: "100 phim hài", vibe: "Bạn chính là joke")
+        AchievementDefinition(id: "comedy_king", category: .genre, title: "Vua Hài", tiers: [
+            AchievementTier(achievementId: "comedy_king", tier: 1, name: "Cười mỉm", requirement: 10, description: "10 phim hài", vibe: "Mới cười nhẹ"),
+            AchievementTier(achievementId: "comedy_king", tier: 2, name: "Cười sảng khoái", requirement: 30, description: "30 phim hài", vibe: "Cơ bụng đã săn chắc"),
+            AchievementTier(achievementId: "comedy_king", tier: 3, name: "Cười ra nước mắt", requirement: 50, description: "50 phim hài", vibe: "Hàng xóm tưởng bạn điên"),
+            AchievementTier(achievementId: "comedy_king", tier: 4, name: "Vua Hài", requirement: 100, description: "100 phim hài", vibe: "Bạn chính là joke")
         ]),
-        AchievementDefinition(id: "drama_master", category: .genre, title: "Thánh Drama", icon: "😭", tiers: [
-            AchievementTier(achievementId: "drama_master", tier: 1, name: "Xem drama sơ cấp", icon: "🐱", requirement: 10, description: "10 phim Drama", vibe: "Mới rơi vài giọt"),
-            AchievementTier(achievementId: "drama_master", tier: 2, name: "Drama trung cấp", icon: "😼", requirement: 30, description: "30 phim Drama", vibe: "Khăn giấy đã hết hộp thứ 3"),
-            AchievementTier(achievementId: "drama_master", tier: 3, name: "Thánh Drama", icon: "😎", requirement: 50, description: "50 phim Drama", vibe: "Mắt lúc nào cũng ướt"),
-            AchievementTier(achievementId: "drama_master", tier: 4, name: "Drama Vip Pro", icon: "👑", requirement: 100, description: "100 phim Drama", vibe: "Bạn là biển nước mắt")
+        AchievementDefinition(id: "drama_master", category: .genre, title: "Thánh Drama", tiers: [
+            AchievementTier(achievementId: "drama_master", tier: 1, name: "Xem drama sơ cấp", requirement: 10, description: "10 phim Drama", vibe: "Mới rơi vài giọt"),
+            AchievementTier(achievementId: "drama_master", tier: 2, name: "Drama trung cấp", requirement: 30, description: "30 phim Drama", vibe: "Khăn giấy đã hết hộp thứ 3"),
+            AchievementTier(achievementId: "drama_master", tier: 3, name: "Thánh Drama", requirement: 50, description: "50 phim Drama", vibe: "Mắt lúc nào cũng ướt"),
+            AchievementTier(achievementId: "drama_master", tier: 4, name: "Drama Vip Pro", requirement: 100, description: "100 phim Drama", vibe: "Bạn là biển nước mắt")
         ]),
-        AchievementDefinition(id: "scifi_explorer", category: .genre, title: "Người Du Hành", icon: "🚀", tiers: [
-            AchievementTier(achievementId: "scifi_explorer", tier: 1, name: "Du hành tập sự", icon: "🐱", requirement: 10, description: "10 phim Sci-Fi", vibe: "Vừa rời bệ phóng"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 2, name: "Du hành liên hành tinh", icon: "😼", requirement: 30, description: "30 phim Sci-Fi", vibe: "Bay qua sao Hỏa như đi chợ"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 3, name: "Du hành liên thiên hà", icon: "😎", requirement: 50, description: "50 phim Sci-Fi", vibe: "Black hole cũng né bạn"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 4, name: "Chúa tể vũ trụ", icon: "👑", requirement: 100, description: "100 phim Sci-Fi", vibe: "Bạn sở hữu dải ngân hà")
+        AchievementDefinition(id: "scifi_explorer", category: .genre, title: "Người Du Hành", tiers: [
+            AchievementTier(achievementId: "scifi_explorer", tier: 1, name: "Du hành tập sự", requirement: 10, description: "10 phim Sci-Fi", vibe: "Vừa rời bệ phóng"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 2, name: "Du hành liên hành tinh", requirement: 30, description: "30 phim Sci-Fi", vibe: "Bay qua sao Hỏa như đi chợ"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 3, name: "Du hành liên thiên hà", requirement: 50, description: "50 phim Sci-Fi", vibe: "Black hole cũng né bạn"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 4, name: "Chúa tể vũ trụ", requirement: 100, description: "100 phim Sci-Fi", vibe: "Bạn sở hữu dải ngân hà")
         ]),
-        AchievementDefinition(id: "romance_lover", category: .genre, title: "Tình Yêu Vô Cực", icon: "❤️", tiers: [
-            AchievementTier(achievementId: "romance_lover", tier: 1, name: "Tim rung nhẹ", icon: "🐱", requirement: 10, description: "10 phim tình cảm", vibe: "Crush vẫn chưa rep"),
-            AchievementTier(achievementId: "romance_lover", tier: 2, name: "Yêu say đắm", icon: "😸", requirement: 30, description: "30 phim tình cảm", vibe: "Đã có người yêu trong mơ"),
-            AchievementTier(achievementId: "romance_lover", tier: 3, name: "Tình yêu bất diệt", icon: "😎", requirement: 50, description: "50 phim tình cảm", vibe: "Yêu nhiều hơn cả Romeo"),
-            AchievementTier(achievementId: "romance_lover", tier: 4, name: "Thánh Tình Yêu", icon: "👑", requirement: 100, description: "100 phim tình cảm", vibe: "Cả thế giới yêu bạn")
+        AchievementDefinition(id: "romance_lover", category: .genre, title: "Tình Yêu Vô Cực", tiers: [
+            AchievementTier(achievementId: "romance_lover", tier: 1, name: "Tim rung nhẹ", requirement: 10, description: "10 phim tình cảm", vibe: "Crush vẫn chưa rep"),
+            AchievementTier(achievementId: "romance_lover", tier: 2, name: "Yêu say đắm", requirement: 30, description: "30 phim tình cảm", vibe: "Đã có người yêu trong mơ"),
+            AchievementTier(achievementId: "romance_lover", tier: 3, name: "Tình yêu bất diệt", requirement: 50, description: "50 phim tình cảm", vibe: "Yêu nhiều hơn cả Romeo"),
+            AchievementTier(achievementId: "romance_lover", tier: 4, name: "Thánh Tình Yêu", requirement: 100, description: "100 phim tình cảm", vibe: "Cả thế giới yêu bạn")
         ]),
-        AchievementDefinition(id: "watch_time", category: .time, title: "Thời Gian Cày", icon: "⏱", tiers: [
-            AchievementTier(achievementId: "watch_time", tier: 1, name: "10 giờ", icon: "🐱", requirement: 600, description: "Xem 10 giờ", vibe: "Một ngày làm việc"),
-            AchievementTier(achievementId: "watch_time", tier: 2, name: "50 giờ", icon: "😺", requirement: 3000, description: "Xem 50 giờ", vibe: "Hơn 2 ngày không ngủ"),
-            AchievementTier(achievementId: "watch_time", tier: 3, name: "100 giờ", icon: "😼", requirement: 6000, description: "Xem 100 giờ", vibe: "Một tuần biến mất"),
-            AchievementTier(achievementId: "watch_time", tier: 4, name: "300 giờ", icon: "😎", requirement: 18000, description: "Xem 300 giờ", vibe: "Nửa tháng trong bóng tối"),
-            AchievementTier(achievementId: "watch_time", tier: 5, name: "1000 giờ", icon: "👑", requirement: 60000, description: "Xem 1000 giờ", vibe: "Bạn đã dành cả thanh xuân")
+        AchievementDefinition(id: "watch_time", category: .time, title: "Thời Gian Cày", tiers: [
+            AchievementTier(achievementId: "watch_time", tier: 1, name: "10 giờ", requirement: 600, description: "Xem 10 giờ", vibe: "Một ngày làm việc"),
+            AchievementTier(achievementId: "watch_time", tier: 2, name: "50 giờ", requirement: 3000, description: "Xem 50 giờ", vibe: "Hơn 2 ngày không ngủ"),
+            AchievementTier(achievementId: "watch_time", tier: 3, name: "100 giờ", requirement: 6000, description: "Xem 100 giờ", vibe: "Một tuần biến mất"),
+            AchievementTier(achievementId: "watch_time", tier: 4, name: "300 giờ", requirement: 18000, description: "Xem 300 giờ", vibe: "Nửa tháng trong bóng tối"),
+            AchievementTier(achievementId: "watch_time", tier: 5, name: "1000 giờ", requirement: 60000, description: "Xem 1000 giờ", vibe: "Bạn đã dành cả thanh xuân")
         ]),
-        AchievementDefinition(id: "christmas", category: .event, title: "Giáng Sinh", icon: "🎁", tiers: [
-            AchievementTier(achievementId: "christmas", tier: 1, name: "Ông già Noel", icon: "🎅", requirement: 1, description: "Xem phim vào Giáng sinh", vibe: "Quà là phim")
+        AchievementDefinition(id: "christmas", category: .event, title: "Giáng Sinh", tiers: [
+            AchievementTier(achievementId: "christmas", tier: 1, name: "Ông già Noel", requirement: 1, description: "Xem phim vào Giáng sinh", vibe: "Quà là phim")
         ]),
-        AchievementDefinition(id: "halloween", category: .event, title: "Halloween", icon: "🎃", tiers: [
-            AchievementTier(achievementId: "halloween", tier: 1, name: "Ma đói", icon: "👻", requirement: 1, description: "Xem phim vào Halloween", vibe: "Trick or treat là xem phim")
+        AchievementDefinition(id: "halloween", category: .event, title: "Halloween", tiers: [
+            AchievementTier(achievementId: "halloween", tier: 1, name: "Ma đói", requirement: 1, description: "Xem phim vào Halloween", vibe: "Trick or treat là xem phim")
         ]),
-        AchievementDefinition(id: "valentine", category: .event, title: "Valentine", icon: "💝", tiers: [
-            AchievementTier(achievementId: "valentine", tier: 1, name: "Trái tim cô đơn", icon: "💔", requirement: 1, description: "Xem phim vào Valentine", vibe: "Phim là người yêu")
+        AchievementDefinition(id: "valentine", category: .event, title: "Valentine", tiers: [
+            AchievementTier(achievementId: "valentine", tier: 1, name: "Trái tim cô đơn", requirement: 1, description: "Xem phim vào Valentine", vibe: "Phim là người yêu")
         ]),
-        AchievementDefinition(id: "new_year", category: .event, title: "Năm Mới", icon: "🎆", tiers: [
-            AchievementTier(achievementId: "new_year", tier: 1, name: "Pháo hoa đầu năm", icon: "🎇", requirement: 1, description: "Xem phim vào năm mới", vibe: "New year, new phim")
+        AchievementDefinition(id: "new_year", category: .event, title: "Năm Mới", tiers: [
+            AchievementTier(achievementId: "new_year", tier: 1, name: "Pháo hoa đầu năm", requirement: 1, description: "Xem phim vào năm mới", vibe: "New year, new phim")
         ])
     ]
 }
