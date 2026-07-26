@@ -36,11 +36,21 @@ struct AchievementListItemView: View {
             }
             .padding(14)
             .background(Color(red: 0.08, green: 0.08, blue: 0.08))
+            
+            // === QUAN TRỌNG: Viền sáng đứt quãng (Glass Highlight) ===
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(
-                        LinearGradient(stops: [.init(color: .white.opacity(0.4), location: 0.3), .init(color: .white.opacity(0.0), location: 0.8)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.5), location: 0.0),
+                                .init(color: .white.opacity(0.1), location: 0.3),
+                                .init(color: .clear, location: 0.8)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
                     )
             )
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 2).blur(radius: 4))
