@@ -51,35 +51,37 @@ struct ProfileView: View {
                             .padding(.horizontal, 30)
                         
                         // Danh hiệu button
-                        Button {
-                            showAchievements = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text("🏆")
-                                    .font(.system(size: 22))
-                                Text("Danh hiệu")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text("Pro Watcher")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color(red: 0.0, green: 0.8, blue: 1.0))
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial.opacity(0.3))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                                    )
-                            )
-                        }
-                        .padding(.horizontal, 30)
+Button {
+    AchievementManager.shared.refresh(from: appState)
+    showAchievements = true
+} label: {
+    HStack(spacing: 10) {
+        Text("🏆")
+            .font(.system(size: 22))
+        Text("Danh hiệu")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.white)
+        Spacer()
+        let rank = AchievementManager.shared.userRankData.currentRank
+        Text(rank.shortName)
+            .font(.system(size: 12))
+            .foregroundColor(rank.color)
+        Text("›")
+            .font(.system(size: 16, weight: .light))
+            .foregroundColor(.gray)
+    }
+    .padding(.horizontal, 20)
+    .padding(.vertical, 14)
+    .background(
+        RoundedRectangle(cornerRadius: 16)
+            .fill(.ultraThinMaterial.opacity(0.3))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
+            )
+    )
+}
+.padding(.horizontal, 30)
                         
                         Button { withAnimation { appState.logout() } } label: { Text("Đăng xuất").font(.caption).fontWeight(.medium).foregroundColor(.red).padding(.horizontal, 24).padding(.vertical, 10).background(Capsule().stroke(Color.red.opacity(0.4), lineWidth: 1)) }
                     } else {
