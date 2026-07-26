@@ -2,14 +2,27 @@ import SwiftUI
 
 // MARK: - Rank System
 enum Rank: String, CaseIterable, Codable {
-    case newbie = "Newbie"
-    case explorer = "Explorer"
-    case movieFan = "Movie Fan"
-    case enthusiast = "Enthusiast"
-    case proWatcher = "Pro Watcher"
-    case master = "Master"
-    case legend = "Legend"
-    case mythic = "Mythic"
+    case newbie = "Mèo Tập Xem"
+    case explorer = "Mèo Khám Phá"
+    case movieFan = "Mèo Cày Phim"
+    case enthusiast = "Mèo Nghiện Phim"
+    case proWatcher = "Mèo Pro"
+    case master = "Mèo Đại Sư"
+    case legend = "Mèo Huyền Thoại"
+    case mythic = "Mèo Thần Thoại"
+    
+    var shortName: String {
+        switch self {
+        case .newbie: return "Newbie"
+        case .explorer: return "Explorer"
+        case .movieFan: return "Movie Fan"
+        case .enthusiast: return "Enthusiast"
+        case .proWatcher: return "PRO"
+        case .master: return "MASTER"
+        case .legend: return "LEGEND"
+        case .mythic: return "MYTHIC"
+        }
+    }
     
     var level: Int {
         switch self {
@@ -27,23 +40,23 @@ enum Rank: String, CaseIterable, Codable {
     var xpRequired: Int {
         switch self {
         case .newbie: return 0
-        case .explorer: return 100
-        case .movieFan: return 350
-        case .enthusiast: return 800
-        case .proWatcher: return 1500
-        case .master: return 3000
-        case .legend: return 6000
-        case .mythic: return 12000
+        case .explorer: return 150
+        case .movieFan: return 500
+        case .enthusiast: return 1200
+        case .proWatcher: return 2500
+        case .master: return 5000
+        case .legend: return 10000
+        case .mythic: return 20000
         }
     }
     
-    var icon: String {
+    var badgeEmoji: String {
         switch self {
-        case .newbie: return "🥚"
-        case .explorer: return "🥉"
-        case .movieFan: return "🥈"
-        case .enthusiast: return "🥇"
-        case .proWatcher: return "💎"
+        case .newbie: return "🐱"
+        case .explorer: return "😺"
+        case .movieFan: return "😸"
+        case .enthusiast: return "😼"
+        case .proWatcher: return "😎"
         case .master: return "👑"
         case .legend: return "🌟"
         case .mythic: return "🔥"
@@ -52,14 +65,40 @@ enum Rank: String, CaseIterable, Codable {
     
     var color: Color {
         switch self {
-        case .newbie: return .gray
-        case .explorer: return Color(red: 0.8, green: 0.5, blue: 0.2)
-        case .movieFan: return Color(white: 0.75)
-        case .enthusiast: return Color(red: 1.0, green: 0.84, blue: 0.0)
-        case .proWatcher: return Color(red: 0.0, green: 0.8, blue: 1.0)
-        case .master: return Color(red: 0.8, green: 0.2, blue: 0.8)
-        case .legend: return Color(red: 1.0, green: 0.6, blue: 0.0)
-        case .mythic: return Color(red: 1.0, green: 0.2, blue: 0.2)
+        case .newbie: return Color(white: 0.5)
+        case .explorer: return Color(red: 0.8, green: 0.55, blue: 0.25)
+        case .movieFan: return Color(red: 0.7, green: 0.7, blue: 0.75)
+        case .enthusiast: return Color(red: 1.0, green: 0.85, blue: 0.1)
+        case .proWatcher: return Color(red: 0.0, green: 0.75, blue: 0.95)
+        case .master: return Color(red: 0.7, green: 0.2, blue: 0.9)
+        case .legend: return Color(red: 1.0, green: 0.55, blue: 0.0)
+        case .mythic: return Color(red: 1.0, green: 0.15, blue: 0.2)
+        }
+    }
+    
+    var glowColor: Color {
+        switch self {
+        case .newbie: return .clear
+        case .explorer: return color.opacity(0.3)
+        case .movieFan: return color.opacity(0.35)
+        case .enthusiast: return color.opacity(0.4)
+        case .proWatcher: return color.opacity(0.5)
+        case .master: return color.opacity(0.55)
+        case .legend: return color.opacity(0.6)
+        case .mythic: return color.opacity(0.7)
+        }
+    }
+    
+    var tagline: String {
+        switch self {
+        case .newbie: return "Vừa bắt đầu cuộc chơi"
+        case .explorer: return "Đang mò mẫm khám phá"
+        case .movieFan: return "Cày như không có ngày mai"
+        case .enthusiast: return "Nghiện tới mức không ngủ"
+        case .proWatcher: return "Pro thực sự rồi đấy"
+        case .master: return "Đẳng cấp đại sư"
+        case .legend: return "Tên tuổi lưu danh sử sách"
+        case .mythic: return "Cả vũ trụ biết tên bạn"
         }
     }
 }
@@ -67,12 +106,12 @@ enum Rank: String, CaseIterable, Codable {
 // MARK: - Achievement Category
 enum AchievementCategory: String, CaseIterable, Codable {
     case all = "Tất cả"
-    case watching = "Xem phim"
-    case genre = "Thể loại"
-    case time = "Thời gian"
-    case streak = "Liên tục"
-    case rare = "Hiếm"
-    case event = "Sự kiện"
+    case watching = "Cày Phim"
+    case genre = "Thể Loại"
+    case time = "Thời Gian"
+    case streak = "Xem Liên Tục"
+    case rare = "Hiếm Có"
+    case event = "Sự Kiện"
 }
 
 // MARK: - Achievement Tier
@@ -84,6 +123,7 @@ struct AchievementTier: Codable, Identifiable {
     let icon: String
     let requirement: Int
     let description: String
+    let vibe: String
     
     func isUnlocked(current: Int) -> Bool { current >= requirement }
     func progress(current: Int) -> Double { min(Double(current) / Double(requirement), 1.0) }
@@ -134,7 +174,7 @@ struct UserRankData: Codable {
     var level: Int {
         let baseXP = currentRank.xpRequired
         let nextXP = nextRank?.xpRequired ?? (currentRank.xpRequired * 2)
-        let range = nextXP - baseXP
+        let range = max(nextXP - baseXP, 1)
         let progress = totalXP - baseXP
         let levelsInRank: Int = {
             switch currentRank {
@@ -153,139 +193,92 @@ struct UserRankData: Codable {
     
     var percentile: Int {
         switch currentRank {
-        case .newbie: return 95
-        case .explorer: return 75
-        case .movieFan: return 55
-        case .enthusiast: return 35
-        case .proWatcher: return 18
-        case .master: return 8
-        case .legend: return 3
+        case .newbie: return 92
+        case .explorer: return 72
+        case .movieFan: return 50
+        case .enthusiast: return 30
+        case .proWatcher: return 15
+        case .master: return 6
+        case .legend: return 2
         case .mythic: return 1
         }
     }
 }
 
-// MARK: - Mock Data
-struct AchievementMockData {
-    static let achievements: [AchievementDefinition] = [
-        // Xem phim
-        AchievementDefinition(id: "movie_buff", category: .watching, title: "Movie Buff", icon: "🎬", tiers: [
-            AchievementTier(achievementId: "movie_buff", tier: 1, name: "Movie Buff I", icon: "🎬", requirement: 10, description: "Xem 10 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 2, name: "Movie Buff II", icon: "🍿", requirement: 50, description: "Xem 50 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 3, name: "Movie Buff III", icon: "🎥", requirement: 100, description: "Xem 100 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 4, name: "Movie Buff IV", icon: "📽", requirement: 250, description: "Xem 250 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 5, name: "Movie Buff V", icon: "🎞", requirement: 500, description: "Xem 500 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 6, name: "Movie Buff VI", icon: "🍿", requirement: 1000, description: "Xem 1.000 phim"),
-            AchievementTier(achievementId: "movie_buff", tier: 7, name: "Movie Buff VII", icon: "👑", requirement: 2500, description: "Xem 2.500 phim")
+// MARK: - Achievement Data (Static Definitions)
+struct AchievementData {
+    static let all: [AchievementDefinition] = [
+        AchievementDefinition(id: "movie_buff", category: .watching, title: "Cày Phim", icon: "🎬", tiers: [
+            AchievementTier(achievementId: "movie_buff", tier: 1, name: "Mới tập cày", icon: "🐱", requirement: 10, description: "Xem 10 phim", vibe: "Chân ái vừa bắt đầu"),
+            AchievementTier(achievementId: "movie_buff", tier: 2, name: "Cày khá", icon: "😺", requirement: 50, description: "Xem 50 phim", vibe: "Đã biết mùi phim"),
+            AchievementTier(achievementId: "movie_buff", tier: 3, name: "Cày xuyên đêm", icon: "😸", requirement: 100, description: "Xem 100 phim", vibe: "Ngủ làm gì khi còn phim"),
+            AchievementTier(achievementId: "movie_buff", tier: 4, name: "Cày bất chấp", icon: "😼", requirement: 250, description: "Xem 250 phim", vibe: "Mưa bão cũng không ngăn được"),
+            AchievementTier(achievementId: "movie_buff", tier: 5, name: "Cày thủng nóc", icon: "😎", requirement: 500, description: "Xem 500 phim", vibe: "Server phim sợ bạn rồi"),
+            AchievementTier(achievementId: "movie_buff", tier: 6, name: "Cày xuyên không gian", icon: "👑", requirement: 1000, description: "Xem 1.000 phim", vibe: "Không gian 4 chiều cũng cày"),
+            AchievementTier(achievementId: "movie_buff", tier: 7, name: "Cày Vip Pro Max", icon: "🔥", requirement: 2500, description: "Xem 2.500 phim", vibe: "Bạn chính là phim")
         ]),
-        AchievementDefinition(id: "first_movie", category: .watching, title: "First Movie", icon: "▶️", tiers: [
-            AchievementTier(achievementId: "first_movie", tier: 1, name: "First Movie", icon: "▶️", requirement: 1, description: "Xem phim đầu tiên")
-        ]),
-        
-        // Xem liên tục
         AchievementDefinition(id: "marathon", category: .streak, title: "Marathon", icon: "⚡", tiers: [
-            AchievementTier(achievementId: "marathon", tier: 1, name: "Marathon I", icon: "⚡", requirement: 2, description: "2 phim liên tục"),
-            AchievementTier(achievementId: "marathon", tier: 2, name: "Marathon II", icon: "⚡", requirement: 5, description: "5 phim liên tục"),
-            AchievementTier(achievementId: "marathon", tier: 3, name: "Marathon III", icon: "⚡", requirement: 10, description: "10 phim liên tục"),
-            AchievementTier(achievementId: "marathon", tier: 4, name: "Marathon IV", icon: "⚡", requirement: 20, description: "20 phim liên tục"),
-            AchievementTier(achievementId: "marathon", tier: 5, name: "Marathon V", icon: "⚡", requirement: 50, description: "50 phim liên tục")
+            AchievementTier(achievementId: "marathon", tier: 1, name: "Chạy đà", icon: "🐱", requirement: 2, description: "2 phim liên tục", vibe: "Khởi động nhẹ"),
+            AchievementTier(achievementId: "marathon", tier: 2, name: "Chạy nước rút", icon: "😺", requirement: 5, description: "5 phim liên tục", vibe: "Pin còn 1% vẫn chiến"),
+            AchievementTier(achievementId: "marathon", tier: 3, name: "Chạy marathon", icon: "😼", requirement: 10, description: "10 phim liên tục", vibe: "Đã quên mùi ánh sáng mặt trời"),
+            AchievementTier(achievementId: "marathon", tier: 4, name: "Ultra Marathon", icon: "😎", requirement: 20, description: "20 phim liên tục", vibe: "Bạn là cỗ máy không cần ngủ"),
+            AchievementTier(achievementId: "marathon", tier: 5, name: "Marathon Huyền Thoại", icon: "🌟", requirement: 50, description: "50 phim liên tục", vibe: "Cơ thể bạn giờ là Netflix")
         ]),
-        AchievementDefinition(id: "binge_master", category: .streak, title: "Binge Master", icon: "🍕", tiers: [
-            AchievementTier(achievementId: "binge_master", tier: 1, name: "Binge Master I", icon: "🍕", requirement: 3, description: "Xem liên tục 3 phim"),
-            AchievementTier(achievementId: "binge_master", tier: 2, name: "Binge Master II", icon: "🍕", requirement: 5, description: "Xem liên tục 5 phim"),
-            AchievementTier(achievementId: "binge_master", tier: 3, name: "Binge Master III", icon: "🍕", requirement: 10, description: "Xem liên tục 10 phim")
+        AchievementDefinition(id: "night_owl", category: .time, title: "Cú Đêm", icon: "🌙", tiers: [
+            AchievementTier(achievementId: "night_owl", tier: 1, name: "Cú non", icon: "🐱", requirement: 5, description: "Xem sau 22h 5 lần", vibe: "Mới tập thức đêm"),
+            AchievementTier(achievementId: "night_owl", tier: 2, name: "Cú trưởng thành", icon: "😺", requirement: 20, description: "Xem sau 22h 20 lần", vibe: "Đêm là nhà"),
+            AchievementTier(achievementId: "night_owl", tier: 3, name: "Cú chiến", icon: "😼", requirement: 50, description: "Xem sau 22h 50 lần", vibe: "Quên mất mặt trời mọc hướng nào"),
+            AchievementTier(achievementId: "night_owl", tier: 4, name: "Cú tinh anh", icon: "😎", requirement: 100, description: "Xem sau 22h 100 lần", vibe: "Cú đêm đỉnh cao"),
+            AchievementTier(achievementId: "night_owl", tier: 5, name: "Cú Vip Pro", icon: "🦉", requirement: 300, description: "Xem sau 22h 300 lần", vibe: "Bạn và bóng tối là một")
         ]),
-        
-        // Theo giờ
-        AchievementDefinition(id: "night_owl", category: .time, title: "Night Owl", icon: "🌙", tiers: [
-            AchievementTier(achievementId: "night_owl", tier: 1, name: "Night Owl I", icon: "🌙", requirement: 5, description: "Xem sau 22h 5 lần"),
-            AchievementTier(achievementId: "night_owl", tier: 2, name: "Night Owl II", icon: "🌙", requirement: 20, description: "Xem sau 22h 20 lần"),
-            AchievementTier(achievementId: "night_owl", tier: 3, name: "Night Owl III", icon: "🌙", requirement: 50, description: "Xem sau 22h 50 lần"),
-            AchievementTier(achievementId: "night_owl", tier: 4, name: "Night Owl IV", icon: "🌙", requirement: 100, description: "Xem sau 22h 100 lần"),
-            AchievementTier(achievementId: "night_owl", tier: 5, name: "Night Owl V", icon: "🌙", requirement: 300, description: "Xem sau 22h 300 lần")
+        AchievementDefinition(id: "horror_expert", category: .genre, title: "Thợ Săn Ma", icon: "👻", tiers: [
+            AchievementTier(achievementId: "horror_expert", tier: 1, name: "Sợ nhưng vẫn xem", icon: "🐱", requirement: 10, description: "10 phim kinh dị", vibe: "Núp chăn nhưng không tắt"),
+            AchievementTier(achievementId: "horror_expert", tier: 2, name: "Gan thép", icon: "😼", requirement: 30, description: "30 phim kinh dị", vibe: "Ma còn sợ bạn"),
+            AchievementTier(achievementId: "horror_expert", tier: 3, name: "Thợ săn ma", icon: "😎", requirement: 50, description: "50 phim kinh dị", vibe: "Không con ma nào dám hù"),
+            AchievementTier(achievementId: "horror_expert", tier: 4, name: "Ma Vương", icon: "👑", requirement: 100, description: "100 phim kinh dị", vibe: "Bạn là trùm cuối")
         ]),
-        AchievementDefinition(id: "early_bird", category: .time, title: "Early Bird", icon: "🌅", tiers: [
-            AchievementTier(achievementId: "early_bird", tier: 1, name: "Early Bird I", icon: "🌅", requirement: 5, description: "Xem trước 6h 5 lần"),
-            AchievementTier(achievementId: "early_bird", tier: 2, name: "Early Bird II", icon: "🌅", requirement: 20, description: "Xem trước 6h 20 lần"),
-            AchievementTier(achievementId: "early_bird", tier: 3, name: "Early Bird III", icon: "🌅", requirement: 50, description: "Xem trước 6h 50 lần")
+        AchievementDefinition(id: "comedy_king", category: .genre, title: "Vua Hài", icon: "😂", tiers: [
+            AchievementTier(achievementId: "comedy_king", tier: 1, name: "Cười mỉm", icon: "🐱", requirement: 10, description: "10 phim hài", vibe: "Mới cười nhẹ"),
+            AchievementTier(achievementId: "comedy_king", tier: 2, name: "Cười sảng khoái", icon: "😸", requirement: 30, description: "30 phim hài", vibe: "Cơ bụng đã săn chắc"),
+            AchievementTier(achievementId: "comedy_king", tier: 3, name: "Cười ra nước mắt", icon: "😎", requirement: 50, description: "50 phim hài", vibe: "Hàng xóm tưởng bạn điên"),
+            AchievementTier(achievementId: "comedy_king", tier: 4, name: "Vua Hài", icon: "👑", requirement: 100, description: "100 phim hài", vibe: "Bạn chính là joke")
         ]),
-        
-        // Thể loại
-        AchievementDefinition(id: "horror_expert", category: .genre, title: "Horror Expert", icon: "👻", tiers: [
-            AchievementTier(achievementId: "horror_expert", tier: 1, name: "Horror Expert I", icon: "👻", requirement: 10, description: "10 phim kinh dị"),
-            AchievementTier(achievementId: "horror_expert", tier: 2, name: "Horror Expert II", icon: "👻", requirement: 30, description: "30 phim kinh dị"),
-            AchievementTier(achievementId: "horror_expert", tier: 3, name: "Horror Expert III", icon: "👻", requirement: 50, description: "50 phim kinh dị"),
-            AchievementTier(achievementId: "horror_expert", tier: 4, name: "Horror Expert IV", icon: "👻", requirement: 100, description: "100 phim kinh dị")
+        AchievementDefinition(id: "drama_master", category: .genre, title: "Thánh Drama", icon: "😭", tiers: [
+            AchievementTier(achievementId: "drama_master", tier: 1, name: "Xem drama sơ cấp", icon: "🐱", requirement: 10, description: "10 phim Drama", vibe: "Mới rơi vài giọt"),
+            AchievementTier(achievementId: "drama_master", tier: 2, name: "Drama trung cấp", icon: "😼", requirement: 30, description: "30 phim Drama", vibe: "Khăn giấy đã hết hộp thứ 3"),
+            AchievementTier(achievementId: "drama_master", tier: 3, name: "Thánh Drama", icon: "😎", requirement: 50, description: "50 phim Drama", vibe: "Mắt lúc nào cũng ướt"),
+            AchievementTier(achievementId: "drama_master", tier: 4, name: "Drama Vip Pro", icon: "👑", requirement: 100, description: "100 phim Drama", vibe: "Bạn là biển nước mắt")
         ]),
-        AchievementDefinition(id: "comedy_king", category: .genre, title: "Comedy King", icon: "😂", tiers: [
-            AchievementTier(achievementId: "comedy_king", tier: 1, name: "Comedy King I", icon: "😂", requirement: 10, description: "10 phim hài"),
-            AchievementTier(achievementId: "comedy_king", tier: 2, name: "Comedy King II", icon: "😂", requirement: 30, description: "30 phim hài"),
-            AchievementTier(achievementId: "comedy_king", tier: 3, name: "Comedy King III", icon: "😂", requirement: 50, description: "50 phim hài"),
-            AchievementTier(achievementId: "comedy_king", tier: 4, name: "Comedy King IV", icon: "😂", requirement: 100, description: "100 phim hài")
+        AchievementDefinition(id: "scifi_explorer", category: .genre, title: "Người Du Hành", icon: "🚀", tiers: [
+            AchievementTier(achievementId: "scifi_explorer", tier: 1, name: "Du hành tập sự", icon: "🐱", requirement: 10, description: "10 phim Sci-Fi", vibe: "Vừa rời bệ phóng"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 2, name: "Du hành liên hành tinh", icon: "😼", requirement: 30, description: "30 phim Sci-Fi", vibe: "Bay qua sao Hỏa như đi chợ"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 3, name: "Du hành liên thiên hà", icon: "😎", requirement: 50, description: "50 phim Sci-Fi", vibe: "Black hole cũng né bạn"),
+            AchievementTier(achievementId: "scifi_explorer", tier: 4, name: "Chúa tể vũ trụ", icon: "👑", requirement: 100, description: "100 phim Sci-Fi", vibe: "Bạn sở hữu dải ngân hà")
         ]),
-        AchievementDefinition(id: "drama_master", category: .genre, title: "Drama Master", icon: "😭", tiers: [
-            AchievementTier(achievementId: "drama_master", tier: 1, name: "Drama Master I", icon: "😭", requirement: 10, description: "10 phim Drama"),
-            AchievementTier(achievementId: "drama_master", tier: 2, name: "Drama Master II", icon: "😭", requirement: 30, description: "30 phim Drama"),
-            AchievementTier(achievementId: "drama_master", tier: 3, name: "Drama Master III", icon: "😭", requirement: 50, description: "50 phim Drama"),
-            AchievementTier(achievementId: "drama_master", tier: 4, name: "Drama Master IV", icon: "😭", requirement: 100, description: "100 phim Drama")
+        AchievementDefinition(id: "romance_lover", category: .genre, title: "Tình Yêu Vô Cực", icon: "❤️", tiers: [
+            AchievementTier(achievementId: "romance_lover", tier: 1, name: "Tim rung nhẹ", icon: "🐱", requirement: 10, description: "10 phim tình cảm", vibe: "Crush vẫn chưa rep"),
+            AchievementTier(achievementId: "romance_lover", tier: 2, name: "Yêu say đắm", icon: "😸", requirement: 30, description: "30 phim tình cảm", vibe: "Đã có người yêu trong mơ"),
+            AchievementTier(achievementId: "romance_lover", tier: 3, name: "Tình yêu bất diệt", icon: "😎", requirement: 50, description: "50 phim tình cảm", vibe: "Yêu nhiều hơn cả Romeo"),
+            AchievementTier(achievementId: "romance_lover", tier: 4, name: "Thánh Tình Yêu", icon: "👑", requirement: 100, description: "100 phim tình cảm", vibe: "Cả thế giới yêu bạn")
         ]),
-        AchievementDefinition(id: "scifi_explorer", category: .genre, title: "Sci-Fi Explorer", icon: "🚀", tiers: [
-            AchievementTier(achievementId: "scifi_explorer", tier: 1, name: "Sci-Fi Explorer I", icon: "🚀", requirement: 10, description: "10 phim Sci-Fi"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 2, name: "Sci-Fi Explorer II", icon: "🚀", requirement: 30, description: "30 phim Sci-Fi"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 3, name: "Sci-Fi Explorer III", icon: "🚀", requirement: 50, description: "50 phim Sci-Fi"),
-            AchievementTier(achievementId: "scifi_explorer", tier: 4, name: "Sci-Fi Explorer IV", icon: "🚀", requirement: 100, description: "100 phim Sci-Fi")
+        AchievementDefinition(id: "watch_time", category: .time, title: "Thời Gian Cày", icon: "⏱", tiers: [
+            AchievementTier(achievementId: "watch_time", tier: 1, name: "10 giờ", icon: "🐱", requirement: 600, description: "Xem 10 giờ", vibe: "Một ngày làm việc"),
+            AchievementTier(achievementId: "watch_time", tier: 2, name: "50 giờ", icon: "😺", requirement: 3000, description: "Xem 50 giờ", vibe: "Hơn 2 ngày không ngủ"),
+            AchievementTier(achievementId: "watch_time", tier: 3, name: "100 giờ", icon: "😼", requirement: 6000, description: "Xem 100 giờ", vibe: "Một tuần biến mất"),
+            AchievementTier(achievementId: "watch_time", tier: 4, name: "300 giờ", icon: "😎", requirement: 18000, description: "Xem 300 giờ", vibe: "Nửa tháng trong bóng tối"),
+            AchievementTier(achievementId: "watch_time", tier: 5, name: "1000 giờ", icon: "👑", requirement: 60000, description: "Xem 1000 giờ", vibe: "Bạn đã dành cả thanh xuân")
         ]),
-        AchievementDefinition(id: "romance_lover", category: .genre, title: "Romance Lover", icon: "❤️", tiers: [
-            AchievementTier(achievementId: "romance_lover", tier: 1, name: "Romance Lover I", icon: "❤️", requirement: 10, description: "10 phim tình cảm"),
-            AchievementTier(achievementId: "romance_lover", tier: 2, name: "Romance Lover II", icon: "❤️", requirement: 30, description: "30 phim tình cảm"),
-            AchievementTier(achievementId: "romance_lover", tier: 3, name: "Romance Lover III", icon: "❤️", requirement: 50, description: "50 phim tình cảm"),
-            AchievementTier(achievementId: "romance_lover", tier: 4, name: "Romance Lover IV", icon: "❤️", requirement: 100, description: "100 phim tình cảm")
-        ]),
-        
-        // Theo thời lượng
-        AchievementDefinition(id: "watch_time", category: .time, title: "Watch Time", icon: "⏱", tiers: [
-            AchievementTier(achievementId: "watch_time", tier: 1, name: "10 giờ", icon: "⏱", requirement: 600, description: "Xem 10 giờ"),
-            AchievementTier(achievementId: "watch_time", tier: 2, name: "50 giờ", icon: "⏱", requirement: 3000, description: "Xem 50 giờ"),
-            AchievementTier(achievementId: "watch_time", tier: 3, name: "100 giờ", icon: "⏱", requirement: 6000, description: "Xem 100 giờ"),
-            AchievementTier(achievementId: "watch_time", tier: 4, name: "300 giờ", icon: "⏱", requirement: 18000, description: "Xem 300 giờ"),
-            AchievementTier(achievementId: "watch_time", tier: 5, name: "1000 giờ", icon: "⏱", requirement: 60000, description: "Xem 1000 giờ")
-        ]),
-        
-        // Hiếm
-        AchievementDefinition(id: "christmas", category: .event, title: "Christmas Watcher", icon: "🎁", tiers: [
-            AchievementTier(achievementId: "christmas", tier: 1, name: "Christmas Watcher", icon: "🎁", requirement: 1, description: "Xem phim vào Giáng sinh")
+        AchievementDefinition(id: "christmas", category: .event, title: "Giáng Sinh", icon: "🎁", tiers: [
+            AchievementTier(achievementId: "christmas", tier: 1, name: "Ông già Noel", icon: "🎅", requirement: 1, description: "Xem phim vào Giáng sinh", vibe: "Quà là phim")
         ]),
         AchievementDefinition(id: "halloween", category: .event, title: "Halloween", icon: "🎃", tiers: [
-            AchievementTier(achievementId: "halloween", tier: 1, name: "Halloween Watcher", icon: "🎃", requirement: 1, description: "Xem phim vào Halloween")
+            AchievementTier(achievementId: "halloween", tier: 1, name: "Ma đói", icon: "👻", requirement: 1, description: "Xem phim vào Halloween", vibe: "Trick or treat là xem phim")
         ]),
         AchievementDefinition(id: "valentine", category: .event, title: "Valentine", icon: "💝", tiers: [
-            AchievementTier(achievementId: "valentine", tier: 1, name: "Valentine Watcher", icon: "💝", requirement: 1, description: "Xem phim vào Valentine")
+            AchievementTier(achievementId: "valentine", tier: 1, name: "Trái tim cô đơn", icon: "💔", requirement: 1, description: "Xem phim vào Valentine", vibe: "Phim là người yêu")
         ]),
-        AchievementDefinition(id: "new_year", category: .event, title: "New Year", icon: "🎆", tiers: [
-            AchievementTier(achievementId: "new_year", tier: 1, name: "New Year Watcher", icon: "🎆", requirement: 1, description: "Xem phim vào năm mới")
+        AchievementDefinition(id: "new_year", category: .event, title: "Năm Mới", icon: "🎆", tiers: [
+            AchievementTier(achievementId: "new_year", tier: 1, name: "Pháo hoa đầu năm", icon: "🎇", requirement: 1, description: "Xem phim vào năm mới", vibe: "New year, new phim")
         ])
     ]
-    
-    static var userRankData: UserRankData {
-        UserRankData(totalXP: 2350, unlockedAchievements: 12, totalAchievements: achievements.flatMap { $0.tiers }.count)
-    }
-    
-    static var userProgress: [AchievementProgress] {
-        [
-            AchievementProgress(achievementId: "movie_buff", currentValue: 187, unlockedTiers: [1, 2, 3]),
-            AchievementProgress(achievementId: "first_movie", currentValue: 1, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "marathon", currentValue: 8, unlockedTiers: [1, 2]),
-            AchievementProgress(achievementId: "binge_master", currentValue: 4, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "night_owl", currentValue: 35, unlockedTiers: [1, 2]),
-            AchievementProgress(achievementId: "early_bird", currentValue: 3, unlockedTiers: []),
-            AchievementProgress(achievementId: "horror_expert", currentValue: 28, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "comedy_king", currentValue: 15, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "drama_master", currentValue: 28, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "scifi_explorer", currentValue: 42, unlockedTiers: [1, 2]),
-            AchievementProgress(achievementId: "romance_lover", currentValue: 8, unlockedTiers: []),
-            AchievementProgress(achievementId: "watch_time", currentValue: 3200, unlockedTiers: [1, 2]),
-            AchievementProgress(achievementId: "christmas", currentValue: 1, unlockedTiers: [1]),
-            AchievementProgress(achievementId: "new_year", currentValue: 1, unlockedTiers: [1])
-        ]
-    }
 }
