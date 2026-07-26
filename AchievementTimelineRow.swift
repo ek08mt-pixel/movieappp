@@ -13,15 +13,16 @@ struct AchievementTimelineRow: View {
     private let badgeSize: CGFloat = 44
     private let spacing: CGFloat = 6
     
+    // Lấy đúng tên biến trong CustomBadgeShapes.swift mới
     func iconForStage(_ title: String) -> String {
         switch title {
-        case "Newbie": return crownIconSVG
-        case "Enthusiast": return lightningIconSVG
-        case "Fanatic": return flameIconSVG
-        case "Pro Watcher": return catIconSVG
-        case "Master": return crownIconSVG
-        case "Legend": return crownIconSVG
-        default: return crownIconSVG
+        case "Newbie": return crownSVG
+        case "Enthusiast": return lightningSVG
+        case "Fanatic": return flameSVG
+        case "Pro Watcher": return catSVG
+        case "Master": return crownSVG
+        case "Legend": return crownSVG
+        default: return crownSVG
         }
     }
     
@@ -50,7 +51,10 @@ struct AchievementTimelineRow: View {
                                         HexagonShape().fill(isActive ? Color(red: 0.2, green: 0.2, blue: 0.2) : isCompleted ? Color(red: 0.1, green: 0.1, blue: 0.1) : Color(red: 0.04, green: 0.04, blue: 0.04)).frame(width: badgeSize, height: badgeSize + 4)
                                         HexagonShape().stroke(isActive ? Color.white : (isCompleted ? Color.white.opacity(0.3) : Color.white.opacity(0.05)), lineWidth: isActive ? 2 : 1).frame(width: badgeSize, height: badgeSize + 4)
                                         
-                                        Image(svgBase64: iconForStage(stage.title)).resizable().scaledToFit().frame(width: 18, height: 18).opacity(isActive ? 1.0 : (isCompleted ? 0.8 : 0.1))
+                                        // SỬA LỖI: Dùng SVGIcon thay vì Image(svgBase64:)
+                                        SVGIcon(svgString: iconForStage(stage.title))
+                                            .frame(width: 18, height: 18)
+                                            .opacity(isActive ? 1.0 : (isCompleted ? 0.8 : 0.1))
                                         
                                         if isActive {
                                             HexagonShape().stroke(Color.white.opacity(0.5), lineWidth: 3).blur(radius: 6).frame(width: badgeSize, height: badgeSize + 4)
