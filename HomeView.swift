@@ -212,15 +212,15 @@ Section {
                         if !appState.watchProgressList.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack(spacing: 6) {
-                                    Text("|")
-                                        .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.6))
-                                    Text("Tiếp tục xem")
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, 20)
+    RoundedRectangle(cornerRadius: 2)
+        .fill(.white.opacity(0.55))
+        .frame(width: 3, height: 18)
+    Text("Tiếp tục xem")
+        .font(.title3)
+        .fontWeight(.bold)
+        .foregroundColor(.white)
+}
+.padding(.horizontal, 20)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 12) {
                                         ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
@@ -239,15 +239,15 @@ Section {
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 6) {
-                                    Text("|")
-                                        .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.6))
-                                    Text("Movie of the Day")
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, 20)
+    RoundedRectangle(cornerRadius: 2)
+        .fill(.white.opacity(0.55))
+        .frame(width: 3, height: 18)
+    Text("Movie of the Day")
+        .font(.title3)
+        .fontWeight(.bold)
+        .foregroundColor(.white)
+}
+.padding(.horizontal, 20)
                                 NavigationLink(destination: MovieDetailView(movie: mod)) {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
@@ -577,15 +577,15 @@ struct SectionGrid: View {
             VStack(alignment: .leading, spacing: 12) {
                 NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) {
                     HStack(spacing: 6) {
-                        Text("|")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white.opacity(0.6))
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(.white.opacity(0.55))
+                            .frame(width: 3, height: 18)
                         Text(title)
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                        Text(">")
-                            .font(.system(size: 16, weight: .bold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .light))
                             .foregroundColor(.white.opacity(0.5))
                     }
                 }
