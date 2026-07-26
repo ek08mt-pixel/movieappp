@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import WebKit // Import WebKit để render SVG chính xác 100%
 
 // MARK: - 1. Hexagon Shape
 struct HexagonShape: Shape {
@@ -30,47 +29,92 @@ struct HexagonShape: Shape {
     }
 }
 
-// MARK: - 2. SVG Renderer Dùng WebKit (Đã fix build 100%)
-struct SVGIcon: UIViewRepresentable {
-    let svgString: String
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        return webView
-    }
-    func updateUIView(_ uiView: WKWebView, context: Context) {
-        let html = """
-        <html><head><style>body { margin: 0; background: transparent; display: flex; justify-content: center; align-items: center; height: 100%; }</style></head>
-        <body>\(svgString)</body></html>
-        """
-        uiView.loadHTMLString(html, baseURL: nil)
+// MARK: - 2. Con Mèo (Đã tính toán tọa độ chuẩn xác để giống Mockup)
+struct CatShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+        let c = CGPoint(x: w/2, y: h/2)
+        
+        // Tai trái
+        path.move(to: CGPoint(x: w * 0.32, y: h * 0.34))
+        path.addQuadCurve(to: CGPoint(x: w * 0.18, y: h * 0.08), control: CGPoint(x: w * 0.26, y: h * 0.12))
+        path.addQuadCurve(to: CGPoint(x: w * 0.42, y: h * 0.26), control: CGPoint(x: w * 0.35, y: h * 0.26))
+        path.closeSubpath()
+        
+        // Tai phải
+        path.move(to: CGPoint(x: w * 0.68, y: h * 0.34))
+        path.addQuadCurve(to: CGPoint(x: w * 0.82, y: h * 0.08), control: CGPoint(x: w * 0.74, y: h * 0.12))
+        path.addQuadCurve(to: CGPoint(x: w * 0.58, y: h * 0.26), control: CGPoint(x: w * 0.65, y: h * 0.26))
+        path.closeSubpath()
+        
+        // Đầu tròn
+        path.move(to: CGPoint(x: w * 0.42, y: h * 0.26))
+        path.addQuadCurve(to: CGPoint(x: w * 0.58, y: h * 0.26), control: CGPoint(x: c.x, y: h * 0.14))
+        path.addArc(center: c, radius: w * 0.32, startAngle: .degrees(-95), endAngle: .degrees(95), clockwise: false)
+        path.closeSubpath()
+        
+        // Mắt
+        path.addEllipse(in: CGRect(x: w * 0.38, y: h * 0.42, width: w * 0.08, height: h * 0.12))
+        path.addEllipse(in: CGRect(x: w * 0.54, y: h * 0.42, width: w * 0.08, height: h * 0.12))
+        
+        // Mũi
+        path.move(to: CGPoint(x: w * 0.48, y: h * 0.54))
+        path.addLine(to: CGPoint(x: w * 0.52, y: h * 0.54))
+        path.addLine(to: CGPoint(x: w * 0.50, y: h * 0.58))
+        path.closeSubpath()
+        
+        // Ria trái
+        path.move(to: CGPoint(x: w * 0.30, y: h * 0.46)); path.addLine(to: CGPoint(x: w * 0.10, y: h * 0.46))
+        path.move(to: CGPoint(x: w * 0.30, y: h * 0.50)); path.addLine(to: CGPoint(x: w * 0.10, y: h * 0.50))
+        path.move(to: CGPoint(x: w * 0.30, y: h * 0.54)); path.addLine(to: CGPoint(x: w * 0.10, y: h * 0.54))
+        
+        // Ria phải
+        path.move(to: CGPoint(x: w * 0.70, y: h * 0.46)); path.addLine(to: CGPoint(x: w * 0.90, y: h * 0.46))
+        path.move(to: CGPoint(x: w * 0.70, y: h * 0.50)); path.addLine(to: CGPoint(x: w * 0.90, y: h * 0.50))
+        path.move(to: CGPoint(x: w * 0.70, y: h * 0.54)); path.addLine(to: CGPoint(x: w * 0.90, y: h * 0.54))
+        
+        return path
     }
 }
 
-// MARK: - 3. SVG Code gốc (Chính xác từ Mockup)
-let catSVG = """
-<svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path fill="white" d="M50 13C36.1 13 25 24.1 25 38C25 51.9 36.1 63 50 63C63.9 63 75 51.9 75 38C75 24.1 63.9 13 50 13ZM50 59C38.4 59 29 49.6 29 38C29 26.4 38.4 17 50 17C61.6 17 71 26.4 71 38C71 49.6 61.6 59 50 59Z"/>
-  <path fill="white" d="M38 36C36.3 36 35 37.3 35 39C35 40.7 36.3 42 38 42C41.7 42 41 40.7 41 39C41 37.3 39.7 36 38 36Z"/>
-  <path fill="white" d="M62 36C60.3 36 59 37.3 59 39C59 40.7 60.3 42 62 42C63.7 42 65 40.7 65 39C65 37.3 63.7 36 62 36Z"/>
-  <path fill="white" d="M50 45C48 45 47 46 47 48V50C47 52 48 53 50 53C52 53 53 52 53 50V48C53 46 52 45 50 45Z"/>
-</svg>
-"""
-let crownSVG = """
-<svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path fill="white" d="M25 60L25 70L75 70L75 60L50 75L25 60Z"/>
-  <path fill="white" d="M10 10L10 40L40 40L40 10L10 10Z"/>
-</svg>
-"""
-let lightningSVG = """
-<svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path fill="white" d="M50 0L40 50L45 50L40 100L70 40L60 40L70 0Z"/>
-</svg>
-"""
-let flameSVG = """
-<svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path fill="white" d="M50 5C40 20 40 40 40 40C40 20 30 30 10 50C10 70 30 90 50 90C70 90 90 70 90 50C70 30 60 20 60 40C60 40 60 20 50 5Z"/>
-</svg>
-"""
+// MARK: - 3. Icon Shapes cho Timeline
+struct CrownIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.width * 0.2, y: rect.maxY * 0.4))
+        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.midY + 4), control: CGPoint(x: rect.midX - 10, y: rect.maxY * 0.6))
+        path.addQuadCurve(to: CGPoint(x: rect.width * 0.8, y: rect.maxY * 0.4), control: CGPoint(x: rect.midX + 10, y: rect.maxY * 0.6))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct LightningIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.midY + 6))
+        path.addLine(to: CGPoint(x: rect.midX - 4, y: rect.midY + 6))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY - 6))
+        path.addLine(to: CGPoint(x: rect.midX + 4, y: rect.midY - 6))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct FlameIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY * 0.6), control: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.maxY * 0.3))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.maxY * 0.6), control: CGPoint(x: rect.maxX, y: rect.maxY * 0.3))
+        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        return path
+    }
+}
