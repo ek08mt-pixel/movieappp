@@ -9,20 +9,14 @@ import SwiftUI
 
 struct AchievementListItemView: View {
     let item: AchievementItem
-    
-    // Press Effect State
     @State private var isPressed = false
     
     var body: some View {
         Button(action: {
-            // Haptic feedback nhẹ (tùy chọn, nếu muốn)
-            // UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            
-            // Xử lý bấm vào Danh hiệu tại đây
-            print("Tapped on: \(item.title)")
+            // Haptic feedback nhẹ (tùy chọn)
         }) {
-            HStack(spacing: 20) {
-                // Icon Container với Gradient/Depth
+            HStack(spacing: 16) {
+                // Icon Container (Thu nhỏ lại cho cân đối)
                 ZStack {
                     Circle()
                         .fill(
@@ -32,26 +26,26 @@ struct AchievementListItemView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 56, height: 56)
+                        .frame(width: 44, height: 44)
                     
                     Circle()
                         .stroke(Color.white.opacity(0.05), lineWidth: 1)
-                        .frame(width: 56, height: 56)
+                        .frame(width: 44, height: 44)
                     
-                    // Icon (SF Symbol tạm thời)
+                    // Icon (SF Symbol)
                     Image(systemName: item.iconName)
-                        .font(.system(size: 24, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.white)
                 }
                 
                 // Text Info
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
                     
                     Text(item.subtitle)
-                        .font(.system(size: 13, weight: .regular, design: .rounded))
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
                         .foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
                 }
                 
@@ -59,31 +53,22 @@ struct AchievementListItemView: View {
                 
                 // Date Text
                 Text(item.date)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(Color(red: 0.55, green: 0.55, blue: 0.55))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
             }
-            .padding(20)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(red: 0.1, green: 0.1, blue: 0.1)) // #1A1A1A
-                    // Chiều sâu Inner Shadow
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(red: 0.1, green: 0.1, blue: 0.1))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(Color.white.opacity(0.05), lineWidth: 1)
-                            .shadow(color: Color.black.opacity(0.6), radius: 6, x: 0, y: 4)
-                            .mask(RoundedRectangle(cornerRadius: 24))
-                    )
-                    // Border rất mờ
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
                     )
             )
-            // Press Effect (Scale xuống 0.97 khi giữ)
             .scaleEffect(isPressed ? 0.97 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         }
-        .buttonStyle(.plain) // Tắt hiệu ứng mặc định của Button để dùng custom effect
+        .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: 0.01, pressing: { pressing in
             isPressed = pressing
         }, perform: {})
