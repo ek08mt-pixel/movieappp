@@ -3,35 +3,38 @@ import SwiftUI
 // MARK: - Explore View
 struct ExploreView: View {
     @EnvironmentObject var appState: AppState
-    @State private var staffMovies: [Movie] = []; @State private var editorMovies: [Movie] = []; @State private var hiddenMovies: [Movie] = []
+    @State private var staffMovies: [Movie] = []
+    @State private var editorMovies: [Movie] = []
+    @State private var hiddenMovies: [Movie] = []
+    @State private var showWatchTogether = false
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
-    ("IMDb Top", 210024, .keyword),
-    ("Netflix", 213, .studio), ("Marvel", 420, .studio),
-    ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio),
-    ("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
-    ("Disney+", 2739, .studio), ("Hulu", 453, .studio), ("Paramount+", 4330, .studio),
-    ("Peacock", 3353, .studio), ("Anime", 16, .genre), ("Châu Á", 0, .asia), ("Warner Bros", 174, .studio)
-]
+        ("IMDb Top", 210024, .keyword),
+        ("Netflix", 213, .studio), ("Marvel", 420, .studio),
+        ("DC", 429, .studio), ("Pixar", 3, .studio), ("Disney", 2, .studio),
+        ("HBO", 49, .studio), ("Apple TV+", 2552, .studio), ("Amazon Prime", 1024, .studio),
+        ("Disney+", 2739, .studio), ("Hulu", 453, .studio), ("Paramount+", 4330, .studio),
+        ("Peacock", 3353, .studio), ("Anime", 16, .genre), ("Châu Á", 0, .asia), ("Warner Bros", 174, .studio)
+    ]
     
     let posterMap: [String: String] = [
-    "IMDb Top": "/8Tfys3mDZVp4tNoH2ktm06a0Tau.jpg",
-    "Netflix": "/jLuGZc84MvPYCQomQg9DI72mstt.jpg",
-    "Marvel": "/lv3TXqhpaIxkclIHbhN2MRMOemQ.jpg",
-    "DC": "/eGX66zonvc4bXg3rM08RUxdYSDx.jpg",
-    "Pixar": "/u53UYu5XG2hNgWGvs3xGhAVzypl.jpg",
-    "Disney": "/qjTqY5coNiz6sVtPng40IzltsoN.jpg",
-    "HBO": "/577eXC8wFQT0eUrJcgznSiFPRmk.jpg",
-    "Apple TV+": "/yx0sfeYOoXol2fjT22SXo9YyviI.jpg",
-    "Amazon Prime": "/voKEhzb4ExOmR0WSvQgLTTqRUEu.jpg",
-    "Disney+": "/q3jHCb4dMfYF6ojikKuHd6LscxC.jpg",
-    "Hulu": "/a4doyPOabvQor0RGkWdhVENAR3G.jpg",
-    "Paramount+": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
-    "Peacock": "/xaiKpxuf9YGuTsqpdK5HSbD8M8f.jpg",
-    "Anime": "/gtKglOSEq3d4MgQE4VsrT1sRkd0.jpg",
-    "Châu Á": "/i3bMeXOGyT57owjlMPCuLiijhq5.jpg",
-    "Warner Bros": "/1stUIsjawROZxjiCMtqqXqgfZWC.jpg"
-]
+        "IMDb Top": "/8Tfys3mDZVp4tNoH2ktm06a0Tau.jpg",
+        "Netflix": "/jLuGZc84MvPYCQomQg9DI72mstt.jpg",
+        "Marvel": "/lv3TXqhpaIxkclIHbhN2MRMOemQ.jpg",
+        "DC": "/eGX66zonvc4bXg3rM08RUxdYSDx.jpg",
+        "Pixar": "/u53UYu5XG2hNgWGvs3xGhAVzypl.jpg",
+        "Disney": "/qjTqY5coNiz6sVtPng40IzltsoN.jpg",
+        "HBO": "/577eXC8wFQT0eUrJcgznSiFPRmk.jpg",
+        "Apple TV+": "/yx0sfeYOoXol2fjT22SXo9YyviI.jpg",
+        "Amazon Prime": "/voKEhzb4ExOmR0WSvQgLTTqRUEu.jpg",
+        "Disney+": "/q3jHCb4dMfYF6ojikKuHd6LscxC.jpg",
+        "Hulu": "/a4doyPOabvQor0RGkWdhVENAR3G.jpg",
+        "Paramount+": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
+        "Peacock": "/xaiKpxuf9YGuTsqpdK5HSbD8M8f.jpg",
+        "Anime": "/gtKglOSEq3d4MgQE4VsrT1sRkd0.jpg",
+        "Châu Á": "/i3bMeXOGyT57owjlMPCuLiijhq5.jpg",
+        "Warner Bros": "/1stUIsjawROZxjiCMtqqXqgfZWC.jpg"
+    ]
     
     var body: some View {
         NavigationStack {
@@ -41,11 +44,12 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
                         
+                        // 3 nút: OST | Timeline | Cùng xem
                         HStack(spacing: 10) {
                             NavigationLink(destination: OSTView()) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "music.note").font(.system(size: 16)).foregroundColor(.pink)
-                                    Text("OST").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                                HStack(spacing: 6) {
+                                    Text("🎵").font(.system(size: 14))
+                                    Text("OST").font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
@@ -53,9 +57,21 @@ struct ExploreView: View {
                             }
                             
                             NavigationLink(destination: TimelineView()) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "calendar").font(.system(size: 16)).foregroundColor(.blue)
-                                    Text("Timeline").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                                HStack(spacing: 6) {
+                                    Text("📅").font(.system(size: 14))
+                                    Text("Timeline").font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                            }
+                            
+                            Button {
+                                showWatchTogether = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text("👥").font(.system(size: 14))
+                                    Text("Watch").font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
@@ -100,6 +116,9 @@ struct ExploreView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showWatchTogether) {
+            WatchTogetherRoomView()
+        }
         .task { loadData() }
     }
     
@@ -115,103 +134,7 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
 }
-// MARK: - SwipePickOverlay
-struct SwipePickOverlay: View {
-    @Binding var show: Bool
-    @EnvironmentObject var appState: AppState
-    @State private var movies: [Movie] = []
-    @State private var currentIndex = 0
-    @State private var offset = CGSize.zero
-    @State private var isLoading = true
-    
-    var currentMovie: Movie? { guard currentIndex < movies.count else { return nil }; return movies[currentIndex] }
-    var nextMovie: Movie? { guard currentIndex + 1 < movies.count else { return nil }; return movies[currentIndex + 1] }
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { show = false }
-            VStack {
-                if let movie = currentMovie {
-                    VStack(spacing: 20) {
-                        ZStack {
-                            if let next = nextMovie {
-                                cardView(movie: next).scaleEffect(0.92).offset(y: 12).opacity(0.5)
-                            }
-                            cardView(movie: movie)
-                                .offset(x: offset.width)
-                                .rotationEffect(.degrees(Double(offset.width / 20)))
-                                .gesture(DragGesture()
-                                    .onChanged { offset = $0.translation }
-                                    .onEnded {
-                                        if $0.translation.width > 100 { swipeRight() }
-                                        else if $0.translation.width < -100 { swipeLeft() }
-                                        else { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = .zero } }
-                                    }
-                                )
-                        }
-                        HStack(spacing: 50) {
-                            Button { swipeLeft() } label: {
-                                Image(systemName: "xmark").font(.system(size: 20, weight: .bold)).foregroundColor(.red).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.red.opacity(0.3), lineWidth: 1))
-                            }
-                            Button { swipeRight() } label: {
-                                Image(systemName: "heart.fill").font(.system(size: 20, weight: .bold)).foregroundColor(.green).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.6))).overlay(Circle().stroke(.green.opacity(0.3), lineWidth: 1))
-                            }
-                        }
-                    }
-                    .offset(y: -100)
-                }
-                Spacer()
-            }
-            if isLoading { ProgressView().tint(.white) }
-        }
-        .task { await loadMovies() }
-    }
-    
-    func cardView(movie: Movie) -> some View {
-        ZStack(alignment: .bottom) {
-            CachedAsyncImage(url: movie.posterURL)
-                .aspectRatio(2/3, contentMode: .fill)
-                .frame(width: UIScreen.main.bounds.width - 60, height: UIScreen.main.bounds.height * 0.55)
-                .clipShape(RoundedRectangle(cornerRadius: 24)).shadow(color: .black.opacity(0.6), radius: 25)
-            VStack(alignment: .leading, spacing: 3) {
-                Spacer()
-                LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom).frame(height: 100)
-                    .overlay(alignment: .bottomLeading) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(movie.title).font(.system(size: 17, weight: .bold)).foregroundColor(.white).lineLimit(2)
-                            HStack(spacing: 6) {
-                                HStack(spacing: 3) { Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 11, weight: .bold)).foregroundColor(.white) }
-                                Text(movie.yearText).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
-                            }
-                        }
-                        .padding(.horizontal, 16).padding(.bottom, 12)
-                    }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-        }
-    }
-    
-    func loadMovies() async {
-        isLoading = true
-        movies = (try? await APIService.shared.popular())?.filter { !($0.adult ?? false) }.shuffled() ?? []
-        isLoading = false
-    }
-    
-    func swipeRight() {
-        if let movie = currentMovie {
-            if !appState.favorites.contains(where: { $0.id == movie.id }) {
-                appState.favorites.append(movie); appState.save()
-            }
-        }
-        withAnimation { offset = CGSize(width: 500, height: 0) }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero }
-    }
-    
-    func swipeLeft() {
-        withAnimation { offset = CGSize(width: -500, height: 0) }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { currentIndex += 1; offset = .zero }
-    }
-}
+
 
 // MARK: - Asia Category View
 struct AsiaCategoryView: View {
