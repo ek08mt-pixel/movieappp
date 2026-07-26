@@ -1,3 +1,10 @@
+//
+//  AchievementManager.swift
+//  movieapp
+//
+//  Created by (Your App Name) on 2026.
+//
+
 import SwiftUI
 
 class AchievementManager: ObservableObject {
@@ -11,22 +18,22 @@ class AchievementManager: ObservableObject {
         JourneyStage(title: "Legend", level: "Lv.20", isUnlocked: false)
     ]
     
-    // Dữ liệu Danh hiệu nổi bật
+    // Dữ liệu Danh hiệu nổi bật - SỬA LỖI: Đổi iconShape thành iconName (String SF Symbol)
     @Published var achievements: [AchievementItem] = [
         AchievementItem(
-            iconShape: LightningShape(),
+            iconName: "bolt.fill", // Thay LightningShape()
             title: "Cú Đêm Chính Hiệu",
             subtitle: "Xem phim từ 23:00 đến 3:00",
             date: "12.05.2024"
         ),
         AchievementItem(
-            iconShape: FlameShape(),
+            iconName: "flame.fill", // Thay FlameShape()
             title: "Binge Master",
             subtitle: "Xem liên tục 5 tập phim",
             date: "08.05.2024"
         ),
         AchievementItem(
-            iconShape: MasksShape(),
+            iconName: "theatermasks.fill", // Thay MasksShape()
             title: "Drama Queen",
             subtitle: "Xem 10 phim thể loại Drama",
             date: "02.05.2024"
