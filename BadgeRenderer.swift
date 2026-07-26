@@ -92,30 +92,26 @@ struct RankBadgeView: View {
     
     var body: some View {
         ZStack {
-            // Outer glow
+            // Glow
             if rank != .newbie {
-                rankBadgeShape
+                GameShield()
                     .fill(rank.glowColor)
                     .frame(width: size, height: size * 1.1)
                     .blur(radius: size * 0.15)
             }
             
             // Shield body
-            rankBadgeShape
+            GameShield()
                 .fill(
                     LinearGradient(
-                        colors: [
-                            rank.color.opacity(0.2),
-                            rank.color.opacity(0.05),
-                            .black.opacity(0.5)
-                        ],
+                        colors: [rank.color.opacity(0.2), rank.color.opacity(0.05), .black.opacity(0.5)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: size, height: size * 1.1)
                 .overlay(
-                    rankBadgeShape
+                    GameShield()
                         .stroke(
                             LinearGradient(
                                 colors: [rank.color.opacity(0.7), rank.color.opacity(0.2)],
@@ -128,7 +124,7 @@ struct RankBadgeView: View {
                 .shadow(color: rank.glowColor, radius: size * 0.1)
             
             // Inner highlight
-            rankBadgeShape
+            GameShield()
                 .stroke(
                     LinearGradient(
                         colors: [.white.opacity(0.15), .clear],
@@ -137,42 +133,24 @@ struct RankBadgeView: View {
                     ),
                     lineWidth: size * 0.015
                 )
-                .frame(width: size * 0.9, height: size)
+                .frame(width: size * 0.85, height: size * 0.95)
             
-            // Text code
+            // Code
             Text(shortCode)
                 .font(.system(size: size * 0.35, weight: .black, design: .monospaced))
                 .foregroundColor(rank.color)
                 .shadow(color: rank.color.opacity(0.5), radius: size * 0.05)
             
-            // Crown for top ranks
+            // Crown for high ranks
             if [Rank.master, Rank.legend, Rank.mythic].contains(rank) {
                 Text("✦")
-                    .font(.system(size: size * 0.2, weight: .bold))
+                    .font(.system(size: size * 0.22, weight: .bold))
                     .foregroundColor(rank.color)
                     .offset(y: -size * 0.5)
                     .shadow(color: rank.color.opacity(0.6), radius: size * 0.06)
             }
         }
         .frame(width: size, height: size * 1.15)
-    }
-    
-    @ViewBuilder
-    var rankBadgeShape: some Shape {
-        switch rank {
-        case .newbie, .explorer:
-            AnyShape(GameShield())
-        case .movieFan, .enthusiast:
-            AnyShape(GameShield())
-        case .proWatcher:
-            AnyShape(EliteShield())
-        case .master:
-            AnyShape(WingedShield())
-        case .legend:
-            AnyShape(WingedShield())
-        case .mythic:
-            AnyShape(EliteShield())
-        }
     }
 }
 
