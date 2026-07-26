@@ -12,28 +12,53 @@ struct AchievementHeroCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Avatar
+            // 1. Avatar Container (Hexagon + Cat + Sparkles)
             ZStack {
+                // Outer Glow (Tỏa sáng xung quanh)
                 HexagonShape()
-                    .stroke(Color.white.opacity(0.4), lineWidth: 4)
+                    .stroke(Color.white.opacity(0.4), lineWidth: 3)
                     .blur(radius: 10)
-                    .frame(width: 80, height: 88)
+                    .frame(width: 88, height: 96)
                 
+                // Base Background (Gradient nền)
                 HexagonShape()
-                    .fill(LinearGradient(colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.05)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 80, height: 88)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 88, height: 96)
                 
+                // Viền sáng bao quanh (Rim Light)
                 HexagonShape()
-                    .stroke(LinearGradient(colors: [Color.white.opacity(0.9), Color.white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
-                    .frame(width: 80, height: 88)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.9), .white.opacity(0.1), .white.opacity(0.0), .white.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 88, height: 96)
                 
-                Image(systemName: "cat.fill")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundColor(.white)
+                // Con mèo (Custom Shape)
+                ProCatIcon()
+                    .fill(Color.white)
+                    .frame(width: 52, height: 52)
+                    .shadow(color: .white.opacity(0.2), radius: 4, x: 0, y: 0)
+                
+                // Hạt lấp lánh (Sparkles) xung quanh mèo
+                Circle().fill(Color.white.opacity(0.7)).frame(width: 3, height: 3).offset(x: -42, y: -30)
+                Circle().fill(Color.white.opacity(0.4)).frame(width: 2, height: 2).offset(x: 38, y: -28)
+                Circle().fill(Color.white.opacity(0.6)).frame(width: 4, height: 4).offset(x: -45, y: 18)
+                Circle().fill(Color.white.opacity(0.3)).frame(width: 2, height: 2).offset(x: 42, y: 22)
+                Circle().fill(Color.white.opacity(0.8)).frame(width: 2, height: 2).offset(x: -30, y: 42)
+                Circle().fill(Color.white.opacity(0.5)).frame(width: 2, height: 2).offset(x: 30, y: 45)
             }
-            .padding(.leading, 4)
             
-            // Info
+            // 2. Text Info
             VStack(alignment: .leading, spacing: 6) {
                 Text("Lv. 12")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -52,11 +77,11 @@ struct AchievementHeroCard: View {
                 
                 Spacer().frame(height: 2)
                 
-                // Progress
+                // 3. Progress Bar
                 VStack(alignment: .leading, spacing: 3) {
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.15)).frame(height: 4)
-                        Capsule().fill(Color.white).frame(width: 120 * progressAnimation, height: 4)
+                        Capsule().fill(Color.white.opacity(0.12)).frame(height: 5)
+                        Capsule().fill(Color.white).frame(width: 110 * progressAnimation, height: 5)
                     }
                     .onAppear { withAnimation(.easeOut(duration: 0.6)) { progressAnimation = 0.65 } }
                     
@@ -70,31 +95,18 @@ struct AchievementHeroCard: View {
             Spacer()
         }
         .padding(20)
-        // Khung nền Card
         .background(RoundedRectangle(cornerRadius: 24).fill(Color(red: 0.12, green: 0.12, blue: 0.12)))
-        
-        // === QUAN TRỌNG: Viền sáng đứt quãng (Glass Highlight) ===
-        // Dùng Mask + Trim để cắt gradient, tạo hiệu ứng ánh sáng chiếu vào 1 phía
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(
                     LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.8), location: 0.0),
-                            .init(color: .white.opacity(0.4), location: 0.2),
-                            .init(color: .clear, location: 0.6)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        stops: [.init(color: .white.opacity(0.3), location: 0.0), .init(color: .white.opacity(0.05), location: 0.4), .init(color: .clear, location: 0.8)],
+                        startPoint: .top,
+                        endPoint: .bottom
                     ),
                     lineWidth: 1.5
                 )
         )
-        // Lớp Outer Glow mờ
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.1), lineWidth: 3)
-                .blur(radius: 5)
-        )
+        .shadow(color: Color.white.opacity(0.05), radius: 10, x: 0, y: 10)
     }
 }
