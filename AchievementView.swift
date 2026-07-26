@@ -19,7 +19,7 @@ struct AchievementView: View {
             Color(red: 0.04, green: 0.04, blue: 0.04).ignoresSafeArea()
             
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 28) { // Spacing đã được tối ưu lại
+                VStack(spacing: 28) {
                     
                     // 1. Custom Header
                     HStack {
@@ -44,7 +44,7 @@ struct AchievementView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // 2. Interactive Category Tabs (VisionOS Style)
+                    // 2. Interactive Category Tabs (Tương thích iOS 16)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(tabs, id: \.self) { tab in
@@ -66,10 +66,8 @@ struct AchievementView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 20) // Giữ padding 2 bên để không bị dính sát lề màn hình
                     }
-                    // Giúp scroll tab dừng đúng vị trí giữa màn hình
-                    .scrollTargetBehavior(.viewAligned)
                     
                     // 3. Hero Card
                     AchievementHeroCard()
@@ -112,7 +110,7 @@ struct AchievementView: View {
                         }
                         .padding(.horizontal, 20)
                     }
-                    .padding(.bottom, 40) // Khoảng trống cho Tab Bar
+                    .padding(.bottom, 40)
                 }
             }
         }
