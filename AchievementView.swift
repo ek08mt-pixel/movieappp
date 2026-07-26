@@ -20,7 +20,7 @@ struct AchievementView: View {
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 28) {
-                    // Header
+                    // 1. Header
                     HStack {
                         Button(action: { dismiss() }) {
                             Image(systemName: "arrow.left")
@@ -39,54 +39,18 @@ struct AchievementView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Category Tabs (Liquid Glass)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(tabs, id: \.self) { tab in
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                        selectedTab = tab
-                                    }
-                                }) {
-                                    Text(tab)
-                                        .font(.system(size: 14, weight: selectedTab == tab ? .bold : .medium, design: .rounded))
-                                        .foregroundColor(selectedTab == tab ? .white : Color(red: 0.6, green: 0.6, blue: 0.6))
-                                        .padding(.horizontal, 18)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            Group {
-                                                if selectedTab == tab {
-                                                    Capsule()
-                                                        .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-                                                        .overlay(
-                                                            Capsule()
-                                                                .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                                                .foregroundColor(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                        )
-                                                        .overlay(
-                                                            Capsule()
-                                                                .stroke(Color.white.opacity(0.2), lineWidth: 2)
-                                                                .blur(radius: 4)
-                                                        )
-                                                }
-                                            }
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
+                    // 2. Category Tabs (Tách ra View con để giảm tải cho compiler)
+                    CategoryTabsView(tabs: tabs, selectedTab: $selectedTab)
                     
-                    // Hero Card
+                    // 3. Hero Card
                     AchievementHeroCard()
                         .padding(.horizontal, 20)
                     
-                    // Timeline
+                    // 4. Timeline
                     AchievementTimelineRow(stages: viewModel.journeyStages)
                         .padding(.horizontal, 16)
                     
-                    // Achievement List Section
+                    // 5. Achievement List Section
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("DANH HIỆU NỔI BẬT")
@@ -121,4 +85,60 @@ struct AchievementView: View {
         }
         .navigationBarHidden(true)
     }
+}
+
+// MARK: - Tách CategoryTabs ra View riêng để tránh lỗi Compiler Timeout
+struct CategoryTabsView: View {
+    let tabs: [String]
+    @Binding var selectedTab: String
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(tabs, id: \.self) { tab in
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            selectedTab = tab
+                        }
+                    }) {
+                        Text(tab)
+                            .font(.system(size: 14, weight: selectedTab == tab ? .bold : .medium, design: .rounded))
+                            .foregroundColor(selectedTab == tab ? .white : Color(red: 0.6, green: 0.6, blue: 0.6))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                            .background(
+                                Group {
+                                    if selectedTab == tab {
+                                        Capsule()
+                                            .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(
+                                                        LinearGradient(
+                                                            stops: [.init(color: .white.opacity(0.8), location: 0.2), .init(color: .white.opacity(0.2), location: 0.8)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        ),
+                                                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                                                    )
+                                            )
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(Color.white.opacity(0.2), lineWidth: 2)
+                                                    .blur(radius: 4)
+                                            )
+                                    }
+                                }
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+}
+
+#Preview {
+    AchievementView()
 }
