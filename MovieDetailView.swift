@@ -73,10 +73,6 @@ struct MovieDetailView: View {
                                 Text(movie.title)
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.white)
-                                Text("Slug: \(MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) ?? "nil") | Ep: \(vm.sourceEpisodes.count)").font(.system(size: 8)).foregroundColor(.gray)
-                                Text("ID: \(movie.id) Season: \(vm.seasons.first?.seasonNumber ?? 0)").font(.system(size: 8)).foregroundColor(.gray)
-                                Text("Seasons: \(vm.seasons.count) | Detail: \(vm.selectedSeason?.seasonNumber ?? 0)").font(.system(size: 8)).foregroundColor(.gray)
-                                Text("Eps: \(vm.selectedSeason?.episodes.count ?? 0)").font(.system(size: 8)).foregroundColor(.gray)
                                 HStack(spacing: 6) {
                                     Text(releaseDateText).foregroundColor(.gray).font(.caption)
                                     Text("•").foregroundColor(.gray)
