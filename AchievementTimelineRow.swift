@@ -46,7 +46,7 @@ struct AchievementTimelineRow: View {
                             }
                             
                             // Icon Hexagon
-                            let iconShape = stage.getIconShape()
+                            let iconShape = AnyShape(stage.getIconShape())
                             
                             ZStack {
                                 // Nền tối / Sáng
@@ -60,7 +60,7 @@ struct AchievementTimelineRow: View {
                                     .frame(width: 44, height: 48)
                                 
                                 // Nội dung Shape
-                                AnyView(iconShape)
+                                iconShape
                                     .fill(stage.isUnlocked ? Color.white : Color.white.opacity(0.15))
                                     .frame(width: 20, height: 20)
                             }
