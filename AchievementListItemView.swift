@@ -14,18 +14,14 @@ struct AchievementListItemView: View {
     var body: some View {
         Button(action: {}) {
             HStack(spacing: 14) {
-                // Icon
                 ZStack {
                     Circle()
                         .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.25, blue: 0.25), Color(red: 0.1, green: 0.1, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 42, height: 42)
                     Circle().stroke(Color.white.opacity(0.4), lineWidth: 1.5).frame(width: 42, height: 42)
-                    Image(systemName: item.iconName)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.white)
+                    Image(svgBase64: item.iconName).resizable().scaledToFit().frame(width: 18, height: 18)
                 }
                 
-                // Text
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.title).font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(.white)
                     Text(item.subtitle).font(.system(size: 11, weight: .regular, design: .rounded)).foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
@@ -37,20 +33,20 @@ struct AchievementListItemView: View {
             .padding(14)
             .background(Color(red: 0.08, green: 0.08, blue: 0.08))
             
-            // === QUAN TRỌNG: Viền sáng đứt quãng (Glass Highlight) ===
+            // === VIỀN MỎNG (0.8) & ĐỨT ĐOẠN TỰ NHIÊN CHO LIST ===
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
+                    .trim(from: 0.0, to: 0.6) // Đứt đoạn từ 60% trở đi
                     .stroke(
                         LinearGradient(
                             stops: [
-                                .init(color: .white.opacity(0.5), location: 0.0),
-                                .init(color: .white.opacity(0.1), location: 0.3),
-                                .init(color: .clear, location: 0.8)
+                                .init(color: .white.opacity(0.6), location: 0.0),
+                                .init(color: .white.opacity(0.0), location: 0.5)
                             ],
                             startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            endPoint: .bottom
                         ),
-                        lineWidth: 1
+                        style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
                     )
             )
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 2).blur(radius: 4))
