@@ -98,15 +98,15 @@ struct AchievementHeroCard: View {
                 .shadow(color: Color.white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .overlay(
-            // Viền ngoài đứt đoạn (Dashed) và sáng
+            // Viền ngoài đứt đoạn (Dashed) và sáng - Đã sửa lỗi .foregroundColor -> .stroke
             RoundedRectangle(cornerRadius: 24)
-                .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
-                .foregroundColor(
+                .stroke(
                     LinearGradient(
                         stops: [.init(color: .white.opacity(0.8), location: 0.2), .init(color: .white.opacity(0.1), location: 0.8)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
-                    )
+                    ),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [6, 6])
                 )
         )
         // Outer Glow (Lớp viền mờ chạy quanh)
