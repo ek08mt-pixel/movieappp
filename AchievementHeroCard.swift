@@ -1,119 +1,142 @@
+//
+//  AchievementHeroCard.swift
+//  movieapp
+//
+//  Created by (Your App Name) on 2026.
+//
+
 import SwiftUI
 
 struct AchievementHeroCard: View {
     // Màu sắc đặc thù cho Component này
-    private let cardBgColor = Color(red: 0.12, green: 0.12, blue: 0.12) // #1E1E1E
-    private let progressTint = Color.white
+    private let cardBgColor = Color(red: 0.1, green: 0.1, blue: 0.1) // #1A1A1A
     private let progressBg = Color.white.opacity(0.15)
+    private let progressFill = Color.white
+    
+    @State private var progressAnimation: CGFloat = 0
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 20) {
-                // Phần Avatar Hexagon + Cat
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 24) {
+                // 1. Avatar Hexagon
                 ZStack {
-                    // Outer Glow Layer
+                    // Outer Glow Layer (Hiệu ứng ánh sáng lan tỏa)
                     HexagonShape()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 4)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 6)
                         .blur(radius: 12)
-                        .frame(width: 100, height: 110)
+                        .frame(width: 110, height: 120)
                     
-                    // Inner Base Layer (Tối)
+                    // Inner Base Layer (Tạo chiều sâu Gradient)
                     HexagonShape()
                         .fill(
                             LinearGradient(
-                                colors: [Color.black, Color(red: 0.15, green: 0.15, blue: 0.15)],
+                                colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.08, green: 0.08, blue: 0.08)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 100, height: 110)
+                        .frame(width: 110, height: 120)
                     
                     // Border Stroke (Sáng hơn)
                     HexagonShape()
-                        .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
-                        .frame(width: 100, height: 110)
+                        .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                        .frame(width: 110, height: 120)
                     
-                    // Con mèo đen
-                    ProCatShape()
-                        .fill(Color.white)
-                        .frame(width: 70, height: 70)
+                    // Tạm thời dùng SF Symbol để test layout, sau này thay = AnyShape(YourSVG)
+                    Image(systemName: "cat.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 50, height: 50)
+                        .foregroundColor(.white)
                 }
                 .padding(.leading, 4)
                 
-                // Phần Text Info
-                VStack(alignment: .leading, spacing: 6) {
+                // 2. Text Info (Phần bên phải)
+                VStack(alignment: .leading, spacing: 10) {
                     // Level Badge
                     Text("Lv. 12")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
                         .background(
                             Capsule()
                                 .fill(Color.black.opacity(0.6))
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                 )
                         )
                     
-                    // Title
+                    // Title (Font tròn, lớn)
                     Text("Pro Watcher")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     
                     // Subtitle
                     Text("Top 18% người xem tích cực")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textSecondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
                     
-                    Spacer().frame(height: 4)
+                    Spacer().frame(height: 8)
                     
-                    // Progress Bar & XP Text
-                    VStack(alignment: .leading, spacing: 4) {
+                    // 3. Progress Bar & XP Text
+                    VStack(alignment: .leading, spacing: 6) {
                         // Thanh trượt (Track + Fill)
                         ZStack(alignment: .leading) {
                             Capsule()
                                 .fill(progressBg)
-                                .frame(height: 4)
+                                .frame(height: 6)
                             
                             Capsule()
-                                .fill(LinearGradient(colors: [Color.white, Color.white.opacity(0.8)], startPoint: .leading, endPoint: .trailing))
-                                .frame(width: 100, height: 4) // Giả lập % hoàn thành
+                                .fill(progressFill)
+                                .frame(width: progressAnimation * 100, height: 6)
+                        }
+                        .onAppear {
+                            withAnimation(.easeOut(duration: 0.8).delay(0.2)) {
+                                progressAnimation = 0.65
+                            }
                         }
                         
                         HStack(spacing: 0) {
                             Text("2,350 / 3,600 XP")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.textSecondary)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
                             
                             Spacer()
                             
                             Text("Còn 1,250 XP để lên cấp tiếp theo")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.textSecondary)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 0.65, green: 0.65, blue: 0.65))
                         }
                     }
                 }
                 Spacer()
             }
+            .padding(28)
         }
-        .padding(20)
+        // 4. Card Container với Depth, Inner Shadow & Corner Radius
         .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(cardBgColor)
-                // Thêm một viền siêu mờ để tạo cảm giác Card nổi
+            RoundedRectangle(cornerRadius: 28)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.14, green: 0.14, blue: 0.14), Color(red: 0.06, green: 0.06, blue: 0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                // Inner Shadow (Tạo độ sâu)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 28)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        .shadow(color: Color.black.opacity(0.5), radius: 8, x: 0, y: 6)
+                        .mask(RoundedRectangle(cornerRadius: 28))
+                )
+                // Border sáng tinh tế
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
-    }
-}
-
-#Preview {
-    ZStack {
-        Color.black
-        AchievementHeroCard()
     }
 }
