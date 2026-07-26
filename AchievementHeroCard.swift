@@ -72,14 +72,25 @@ struct AchievementHeroCard: View {
         .padding(20)
         // Khung nền Card
         .background(RoundedRectangle(cornerRadius: 24).fill(Color(red: 0.12, green: 0.12, blue: 0.12)))
-        // CHỈ giữ lại viền nét đứt - Tuyệt đối không vẽ đường ngang màn hình
+        
+        // === QUAN TRỌNG: Viền sáng đứt quãng (Glass Highlight) ===
+        // Dùng Mask + Trim để cắt gradient, tạo hiệu ứng ánh sáng chiếu vào 1 phía
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(
-                    LinearGradient(stops: [.init(color: .white.opacity(0.6), location: 0.2), .init(color: .white.opacity(0.1), location: 0.8)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    style: StrokeStyle(lineWidth: 1, dash: [6, 6])
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.8), location: 0.0),
+                            .init(color: .white.opacity(0.4), location: 0.2),
+                            .init(color: .clear, location: 0.6)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
                 )
         )
+        // Lớp Outer Glow mờ
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(Color.white.opacity(0.1), lineWidth: 3)
