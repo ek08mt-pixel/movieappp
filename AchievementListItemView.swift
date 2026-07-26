@@ -53,15 +53,15 @@ struct AchievementListItemView: View {
             // Nền tối hơn
             .background(Color(red: 0.08, green: 0.08, blue: 0.08))
             .overlay(
-                // Viền đứt đoạn, có chỗ sáng chỗ mờ (Dashed Gradient)
+                // Viền đứt đoạn, có chỗ sáng chỗ mờ (Dashed Gradient) - Đã sửa lỗi .stroke
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                    .foregroundColor(
+                    .stroke(
                         LinearGradient(
                             stops: [.init(color: .white.opacity(0.4), location: 0.3), .init(color: .white.opacity(0.0), location: 0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        )
+                        ),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
                     )
             )
             // Outer Glow mờ quanh Card
