@@ -1,15 +1,14 @@
 import SwiftUI
 
 struct AchievementView: View {
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
+    @StateObject private var manager = AchievementManager.shared
     @State private var selectedCategory: AchievementCategory = .all
-    @State private var userRank = AchievementMockData.userRankData
-    @State private var progress = AchievementMockData.userProgress
     @State private var selectedAchievement: AchievementDefinition?
     @State private var showDetail = false
-    @Namespace private var animation
     
-    private let achievements = AchievementMockData.achievements
+    private let achievements = AchievementData.all
     
     var filteredAchievements: [AchievementDefinition] {
         if selectedCategory == .all { return achievements }
@@ -19,7 +18,6 @@ struct AchievementView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
                 ZStack {
                     Color.black
                     LinearGradient(
@@ -32,23 +30,18 @@ struct AchievementView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Header
                         headerView
                             .padding(.top, 60)
                         
-                        // Rank Card
                         rankCard
                             .padding(.horizontal, 20)
                         
-                        // Timeline
                         timelineView
                             .padding(.horizontal, 20)
                         
-                        // Category Filter
                         categoryFilter
                             .padding(.horizontal, 20)
                         
-                        // Achievement Grid
                         achievementGrid
                             .padding(.horizontal, 20)
                         
@@ -59,14 +52,17 @@ struct AchievementView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showDetail) {
                 if let achievement = selectedAchievement,
-                   let prog = progress.first(where: { $0.achievementId == achievement.id }) {
+                   let prog = manager.progress(for: achievement.id) {
                     AchievementDetailView(
                         achievement: achievement,
                         progress: prog,
-                        userRank: userRank
+                        userRank: manager.userRankData
                     )
                 }
             }
+        }
+        .onAppear {
+            manager.refresh(from: appState)
         }
     }
     
@@ -76,8 +72,8 @@ struct AchievementView: View {
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .bold))
+                Text("←")
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.white)
                     .padding(12)
                     .background(
@@ -87,85 +83,102 @@ struct AchievementView: View {
                     )
             }
             
-            Text("Danh hiệu")
+            Text("Danh Hiệu")
                 .font(.system(size: 22, weight: .bold, design: .default))
                 .foregroundColor(.white)
             
             Spacer()
             
-            Button {
-                // Info action
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 18))
-                    .foregroundColor(.white.opacity(0.6))
-            }
+            Text("\(manager.userRankData.unlockedAchievements)/\(manager.userRankData.totalAchievements)")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(.gray)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial.opacity(0.3))
+                )
         }
         .padding(.horizontal, 20)
     }
     
     // MARK: - Rank Card
     var rankCard: some View {
-        let currentRank = userRank.currentRank
-        let nextRank = userRank.nextRank
-        let xpInRank = userRank.totalXP - currentRank.xpRequired
-        let xpRange = (nextRank?.xpRequired ?? currentRank.xpRequired * 2) - currentRank.xpRequired
+        let currentRank = manager.userRankData.currentRank
+        let nextRank = manager.userRankData.nextRank
+        let xpInRank = manager.userRankData.totalXP - currentRank.xpRequired
+        let xpRange = max((nextRank?.xpRequired ?? currentRank.xpRequired * 2) - currentRank.xpRequired, 1)
         
         return ZStack {
+            Circle()
+                .fill(currentRank.glowColor)
+                .frame(width: 200, height: 200)
+                .blur(radius: 60)
+                .offset(y: -20)
+            
             RoundedRectangle(cornerRadius: 32)
-                .fill(.ultraThinMaterial.opacity(0.15))
+                .fill(.ultraThinMaterial.opacity(0.12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 32)
                         .stroke(
                             LinearGradient(
-                                colors: [.white.opacity(0.2), .white.opacity(0.05)],
+                                colors: [currentRank.color.opacity(0.3), .white.opacity(0.05)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                             lineWidth: 1
                         )
                 )
-                .shadow(color: currentRank.color.opacity(0.1), radius: 30, y: 10)
             
-            VStack(spacing: 16) {
-                // Icon
-                Text(currentRank.icon)
-                    .font(.system(size: 48))
-                    .shadow(color: currentRank.color.opacity(0.3), radius: 20)
+            VStack(spacing: 14) {
+                ZStack {
+                    // Custom shield badge
+                    ShieldBadge(rank: currentRank)
+                    
+                    if [Rank.master, Rank.legend, Rank.mythic].contains(currentRank) {
+                        Text("👑")
+                            .font(.system(size: 22))
+                            .offset(y: -52)
+                            .shadow(color: currentRank.color.opacity(0.6), radius: 8)
+                    }
+                }
                 
-                // Title
+                Text(currentRank.shortName)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(currentRank.color)
+                    .tracking(2)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(currentRank.color.opacity(0.15)))
+                
                 Text(currentRank.rawValue)
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                 
-                // Level
-                Text("Level \(userRank.level)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(currentRank.color)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(currentRank.color.opacity(0.15))
-                    )
-                
-                // Percentile
-                Text("Top \(userRank.percentile)% người dùng")
+                Text(currentRank.tagline)
                     .font(.system(size: 12))
                     .foregroundColor(.gray)
+                    .italic()
                 
-                // XP Bar
+                Text("Level \(manager.userRankData.level)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text("Top \(manager.userRankData.percentile)% người dùng")
+                    .font(.system(size: 11))
+                    .foregroundColor(.gray)
+                
                 VStack(spacing: 8) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
+                            RoundedRectangle(cornerRadius: 4)
                                 .fill(Color(white: 0.2))
                                 .frame(height: 6)
                             
-                            RoundedRectangle(cornerRadius: 3)
+                            RoundedRectangle(cornerRadius: 4)
                                 .fill(
                                     LinearGradient(
-                                        colors: [currentRank.color.opacity(0.8), currentRank.color.opacity(0.4)],
+                                        colors: [currentRank.color.opacity(0.8), currentRank.color.opacity(0.3)],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -177,14 +190,14 @@ struct AchievementView: View {
                     .frame(height: 6)
                     
                     HStack {
-                        Text("\(userRank.totalXP) / \(nextRank?.xpRequired ?? currentRank.xpRequired * 2) XP")
+                        Text("\(manager.userRankData.totalXP) / \(nextRank?.xpRequired ?? currentRank.xpRequired * 2) XP")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.gray)
                         
                         Spacer()
                         
                         if let next = nextRank {
-                            Text("Còn \(next.xpRequired - userRank.totalXP) XP để lên \(next.rawValue)")
+                            Text("Còn \(next.xpRequired - manager.userRankData.totalXP) XP để lên \(next.shortName)")
                                 .font(.system(size: 11))
                                 .foregroundColor(currentRank.color.opacity(0.7))
                         }
@@ -193,49 +206,48 @@ struct AchievementView: View {
             }
             .padding(24)
         }
-        .frame(height: 220)
+        .frame(minHeight: 300)
     }
     
     // MARK: - Timeline
     var timelineView: some View {
-        let currentRank = userRank.currentRank
+        let currentRank = manager.userRankData.currentRank
         
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
                 ForEach(Array(Rank.allCases.enumerated()), id: \.element) { index, rank in
                     HStack(spacing: 0) {
-                        // Node
                         VStack(spacing: 6) {
-                            Text(rank.icon)
-                                .font(.system(size: 22))
-                                .opacity(rank.xpRequired <= userRank.totalXP ? 1.0 : 0.3)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(rank == currentRank ? rank.color.opacity(0.2) : .white.opacity(0.03))
+                                    .frame(width: 48, height: 48)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(rank == currentRank ? rank.color.opacity(0.5) : .white.opacity(0.08), lineWidth: rank == currentRank ? 2 : 0.5)
+                                    )
+                                
+                                Text(rank.badgeEmoji)
+                                    .font(.system(size: 24))
+                                    .opacity(rank.xpRequired <= manager.userRankData.totalXP ? 1.0 : 0.25)
+                            }
                             
-                            Text(rank.rawValue)
-                                .font(.system(size: 8))
-                                .foregroundColor(rank == currentRank ? currentRank.color : .gray)
+                            Text(rank.shortName)
+                                .font(.system(size: 8, weight: rank == currentRank ? .bold : .regular))
+                                .foregroundColor(rank == currentRank ? rank.color : .gray)
                                 .lineLimit(1)
                             
                             Text("Lv\(rank.level)")
                                 .font(.system(size: 7))
                                 .foregroundColor(.gray)
                         }
-                        .frame(width: 60)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(rank == currentRank ? currentRank.color.opacity(0.12) : .clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(rank == currentRank ? currentRank.color.opacity(0.3) : .clear, lineWidth: 1)
-                                )
-                        )
+                        .frame(width: 56)
                         
-                        // Connector
                         if index < Rank.allCases.count - 1 {
                             VStack(spacing: 0) {
                                 Rectangle()
-                                    .fill(rank.xpRequired < userRank.totalXP ? currentRank.color.opacity(0.4) : Color(white: 0.2))
-                                    .frame(width: 20, height: 2)
+                                    .fill(rank.xpRequired < manager.userRankData.totalXP ? currentRank.color.opacity(0.5) : Color(white: 0.18))
+                                    .frame(width: 16, height: 2)
                             }
                         }
                     }
@@ -280,11 +292,11 @@ struct AchievementView: View {
         
         return LazyVGrid(columns: columns, spacing: 14) {
             ForEach(filteredAchievements) { achievement in
-                if let prog = progress.first(where: { $0.achievementId == achievement.id }) {
+                if let prog = manager.progress(for: achievement.id) {
                     AchievementCard(
                         achievement: achievement,
                         progress: prog,
-                        namespace: animation
+                        currentRank: manager.userRankData.currentRank
                     )
                     .onTapGesture {
                         selectedAchievement = achievement
@@ -296,25 +308,76 @@ struct AchievementView: View {
     }
 }
 
+// MARK: - Custom Shield Badge
+struct ShieldBadge: View {
+    let rank: Rank
+    
+    var body: some View {
+        ZStack {
+            // Shield shape using RoundedRectangle with custom look
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(
+                        colors: [rank.color.opacity(0.15), rank.color.opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 90, height: 100)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(
+                            LinearGradient(
+                                colors: [rank.color.opacity(0.5), rank.color.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: rank.glowColor, radius: 12)
+            
+            // Cat emoji
+            Text(rank.badgeEmoji)
+                .font(.system(size: 50))
+                .shadow(color: rank.color.opacity(0.5), radius: 15)
+        }
+    }
+}
+
 // MARK: - Achievement Card
 struct AchievementCard: View {
     let achievement: AchievementDefinition
     let progress: AchievementProgress
-    var namespace: Namespace.ID
+    let currentRank: Rank
     
     var body: some View {
         let currentTier = achievement.currentTier(progress: progress.currentValue)
         let nextTier = achievement.nextTier(progress: progress.currentValue)
         let isCompleted = nextTier == nil
+        let tierColor: Color = {
+            guard let tier = currentTier else { return .gray }
+            let ratio = Double(tier.tier) / Double(max(achievement.tiers.count, 1))
+            return Color(red: 0.3 + 0.7 * ratio, green: 0.7 - 0.4 * ratio, blue: 0.9 - 0.3 * ratio)
+        }()
         
         VStack(spacing: 10) {
-            // Icon
-            Text(currentTier?.icon ?? achievement.icon)
-                .font(.system(size: 36))
-                .frame(height: 44)
-                .opacity(currentTier != nil ? 1.0 : 0.3)
+            // Custom shield for achievement
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(isCompleted ? tierColor.opacity(0.12) : .white.opacity(0.04))
+                    .frame(width: 56, height: 62)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(isCompleted ? tierColor.opacity(0.35) : .white.opacity(0.08), lineWidth: 1.5)
+                    )
+                    .shadow(color: isCompleted ? tierColor.opacity(0.15) : .clear, radius: 8)
+                
+                Text(currentTier?.icon ?? achievement.icon)
+                    .font(.system(size: 32))
+                    .opacity(currentTier != nil ? 1.0 : 0.3)
+            }
             
-            // Title
             Text(currentTier?.name ?? achievement.title)
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(.white)
@@ -322,13 +385,11 @@ struct AchievementCard: View {
                 .multilineTextAlignment(.center)
                 .frame(height: 36)
             
-            // Description
             if let next = nextTier {
-                Text("\(progress.currentValue) / \(next.requirement)")
+                Text("\(progress.currentValue)/\(next.requirement)")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.gray)
                 
-                // Mini progress bar
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 2)
@@ -336,7 +397,13 @@ struct AchievementCard: View {
                             .frame(height: 3)
                         
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(.white.opacity(0.5))
+                            .fill(
+                                LinearGradient(
+                                    colors: [tierColor, tierColor.opacity(0.4)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .frame(width: geo.size.width * next.progress(current: progress.currentValue), height: 3)
                     }
                 }
@@ -344,13 +411,16 @@ struct AchievementCard: View {
                 .padding(.horizontal, 8)
             } else if isCompleted {
                 HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.green.opacity(0.8))
-                    Text("Đã đạt")
-                        .font(.system(size: 11))
-                        .foregroundColor(.green.opacity(0.8))
+                    Text("✔")
+                        .font(.system(size: 10))
+                        .foregroundColor(tierColor)
+                    Text("MAX")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(tierColor)
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(tierColor.opacity(0.12)))
             } else {
                 Text(achievement.tiers.first?.description ?? "")
                     .font(.system(size: 11))
@@ -358,23 +428,23 @@ struct AchievementCard: View {
             }
         }
         .padding(14)
-        .frame(height: 170)
+        .frame(height: 175)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 28)
-                .fill(.ultraThinMaterial.opacity(0.12))
+                .fill(.ultraThinMaterial.opacity(0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(
                     LinearGradient(
-                        colors: [.white.opacity(0.15), .white.opacity(0.03)],
+                        colors: [.white.opacity(0.12), .white.opacity(0.02)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 0.5
                 )
         )
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .shadow(color: isCompleted ? tierColor.opacity(0.12) : .black.opacity(0.3), radius: 10, y: 5)
     }
 }
