@@ -20,7 +20,12 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
-                LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                // Background blur trong suốt thay vì full đen
+                ZStack {
+                    Color.black.opacity(0.75)
+                    VisualEffectBlur(blurStyle: .systemUltraThinMaterialDark)
+                }
+                .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     VStack(spacing: 8) {
@@ -32,7 +37,15 @@ struct SearchView: View {
                             if !vm.query.isEmpty { Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) } }
                             if focused { Button("Đóng") { focused = false }.foregroundColor(.white).font(.caption) }
                         }
-                        .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(.ultraThinMaterial.opacity(0.7))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                        )
                         
                         Picker("", selection: $searchMode) {
                             ForEach(SearchMode.allCases, id: \.self) { mode in Text(mode.rawValue).tag(mode) }
@@ -175,6 +188,20 @@ struct SearchView: View {
                 }
             } catch { print("Search actors error: \(error)") }
         }
+    }
+}
+
+// MARK: - Visual Effect Blur (UIKit bridge)
+struct VisualEffectBlur: UIViewRepresentable {
+    var blurStyle: UIBlurEffect.Style
+    
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        let view = UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = UIBlurEffect(style: blurStyle)
     }
 }
 
