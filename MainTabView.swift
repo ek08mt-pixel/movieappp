@@ -37,7 +37,7 @@ struct MainTabView: View {
                     LiquidTabIcon(icon: "safari.fill", label: "Explore", isSelected: selectedTab == 1) {
                         if selectedTab == 1 { exploreID = UUID() } else { selectedTab = 1 }
                     }
-                    LiquidTabIcon(icon: "person.fill", label: "Cá nhân", isSelected: selectedTab == 2) {
+                    LiquidTabIcon(icon: "person.fill", label: "Me", isSelected: selectedTab == 2) {
                         if selectedTab == 2 { profileID = UUID() } else { selectedTab = 2 }
                     }
                     LiquidTabIcon(icon: "rectangle.stack.fill", label: "Library", isSelected: selectedTab == 3) {
