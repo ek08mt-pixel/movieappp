@@ -389,7 +389,7 @@ struct CatFaceMythic: View {
 }
 
 // MARK: - Cat Badge Renderer
-structstruct CatBadgeView: View {
+struct CatBadgeView: View {
     let rank: Rank
     let size: CGFloat
     
