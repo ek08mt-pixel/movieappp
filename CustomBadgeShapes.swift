@@ -29,17 +29,13 @@ struct HexagonShape: Shape {
     }
 }
 
-// MARK: - 2. Hàm Load Ảnh từ Base64 (Đã sửa lỗi cho môi trường swiftc)
+// MARK: - 2. Hàm Load Ảnh từ Base64 (Đã fix lỗi cho GitHub Actions)
 extension Image {
     init(svgBase64: String) {
-        // Vì GitHub Actions dùng swiftc dòng lệnh, cách an toàn nhất:
-        // 1. Giải mã Base64 thành Data
         guard let data = Data(base64Encoded: svgBase64) else {
             self.init(systemName: "xmark.circle")
             return
         }
-        
-        // 2. Tạo UIImage từ Data. (Nếu không có UIKit (macOS), nó sẽ fallback)
         #if canImport(UIKit)
         if let uiImage = UIImage(data: data) {
             self.init(uiImage: uiImage)
@@ -47,17 +43,14 @@ extension Image {
             self.init(systemName: "photo")
         }
         #else
-        // Fallback cho môi trường không phải iOS
         self.init(systemName: "photo")
         #endif
     }
 }
 
-// MARK: - 3. SVG Base64 Icon chính xác
-// Con mèo đã được nén gọn hơn, đảm bảo load nhanh
+// MARK: - 3. Bộ Icon Base64 (Lấy chính xác từ Mockup)
 let catIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDEzQzM2LjEgMTMgMjUgMjQuMSAyNSAzOEMyNSA1MS45IDM2LjEgNjMgNTAgNjNDNjMuOSA2MyA3NSA1MS45IDc1IDM4Qzc1IDI0LjEgNjMuOSAxMyA1MCAxM1pNNTAgNTlDMzguNCA1OSAyOSA0OS42IDI5IDM4QzI5IDI2LjQgMzguNCAxNyA1MCAxN0M2MS42IDE3IDcxIDI2LjQgNzEgMzhDNzEgNDkuNiA2MS42IDU5IDUwIDU5WiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0zOCAzNkMzNi4zIDM2IDM1IDM3LjMgMzUgMzlDMzUgNDAuNyAzNi4zIDQyIDM4IDQyQzQxLjcgNDIgNDEgNDAuNyA0MSAzOUM0MSAzNy4zIDM5LjcgMzYgMzggMzZaIi8+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYyIDM2QzYwLjMgMzYgNTkgMzcuMyA1OSAzOUM1OSA0MC43IDYwLjMgNDIgNjIgNDJDNjMuNyA0MiA2NSA0MC43IDY1IDM5QzY1IDM3LjMgNjMuNyAzNiA2MiAzNloiLz48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNNTAgNDVDNDggNDUgNDcgNDYgNDcgNDhWNTBDNDcgNTIgNDggNTMgNTAgNTNDNTIgNTMgNTMgNTIgNTMgNTBWNDhDNTMgNDYgNTIgNDUgNTAgNDVaIi8+PC9zdmc+"
 
 let crownIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1IDYwTDI1IDcwTDc1IDcwTDc1IDYwTDUwIDc1TDI1IDYwWiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0xMCAxMEwxMCA0MEw0MCA0MEw0MCAxMEwxMCAxMFoiLz48L3N2Zz4="
 let lightningIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDBMNDAgNTBMNDUgNTBMNDAgMTAwTDcwIDQwTDYwIDQwTDcwIDBaIi8+PC9zdmc+"
 let flameIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDVDNDAgMjAgNDAgNDAgNDAgNDBDNDAgMjAgMzAgMzAgMTAgNTBDMTAgNzAgMzAgOTAgNTAgOTBDNzAgOTAgOTAgNzAgOTAgNTBDNzAgMzAgNjAgMjAgNjAgNDBDNjAgNDAgNjAgMjAgNTAgNVoiLz48L3N2Zz4="
-let masksIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1IDI1QzE1IDI1IDUgMzUgNSA0NUM1IDU1IDE1IDY1IDI1IDY1QzM1IDY1IDQ1IDU1IDQ1IDQ1QzQ1IDM1IDM1IDI1IDI1IDI1Wk0yNSA1NEMxOCA1NCAxMyA0OCAxMyA0MkMxMyAzNiAxOCAzMCAyNSAzMEMzMiAzMCAzNyAzNiAzNyA0MkMzNyA0OCAzMiA1NCAyNSA1NFoiLz48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNNzUgMjVDNjUgMjUgNTUgMzUgNTUgNDVDNTUgNTUgNjUgNjUgNzUgNjVDODUgNjUgOTUgNTUgOTUgNDVDOTUgMzUgODUgMjUgNzUgMjVaTTc1IDU0QzY4IDU0IDYzIDQ4IDYzIDQyQzYzIDM2IDY4IDMwIDc1IDMwQzgyIDMwIDg3IDM2IDg3IDQyQzg3IDQ4IDgyIDU0IDc1IDU0WiIvPjwvc3ZnPg=="
