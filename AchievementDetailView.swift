@@ -54,29 +54,17 @@ struct AchievementDetailView: View {
                                     .frame(width: 140, height: 140)
                                     .blur(radius: 30)
                                 
-                                RoundedRectangle(cornerRadius: 32)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [tierColor.opacity(0.12), tierColor.opacity(0.04)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                                    .frame(width: 120, height: 130)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 32)
-                                            .stroke(tierColor.opacity(0.4), lineWidth: 2.5)
-                                    )
+                                AchievementBadgeView(
+                                    tier: currentTier?.tier ?? 1,
+                                    maxTier: achievement.tiers.count,
+                                    size: 100
+                                )
                                 
-                                Text(currentTier?.icon ?? achievement.icon)
-                                    .font(.system(size: 60))
-                                    .shadow(color: tierColor.opacity(0.5), radius: 20)
-                                
-                                if let tier = currentTier, tier.tier >= achievement.tiers.count - 1 {
-                                    Text("👑")
+                                if let tier = currentTier, tier.tier >= achievement.tiers.count {
+                                    Text("✦")
                                         .font(.system(size: 26))
+                                        .foregroundColor(tierColor)
                                         .offset(y: -60)
-                                        .shadow(color: tierColor.opacity(0.5), radius: 10)
                                 }
                             }
                             
@@ -130,12 +118,13 @@ struct AchievementDetailView: View {
                                             )
                                         
                                         if progress.unlockedTiers.contains(tier.tier) {
-                                            Text(tier.icon)
-                                                .font(.system(size: 22))
+                                            Text("✓")
+                                                .font(.system(size: 18, weight: .bold))
+                                                .foregroundColor(tierColorForTier(tier))
                                         } else {
-                                            Text("🔒")
-                                                .font(.system(size: 18))
-                                                .opacity(0.4)
+                                            Text("○")
+                                                .font(.system(size: 18, weight: .light))
+                                                .foregroundColor(.gray.opacity(0.4))
                                         }
                                     }
                                     
@@ -157,7 +146,7 @@ struct AchievementDetailView: View {
                                     Spacer()
                                     
                                     if progress.unlockedTiers.contains(tier.tier) {
-                                        Text("✔")
+                                        Text("✓")
                                             .font(.system(size: 16, weight: .bold))
                                             .foregroundColor(tierColorForTier(tier))
                                     }
