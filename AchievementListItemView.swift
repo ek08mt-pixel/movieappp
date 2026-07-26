@@ -15,11 +15,9 @@ struct AchievementListItemView: View {
         Button(action: {}) {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.25, blue: 0.25), Color(red: 0.1, green: 0.1, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 42, height: 42)
+                    Circle().fill(LinearGradient(colors: [Color(red: 0.25, green: 0.25, blue: 0.25), Color(red: 0.1, green: 0.1, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 42, height: 42)
                     Circle().stroke(Color.white.opacity(0.4), lineWidth: 1.5).frame(width: 42, height: 42)
-                    Image(svgBase64: item.iconName).resizable().scaledToFit().frame(width: 18, height: 18)
+                    Image(systemName: item.iconName).font(.system(size: 17, weight: .medium)).foregroundColor(.white)
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
@@ -33,19 +31,12 @@ struct AchievementListItemView: View {
             .padding(14)
             .background(Color(red: 0.08, green: 0.08, blue: 0.08))
             
-            // === VIỀN MỎNG (0.8) & ĐỨT ĐOẠN TỰ NHIÊN CHO LIST ===
+            // Viền mỏng 0.8 đứt đoạn
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .trim(from: 0.0, to: 0.6) // Đứt đoạn từ 60% trở đi
+                    .trim(from: 0.0, to: 0.6)
                     .stroke(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white.opacity(0.6), location: 0.0),
-                                .init(color: .white.opacity(0.0), location: 0.5)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottom
-                        ),
+                        LinearGradient(stops: [.init(color: .white.opacity(0.6), location: 0.0), .init(color: .white.opacity(0.0), location: 0.5)], startPoint: .topLeading, endPoint: .bottom),
                         style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
                     )
             )
