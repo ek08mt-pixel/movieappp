@@ -98,7 +98,8 @@ struct AchievementTimelineRow: View {
                                 VStack(spacing: 0) {
                                     Text(stage.title)
                                         .font(.system(size: 10, weight: .medium, design: .rounded))
-                                        .fixedSize(horizontal: true) // Ngăn không cho text bị ép co lại
+                                        // SỬA LỖI: Thêm tham số vertical: false
+                                        .fixedSize(horizontal: true, vertical: false)
                                         .foregroundColor(
                                             isActive ? .white :
                                             isCompleted ? Color(red: 0.6, green: 0.6, blue: 0.6) :
