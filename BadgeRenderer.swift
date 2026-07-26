@@ -389,13 +389,13 @@ struct CatFaceMythic: View {
 }
 
 // MARK: - Cat Badge Renderer
-struct CatBadgeView: View {
+structstruct CatBadgeView: View {
     let rank: Rank
     let size: CGFloat
     
     var body: some View {
         ZStack {
-            // Glow effect
+            // Glow
             if rank != .newbie {
                 Circle()
                     .fill(rank.glowColor)
@@ -403,71 +403,87 @@ struct CatBadgeView: View {
                     .blur(radius: size * 0.2)
             }
             
-            // Badge shape
-            badgeShape
-                .fill(
-                    LinearGradient(
-                        colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(
-                    badgeShape
-                        .stroke(
-                            LinearGradient(
-                                colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: size * 0.025
-                        )
-                )
-                .shadow(color: rank.glowColor, radius: size * 0.12)
-            
-            // Cat face inside
-            catView
+            // Badge shape + cat
+            badgeContent
         }
         .frame(width: size, height: size * 1.1)
     }
     
     @ViewBuilder
-    var badgeShape: some Shape {
+    var badgeContent: some View {
         switch rank {
-        case .newbie, .explorer:
-            AnyShape(Circle())
+        case .newbie:
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(Circle().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceSimple()
+            }
+            .frame(width: size, height: size)
+        case .explorer:
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(Circle().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceSimple()
+            }
+            .frame(width: size, height: size)
         case .movieFan:
-            AnyShape(HexagonShape())
+            ZStack {
+                HexagonShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(HexagonShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceCool()
+            }
+            .frame(width: size, height: size)
         case .enthusiast:
-            AnyShape(DiamondShape())
+            ZStack {
+                DiamondShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(DiamondShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceCool()
+            }
+            .frame(width: size, height: size)
         case .proWatcher:
-            AnyShape(ShieldShape())
+            ZStack {
+                ShieldShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(ShieldShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFacePro()
+            }
+            .frame(width: size, height: size * 1.05)
         case .master:
-            AnyShape(WingedShieldShape())
+            ZStack {
+                WingedShieldShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(WingedShieldShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.02))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceCrown()
+            }
+            .frame(width: size * 1.2, height: size)
         case .legend:
-            AnyShape(SeraphimShape())
+            ZStack {
+                SeraphimShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(SeraphimShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.02))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceLegend()
+            }
+            .frame(width: size * 1.1, height: size * 1.1)
         case .mythic:
-            AnyShape(ShieldShape())
-        }
-    }
-    
-    @ViewBuilder
-    var catView: some View {
-        switch rank {
-        case .newbie, .explorer:
-            CatFaceSimple()
-        case .movieFan:
-            CatFaceCool()
-        case .enthusiast:
-            CatFaceCool()
-        case .proWatcher:
-            CatFacePro()
-        case .master:
-            CatFaceCrown()
-        case .legend:
-            CatFaceLegend()
-        case .mythic:
-            CatFaceMythic()
+            ZStack {
+                ShieldShape()
+                    .fill(LinearGradient(colors: [rank.color.opacity(0.12), rank.color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
+                    .overlay(ShieldShape().stroke(LinearGradient(colors: [rank.color.opacity(0.5), rank.color.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: size * 0.025))
+                    .shadow(color: rank.glowColor, radius: size * 0.12)
+                CatFaceMythic()
+            }
+            .frame(width: size, height: size * 1.05)
         }
     }
 }
