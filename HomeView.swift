@@ -211,7 +211,16 @@ Section {
                         // Continue Watching
                         if !appState.watchProgressList.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
+                                HStack(spacing: 6) {
+                                    Text("|")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.6))
+                                    Text("Tiếp tục xem")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
+                                .padding(.horizontal, 20)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 12) {
                                         ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
@@ -229,7 +238,16 @@ Section {
                         
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white).padding(.horizontal, 20)
+                                HStack(spacing: 6) {
+                                    Text("|")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.6))
+                                    Text("Movie of the Day")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
+                                .padding(.horizontal, 20)
                                 NavigationLink(destination: MovieDetailView(movie: mod)) {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
@@ -557,7 +575,22 @@ struct SectionGrid: View {
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white); Spacer(); NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) { Text("Xem tất cả").font(.caption).foregroundColor(.gray) } }.padding(.horizontal, 20)
+                NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) {
+                    HStack(spacing: 6) {
+                        Text("|")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white.opacity(0.6))
+                        Text(title)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        Text(">")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
