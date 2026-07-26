@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var isEditingName = false
     @State private var tempName: String = ""
     @State private var showAuth = false
+    @State private var showAchievements = false
     @Environment(\.dismiss) var dismiss
     
     let avatars = ["person.circle.fill", "person.crop.circle.fill", "face.smiling.fill",
@@ -44,11 +45,41 @@ struct ProfileView: View {
                             }
                         }
                         
-                        // Hiển thị email từ AppState
                         Text(appState.email)
                             .font(.caption)
                             .foregroundColor(.gray)
                             .padding(.horizontal, 30)
+                        
+                        // Danh hiệu button
+                        Button {
+                            showAchievements = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text("🏆")
+                                    .font(.system(size: 22))
+                                Text("Danh hiệu")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("Pro Watcher")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(red: 0.0, green: 0.8, blue: 1.0))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.ultraThinMaterial.opacity(0.3))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                    )
+                            )
+                        }
+                        .padding(.horizontal, 30)
                         
                         Button { withAnimation { appState.logout() } } label: { Text("Đăng xuất").font(.caption).fontWeight(.medium).foregroundColor(.red).padding(.horizontal, 24).padding(.vertical, 10).background(Capsule().stroke(Color.red.opacity(0.4), lineWidth: 1)) }
                     } else {
@@ -75,6 +106,9 @@ struct ProfileView: View {
             appState.smartLogin(email: email, password: password)
             showAuth = false
         } }
+        .fullScreenCover(isPresented: $showAchievements) {
+            AchievementView()
+        }
         .onChange(of: inputImage) { img in if let img = img, let data = img.jpegData(compressionQuality: 0.7) { appState.avatarImageData = data; appState.selectedAvatar = ""; appState.save() } }
     }
 }
