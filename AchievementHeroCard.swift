@@ -12,49 +12,26 @@ struct AchievementHeroCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // 1. Avatar Container (Hexagon + Cat Image từ Base64)
+            // 1. Avatar Container
             ZStack {
-                // Outer Glow
+                HexagonShape().stroke(Color.white.opacity(0.4), lineWidth: 3).blur(radius: 10).frame(width: 88, height: 96)
+                
                 HexagonShape()
-                    .stroke(Color.white.opacity(0.4), lineWidth: 3)
-                    .blur(radius: 10)
+                    .fill(LinearGradient(colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.05)], startPoint: .top, endPoint: .bottom))
                     .frame(width: 88, height: 96)
                 
                 HexagonShape()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.2, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .stroke(LinearGradient(colors: [.white.opacity(0.9), .white.opacity(0.1), .white.opacity(0.0), .white.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
                     .frame(width: 88, height: 96)
                 
-                HexagonShape()
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.9), .white.opacity(0.1), .white.opacity(0.0), .white.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
-                    .frame(width: 88, height: 96)
-                
-                // Con mèo (RENDER TỪ BASE64 STRING)
-                Image(svgBase64: catIconSVG)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 44, height: 44)
+                Image(svgBase64: catIconSVG).resizable().scaledToFit().frame(width: 44, height: 44)
                 
                 // Sparkles
                 Circle().fill(Color.white.opacity(0.7)).frame(width: 3, height: 3).offset(x: -42, y: -30)
                 Circle().fill(Color.white.opacity(0.4)).frame(width: 2, height: 2).offset(x: 38, y: -28)
                 Circle().fill(Color.white.opacity(0.6)).frame(width: 4, height: 4).offset(x: -45, y: 18)
-                Circle().fill(Color.white.opacity(0.3)).frame(width: 2, height: 2).offset(x: 42, y: 22)
             }
             
-            // 2. Text Info
             VStack(alignment: .leading, spacing: 6) {
                 Text("Lv. 12")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -73,7 +50,6 @@ struct AchievementHeroCard: View {
                 
                 Spacer().frame(height: 2)
                 
-                // 3. Progress Bar
                 VStack(alignment: .leading, spacing: 3) {
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.white.opacity(0.12)).frame(height: 5)
@@ -92,17 +68,24 @@ struct AchievementHeroCard: View {
         }
         .padding(20)
         .background(RoundedRectangle(cornerRadius: 24).fill(Color(red: 0.12, green: 0.12, blue: 0.12)))
+        
+        // === VIỀN MỎNG (0.8) & ĐỨT ĐOẠN TỰ NHIÊN ===
         .overlay(
             RoundedRectangle(cornerRadius: 24)
+                .trim(from: 0.05, to: 0.65) // Cắt bỏ 35% viền để tạo đứt đoạn
                 .stroke(
                     LinearGradient(
-                        stops: [.init(color: .white.opacity(0.3), location: 0.0), .init(color: .white.opacity(0.05), location: 0.4), .init(color: .clear, location: 0.8)],
-                        startPoint: .top,
+                        stops: [
+                            .init(color: .white.opacity(0.7), location: 0.0),
+                            .init(color: .white.opacity(0.0), location: 0.6)
+                        ],
+                        startPoint: .topLeading,
                         endPoint: .bottom
                     ),
-                    lineWidth: 1.5
+                    style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
                 )
         )
-        .shadow(color: Color.white.opacity(0.05), radius: 10, x: 0, y: 10)
+        // Lớp Outer Glow mờ tổng thể (Rất nhẹ)
+        .shadow(color: Color.white.opacity(0.03), radius: 8, x: 0, y: 8)
     }
 }
