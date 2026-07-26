@@ -9,105 +9,103 @@ import SwiftUI
 
 struct AchievementTimelineRow: View {
     let stages: [JourneyStage]
+    @State private var selectedID: UUID?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             Text("HÀNH TRÌNH CỦA BẠN")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .tracking(1.5)
-                .foregroundColor(.textSecondary)
+                .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
+                .padding(.leading, 8)
             
-            // Timeline
             HStack(alignment: .top, spacing: 0) {
                 ForEach(Array(stages.enumerated()), id: \.element.id) { index, stage in
-                    // Một cột mốc (Icon + Tên)
-                    VStack(spacing: 10) {
-                        ZStack {
-                            // Đường nét đứt nối liền các cột (trừ cái cuối cùng)
-                            if index < stages.count - 1 {
-                                HStack(spacing: 0) {
-                                    Spacer()
-                                    // Vẽ đường nét đứt
-                                    Path { path in
-                                        path.move(to: CGPoint(x: 0, y: 0))
-                                        path.addLine(to: CGPoint(x: 40, y: 0))
-                                    }
-                                    .stroke(
-                                        style: StrokeStyle(
-                                            lineWidth: 1.5,
-                                            dash: [4, 4]
-                                        )
-                                    )
-                                    .foregroundColor(stage.isUnlocked ? Color.white.opacity(0.3) : Color.white.opacity(0.05))
-                                    .frame(width: 42, height: 1)
-                                    Spacer()
-                                }
-                                .offset(y: -22) // Căn chỉnh đường nét ngang tâm hình
-                            }
-                            
-                            // Icon Hexagon
-                            let iconShape = AnyShape(stage.getIconShape())
-                            
-                            ZStack {
-                                // Nền tối / Sáng
-                                HexagonShape()
-                                    .fill(stage.isUnlocked ? Color(red: 0.16, green: 0.16, blue: 0.16) : Color(red: 0.08, green: 0.08, blue: 0.08))
-                                    .frame(width: 44, height: 48)
-                                
-                                // Viền (Outline)
-                                HexagonShape()
-                                    .stroke(stage.isUnlocked ? Color.white.opacity(0.5) : Color.white.opacity(0.05), lineWidth: 1)
-                                    .frame(width: 44, height: 48)
-                                
-                                // Nội dung Shape
-                                iconShape
-                                    .fill(stage.isUnlocked ? Color.white : Color.white.opacity(0.15))
-                                    .frame(width: 20, height: 20)
-                            }
-                            // Glow ring cho cột đang mở
-                            .overlay(
-                                Group {
-                                    if stage.isUnlocked {
-                                        HexagonShape()
-                                            .stroke(Color.white.opacity(0.2), lineWidth: 3)
-                                            .blur(radius: 6)
-                                            .frame(width: 44, height: 48)
-                                    }
-                                }
-                            )
+                    let isActive = stage.isUnlocked && stage.title == "Pro Watcher"
+                    let isCompleted = stage.isUnlocked && stage.title != "Pro Watcher"
+                    let isLocked = !stage.isUnlocked
+                    
+                    ZStack(alignment: .top) {
+                        // Đường nét đứt nối (Chạy dưới, trừ cái cuối cùng)
+                        if index < stages.count - 1 {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 52, height: 1.5)
+                                .offset(x: 26, y: 26)
                         }
-                        .frame(width: 50)
                         
-                        // Tên & Cấp độ (Text bên dưới)
-                        VStack(spacing: 2) {
-                            Text(stage.title)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(stage.isUnlocked ? .textSecondary : .textTertiary)
+                        VStack(spacing: 12) {
+                            // Badge
+                            Button(action: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                    selectedID = stage.id
+                                }
+                                // Xử lý tương tác ở đây
+                            }) {
+                                ZStack {
+                                    // Background Hexagon
+                                    HexagonShape()
+                                        .fill(
+                                            isActive ? Color.white.opacity(0.15) :
+                                            isCompleted ? Color(red: 0.12, green: 0.12, blue: 0.12) :
+                                            Color(red: 0.06, green: 0.06, blue: 0.06)
+                                        )
+                                        .frame(width: 56, height: 64)
+                                    
+                                    // Border
+                                    HexagonShape()
+                                        .stroke(
+                                            isActive ? Color.white :
+                                            isCompleted ? Color.white.opacity(0.3) :
+                                            Color.white.opacity(0.05),
+                                            lineWidth: isActive ? 2 : 1
+                                        )
+                                        .frame(width: 56, height: 64)
+                                    
+                                    // Icon (SF Symbol tạm thời)
+                                    Image(systemName: stage.iconName)
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(
+                                            isActive ? .white :
+                                            isCompleted ? .white.opacity(0.8) :
+                                            .white.opacity(0.15)
+                                        )
+                                    
+                                    // Active Glow Ring
+                                    if isActive {
+                                        HexagonShape()
+                                            .stroke(Color.white.opacity(0.4), lineWidth: 6)
+                                            .blur(radius: 12)
+                                            .frame(width: 56, height: 64)
+                                    }
+                                }
+                                .scaleEffect(selectedID == stage.id ? 1.05 : 1.0)
+                            }
+                            .buttonStyle(.plain) // Ngăn hiệu ứng click mặc định của SwiftUI
                             
-                            Text(stage.level)
-                                .font(.system(size: 10, weight: .regular))
-                                .foregroundColor(stage.isUnlocked ? .textSecondary : .textTertiary)
+                            // Text Labels
+                            VStack(spacing: 2) {
+                                Text(stage.title)
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundColor(
+                                        isActive ? .white :
+                                        isCompleted ? Color(red: 0.65, green: 0.65, blue: 0.65) :
+                                        Color(red: 0.35, green: 0.35, blue: 0.35)
+                                    )
+                                Text(stage.level)
+                                    .font(.system(size: 10, weight: .regular, design: .rounded))
+                                    .foregroundColor(
+                                        isActive ? Color(red: 0.65, green: 0.65, blue: 0.65) :
+                                        isCompleted ? Color(red: 0.45, green: 0.45, blue: 0.45) :
+                                        Color(red: 0.25, green: 0.25, blue: 0.25)
+                                    )
+                            }
                         }
-                        .frame(width: 70)
                     }
+                    .frame(width: 70) // Chiều rộng cố định mỗi cột để các mốc thẳng hàng chuẩn xác
                 }
             }
-            .padding(.top, 24)
             .padding(.horizontal, 4)
         }
-    }
-}
-
-#Preview {
-    ZStack {
-        Color.black
-        AchievementTimelineRow(stages: [
-            JourneyStage(title: "Newbie", level: "Lv.1", isUnlocked: true),
-            JourneyStage(title: "Enthusiast", level: "Lv.5", isUnlocked: true),
-            JourneyStage(title: "Fanatic", level: "Lv.10", isUnlocked: true),
-            JourneyStage(title: "Pro Watcher", level: "Lv.12", isUnlocked: true),
-            JourneyStage(title: "Master", level: "Lv.15", isUnlocked: false),
-            JourneyStage(title: "Legend", level: "Lv.20", isUnlocked: false)
-        ])
     }
 }
