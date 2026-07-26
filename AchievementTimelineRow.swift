@@ -12,47 +12,46 @@ struct AchievementTimelineRow: View {
     @State private var selectedID: UUID?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("HÀNH TRÌNH CỦA BẠN")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .tracking(1.5)
+                .tracking(1.2)
                 .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
-                .padding(.leading, 8)
+                .padding(.leading, 4)
             
-            HStack(alignment: .top, spacing: 0) {
+            // Hàng ngang
+            HStack(spacing: -12) {
                 ForEach(Array(stages.enumerated()), id: \.element.id) { index, stage in
                     let isActive = stage.isUnlocked && stage.title == "Pro Watcher"
                     let isCompleted = stage.isUnlocked && stage.title != "Pro Watcher"
-                    let isLocked = !stage.isUnlocked
                     
                     ZStack(alignment: .top) {
-                        // Đường nét đứt nối (Chạy dưới, trừ cái cuối cùng)
+                        // Đường nối nét đứt (ẩn ở cái cuối cùng)
                         if index < stages.count - 1 {
                             Rectangle()
-                                .fill(Color.white.opacity(0.1))
-                                .frame(width: 52, height: 1.5)
-                                .offset(x: 26, y: 26)
+                                .fill(Color.white.opacity(isActive || isCompleted ? 0.15 : 0.05))
+                                .frame(width: 44, height: 1)
+                                .offset(x: 22, y: 22)
                         }
                         
-                        VStack(spacing: 12) {
-                            // Badge
+                        VStack(spacing: 6) {
+                            // Badge Button
                             Button(action: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     selectedID = stage.id
                                 }
-                                // Xử lý tương tác ở đây
                             }) {
                                 ZStack {
-                                    // Background Hexagon
+                                    // Nền tối đa
                                     HexagonShape()
                                         .fill(
-                                            isActive ? Color.white.opacity(0.15) :
-                                            isCompleted ? Color(red: 0.12, green: 0.12, blue: 0.12) :
+                                            isActive ? Color(red: 0.15, green: 0.15, blue: 0.15) :
+                                            isCompleted ? Color(red: 0.1, green: 0.1, blue: 0.1) :
                                             Color(red: 0.06, green: 0.06, blue: 0.06)
                                         )
-                                        .frame(width: 56, height: 64)
+                                        .frame(width: 42, height: 48)
                                     
-                                    // Border
+                                    // Viền nhẹ
                                     HexagonShape()
                                         .stroke(
                                             isActive ? Color.white :
@@ -60,51 +59,52 @@ struct AchievementTimelineRow: View {
                                             Color.white.opacity(0.05),
                                             lineWidth: isActive ? 2 : 1
                                         )
-                                        .frame(width: 56, height: 64)
+                                        .frame(width: 42, height: 48)
                                     
-                                    // Icon (SF Symbol tạm thời)
+                                    // Icon bên trong (đã scale nhỏ lại)
                                     Image(systemName: stage.iconName)
-                                        .font(.system(size: 24, weight: .bold))
+                                        .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(
                                             isActive ? .white :
                                             isCompleted ? .white.opacity(0.8) :
-                                            .white.opacity(0.15)
+                                            .white.opacity(0.1)
                                         )
                                     
-                                    // Active Glow Ring
+                                    // Glow Active
                                     if isActive {
                                         HexagonShape()
-                                            .stroke(Color.white.opacity(0.4), lineWidth: 6)
-                                            .blur(radius: 12)
-                                            .frame(width: 56, height: 64)
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 4)
+                                            .blur(radius: 8)
+                                            .frame(width: 42, height: 48)
                                     }
                                 }
-                                .scaleEffect(selectedID == stage.id ? 1.05 : 1.0)
+                                .scaleEffect(selectedID == stage.id ? 1.1 : 1.0)
                             }
-                            .buttonStyle(.plain) // Ngăn hiệu ứng click mặc định của SwiftUI
+                            .buttonStyle(.plain)
                             
-                            // Text Labels
-                            VStack(spacing: 2) {
+                            // Text Labels (Nhỏ gọn)
+                            VStack(spacing: 0) {
                                 Text(stage.title)
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
                                     .foregroundColor(
                                         isActive ? .white :
-                                        isCompleted ? Color(red: 0.65, green: 0.65, blue: 0.65) :
-                                        Color(red: 0.35, green: 0.35, blue: 0.35)
+                                        isCompleted ? Color(red: 0.6, green: 0.6, blue: 0.6) :
+                                        Color(red: 0.3, green: 0.3, blue: 0.3)
                                     )
                                 Text(stage.level)
-                                    .font(.system(size: 10, weight: .regular, design: .rounded))
+                                    .font(.system(size: 9, weight: .regular, design: .rounded))
                                     .foregroundColor(
-                                        isActive ? Color(red: 0.65, green: 0.65, blue: 0.65) :
-                                        isCompleted ? Color(red: 0.45, green: 0.45, blue: 0.45) :
-                                        Color(red: 0.25, green: 0.25, blue: 0.25)
+                                        isActive ? Color(red: 0.5, green: 0.5, blue: 0.5) :
+                                        isCompleted ? Color(red: 0.4, green: 0.4, blue: 0.4) :
+                                        Color(red: 0.2, green: 0.2, blue: 0.2)
                                     )
                             }
                         }
+                        .frame(width: 56) // Khung cột được giới hạn nhẹ, nhưng dùng spacing âm để đẩy sát vào nhau
                     }
-                    .frame(width: 70) // Chiều rộng cố định mỗi cột để các mốc thẳng hàng chuẩn xác
                 }
             }
+            .padding(.top, 4)
             .padding(.horizontal, 4)
         }
     }
