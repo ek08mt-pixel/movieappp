@@ -11,6 +11,9 @@ struct AchievementTimelineRow: View {
     let stages: [JourneyStage]
     @State private var selectedID: UUID?
     
+    private let badgeSize: CGFloat = 44
+    private let columnWidth: CGFloat = 64
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("HÀNH TRÌNH CỦA BẠN")
@@ -19,9 +22,21 @@ struct AchievementTimelineRow: View {
                 .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
                 .padding(.leading, 4)
             
-            // Dùng ScrollView ngang để đảm bảo không bao giờ bị mất item dù màn hình nhỏ
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+            ZStack(alignment: .topLeading) {
+                // 1. Vẽ đường nối nét đứt
+                // Tính khoảng cách giữa tâm 2 cột liền kề: ColumnWidth - (BadgeSize/2) + (BadgeSize/2) = ColumnWidth
+                ForEach(0..<stages.count - 1, id: \.self) { index in
+                    let isActiveOrCompleted = stages[index].isUnlocked || stages[index+1].isUnlocked
+                    
+                    Rectangle()
+                        .fill(Color.white.opacity(isActiveOrCompleted ? 0.2 : 0.05))
+                        .frame(width: columnWidth - badgeSize, height: 1)
+                        .offset(x: (CGFloat(index + 1) * columnWidth) - (badgeSize / 2) - (columnWidth/2),
+                                y: badgeSize / 2)
+                }
+                
+                // 2. Vẽ các cột mốc
+                HStack(spacing: columnWidth - badgeSize) {
                     ForEach(Array(stages.enumerated()), id: \.element.id) { index, stage in
                         let isActive = stage.isUnlocked && stage.title == "Pro Watcher"
                         let isCompleted = stage.isUnlocked && stage.title != "Pro Watcher"
@@ -34,40 +49,40 @@ struct AchievementTimelineRow: View {
                                 }
                             }) {
                                 ZStack {
-                                    // Nền tối đa (HexagonShape)
+                                    // Nền
                                     HexagonShape()
                                         .fill(
-                                            isActive ? Color(red: 0.15, green: 0.15, blue: 0.15) :
+                                            isActive ? Color(red: 0.18, green: 0.18, blue: 0.18) :
                                             isCompleted ? Color(red: 0.08, green: 0.08, blue: 0.08) :
                                             Color(red: 0.04, green: 0.04, blue: 0.04)
                                         )
-                                        .frame(width: 46, height: 50)
+                                        .frame(width: badgeSize, height: badgeSize + 4)
                                     
-                                    // Viền ngoài (Có sáng hơn khi Active)
+                                    // Viền
                                     HexagonShape()
                                         .stroke(
                                             isActive ? Color.white :
-                                            isCompleted ? Color.white.opacity(0.2) :
+                                            isCompleted ? Color.white.opacity(0.3) :
                                             Color.white.opacity(0.05),
                                             lineWidth: isActive ? 2 : 1
                                         )
-                                        .frame(width: 46, height: 50)
+                                        .frame(width: badgeSize, height: badgeSize + 4)
                                     
-                                    // Icon SF Symbol
+                                    // Icon
                                     Image(systemName: stage.iconName)
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundColor(
                                             isActive ? .white :
-                                            isCompleted ? .white.opacity(0.6) :
+                                            isCompleted ? .white.opacity(0.8) :
                                             .white.opacity(0.1)
                                         )
                                     
-                                    // Active Glow (Mờ và lan tỏa hơn)
+                                    // Active Glow
                                     if isActive {
                                         HexagonShape()
-                                            .stroke(Color.white.opacity(0.4), lineWidth: 4)
-                                            .blur(radius: 8)
-                                            .frame(width: 46, height: 50)
+                                            .stroke(Color.white.opacity(0.5), lineWidth: 3)
+                                            .blur(radius: 6)
+                                            .frame(width: badgeSize, height: badgeSize + 4)
                                     }
                                 }
                                 .scaleEffect(selectedID == stage.id ? 1.08 : 1.0)
@@ -93,12 +108,12 @@ struct AchievementTimelineRow: View {
                                     )
                             }
                         }
-                        .frame(width: 64) // Khổ cột cố định
+                        .frame(width: columnWidth)
                     }
                 }
-                .padding(.horizontal, 16) // Padding 2 bên cho ScrollView ngang
             }
-            // Căn giữa nếu nội dung ít hơn màn hình (tùy chọn, nhưng rất tốt cho UI)
+            .frame(height: 110) // Chiều cao cố định cho toàn bộ Timeline
+            .padding(.horizontal, 0) // Không padding ngang để dàn trang đều
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
