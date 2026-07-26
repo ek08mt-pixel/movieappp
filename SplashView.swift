@@ -24,7 +24,7 @@ struct SplashView: View {
                         .font(.system(size: 42, weight: .bold, design: .serif))
                         .foregroundColor(.white)
                     Spacer()
-                    Text("© 2026 @Emmew All rights reserved")
+                    Text("© 2026 @Emmew All rights")
                         .font(.system(size: 11))
                         .foregroundColor(.gray.opacity(0.4))
                         .padding(.bottom, 40)
@@ -95,7 +95,7 @@ struct SplashView: View {
     }
     
     func proceedToApp() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             withAnimation(.easeInOut(duration: 0.5)) {
                 isLoading = false
                 showSplash = false
