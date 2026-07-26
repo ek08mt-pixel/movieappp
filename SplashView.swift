@@ -132,8 +132,8 @@ struct SplashView: View {
                                         .white.opacity(0.6),
                                         .white.opacity(0.1)
                                     ],
-                                    startPoint: UnitPoint(x: chromePhase.truncatingRemainder, y: 0.3),
-                                    endPoint: UnitPoint(x: chromePhase.truncatingRemainder + 0.4, y: 0.7)
+                                    startPoint: UnitPoint(x: chromePhase, y: 0.3),
+endPoint: UnitPoint(x: chromePhase + 0.4, y: 0.7)
                                 )
                                 .mask(
                                     Text("EMMEW")
