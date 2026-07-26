@@ -12,15 +12,14 @@ struct AchievementHeroCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // 1. Avatar Container (Hexagon + Cat + Sparkles)
+            // 1. Avatar Container (Hexagon + Cat Image từ Base64)
             ZStack {
-                // Outer Glow (Tỏa sáng xung quanh)
+                // Outer Glow
                 HexagonShape()
                     .stroke(Color.white.opacity(0.4), lineWidth: 3)
                     .blur(radius: 10)
                     .frame(width: 88, height: 96)
                 
-                // Base Background (Gradient nền)
                 HexagonShape()
                     .fill(
                         LinearGradient(
@@ -31,7 +30,6 @@ struct AchievementHeroCard: View {
                     )
                     .frame(width: 88, height: 96)
                 
-                // Viền sáng bao quanh (Rim Light)
                 HexagonShape()
                     .stroke(
                         LinearGradient(
@@ -43,19 +41,17 @@ struct AchievementHeroCard: View {
                     )
                     .frame(width: 88, height: 96)
                 
-                // Con mèo (Custom Shape)
-                ProCatIcon()
-                    .fill(Color.white)
-                    .frame(width: 52, height: 52)
-                    .shadow(color: .white.opacity(0.2), radius: 4, x: 0, y: 0)
+                // Con mèo (RENDER TỪ BASE64 STRING)
+                Image(svgBase64: catIconSVG)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
                 
-                // Hạt lấp lánh (Sparkles) xung quanh mèo
+                // Sparkles
                 Circle().fill(Color.white.opacity(0.7)).frame(width: 3, height: 3).offset(x: -42, y: -30)
                 Circle().fill(Color.white.opacity(0.4)).frame(width: 2, height: 2).offset(x: 38, y: -28)
                 Circle().fill(Color.white.opacity(0.6)).frame(width: 4, height: 4).offset(x: -45, y: 18)
                 Circle().fill(Color.white.opacity(0.3)).frame(width: 2, height: 2).offset(x: 42, y: 22)
-                Circle().fill(Color.white.opacity(0.8)).frame(width: 2, height: 2).offset(x: -30, y: 42)
-                Circle().fill(Color.white.opacity(0.5)).frame(width: 2, height: 2).offset(x: 30, y: 45)
             }
             
             // 2. Text Info
