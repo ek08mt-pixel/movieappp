@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - 1. Hexagon Shape
+// MARK: - 1. Hexagon Shape (Giữ nguyên)
 struct HexagonShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -29,113 +29,26 @@ struct HexagonShape: Shape {
     }
 }
 
-// MARK: - 2. Con Mèo Hoạt Hình (Pixel-perfect từ Mockup)
-struct ProCatIcon: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let w = rect.width
-        let h = rect.height
-        let c = CGPoint(x: w/2, y: h/2)
-        
-        // 1. Tai trái
-        path.move(to: CGPoint(x: w * 0.32, y: h * 0.30))
-        path.addQuadCurve(to: CGPoint(x: w * 0.20, y: h * 0.08), control: CGPoint(x: w * 0.25, y: h * 0.10))
-        path.addQuadCurve(to: CGPoint(x: w * 0.42, y: h * 0.25), control: CGPoint(x: w * 0.33, y: h * 0.25))
-        path.closeSubpath()
-        
-        // 2. Tai phải
-        path.move(to: CGPoint(x: w * 0.68, y: h * 0.30))
-        path.addQuadCurve(to: CGPoint(x: w * 0.80, y: h * 0.08), control: CGPoint(x: w * 0.75, y: h * 0.10))
-        path.addQuadCurve(to: CGPoint(x: w * 0.58, y: h * 0.25), control: CGPoint(x: w * 0.67, y: h * 0.25))
-        path.closeSubpath()
-        
-        // 3. Đầu tròn (Vẽ nối 2 bên tai)
-        path.move(to: CGPoint(x: w * 0.42, y: h * 0.25))
-        path.addQuadCurve(to: CGPoint(x: w * 0.58, y: h * 0.25), control: CGPoint(x: c.x, y: h * 0.12))
-        path.addArc(center: c, radius: w * 0.30, startAngle: .degrees(-100), endAngle: .degrees(100), clockwise: false)
-        path.closeSubpath()
-        
-        // 4. Mắt trái
-        path.addEllipse(in: CGRect(x: w * 0.38, y: h * 0.41, width: w * 0.07, height: h * 0.09))
-        // 5. Mắt phải
-        path.addEllipse(in: CGRect(x: w * 0.55, y: h * 0.41, width: w * 0.07, height: h * 0.09))
-        
-        // 6. Mũi (Tam giác)
-        path.move(to: CGPoint(x: w * 0.48, y: h * 0.52))
-        path.addLine(to: CGPoint(x: w * 0.52, y: h * 0.52))
-        path.addLine(to: CGPoint(x: w * 0.50, y: h * 0.56))
-        path.closeSubpath()
-        
-        // 7. Ria mép (6 đường)
-        let ry: [CGFloat] = [0.48, 0.52, 0.56]
-        for i in 0..<3 {
-            path.move(to: CGPoint(x: w * 0.32, y: h * ry[i]))
-            path.addLine(to: CGPoint(x: w * 0.16, y: h * ry[i]))
-            path.move(to: CGPoint(x: w * 0.68, y: h * ry[i]))
-            path.addLine(to: CGPoint(x: w * 0.84, y: h * ry[i]))
-        }
-        return path
+// MARK: - 2. Hàm tiện ích chuyển SVG String thành Image
+extension Image {
+    init(svgBase64: String) {
+        // Tạo Data từ Base64 String
+        let data = Data(base64Encoded: svgBase64) ?? Data()
+        // Tạo UIImage từ Data và khởi tạo Image
+        #if canImport(UIKit)
+        let uiImage = UIImage(data: data) ?? UIImage()
+        self.init(uiImage: uiImage)
+        #else
+        self.init(systemName: "photo")
+        #endif
     }
 }
 
-// MARK: - 3. Icon Shapes dùng cho Timeline
-struct CrownIcon: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: 0, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.width * 0.2, y: rect.midY * 0.6))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.width * 0.8, y: rect.midY * 0.6))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
+// MARK: - 3. Base64 SVG của Mèo (Giống 100% Mockup)
+let catIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik01MCAxM0MzNi4xIDEzIDI1IDI0LjEgMjUgMzhDMjUgNTEuOSAzNi4xIDYzIDUwIDYzQzYzLjkgNjMgNzUgNTEuOSA3NSAzOEM3NSAyNC4xIDYzLjkgMTMgNTAgMTNaTTUwIDU5QzM4LjQgNTkgMjkgNDkuNiAyOSAzOEMyOSAyNi40IDM4LjQgMTcgNTAgMTdDNjEuNiAxNyA3MSAyNi40IDcxIDM4QzcxIDQ5LjYgNjEuNiA1OSA1MCA1OVoiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTM4IDM2QzM2LjMgMzYgMzUgMzcuMyAzNSAzOUMzNSA0MC43IDM2LjMgNDIgMzggNDJDNDEuNyA0MiA0MSA0MC43IDQxIDM5QzQxIDM3LjMgMzkuNyAzNiAzOCAzNloiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTYyIDM2QzYwLjMgMzYgNTkgMzcuMyA1OSAzOUM1OSA0MC43IDYwLjMgNDIgNjIgNDJDNjMuNyA0MiA2NSA0MC43IDY1IDM5QzY1IDM3LjMgNjMuNyAzNiA2MiAzNloiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTUwIDQ1QzQ4IDQ1IDQ3IDQ2IDQ3IDQ4VjUwQzQ3IDUyIDQ4IDUzIDUwIDUzQzUyIDUzIDUzIDUyIDUzIDUwVjQ4QzUzIDQ2IDUyIDQ1IDUwIDQ1WiIvPjwvc3ZnPg=="
 
-struct LightningIcon: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: 0))
-        path.addLine(to: CGPoint(x: 0, y: rect.midY + 6))
-        path.addLine(to: CGPoint(x: rect.midX - 4, y: rect.midY + 6))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY - 6))
-        path.addLine(to: CGPoint(x: rect.midX + 4, y: rect.midY - 6))
-        path.closeSubpath()
-        return path
-    }
-}
-
-struct FlameIcon: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.midY * 0.8), control: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addQuadCurve(to: CGPoint(x: rect.midX, y: 0), control: CGPoint(x: rect.minX, y: rect.midY * 0.5))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.midY * 0.8), control: CGPoint(x: rect.maxX, y: rect.midY * 0.5))
-        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
-        return path
-    }
-}
-
-struct MasksIcon: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        // Left Mask
-        path.move(to: CGPoint(x: rect.width * 0.2, y: rect.height * 0.3))
-        path.addEllipse(in: CGRect(x: rect.width * 0.15, y: rect.height * 0.3, width: rect.width * 0.3, height: rect.height * 0.4))
-        path.move(to: CGPoint(x: rect.width * 0.2, y: rect.height * 0.5))
-        path.addLine(to: CGPoint(x: rect.width * 0.3, y: rect.height * 0.4))
-        path.move(to: CGPoint(x: rect.width * 0.4, y: rect.height * 0.5))
-        path.addLine(to: CGPoint(x: rect.width * 0.3, y: rect.height * 0.4))
-        
-        // Right Mask
-        path.move(to: CGPoint(x: rect.width * 0.5, y: rect.height * 0.45))
-        path.addEllipse(in: CGRect(x: rect.width * 0.45, y: rect.height * 0.45, width: rect.width * 0.35, height: rect.height * 0.4))
-        path.move(to: CGPoint(x: rect.width * 0.5, y: rect.height * 0.65))
-        path.addLine(to: CGPoint(x: rect.width * 0.6, y: rect.height * 0.55))
-        path.move(to: CGPoint(x: rect.width * 0.7, y: rect.height * 0.65))
-        path.addLine(to: CGPoint(x: rect.width * 0.6, y: rect.height * 0.55))
-        return path
-    }
-}
+// MARK: - 4. Base64 SVG của các Icon Timeline (Crown, Lightning, Flame, Drama Masks)
+let crownIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1IDYwTDI1IDcwTDc1IDcwTDc1IDYwTDUwIDc1TDI1IDYwWiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0xMCAxMEwxMCA0MEw0MCA0MEw0MCAxMEwxMCAxMFoiLz48L3N2Zz4="
+let lightningIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDBMNDAgNTBMNDUgNTBMNDAgMTAwTDcwIDQwTDYwIDQwTDcwIDBaIi8+PC9zdmc+"
+let flameIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTUwIDVDNDAgMjAgNDAgNDAgNDAgNDBDNDAgMjAgMzAgMzAgMTAgNTBDMTAgNzAgMzAgOTAgNTAgOTBDNzAgOTAgOTAgNzAgOTAgNTBDNzAgMzAgNjAgMjAgNjAgNDBDNjAgNDAgNjAgMjAgNTAgNVoiLz48L3N2Zz4="
+let masksIconSVG = "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1IDI1QzE1IDI1IDUgMzUgNSA0NUM1IDU1IDE1IDY1IDI1IDY1QzM1IDY1IDQ1IDU1IDQ1IDQ1QzQ1IDM1IDM1IDI1IDI1IDI1Wk0yNSA1NEMxOCA1NCAxMyA0OCAxMyA0MkMxMyAzNiAxOCAzMCAyNSAzMEMzMiAzMCAzNyAzNiAzNyA0MkMzNyA0OCAzMiA1NCAyNSA1NFoiLz48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNNzUgMjVDNjUgMjUgNTUgMzUgNTUgNDVDNTUgNTUgNjUgNjUgNzUgNjVDODUgNjUgOTUgNTUgOTUgNDVDOTUgMzUgODUgMjUgNzUgMjVaTTc1IDU0QzY4IDU0IDYzIDQ4IDYzIDQyQzYzIDM2IDY4IDMwIDc1IDMwQzgyIDMwIDg3IDM2IDg3IDQyQzg3IDQ4IDgyIDU0IDc1IDU0WiIvPjwvc3ZnPg=="
