@@ -11,6 +11,19 @@ struct AchievementListItemView: View {
     let item: AchievementItem
     @State private var isPressed = false
     
+    // Tạo điểm sáng Offset ngẫu nhiên cho mỗi ô
+    // Để "Mỗi ô viền khác nhau"
+    private let startPoint: UnitPoint
+    private let endPoint: UnitPoint
+    
+    init(item: AchievementItem) {
+        self.item = item
+        // Random vị trí sáng cho từng Card
+        let seeds: [UnitPoint] = [.topLeading, .top, .topTrailing, .leading, .trailing, .bottomLeading, .bottom]
+        self.startPoint = seeds.randomElement() ?? .topLeading
+        self.endPoint = seeds.randomElement() ?? .bottomTrailing
+    }
+    
     var body: some View {
         Button(action: {}) {
             HStack(spacing: 14) {
@@ -31,16 +44,29 @@ struct AchievementListItemView: View {
             .padding(14)
             .background(Color(red: 0.08, green: 0.08, blue: 0.08))
             
-            // Viền mỏng 0.8 đứt đoạn
+            // == VIỀN MỜ XUNG QUANH KHUNG, MỖI Ô KHÁC NHAU ==
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .trim(from: 0.0, to: 0.6)
                     .stroke(
-                        LinearGradient(stops: [.init(color: .white.opacity(0.6), location: 0.0), .init(color: .white.opacity(0.0), location: 0.5)], startPoint: .topLeading, endPoint: .bottom),
-                        style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.6), location: 0.0),
+                                .init(color: .white.opacity(0.0), location: 0.3),
+                                .init(color: .white.opacity(0.4), location: 0.6),
+                                .init(color: .white.opacity(0.0), location: 1.0)
+                            ],
+                            startPoint: startPoint,
+                            endPoint: endPoint
+                        ),
+                        lineWidth: 0.8
                     )
             )
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 2).blur(radius: 4))
+            // Lớp blur nhẹ tạo hiệu ứng sáng chạy
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 3)
+                    .blur(radius: 2)
+            )
             .scaleEffect(isPressed ? 0.97 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         }
