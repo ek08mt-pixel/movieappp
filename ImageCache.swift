@@ -8,15 +8,15 @@ class ImageCache {
     let session: URLSession
     
     init() {
-        cache.countLimit = 400
-        cache.totalCostLimit = 100 * 1024 * 1024
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForResource = 5
-        config.timeoutIntervalForRequest = 5
-        config.httpMaximumConnectionsPerHost = 4
-        config.requestCachePolicy = .returnCacheDataElseLoad
-        session = URLSession(configuration: config)
-    }
+    cache.countLimit = 300
+    cache.totalCostLimit = 80 * 1024 * 1024
+    let config = URLSessionConfiguration.default
+    config.timeoutIntervalForResource = 10
+    config.timeoutIntervalForRequest = 10
+    config.httpMaximumConnectionsPerHost = 3
+    config.requestCachePolicy = .returnCacheDataElseLoad
+    session = URLSession(configuration: config)
+}
     
     func get(for url: URL, size: String = "thumb") -> UIImage? {
         return cache.object(forKey: "\(size)_\(url.absoluteString)" as NSString)
