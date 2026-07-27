@@ -18,6 +18,7 @@ class HomeViewModel: ObservableObject {
     @Published var movieOfDay: Movie?
     @Published var onThisDayMovie: OnThisDayItem?
     @Published var isLoading = false
+    @Published var trendingAnime: [Movie] = []
     
     init() {
         Task { await loadAll() }
@@ -27,7 +28,6 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Chỉ tải 2 page trending + genres trước
         async let trendingTask = APIService.shared.trending24hFast()
         async let genresTask = APIService.shared.genres()
         
@@ -37,14 +37,17 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        // UI hiện ngay sau dòng này vì trending24h + genres đã có
-        
-        // Load các section còn lại trong background, không block UI
+        // Load trending TV + trending anime
         Task {
             let tv = await loadTrendingTVPages()
-            await MainActor.run { self.trendingTV = tv }
+            let hotAnime = await loadTrendingAnime()
+            await MainActor.run {
+                self.trendingTV = tv
+                self.trendingAnime = hotAnime
+            }
         }
         
+        // Load các section còn lại
         Task {
             async let np = APIService.shared.nowPlaying()
             async let tr = APIService.shared.topRated()
@@ -134,6 +137,31 @@ class HomeViewModel: ObservableObject {
             }
             let response = try JSONDecoder().decode(TVResponse.self, from: data)
             return response.results.map { tv in
+                Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
+                      posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
+                      voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
+                      genreIds: tv.genre_ids, originalTitle: tv.name,
+                      popularity: tv.popularity, voteCount: tv.vote_count,
+                      adult: false, originalLanguage: tv.original_language, mediaType: "tv")
+            }
+        } catch { return [] }
+    }
+    
+    private func loadTrendingAnime() async -> [Movie] {
+        let urlString = "https://api.themoviedb.org/3/discover/tv?api_key=b6be36c1c5788565fec6a24811e7cc9b&with_genres=16&sort_by=popularity.desc&language=vi-VN&page=1&vote_count.gte=30&first_air_date.gte=2024-01-01"
+        guard let url = URL(string: urlString) else { return [] }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct TVResp: Codable { let results: [TVRes] }
+            struct TVRes: Codable {
+                let id: Int; let name: String?; let overview: String
+                let poster_path: String?; let backdrop_path: String?
+                let vote_average: Double; let first_air_date: String?
+                let genre_ids: [Int]?; let popularity: Double?
+                let vote_count: Int?; let original_language: String?
+            }
+            let response = try JSONDecoder().decode(TVResp.self, from: data)
+            return response.results.filter { !($0.name ?? "").isEmpty }.map { tv in
                 Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
                       posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
                       voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
