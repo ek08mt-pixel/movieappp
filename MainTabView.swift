@@ -12,10 +12,9 @@ struct MainTabView: View {
     init() { UITabBar.appearance().isHidden = true }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ZStack {
+        ZStack {
     HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
-    // ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
+    ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
     // LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
     // ProfileView().id(profileID).opacity(selectedTab == 3 ? 1 : 0)
 }
