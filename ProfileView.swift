@@ -378,7 +378,16 @@ struct ProfileView: View {
             Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
             Text("Sử dụng mạng di động").font(.system(size: 15)).foregroundColor(.white)
             Spacer()
-            Toggle("", isOn: $useCellularData).tint(.green)
+            Toggle("", isOn: $useCellularData)
+    .toggleStyle(SwitchToggleStyle(tint: .clear))
+    .background(
+        RoundedRectangle(cornerRadius: 16)
+            .fill(.ultraThinMaterial.opacity(0.3))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
+            )
+    )
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
@@ -388,7 +397,16 @@ struct ProfileView: View {
             Image(systemName: "exclamationmark.triangle").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
             Text("Cảnh báo dữ liệu thấp").font(.system(size: 15)).foregroundColor(.white)
             Spacer()
-            Toggle("", isOn: $lowDataWarning).tint(.orange)
+            Toggle("", isOn: $lowDataWarning)
+    .toggleStyle(SwitchToggleStyle(tint: .clear))
+    .background(
+        RoundedRectangle(cornerRadius: 16)
+            .fill(.ultraThinMaterial.opacity(0.3))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
+            )
+    )
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
