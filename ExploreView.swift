@@ -6,7 +6,6 @@ struct ExploreView: View {
     @State private var staffMovies: [Movie] = []
     @State private var editorMovies: [Movie] = []
     @State private var hiddenMovies: [Movie] = []
-    @State private var showWatchTogether = false
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
@@ -44,7 +43,7 @@ struct ExploreView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Khám phá").font(.largeTitle).fontWeight(.bold).foregroundColor(.white).padding(.top, 8).padding(.horizontal, 16)
                         
-                        // 3 nút: OST | Timeline | Cùng xem
+                        // 2 nút: OST | Timeline
                         HStack(spacing: 10) {
                             NavigationLink(destination: OSTView()) {
                                 HStack(spacing: 6) {
@@ -60,18 +59,6 @@ struct ExploreView: View {
                                 HStack(spacing: 6) {
                                     Text("📅").font(.system(size: 14))
                                     Text("Timeline").font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity).padding(.vertical, 14)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.5))
-                            }
-                            
-                            Button {
-                                showWatchTogether = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Text("👥").font(.system(size: 14))
-                                    Text("Watch").font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity).padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.4)))
@@ -116,9 +103,6 @@ struct ExploreView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showWatchTogether) {
-            WatchTogetherRoomView()
-        }
         .task { loadData() }
     }
     
@@ -134,6 +118,8 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
 }
+
+// Giữ nguyên AsiaCategoryView, BackButton, CategoryFullView bên dưới không đổi
 
 
 // MARK: - Asia Category View
