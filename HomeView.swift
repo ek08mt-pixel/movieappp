@@ -4,7 +4,9 @@ struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
     @EnvironmentObject var appState: AppState
     @State private var currentIndex = 0
+    @State private var animeCurrentIndex = 0
     @State private var timer: Timer?
+    @State private var animeTimer: Timer?
     @State private var showMenu = false
     @State private var menuOffset: CGFloat = -280
     @State private var showGenrePopup = false
@@ -135,20 +137,12 @@ struct HomeView: View {
                         if !appState.watchProgressList.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack(spacing: 6) {
-    RoundedRectangle(cornerRadius: 2)
-        .fill(.white.opacity(0.55))
-        .frame(width: 3, height: 18)
-    Text("Tiếp tục xem")
-        .font(.title3)
-        .fontWeight(.bold)
-        .foregroundColor(.white)
-}
-.padding(.horizontal, 20)
+                                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
+                                    Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                }.padding(.horizontal, 20)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 12) {
-                                        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in
-                                            continueWatchingCard(prog)
-                                        }
+                                        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
                                     }.padding(.horizontal, 20)
                                 }
                             }.padding(.top, 24)
@@ -162,15 +156,9 @@ struct HomeView: View {
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 6) {
-    RoundedRectangle(cornerRadius: 2)
-        .fill(.white.opacity(0.55))
-        .frame(width: 3, height: 18)
-    Text("Movie of the Day")
-        .font(.title3)
-        .fontWeight(.bold)
-        .foregroundColor(.white)
-}
-.padding(.horizontal, 20)
+                                    RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
+                                    Text("Movie of the Day").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                }.padding(.horizontal, 20)
                                 NavigationLink(destination: MovieDetailView(movie: mod)) {
                                     ZStack(alignment: .bottomLeading) {
                                         if let url = mod.backdropURL {
@@ -189,6 +177,77 @@ struct HomeView: View {
                             }.padding(.top, 16)
                         }
                         
+                        // Anime/Hoạt hình đang hot - với dots + thông tin
+                        if !vm.anime.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                NavigationLink(destination: MovieListView(title: "Hoạt hình - Anime", movies: vm.anime, fixedQuery: "Hoạt hình - Anime")) {
+                                    HStack(spacing: 6) {
+                                        RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
+                                        Text("Hoạt hình - Anime").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .light)).foregroundColor(.white.opacity(0.5))
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal, 20)
+                                
+                                // Banner anime có dots
+                                TabView(selection: $animeCurrentIndex) {
+                                    ForEach(Array(vm.anime.prefix(8).enumerated()), id: \.element.id) { i, movie in
+                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                            ZStack(alignment: .bottomLeading) {
+                                                if let bgURL = movie.backdropURL {
+                                                    CachedAsyncImage(url: bgURL, size: .backdrop)
+                                                        .aspectRatio(16/9, contentMode: .fill)
+                                                        .frame(height: 200)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)).frame(height: 200)
+                                                }
+                                                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                
+                                                VStack(alignment: .leading, spacing: 6) {
+                                                    Text(movie.title).font(.system(size: 16, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                                                    HStack(spacing: 8) {
+                                                        HStack(spacing: 3) {
+                                                            Image(systemName: "star.fill").font(.system(size: 9)).foregroundColor(.yellow)
+                                                            Text(movie.ratingText).font(.system(size: 10)).foregroundColor(.white.opacity(0.8))
+                                                        }
+                                                        if let year = movie.releaseDate?.prefix(4) {
+                                                            Text(String(year)).font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                                                        }
+                                                        if let lang = movie.originalLanguage {
+                                                            Text(lang.uppercased()).font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
+                                                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                                                .background(Capsule().fill(.white.opacity(0.15)))
+                                                        }
+                                                    }
+                                                }
+                                                .padding(16)
+                                            }
+                                            .padding(.horizontal, 20)
+                                        }.tag(i)
+                                    }
+                                }
+                                .tabViewStyle(.page(indexDisplayMode: .never))
+                                .frame(height: 216)
+                                .onAppear { startAnimeAutoScroll() }.onDisappear { stopAnimeAutoScroll() }
+                                
+                                // Dots
+                                HStack(spacing: 4) {
+                                    ForEach(0..<min(vm.anime.count, 8), id: \.self) { i in
+                                        let active = i == (animeCurrentIndex % min(vm.anime.count, 8))
+                                        Capsule()
+                                            .fill(.white.opacity(active ? 0.8 : 0.2))
+                                            .frame(width: active ? 16 : 5, height: 3)
+                                            .animation(.easeInOut(duration: 0.3), value: animeCurrentIndex)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .padding(.top, 24)
+                        }
+                        
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
@@ -201,7 +260,7 @@ struct HomeView: View {
                         SectionGrid(title: "Hàn Quốc", movies: vm.korean)
                         SectionGrid(title: "Nhật Bản", movies: vm.japanese)
                         SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
-                        SectionGrid(title: "Anime", movies: vm.anime)
+                        SectionGrid(title: "Hoạt hình - Anime", movies: vm.anime)
                         Spacer().frame(height: 120)
                     }
                 }
@@ -355,29 +414,22 @@ struct HomeView: View {
                     HStack {
                         if let ep = prog.episode {
                             Text("S\(prog.season ?? 1):E\(ep)")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
+                                .font(.system(size: 8, weight: .bold)).foregroundColor(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
                                 .background(Capsule().fill(.black.opacity(0.6)))
                         }
                         Spacer()
                         Text(formatRemaining(prog))
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
+                            .font(.system(size: 8, weight: .medium)).foregroundColor(.white)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
                             .background(Capsule().fill(.black.opacity(0.6)))
                     }
                     .padding(6)
                     
                     GeometryReader { geo in
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(.white.opacity(0.15))
-                            .frame(height: 3)
+                        RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.15)).frame(height: 3)
                             .overlay(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(.white.opacity(0.6))
+                                RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.6))
                                     .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
                             }
                     }
@@ -387,53 +439,25 @@ struct HomeView: View {
             .frame(width: 200, height: 112)
             
             Text(prog.movieTitle)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.white)
-                .lineLimit(1)
-                .frame(width: 200, alignment: .leading)
-                .padding(.top, 4)
+                .font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
+                .lineLimit(1).frame(width: 200, alignment: .leading).padding(.top, 4)
         }
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
-            continueMovieId = prog.movieId
-            continueMovieTitle = prog.movieTitle
-            continueMediaType = prog.mediaType
-            continueSeason = prog.season
-            continueEpisode = prog.episode
-            continuePosterURL = URL(string: prog.posterPath ?? "")
-            continueCurrentTime = prog.currentTime
-            presentContinuePlayer()
+            continueMovieId = prog.movieId; continueMovieTitle = prog.movieTitle
+            continueMediaType = prog.mediaType; continueSeason = prog.season
+            continueEpisode = prog.episode; continuePosterURL = URL(string: prog.posterPath ?? "")
+            continueCurrentTime = prog.currentTime; presentContinuePlayer()
         }
         .contextMenu {
             Button {
-                let movie = Movie(
-                    id: prog.movieId,
-                    title: prog.movieTitle,
-                    overview: "",
-                    posterPath: prog.posterPath,
-                    backdropPath: nil,
-                    voteAverage: 0,
-                    releaseDate: nil,
-                    genreIds: nil,
-                    originalTitle: nil,
-                    popularity: nil,
-                    voteCount: nil,
-                    adult: false,
-                    originalLanguage: nil,
-                    mediaType: prog.mediaType
-                )
-                detailMovie = movie
+                detailMovie = Movie(id: prog.movieId, title: prog.movieTitle, overview: "", posterPath: prog.posterPath, backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: prog.mediaType)
                 showContinueDetail = true
-            } label: {
-                Label("Thông tin", systemImage: "info.circle")
-            }
+            } label: { Label("Thông tin", systemImage: "info.circle") }
             
             Button {
-                appState.watchProgressList.removeAll { $0.movieId == prog.movieId }
-                appState.save()
-            } label: {
-                Label("Xóa", systemImage: "trash")
-            }
+                appState.watchProgressList.removeAll { $0.movieId == prog.movieId }; appState.save()
+            } label: { Label("Xóa", systemImage: "trash") }
         }
     }
     
@@ -443,14 +467,8 @@ struct HomeView: View {
         let src: MovieSource
         if let source = prog?.source {
             src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : source == "Emew 3" ? .vsmov : .phimapi
-        } else {
-            src = .phimapi
-        }
-        let moviePlayer = MoviePlayerView(
-            movieId: id, movieTitle: continueMovieTitle,
-            mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode,
-            posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src
-        ).environmentObject(appState)
+        } else { src = .phimapi }
+        let moviePlayer = MoviePlayerView(movieId: id, movieTitle: continueMovieTitle, mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode, posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src).environmentObject(appState)
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
         hosting.modalPresentationStyle = .fullScreen
         topVC.present(hosting, animated: true)
@@ -468,9 +486,7 @@ struct HomeView: View {
         var seen = Set<String>()
         return vm.genres.filter { genre in
             let name = genre.name.replacingOccurrences(of: "Phim ", with: "")
-            if seen.contains(name) { return false }
-            seen.insert(name)
-            return true
+            if seen.contains(name) { return false }; seen.insert(name); return true
         }
     }
     
@@ -491,6 +507,8 @@ struct HomeView: View {
     func closeMenu() { withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { showMenu = false; menuOffset = -280 } }
     func startAutoScroll() { timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { currentIndex = (currentIndex + 1) % 10 } } }
     func stopAutoScroll() { timer?.invalidate(); timer = nil }
+    func startAnimeAutoScroll() { animeTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: true) { _ in withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { animeCurrentIndex = (animeCurrentIndex + 1) % min(vm.anime.count, 8) } } }
+    func stopAnimeAutoScroll() { animeTimer?.invalidate(); animeTimer = nil }
 }
 
 struct SectionGrid: View {
@@ -500,20 +518,12 @@ struct SectionGrid: View {
             VStack(alignment: .leading, spacing: 12) {
                 NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) {
                     HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.white.opacity(0.55))
-                            .frame(width: 3, height: 18)
-                        Text(title)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .light))
-                            .foregroundColor(.white.opacity(0.5))
+                        RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
+                        Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .light)).foregroundColor(.white.opacity(0.5))
                     }
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
+                .buttonStyle(.plain).padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 14) {
                         ForEach(movies.prefix(10)) { movie in
