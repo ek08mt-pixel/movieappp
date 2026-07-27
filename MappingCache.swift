@@ -20,9 +20,7 @@ final class MappingCache {
     private let defaults = UserDefaults.standard
     private let nguonCKey = "cache_nguonc_mapping"
     private let vsmovKey = "cache_vsmov_mapping"
-    private let stravoKey = "cache_stravo_mapping"
     private let phimapiKey = "cache_phimapi_mapping"
-    private let sofaflixKey = "cache_sofaflix_mapping"
     static var seasonEpisodeCounts: [String: Int] = [:]
     
     private let hardcodedSlugs: [String: String] = [
@@ -114,12 +112,8 @@ final class MappingCache {
     func setNguonCSlug(imdbID: String, slug: String) { var d = dict(for: nguonCKey); d[imdbID] = slug; save(d, for: nguonCKey) }
     func getVSMOVSlug(imdbID: String) -> String? { dict(for: vsmovKey)[imdbID] }
     func setVSMOVSlug(imdbID: String, slug: String) { var d = dict(for: vsmovKey); d[imdbID] = slug; save(d, for: vsmovKey) }
-    func getStravoURL(imdbID: String, season: Int, episode: Int) -> String? { dict(for: stravoKey)["\(imdbID)_S\(season)E\(episode)"] }
-    func setStravoURL(imdbID: String, season: Int, episode: Int, url: String) { var d = dict(for: stravoKey); d["\(imdbID)_S\(season)E\(episode)"] = url; save(d, for: stravoKey) }
     func getPhimAPIURL(tmdbID: Int, season: Int, episode: Int) -> String? { dict(for: phimapiKey)["\(tmdbID)_S\(season)E\(episode)"] }
     func setPhimAPIURL(tmdbID: Int, season: Int, episode: Int, url: String) { var d = dict(for: phimapiKey); d["\(tmdbID)_S\(season)E\(episode)"] = url; save(d, for: phimapiKey) }
-    func getSofaflixURL(tmdbID: Int, season: Int, episode: Int) -> String? { dict(for: sofaflixKey)["\(tmdbID)_S\(season)E\(episode)"] }
-    func setSofaflixURL(tmdbID: Int, season: Int, episode: Int, url: String) { var d = dict(for: sofaflixKey); d["\(tmdbID)_S\(season)E\(episode)"] = url; save(d, for: sofaflixKey) }
     func getHardcodedSlug(tmdbID: Int, season: Int) -> String? { hardcodedSlugs["\(tmdbID)_\(season)"] }
     func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
     func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
@@ -522,119 +516,6 @@ final class PhimAPIService {
         if let exactName = searchItems.first(where: { ($0["origin_name"] as? String ?? "").lowercased() == normalizedTitle }) { return exactName }
         if isSeries { return searchItems.first(where: { isSeriesType($0["type"] as? String ?? "") }) }
         return searchItems.first(where: { isSingleType($0["type"] as? String ?? "") })
-    }
-}
-
-// MARK: - Ophim Service
-final class OphimService {
-    static let shared = OphimService()
-    private let baseURL = "https://ophim1.com/v1/api"
-    private init() {}
-    
-    func fetchStream(title: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
-        let ep = episode ?? 1
-        let searchQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        guard let searchURL = URL(string: "\(baseURL)/tim-kiem?keyword=\(searchQuery)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.streamSession.dataTask(with: searchURL) { [weak self] data, _, error in
-            guard let self = self else { return }
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let status = json["status"] as? String, status == "success",
-                   let dataObj = json["data"] as? [String: Any],
-                   let items = dataObj["items"] as? [[String: Any]] {
-                    var bestMatch: [String: Any]?
-                    let lowerTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-                    for item in items {
-                        let name = (item["name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-                        let origin = (item["origin_name"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-                        if origin == lowerTitle || name == lowerTitle { bestMatch = item; break }
-                    }
-                    if bestMatch == nil {
-                        for item in items {
-                            let name = (item["name"] as? String ?? "").lowercased()
-                            let origin = (item["origin_name"] as? String ?? "").lowercased()
-                            if origin.contains(lowerTitle) || name.contains(lowerTitle) || lowerTitle.contains(origin) { bestMatch = item; break }
-                        }
-                    }
-                    if let slug = bestMatch?["slug"] as? String {
-                        self.fetchDetail(slug: slug, episode: ep, completion: completion)
-                    } else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
-                } else { completion(.failure(StreamServiceError.noMatchFound(id: title))) }
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
-    
-    private func fetchDetail(slug: String, episode: Int, completion: @escaping (Result<URL, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
-        URLSession.streamSession.dataTask(with: url) { data, _, error in
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   json["status"] as? String == "success",
-                   let movie = json["data"] as? [String: Any],
-                   let episodes = movie["episodes"] as? [[String: Any]] {
-                    for server in episodes {
-                        if let serverData = server["server_data"] as? [[String: Any]] {
-                            for epItem in serverData {
-                                if let name = epItem["name"] as? String,
-                                   let linkM3u8 = epItem["link_m3u8"] as? String,
-                                   let streamURL = URL(string: linkM3u8),
-                                   matchEpisode(name: name, target: episode) {
-                                    completion(.success(streamURL))
-                                    return
-                                }
-                            }
-                        }
-                    }
-                    completion(.failure(StreamServiceError.episodeNotFound(ep: "\(episode)")))
-                } else { completion(.failure(StreamServiceError.noData)) }
-            } catch { completion(.failure(error)) }
-        }.resume()
-    }
-}
-
-// MARK: - Onflix Service
-final class OnflixService {
-    static let shared = OnflixService()
-    private let baseURL = "https://onflix.lol"
-    private init() {}
-    
-    func fetchStream(title: String, slug: String, episode: Int? = nil, completion: @escaping (Result<URL, Error>) -> Void) {
-        let urlString = "\(baseURL)/phim/\(slug)"
-        guard let url = URL(string: urlString) else {
-            completion(.failure(StreamServiceError.invalidURL))
-            return
-        }
-        
-        URLSession.streamSession.dataTask(with: url) { data, _, error in
-            if let error = error { completion(.failure(error)); return }
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(StreamServiceError.noData))
-                return
-            }
-            
-            let pattern = #""link_m3u8":"([^"\\]+)""#
-            guard let regex = try? NSRegularExpression(pattern: pattern),
-                  let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-                  let range = Range(match.range(at: 1), in: html) else {
-                completion(.failure(StreamServiceError.noStreamURL))
-                return
-            }
-            
-            var m3u8 = String(html[range])
-                .replacingOccurrences(of: "\\u0026", with: "&")
-                .replacingOccurrences(of: "\\/", with: "/")
-            
-            guard let streamURL = URL(string: m3u8) else {
-                completion(.failure(StreamServiceError.noStreamURL))
-                return
-            }
-            
-            completion(.success(streamURL))
-        }.resume()
     }
 }
 
