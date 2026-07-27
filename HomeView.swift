@@ -522,7 +522,7 @@ struct SectionGrid: View {
                 .buttonStyle(.plain).padding(.horizontal, 20)
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 14) {
-                        ForEach(movies.prefix(10)) { movie in
+                        ForEach(movies.prefix(8)) { movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 115, height: 172).clipShape(RoundedRectangle(cornerRadius: 12)).shadow(color: .black.opacity(0.3), radius: 3)
@@ -544,7 +544,7 @@ struct BigCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label(title, systemImage: icon).font(.headline).foregroundColor(.white)
                 ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 8) { ForEach(movies.prefix(5)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { HStack(spacing: 10) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 50, height: 75).clipShape(RoundedRectangle(cornerRadius: 8)); VStack(alignment: .leading, spacing: 2) { Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2); Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray) }; Spacer() } } } }
+                    LazyVStack(spacing: 8) { ForEach(movies.prefix(4)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { HStack(spacing: 10) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 50, height: 75).clipShape(RoundedRectangle(cornerRadius: 8)); VStack(alignment: .leading, spacing: 2) { Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2); Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray) }; Spacer() } } } }
                 }.frame(maxHeight: 200)
             }.padding(12).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2))).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
