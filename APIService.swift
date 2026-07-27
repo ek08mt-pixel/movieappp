@@ -9,7 +9,7 @@ class APIService {
     private let decoder: JSONDecoder = { let d = JSONDecoder(); return d }()
     
     func trending24h() async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
+        try await fetchMultiplePages(maxPages: 8) { [self] page in
             let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -25,7 +25,7 @@ class APIService {
     return response.results.map { $0.withPlaceholder() }
 }
     func trendingTV() async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
+        try await fetchMultiplePages(maxPages: 8) { [self] page in
             let urlString = "\(baseURL)/trending/tv/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -70,7 +70,7 @@ class APIService {
     }
     
     func popular() async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
+        try await fetchMultiplePages(maxPages: 8) { [self] page in
             let urlString = "\(baseURL)/movie/popular?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -80,7 +80,7 @@ class APIService {
     }
     
     func topRated() async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
+        try await fetchMultiplePages(maxPages: 8) { [self] page in
             let urlString = "\(baseURL)/movie/top_rated?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -90,7 +90,7 @@ class APIService {
     }
     
     func nowPlaying() async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
+        try await fetchMultiplePages(maxPages: 8) { [self] page in
             let urlString = "\(baseURL)/movie/now_playing?api_key=\(apiKey)&language=\(language)&page=\(page)"
             guard let url = URL(string: urlString) else { return [] }
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -128,7 +128,7 @@ class APIService {
     func koreanMovies() async throws -> [Movie] { try await discoverMovies(lang: "ko", sortBy: "popularity.desc") }
    // Nhật Bản - lọc kỹ hơn
 func japaneseMovies() async throws -> [Movie] {
-    try await fetchMultiplePages { [self] page in
+    try await fetchMultiplePages(maxPages: 7) { [self] page in
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ja&without_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&certification_country=JP&certification.lte=R"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -140,7 +140,7 @@ func japaneseMovies() async throws -> [Movie] {
     func usukMovies() async throws -> [Movie] { try await discoverMovies(lang: "en", sortBy: "popularity.desc") }
     
     func animeMovies() async throws -> [Movie] {
-    try await fetchMultiplePages { [self] page in
+    try await fetchMultiplePages(maxPages: 7) { [self] page in
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -357,11 +357,11 @@ func japaneseMovies() async throws -> [Movie] {
     return all
 }
     
-    private func fetchMultiplePages(fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
-        var all: [Movie] = []
-        for page in 1...10 { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
-        return all
-    }
+    private func fetchMultiplePages(maxPages: Int = 5, fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
+    var all: [Movie] = []
+    for page in 1...maxPages { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
+    return all
+}
 }
 
 extension Movie {
