@@ -14,11 +14,11 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ZStack {
-                HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
-                ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
-                LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
-                ProfileView().id(profileID).opacity(selectedTab == 3 ? 1 : 0)
-            }
+    HomeView().id(homeID).opacity(selectedTab == 0 ? 1 : 0)
+    // ExploreView().id(exploreID).opacity(selectedTab == 1 ? 1 : 0)
+    // LibraryView().id(libraryID).opacity(selectedTab == 2 ? 1 : 0)
+    // ProfileView().id(profileID).opacity(selectedTab == 3 ? 1 : 0)
+}
             
             if ostManager.isPlaying && selectedTab != 2 {
                 VStack {
