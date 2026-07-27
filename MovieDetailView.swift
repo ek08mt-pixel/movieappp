@@ -60,24 +60,33 @@ struct MovieDetailView: View {
                         
                         // Thể loại + thời lượng - dưới banner hero
                         VStack {
-                            Spacer()
-                            HStack(spacing: 12) {
-                                if let r = vm.detail?.runtime, r > 0 {
-                                    Label("\(r) phút", systemImage: "clock.fill")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                if let g = vm.detail?.genres, !g.isEmpty {
-                                    Text(g.prefix(3).map{$0.name}.joined(separator: " • "))
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                            }
-                            .padding(.horizontal, 16).padding(.vertical, 6)
-                            .background(Capsule().fill(.black.opacity(0.5)))
-                            .padding(.bottom, 16).padding(.trailing, 16)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
+    Spacer()
+    HStack(spacing: 8) {
+        if let r = vm.detail?.runtime, r > 0 {
+            Text("\(r)m")
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.7))
+        }
+        if let g = vm.detail?.genres, !g.isEmpty {
+            Text(g.prefix(2).compactMap { genre in
+                let mapping: [String: String] = [
+                    "Phim Hành Động": "Action", "Phim Phiêu Lưu": "Adventure", "Phim Hoạt Hình": "Animation",
+                    "Phim Hài": "Comedy", "Phim Hình Sự": "Crime", "Phim Tài Liệu": "Documentary",
+                    "Phim Chính Kịch": "Drama", "Phim Gia Đình": "Family", "Phim Giả Tượng": "Fantasy",
+                    "Phim Lịch Sử": "History", "Phim Kinh Dị": "Horror", "Phim Nhạc": "Music",
+                    "Phim Bí Ẩn": "Mystery", "Phim Lãng Mạn": "Romance", "Phim Khoa Học Viễn Tưởng": "Sci-Fi",
+                    "Phim TV": "TV Movie", "Phim Gây Cấn": "Thriller", "Phim Chiến Tranh": "War",
+                    "Phim Miền Tây": "Western"
+                ]
+                return mapping[genre.name] ?? genre.name.replacingOccurrences(of: "Phim ", with: "")
+            }.joined(separator: " • "))
+            .font(.system(size: 11))
+            .foregroundColor(.white.opacity(0.7))
+        }
+    }
+    .padding(.bottom, 16).padding(.trailing, 20)
+    .frame(maxWidth: .infinity, alignment: .trailing)
+}
                     }
                     
                     VStack(alignment: .leading, spacing: 16) {
