@@ -1,29 +1,15 @@
-//
-//  AchievementTimelineRow.swift
-//  movieapp
-//
-//  Created by (Your App Name) on 2026.
-//
-
 import SwiftUI
 
 struct AchievementTimelineRow: View {
     let stages: [JourneyStage]
+    @StateObject private var manager = AchievementManager.shared
     @State private var selectedID: UUID?
     
     private let badgeSize: CGFloat = 44
     private let spacing: CGFloat = 6
     
-    func iconForStage(_ title: String) -> any Shape {
-        switch title {
-        case "Newbie": return CrownIcon()
-        case "Enthusiast": return LightningIcon()
-        case "Fanatic": return FlameIcon()
-        case "Pro Watcher": return CatShape()
-        case "Master": return CrownIcon()
-        case "Legend": return CrownIcon()
-        default: return CrownIcon()
-        }
+    func rankForTitle(_ title: String) -> Rank {
+        Rank.allCases.first(where: { $0.rawValue == title }) ?? .newbie
     }
     
     var body: some View {
@@ -31,51 +17,62 @@ struct AchievementTimelineRow: View {
             Text("HÀNH TRÌNH CỦA BẠN")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .tracking(1.2)
-                .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
+                .foregroundColor(.gray)
                 .padding(.leading, 4)
             
             VStack(alignment: .center, spacing: 0) {
                 ZStack(alignment: .top) {
                     // Đường nối
-                    HStack(spacing: spacing + badgeSize) {
-                        ForEach(0..<stages.count - 1, id: \.self) { index in
-                            let nextIsActive = stages[index + 1].isUnlocked
+                    HStack(spacing: spacing) {
+                        ForEach(0..<stages.count - 1, id: \.self) { i in
                             Rectangle()
-                                .fill(Color.white.opacity(nextIsActive ? 0.2 : 0.05))
-                                .frame(width: 10, height: 1.5)
+                                .fill(stages[i].isUnlocked ? manager.userRankData.currentRank.color.opacity(0.4) : Color.white.opacity(0.06))
+                                .frame(width: 10, height: 2)
                         }
                     }
-                    .offset(y: 22)
+                    .offset(y: badgeSize / 2)
                     
-                    // Icon
+                    // Icons
                     HStack(spacing: spacing) {
                         ForEach(Array(stages.enumerated()), id: \.element.id) { index, stage in
-                            let isActive = stage.isUnlocked && stage.title == "Pro Watcher"
-                            let isCompleted = stage.isUnlocked && stage.title != "Pro Watcher"
+                            let rank = rankForTitle(stage.title)
+                            let isCurrent = rank == manager.userRankData.currentRank
+                            let isCompleted = stage.isUnlocked && !isCurrent
                             
                             VStack(spacing: 8) {
                                 Button(action: { withAnimation(.spring()) { selectedID = stage.id } }) {
                                     ZStack {
-                                        // Nền Hexagon
-                                        HexagonShape()
-                                            .fill(isActive ? Color(red: 0.2, green: 0.2, blue: 0.2) : isCompleted ? Color(red: 0.1, green: 0.1, blue: 0.1) : Color(red: 0.04, green: 0.04, blue: 0.04))
-                                            .frame(width: badgeSize, height: badgeSize + 4)
-                                        
-                                        HexagonShape()
-                                            .stroke(isActive ? Color.white : (isCompleted ? Color.white.opacity(0.3) : Color.white.opacity(0.05)), lineWidth: isActive ? 2 : 1)
-                                            .frame(width: badgeSize, height: badgeSize + 4)
-                                        
-                                        // Render Icon Shape
-                                        AnyShape(iconForStage(stage.title))
-                                            .fill(isActive ? .white : (isCompleted ? .white.opacity(0.8) : .white.opacity(0.1)))
-                                            .frame(width: 20, height: 20)
-                                        
-                                        if isActive {
+                                        if isCurrent {
                                             HexagonShape()
-                                                .stroke(Color.white.opacity(0.5), lineWidth: 3)
-                                                .blur(radius: 6)
-                                                .frame(width: badgeSize, height: badgeSize + 4)
+                                                .fill(rank.glowColor)
+                                                .frame(width: badgeSize + 6, height: badgeSize + 10)
+                                                .blur(radius: 8)
                                         }
+                                        
+                                        HexagonShape()
+                                            .fill(
+                                                isCompleted ? rank.color.opacity(0.15) :
+                                                    isCurrent ? rank.color.opacity(0.25) :
+                                                    Color(white: 0.06)
+                                            )
+                                            .frame(width: badgeSize, height: badgeSize + 4)
+                                        
+                                        HexagonShape()
+                                            .stroke(
+                                                isCurrent ? rank.color.opacity(0.8) :
+                                                    isCompleted ? rank.color.opacity(0.4) :
+                                                    Color.white.opacity(0.06),
+                                                lineWidth: isCurrent ? 2 : 1
+                                            )
+                                            .frame(width: badgeSize, height: badgeSize + 4)
+                                        
+                                        CatShape()
+                                            .fill(
+                                                isCurrent ? rank.color :
+                                                    isCompleted ? rank.color.opacity(0.7) :
+                                                    Color.white.opacity(0.12)
+                                            )
+                                            .frame(width: 20, height: 20)
                                     }
                                     .scaleEffect(selectedID == stage.id ? 1.08 : 1.0)
                                 }
@@ -83,12 +80,15 @@ struct AchievementTimelineRow: View {
                                 
                                 VStack(spacing: 2) {
                                     Text(stage.title)
-                                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                                        .fixedSize(horizontal: true, vertical: false)
-                                        .foregroundColor(isActive ? .white : (isCompleted ? Color(red: 0.6, green: 0.6, blue: 0.6) : Color(red: 0.3, green: 0.3, blue: 0.3)))
+                                        .font(.system(size: 10, weight: isCurrent ? .bold : .medium, design: .rounded))
+                                        .foregroundColor(
+                                            isCurrent ? rank.color :
+                                                isCompleted ? .white.opacity(0.7) :
+                                                .white.opacity(0.25)
+                                        )
                                     Text(stage.level)
-                                        .font(.system(size: 9, weight: .regular, design: .rounded))
-                                        .foregroundColor(isActive ? Color(red: 0.5, green: 0.5, blue: 0.5) : (isCompleted ? Color(red: 0.4, green: 0.4, blue: 0.4) : Color(red: 0.2, green: 0.2, blue: 0.2)))
+                                        .font(.system(size: 9, design: .rounded))
+                                        .foregroundColor(.gray)
                                 }
                             }
                         }
