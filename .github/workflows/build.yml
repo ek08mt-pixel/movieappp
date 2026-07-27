@@ -15,7 +15,7 @@ jobs:
           echo "Files: $SWIFT_FILES"
           
           xcrun -sdk iphoneos swiftc \
-            -target arm64-apple-ios16.0 \
+            -target arm64-apple-ios18.0 \
             -O \
             -framework SwiftUI \
             -framework UIKit \
@@ -80,7 +80,7 @@ jobs:
               <string>UIInterfaceOrientationLandscapeLeft</string>
               <string>UIInterfaceOrientationLandscapeRight</string>
           </array>
-          <key>MinimumOSVersion</key><string>16.0</string>
+          <key>MinimumOSVersion</key><string>18.0</string>
           <key>NSAppTransportSecurity</key>
           <dict>
               <key>NSAllowsArbitraryLoads</key><true/>
