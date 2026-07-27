@@ -39,41 +39,41 @@ struct AchievementView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Tabs (Viền mỏng 0.8, Đứt đoạn)
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(tabs, id: \.self) { tab in
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                        selectedTab = tab
-                                    }
-                                }) {
-                                    Text(tab)
-                                        .font(.system(size: 13, weight: selectedTab == tab ? .bold : .medium, design: .rounded))
-                                        .foregroundColor(selectedTab == tab ? .white : Color(red: 0.6, green: 0.6, blue: 0.6))
-                                        .padding(.horizontal, 16).padding(.vertical, 8)
-                                        .background(
-                                            Group {
-                                                if selectedTab == tab {
-                                                    Capsule()
-                                                        .fill(Color(red: 0.12, green: 0.12, blue: 0.12))
-                                                        .overlay(
-                                                            Capsule()
-                                                                .trim(from: 0.0, to: 0.5) // Đứt đoạn 50%
-                                                                .stroke(
-                                                                    LinearGradient(stops: [.init(color: .white.opacity(0.6), location: 0.0), .init(color: .white.opacity(0.0), location: 0.5)], startPoint: .leading, endPoint: .trailing),
-                                                                    style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
-                                                                )
-                                                        )
-                                                }
-                                            }
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
+    HStack(spacing: 10) {
+        ForEach(tabs, id: \.self) { tab in
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    selectedTab = tab
+                }
+            }) {
+                Text(tab)
+                    .font(.system(size: 13, weight: selectedTab == tab ? .bold : .medium, design: .rounded))
+                    .foregroundColor(selectedTab == tab ? .white : .gray)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(selectedTab == tab ? Color.white.opacity(0.12) : Color.white.opacity(0.03))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                selectedTab == tab ?
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ) :
+                                    LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom),
+                                lineWidth: 0.8
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    .padding(.horizontal, 20)
+}
                     
                     // Hero
                     AchievementHeroCard().padding(.horizontal, 20)
