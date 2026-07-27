@@ -102,9 +102,6 @@ struct HomeView: View {
                                     .background(Circle().fill(.ultraThinMaterial.opacity(0.4))).overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 0.5))
                             }.padding(.top, 50).padding(.leading, 16)
                         }
-                        
-    .padding(.top, 50).padding(.trailing, 16)
-}
                         .overlay(alignment: .bottom) {
                             LinearGradient(colors: [.clear, Color(white: 0.04).opacity(0.9)], startPoint: .top, endPoint: .bottom).frame(height: 40).allowsHitTesting(false)
                         }
@@ -339,7 +336,7 @@ struct HomeView: View {
         .task { await vm.loadAll() }
     }
     
-    // MARK: - Continue Watching Card with Context Menu
+    // MARK: - Continue Watching Card
     func continueWatchingCard(_ prog: WatchProgress) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .center) {
@@ -375,16 +372,16 @@ struct HomeView: View {
                     .padding(6)
                     
                     GeometryReader { geo in
-    RoundedRectangle(cornerRadius: 1)
-        .fill(.white.opacity(0.15))
-        .frame(height: 3)
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 1)
-                .fill(.white.opacity(0.6))
-                .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
-        }
-}
-.frame(height: 3)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(.white.opacity(0.15))
+                            .frame(height: 3)
+                            .overlay(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(.white.opacity(0.6))
+                                    .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
+                            }
+                    }
+                    .frame(height: 3)
                 }
             }
             .frame(width: 200, height: 112)
@@ -441,23 +438,23 @@ struct HomeView: View {
     }
     
     func presentContinuePlayer() {
-    guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
-    let prog = appState.watchProgressList.first(where: { $0.movieId == id })
-    let src: MovieSource
-if let source = prog?.source {
-    src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : source == "Emew 3" ? .vsmov : .phimapi
-} else {
-    src = .phimapi
-}
-    let moviePlayer = MoviePlayerView(
-        movieId: id, movieTitle: continueMovieTitle,
-        mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode,
-        posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src
-    ).environmentObject(appState)
-    let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
-    hosting.modalPresentationStyle = .fullScreen
-    topVC.present(hosting, animated: true)
-}
+        guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
+        let prog = appState.watchProgressList.first(where: { $0.movieId == id })
+        let src: MovieSource
+        if let source = prog?.source {
+            src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : source == "Emew 3" ? .vsmov : .phimapi
+        } else {
+            src = .phimapi
+        }
+        let moviePlayer = MoviePlayerView(
+            movieId: id, movieTitle: continueMovieTitle,
+            mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode,
+            posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src
+        ).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+    }
     
     func formatRemaining(_ prog: WatchProgress) -> String {
         let remaining = max(prog.duration - prog.currentTime, 0)
