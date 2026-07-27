@@ -28,6 +28,7 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
+        // Chỉ load trending + genres trước
         async let trendingTask = APIService.shared.trending24hFast()
         async let genresTask = APIService.shared.genres()
         
@@ -37,7 +38,7 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        // Load trending TV + trending anime
+        // TV + Anime trending
         Task {
             let tv = await loadTrendingTVPages()
             let hotAnime = await loadTrendingAnime()
@@ -47,26 +48,39 @@ class HomeViewModel: ObservableObject {
             }
         }
         
-        // Load các section còn lại
+        // Batch 1: ưu tiên trước
         Task {
             async let np = APIService.shared.nowPlaying()
             async let tr = APIService.shared.topRated()
-            async let ko = APIService.shared.koreanMovies()
-            async let us = APIService.shared.usukMovies()
-            async let up = APIService.shared.upcoming()
-            async let ja = APIService.shared.japaneseMovies()
-            async let vi = APIService.shared.vietnameseMovies()
-            async let an = APIService.shared.animeMovies()
-            
-            let (now, top, k, u, upc, j, v, a) = await (try? np, try? tr, try? ko, try? us, try? up, try? ja, try? vi, try? an)
+            let (now, top) = await (try? np, try? tr)
             await MainActor.run {
                 if let now = now { self.nowPlaying = now }
                 if let top = top { self.topRated = top }
+            }
+        }
+        
+        // Batch 2: delay nhẹ để UI có thời gian render
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+            async let ko = APIService.shared.koreanMovies()
+            async let us = APIService.shared.usukMovies()
+            async let vi = APIService.shared.vietnameseMovies()
+            let (k, u, v) = await (try? ko, try? us, try? vi)
+            await MainActor.run {
                 if let k = k { self.korean = k }
                 if let u = u { self.usuk = u }
-                if let upc = upc { self.upcoming = upc }
-                if let j = j { self.japanese = j }
                 if let v = v { self.vietnamese = v }
+            }
+        }
+        
+        // Batch 3: delay thêm
+        Task {
+            try? await Task.sleep(nanoseconds: 800_000_000) // 0.8s
+            async let ja = APIService.shared.japaneseMovies()
+            async let an = APIService.shared.animeMovies()
+            let (j, a) = await (try? ja, try? an)
+            await MainActor.run {
+                if let j = j { self.japanese = j }
                 if let a = a { self.anime = a }
             }
         }
@@ -74,6 +88,9 @@ class HomeViewModel: ObservableObject {
         onThisDayMovie = await loadOnThisDay()
         isLoading = false
     }
+    
+    // ... giữ nguyên các hàm còn lại: loadOnThisDay, loadTrendingTVPages, loadTrendingAnime
+}
     
     private func loadOnThisDay() async -> OnThisDayItem? {
         let today = Date()
