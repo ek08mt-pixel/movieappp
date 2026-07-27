@@ -28,7 +28,6 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Chỉ load trending + genres trước
         async let trendingTask = APIService.shared.trending24hFast()
         async let genresTask = APIService.shared.genres()
         
@@ -38,7 +37,6 @@ class HomeViewModel: ObservableObject {
         }
         genres = (try? await genresTask) ?? []
         
-        // TV + Anime trending
         Task {
             let tv = await loadTrendingTVPages()
             let hotAnime = await loadTrendingAnime()
@@ -48,7 +46,6 @@ class HomeViewModel: ObservableObject {
             }
         }
         
-        // Batch 1: ưu tiên trước
         Task {
             async let np = APIService.shared.nowPlaying()
             async let tr = APIService.shared.topRated()
@@ -59,9 +56,8 @@ class HomeViewModel: ObservableObject {
             }
         }
         
-        // Batch 2: delay nhẹ để UI có thời gian render
         Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+            try? await Task.sleep(nanoseconds: 500_000_000)
             async let ko = APIService.shared.koreanMovies()
             async let us = APIService.shared.usukMovies()
             async let vi = APIService.shared.vietnameseMovies()
@@ -73,9 +69,8 @@ class HomeViewModel: ObservableObject {
             }
         }
         
-        // Batch 3: delay thêm
         Task {
-            try? await Task.sleep(nanoseconds: 800_000_000) // 0.8s
+            try? await Task.sleep(nanoseconds: 800_000_000)
             async let ja = APIService.shared.japaneseMovies()
             async let an = APIService.shared.animeMovies()
             let (j, a) = await (try? ja, try? an)
@@ -88,9 +83,6 @@ class HomeViewModel: ObservableObject {
         onThisDayMovie = await loadOnThisDay()
         isLoading = false
     }
-    
-    // ... giữ nguyên các hàm còn lại: loadOnThisDay, loadTrendingTVPages, loadTrendingAnime
-}
     
     private func loadOnThisDay() async -> OnThisDayItem? {
         let today = Date()
