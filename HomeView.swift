@@ -177,76 +177,72 @@ struct HomeView: View {
                             }.padding(.top, 16)
                         }
                         
-                        // Anime/Hoạt hình đang hot - với dots + thông tin
-                        if !vm.anime.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                NavigationLink(destination: MovieListView(title: "Hoạt hình - Anime", movies: vm.anime, fixedQuery: "Hoạt hình - Anime")) {
-                                    HStack(spacing: 6) {
-                                        RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
-                                        Text("Hoạt hình - Anime").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .light)).foregroundColor(.white.opacity(0.5))
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.horizontal, 20)
-                                
-                                // Banner anime có dots
-                                TabView(selection: $animeCurrentIndex) {
-                                    ForEach(Array(vm.anime.prefix(8).enumerated()), id: \.element.id) { i, movie in
-                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                            ZStack(alignment: .bottomLeading) {
-                                                if let bgURL = movie.backdropURL {
-                                                    CachedAsyncImage(url: bgURL, size: .backdrop)
-                                                        .aspectRatio(16/9, contentMode: .fill)
-                                                        .frame(height: 200)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                                } else {
-                                                    RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)).frame(height: 200)
-                                                }
-                                                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                                
-                                                VStack(alignment: .leading, spacing: 6) {
-                                                    Text(movie.title).font(.system(size: 16, weight: .bold)).foregroundColor(.white).lineLimit(2)
-                                                    HStack(spacing: 8) {
-                                                        HStack(spacing: 3) {
-                                                            Image(systemName: "star.fill").font(.system(size: 9)).foregroundColor(.yellow)
-                                                            Text(movie.ratingText).font(.system(size: 10)).foregroundColor(.white.opacity(0.8))
-                                                        }
-                                                        if let year = movie.releaseDate?.prefix(4) {
-                                                            Text(String(year)).font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
-                                                        }
-                                                        if let lang = movie.originalLanguage {
-                                                            Text(lang.uppercased()).font(.system(size: 9)).foregroundColor(.white.opacity(0.5))
-                                                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                                                .background(Capsule().fill(.white.opacity(0.15)))
-                                                        }
-                                                    }
-                                                }
-                                                .padding(16)
-                                            }
-                                            .padding(.horizontal, 20)
-                                        }.tag(i)
-                                    }
-                                }
-                                .tabViewStyle(.page(indexDisplayMode: .never))
-                                .frame(height: 216)
-                                .onAppear { startAnimeAutoScroll() }.onDisappear { stopAnimeAutoScroll() }
-                                
-                                // Dots
-                                HStack(spacing: 4) {
-                                    ForEach(0..<min(vm.anime.count, 8), id: \.self) { i in
-                                        let active = i == (animeCurrentIndex % min(vm.anime.count, 8))
-                                        Capsule()
-                                            .fill(.white.opacity(active ? 0.8 : 0.2))
-                                            .frame(width: active ? 16 : 5, height: 3)
-                                            .animation(.easeInOut(duration: 0.3), value: animeCurrentIndex)
-                                    }
-                                }
-                                .padding(.top, 4)
-                            }
-                            .padding(.top, 24)
+                        // Anime/Hoạt hình đang hot
+if !vm.trendingAnime.isEmpty {
+    VStack(alignment: .leading, spacing: 12) {
+        NavigationLink(destination: MovieListView(title: "Hoạt hình - Anime", movies: vm.anime, fixedQuery: "Hoạt hình - Anime")) {
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
+                Text("Hoạt hình - Anime").font(.title3).fontWeight(.bold).foregroundColor(.white)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .light)).foregroundColor(.white.opacity(0.5))
+            }
+        }
+        .buttonStyle(.plain).padding(.horizontal, 20)
+        
+        TabView(selection: $animeCurrentIndex) {
+            ForEach(Array(vm.trendingAnime.prefix(8).enumerated()), id: \.element.id) { i, movie in
+                NavigationLink(destination: MovieDetailView(movie: movie)) {
+                    ZStack(alignment: .bottomLeading) {
+                        if let bgURL = movie.backdropURL {
+                            CachedAsyncImage(url: bgURL, size: .backdrop)
+                                .aspectRatio(16/9, contentMode: .fill)
+                                .frame(height: 200)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        } else {
+                            RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)).frame(height: 200)
                         }
+                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(movie.title).font(.system(size: 16, weight: .bold)).foregroundColor(.white).lineLimit(2)
+                            HStack(spacing: 8) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "star.fill").font(.system(size: 9)).foregroundColor(.yellow)
+                                    Text(movie.ratingText).font(.system(size: 10)).foregroundColor(.white.opacity(0.8))
+                                }
+                                if let year = movie.releaseDate?.prefix(4) {
+                                    Text(String(year)).font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                                }
+                            }
+                        }
+                        .padding(16)
+                        
+                        // Dots trong banner
+                        VStack {
+                            Spacer()
+                            HStack(spacing: 4) {
+                                ForEach(0..<min(vm.trendingAnime.count, 8), id: \.self) { j in
+                                    Capsule()
+                                        .fill(.white.opacity(j == (animeCurrentIndex % min(vm.trendingAnime.count, 8)) ? 0.9 : 0.25))
+                                        .frame(width: j == (animeCurrentIndex % min(vm.trendingAnime.count, 8)) ? 16 : 5, height: 3)
+                                        .animation(.easeInOut(duration: 0.3), value: animeCurrentIndex)
+                                }
+                            }
+                            .padding(.bottom, 8)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 20)
+                }.tag(i)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: 216)
+        .onAppear { startAnimeAutoScroll() }.onDisappear { stopAnimeAutoScroll() }
+    }
+    .padding(.top, 24)
+}
                         
                         SectionGrid(title: "TV Shows", movies: vm.trendingTV)
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
