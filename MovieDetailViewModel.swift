@@ -86,30 +86,6 @@ class MovieDetailViewModel: ObservableObject {
         return qualities.joined(separator: " • ")
     }
     
-    func getVideoURL(movieId: Int, mediaType: String?, season: Int?, episode: Int?, title: String = "") async -> URL? {
-        let cacheKey = "\(movieId)_\(mediaType ?? "movie")_S\(season ?? 0)E\(episode ?? 0)"
-        if let cached = videoURLCache[cacheKey] { return cached }
-        let s = season ?? 1; let ep = episode ?? 1; let type = mediaType ?? "movie"
-        let imdbID: String
-        if type == "tv" { imdbID = (try? await APIService.shared.fetchExternalIDs(tvId: movieId)) ?? "" }
-        else {
-            let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-            if let url = URL(string: urlString), let (data, _) = try? await URLSession.shared.data(from: url) {
-                struct E: Codable { let imdb_id: String? }
-                imdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-            } else { imdbID = "" }
-        }
-        guard !imdbID.isEmpty else { return nil }
-        return await withCheckedContinuation { continuation in
-            OphimService.shared.fetchStream(title: title, season: s, episode: ep) { result in
-                switch result {
-                case .success(let url): self.videoURLCache[cacheKey] = url; continuation.resume(returning: url)
-                case .failure: continuation.resume(returning: nil)
-                }
-            }
-        }
-    }
-    
     func loadSeasonDetail(tvId: Int, seasonNumber: Int) async {
         if let detail = try? await APIService.shared.fetchSeasonDetail(tvId: tvId, seasonNumber: seasonNumber) {
             selectedSeason = detail; seasonDetails[seasonNumber] = detail
