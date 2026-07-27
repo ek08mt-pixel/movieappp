@@ -378,16 +378,9 @@ struct ProfileView: View {
             Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
             Text("Sử dụng mạng di động").font(.system(size: 15)).foregroundColor(.white)
             Spacer()
-            Toggle("", isOn: $useCellularData)
-    .toggleStyle(SwitchToggleStyle(tint: .clear))
-    .background(
-        RoundedRectangle(cornerRadius: 16)
-            .fill(.ultraThinMaterial.opacity(0.3))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
-            )
-    )
+           Toggle("", isOn: $useCellularData)
+    .toggleStyle(SwitchToggleStyle(tint: useCellularData ? .white.opacity(0.6) : .gray.opacity(0.35)))
+    .scaleEffect(0.85)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
@@ -398,15 +391,8 @@ struct ProfileView: View {
             Text("Cảnh báo dữ liệu thấp").font(.system(size: 15)).foregroundColor(.white)
             Spacer()
             Toggle("", isOn: $lowDataWarning)
-    .toggleStyle(SwitchToggleStyle(tint: .clear))
-    .background(
-        RoundedRectangle(cornerRadius: 16)
-            .fill(.ultraThinMaterial.opacity(0.3))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
-            )
-    )
+    .toggleStyle(SwitchToggleStyle(tint: lowDataWarning ? .white.opacity(0.6) : .gray.opacity(0.35)))
+    .scaleEffect(0.85)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
