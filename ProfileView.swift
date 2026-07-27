@@ -95,7 +95,29 @@ struct ProfileView: View {
                                     }
                                 }
                             }
-                            
+                            // Settings
+NavigationLink(destination: SettingsView()) {
+    HStack(spacing: 10) {
+        Text("⚙")
+            .font(.system(size: 20))
+        Text("Cài đặt")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.white)
+        Spacer()
+        Text("›")
+            .font(.system(size: 16, weight: .light))
+            .foregroundColor(.gray)
+    }
+    .padding(.horizontal, 20)
+    .padding(.vertical, 14)
+    .background(
+        RoundedRectangle(cornerRadius: 16)
+            .fill(.ultraThinMaterial.opacity(0.3))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+    )
+}
+.padding(.horizontal, 20)
+.padding(.top, 12)
                             // Danh hiệu - bấm vào mở AchievementView
                             Button {
                                 AchievementManager.shared.refresh(from: appState)
