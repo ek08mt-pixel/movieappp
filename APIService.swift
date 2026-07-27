@@ -126,10 +126,10 @@ class APIService {
     }
     
     func koreanMovies() async throws -> [Movie] { try await discoverMovies(lang: "ko", sortBy: "popularity.desc") }
-    // Nhật Bản (phim người đóng, loại trừ anime/hoạt hình)
+   // Nhật Bản - lọc kỹ hơn
 func japaneseMovies() async throws -> [Movie] {
     try await fetchMultiplePages { [self] page in
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ja&without_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=20"
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ja&without_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&certification_country=JP&certification.lte=R"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
