@@ -18,6 +18,7 @@ struct MovieDetailView: View {
     @State private var episodeSearchText = ""
     @State private var showEpisodeSearch = false
     @State private var selectedSource = "Emew 1"
+    @State private var showSavePopup = false
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -164,14 +165,22 @@ struct MovieDetailView: View {
                                     .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
-                            Button(action: toggleFavorite) {
-                                Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu",
-                                      systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "plus")
-                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                    .background(.ultraThinMaterial)
-                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                                    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
-                            }
+                            Button {
+    if appState.favorites.contains(where: { $0.id == movie.id }) {
+        // Đã lưu rồi thì bấm để bỏ lưu
+        appState.favorites.removeAll { $0.id == movie.id }
+        appState.save()
+    } else {
+        showSavePopup = true
+    }
+} label: {
+    Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu",
+          systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "bookmark.fill")
+        .frame(maxWidth: .infinity).padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+        .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+}
                         }
                         
                         if !vm.collectionMovies.isEmpty {
@@ -343,21 +352,21 @@ struct MovieDetailView: View {
             }
             await fetchRatings()
         }
-        .sheet(isPresented: $showImages) { MovieImagesView(images: vm.images, title: movie.title) }
-    }
+        .sheet(isPresented: $showImages) {
+    MovieImagesView(images: vm.images, title: movie.title)
+}
+.sheet(isPresented: $showSavePopup) {
+    SaveToListPopup(movie: movie)
+        .environmentObject(appState)
+        .presentationDetents([.medium])
+}
+    
     
     func handlePlayButton() {
         if !vm.seasons.isEmpty || MappingCache.hasDirectSlug(tmdbID: movie.id, season: 1) {
             playSeason = 1; playEpisode = 1
         } else { playSeason = nil; playEpisode = nil }
         presentPlayer()
-    }
-    
-    func toggleFavorite() {
-        if appState.favorites.contains(where: { $0.id == movie.id }) {
-            appState.favorites.removeAll { $0.id == movie.id }
-        } else { appState.favorites.append(movie) }
-        appState.save()
     }
     
     func presentPlayer(directURL: URL? = nil) {
@@ -395,7 +404,114 @@ struct MovieDetailView: View {
         await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) }
     }
 }
-
+struct SaveToListPopup: View {
+    let movie: Movie
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    @State private var newListName = ""
+    @State private var showNewListField = false
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(white: 0.1).ignoresSafeArea()
+                VStack(spacing: 0) {
+                    Text("Lưu vào...").font(.headline).foregroundColor(.white).padding(.top, 20)
+                    
+                    // Lưu vào Đã lưu mặc định
+                    Button {
+                        if !appState.favorites.contains(where: { $0.id == movie.id }) {
+                            appState.favorites.append(movie)
+                            appState.save()
+                        }
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "bookmark.fill").foregroundColor(.white)
+                            Text("Đã lưu").foregroundColor(.white)
+                            Spacer()
+                            if appState.favorites.contains(where: { $0.id == movie.id }) {
+                                Image(systemName: "checkmark").foregroundColor(.green)
+                            }
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.08)))
+                    }
+                    .padding(.horizontal, 20).padding(.top, 16)
+                    
+                    // Danh sách các list
+                    ScrollView {
+                        ForEach(appState.movieLists) { list in
+                            Button {
+                                if !list.movieIds.contains(movie.id) {
+                                    if let idx = appState.movieLists.firstIndex(where: { $0.id == list.id }) {
+                                        appState.movieLists[idx].movieIds.append(movie.id)
+                                        if !appState.favorites.contains(where: { $0.id == movie.id }) {
+                                            appState.favorites.append(movie)
+                                        }
+                                        appState.save()
+                                    }
+                                }
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "folder.fill").foregroundColor(.gray)
+                                    Text(list.name).foregroundColor(.white)
+                                    Spacer()
+                                    Text("\(list.movieIds.count)").font(.caption).foregroundColor(.gray)
+                                    if list.movieIds.contains(movie.id) {
+                                        Image(systemName: "checkmark").foregroundColor(.green)
+                                    }
+                                }
+                                .padding()
+                                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.08)))
+                            }
+                            .padding(.horizontal, 20).padding(.top, 8)
+                        }
+                    }
+                    .padding(.top, 8)
+                    
+                    // Tạo list mới
+                    if showNewListField {
+                        HStack {
+                            TextField("Tên list mới", text: $newListName)
+                                .textFieldStyle(.plain).foregroundColor(.white)
+                                .padding(10).background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
+                            Button("Tạo") {
+                                if !newListName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    var newList = MovieList(name: newListName)
+                                    newList.movieIds = [movie.id]
+                                    appState.movieLists.append(newList)
+                                    if !appState.favorites.contains(where: { $0.id == movie.id }) {
+                                        appState.favorites.append(movie)
+                                    }
+                                    appState.save()
+                                    newListName = ""
+                                    showNewListField = false
+                                    dismiss()
+                                }
+                            }
+                            .font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                        }
+                        .padding(.horizontal, 20).padding(.top, 8)
+                    }
+                    
+                    Button {
+                        withAnimation { showNewListField.toggle() }
+                    } label: {
+                        Label("Tạo list mới", systemImage: "plus")
+                            .foregroundColor(.white.opacity(0.7)).font(.system(size: 13))
+                    }
+                    .padding(.top, 12)
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+}
 // InfoBadge, MovieImagesView, WebView giữ nguyên
 
 struct InfoBadge: View {
