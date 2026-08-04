@@ -91,7 +91,7 @@ struct LibraryView: View {
                 Button {
                     withAnimation { selectedListID = nil }
                 } label: {
-                    Text("Tất cả")
+                    Text("Mặc định")
                         .font(.system(size: 12, weight: selectedListID == nil ? .bold : .regular))
                         .foregroundColor(selectedListID == nil ? .white : .gray)
                         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -144,7 +144,7 @@ struct LibraryView: View {
                 Button("Bỏ lọc") { withAnimation { selectedListID = nil } }
                     .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
             }
-            Button("Xóa tất cả") {
+            Button("Xóa all") {
                 withAnimation {
                     switch selectedTab {
                     case .watched:
