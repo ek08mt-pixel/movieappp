@@ -427,7 +427,6 @@ struct SaveToListPopup: View {
         }
     }
     dismiss()
-}
                             } label: {
                                 HStack {
                                     Image(systemName: "folder.fill").foregroundColor(.gray)
