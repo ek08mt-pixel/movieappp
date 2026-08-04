@@ -424,7 +424,7 @@ struct SaveToListPopup: View {
                                     if let idx = appState.movieLists.firstIndex(where: { $0.id == list.id }) {
                                         appState.movieLists[idx].movieIds.append(movie.id)
                                         if !appState.favorites.contains(where: { $0.id == movie.id }) {
-                                            appState.favorites.append(movie)
+                                    
                                         }
                                         appState.save()
                                     }
@@ -459,7 +459,6 @@ struct SaveToListPopup: View {
                                     newList.movieIds = [movie.id]
                                     appState.movieLists.append(newList)
                                     if !appState.favorites.contains(where: { $0.id == movie.id }) {
-                                        appState.favorites.append(movie)
                                     }
                                     appState.save()
                                     newListName = ""
