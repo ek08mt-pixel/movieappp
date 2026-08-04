@@ -195,12 +195,14 @@ var actionBar: some View {
         }
     }
     
+   
     var emptyIcon: String {
         switch selectedTab {
         case .watched: return "eye.slash"
         case .saved: return "bookmark.slash"
         }
     }
+    
     var emptyText: String {
         switch selectedTab {
         case .watched: return "Chưa có phim đã xem"
@@ -223,7 +225,12 @@ var actionBar: some View {
                             }
                         }
                         Button {
-                            withAnimation { appState.favorites.removeAll { $0.id == movie.id }; appState.save() }
+                            if let listID = selectedListID, let idx = appState.movieLists.firstIndex(where: { $0.id == listID }) {
+                                appState.movieLists[idx].movies.removeAll { $0.id == movie.id }
+                            } else {
+                                appState.favorites.removeAll { $0.id == movie.id }
+                            }
+                            appState.save()
                         } label: {
                             Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundColor(.white.opacity(0.8)).padding(4)
                         }
@@ -268,10 +275,7 @@ var actionBar: some View {
                             }
                             appState.save()
                         }
-                    } label: {
-                        Label("Xóa", systemImage: "trash")
-                    }
-                    .tint(.white.opacity(0.3))
+                    } label: { Label("Xóa", systemImage: "trash") }.tint(.white.opacity(0.3))
                 }
             }
         }
