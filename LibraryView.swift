@@ -138,32 +138,35 @@ struct LibraryView: View {
     }
     
     var actionBar: some View {
-        HStack {
-            Spacer()
-            if selectedListID != nil {
-                Button("Bỏ lọc") { withAnimation { selectedListID = nil } }
-                    .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
-            }
-            Button("Xóa all") {
-                withAnimation {
-                    switch selectedTab {
-                    case .watched:
-                        appState.watchHistory.removeAll()
-                        appState.watchProgressList.removeAll()
-                    case .saved:
-                        if let listID = selectedListID, let idx = appState.movieLists.firstIndex(where: { $0.id == listID }) {
-                            appState.movieLists[idx].movies.removeAll()
-                        } else {
-                            appState.favorites.removeAll()
-                        }
+    HStack {
+        Spacer()
+        Button("Xóa tất cả") {
+            withAnimation {
+                switch selectedTab {
+                case .watched:
+                    appState.watchHistory.removeAll()
+                    appState.watchProgressList.removeAll()
+                case .saved:
+                    if let listID = selectedListID, let idx = appState.movieLists.firstIndex(where: { $0.id == listID }) {
+                        appState.movieLists[idx].movies.removeAll()
+                    } else {
+                        appState.favorites.removeAll()
                     }
-                    appState.save()
                 }
+                appState.save()
             }
-            .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
         }
-        .padding(.horizontal, 20).padding(.top, 8)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(.white.opacity(0.5))
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(.white.opacity(0.08))
+                .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
+        )
     }
+    .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 6)
+}
     
     var savedGridView: some View {
         ScrollView {
