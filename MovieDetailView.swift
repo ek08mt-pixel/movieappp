@@ -406,7 +406,7 @@ struct SaveToListPopup: View {
                     } label: {
                         HStack {
                             Image(systemName: "bookmark.fill").foregroundColor(.white)
-                            Text("Đã lưu").foregroundColor(.white)
+                            Text("Danh sách mặc định").foregroundColor(.white)
                             Spacer()
                             if appState.favorites.contains(where: { $0.id == movie.id }) {
                                 Image(systemName: "checkmark").foregroundColor(.green)
