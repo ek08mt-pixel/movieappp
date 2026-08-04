@@ -14,159 +14,36 @@ struct LibraryView: View {
     }
     
     var currentMovies: [Movie] {
-    switch selectedTab {
-    case .saved:
-        if let listID = selectedListID, let list = appState.movieLists.first(where: { $0.id == listID }) {
-            return list.movies
+        switch selectedTab {
+        case .saved:
+            if let listID = selectedListID, let list = appState.movieLists.first(where: { $0.id == listID }) {
+                return list.movies
+            }
+            return appState.favorites
+        case .watched:
+            return appState.watchHistory
         }
-        return appState.favorites
-    case .watched:
-        return appState.watchHistory
     }
-}
     
     private let savedColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
-    NavigationStack {
-        ZStack {
-            backgroundGradient
-            VStack(spacing: 0) {
-                tabButtons
-                if selectedTab == .saved && !appState.movieLists.isEmpty {
-                    listSelector
-                }
-                if currentMovies.isEmpty {
-                    emptyView
-                } else {
-                    VStack(spacing: 0) {
-                        actionBar
-                        if selectedTab == .saved {
-                            savedGridView
-                        } else {
-                            watchedListView
-                        }
+        NavigationStack {
+            ZStack {
+                LinearGradient(colors: [Color(white: 0.12), Color(white: 0.05), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    tabButtons
+                    
+                    if selectedTab == .saved && !appState.movieLists.isEmpty {
+                        listSelector
                     }
-                }
-            }
-        }
-        .fullScreenCover(item: $playMovie) { movie in
-            let p = appState.watchProgressList.first { $0.movieId == movie.id }
-            MoviePlayerView(
-                movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title,
-                mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode,
-                posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0
-            ).environmentObject(appState)
-        }
-        .alert("Tạo list mới", isPresented: $showNewListAlert) {
-            TextField("Tên list", text: $newListName)
-            Button("Tạo") {
-                if !newListName.trimmingCharacters(in: .whitespaces).isEmpty {
-                    appState.movieLists.append(MovieList(name: newListName))
-                    appState.save()
-                    newListName = ""
-                }
-            }
-            Button("Hủy", role: .cancel) { newListName = "" }
-        }
-    }
-}
-
-var backgroundGradient: some View {
-    LinearGradient(colors: [Color(white: 0.12), Color(white: 0.05), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
-}
-
-var tabButtons: some View {
-    HStack(spacing: 0) {
-        tabButton(.watched)
-        tabButton(.saved)
-    }
-    .padding(4)
-    .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5)))
-    .padding(.horizontal, 20).padding(.top, 8)
-}
-
-var listSelector: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation { selectedListID = nil }
-            } label: {
-                Text("Tất cả")
-                    .font(.system(size: 12, weight: selectedListID == nil ? .bold : .regular))
-                    .foregroundColor(selectedListID == nil ? .white : .gray)
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Capsule().fill(selectedListID == nil ? .white.opacity(0.2) : .white.opacity(0.05)))
-            }
-            ForEach(appState.movieLists) { list in
-                Button {
-                    withAnimation { selectedListID = list.id }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(list.name)
-                            .font(.system(size: 12, weight: selectedListID == list.id ? .bold : .regular))
-                            .foregroundColor(selectedListID == list.id ? .white : .gray)
-                        Text("\(list.movies.count)").font(.system(size: 10)).foregroundColor(.gray)
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Capsule().fill(selectedListID == list.id ? .white.opacity(0.2) : .white.opacity(0.05)))
-                }
-                .contextMenu {
-                    Button(role: .destructive) {
-                        appState.movieLists.removeAll { $0.id == list.id }
-                        if selectedListID == list.id { selectedListID = nil }
-                        appState.save()
-                    } label: { Label("Xóa list", systemImage: "trash") }
-                }
-            }
-            Button {
-                showNewListAlert = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white.opacity(0.6))
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(.white.opacity(0.1)))
-            }
-        }
-        .padding(.horizontal, 20)
-    }
-    .padding(.top, 10)
-}
-
-var emptyView: some View {
-    VStack(spacing: 12) {
-        Image(systemName: emptyIcon).font(.system(size: 50)).foregroundColor(.gray)
-        Text(emptyText).foregroundColor(.gray)
-    }.frame(maxHeight: .infinity)
-}
-
-var actionBar: some View {
-    HStack {
-        Spacer()
-        if selectedListID != nil {
-            Button("Bỏ lọc") { withAnimation { selectedListID = nil } }
-                .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
-        }
-        Button("Xóa tất cả") {
-            withAnimation {
-                switch selectedTab {
-                case .watched: appState.watchHistory.removeAll(); appState.watchProgressList.removeAll(); appState.save()
-                case .saved:
-                    if let listID = selectedListID, let idx = appState.movieLists.firstIndex(where: { $0.id == listID }) {
-                        appState.movieLists[idx].movies.removeAll()
+                    
+                    if currentMovies.isEmpty {
+                        emptyView
                     } else {
-                        appState.favorites.removeAll()
-                    }
-                    appState.save()
-                }
-            }
-        }
-        .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
-    }
-    .padding(.horizontal, 20).padding(.top, 8)
-}
-                            
+                        VStack(spacing: 0) {
+                            actionBar
                             if selectedTab == .saved {
                                 savedGridView
                             } else {
@@ -178,14 +55,17 @@ var actionBar: some View {
             }
             .fullScreenCover(item: $playMovie) { movie in
                 let p = appState.watchProgressList.first { $0.movieId == movie.id }
-                MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode, posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0).environmentObject(appState)
+                MoviePlayerView(
+                    movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title,
+                    mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode,
+                    posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0
+                ).environmentObject(appState)
             }
             .alert("Tạo list mới", isPresented: $showNewListAlert) {
                 TextField("Tên list", text: $newListName)
                 Button("Tạo") {
                     if !newListName.trimmingCharacters(in: .whitespaces).isEmpty {
-                        let newList = MovieList(name: newListName)
-                        appState.movieLists.append(newList)
+                        appState.movieLists.append(MovieList(name: newListName))
                         appState.save()
                         newListName = ""
                     }
@@ -195,19 +75,94 @@ var actionBar: some View {
         }
     }
     
-   
-    var emptyIcon: String {
-        switch selectedTab {
-        case .watched: return "eye.slash"
-        case .saved: return "bookmark.slash"
+    var tabButtons: some View {
+        HStack(spacing: 0) {
+            tabButton(.watched)
+            tabButton(.saved)
         }
+        .padding(4)
+        .background(Capsule().fill(.ultraThinMaterial.opacity(0.2)).overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.5)))
+        .padding(.horizontal, 20).padding(.top, 8)
     }
     
-    var emptyText: String {
-        switch selectedTab {
-        case .watched: return "Chưa có phim đã xem"
-        case .saved: return "Chưa có phim đã lưu"
+    var listSelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation { selectedListID = nil }
+                } label: {
+                    Text("Tất cả")
+                        .font(.system(size: 12, weight: selectedListID == nil ? .bold : .regular))
+                        .foregroundColor(selectedListID == nil ? .white : .gray)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Capsule().fill(selectedListID == nil ? .white.opacity(0.2) : .white.opacity(0.05)))
+                }
+                ForEach(appState.movieLists) { list in
+                    Button {
+                        withAnimation { selectedListID = list.id }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(list.name).font(.system(size: 12, weight: selectedListID == list.id ? .bold : .regular))
+                                .foregroundColor(selectedListID == list.id ? .white : .gray)
+                            Text("\(list.movies.count)").font(.system(size: 10)).foregroundColor(.gray)
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Capsule().fill(selectedListID == list.id ? .white.opacity(0.2) : .white.opacity(0.05)))
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            appState.movieLists.removeAll { $0.id == list.id }
+                            if selectedListID == list.id { selectedListID = nil }
+                            appState.save()
+                        } label: { Label("Xóa list", systemImage: "trash") }
+                    }
+                }
+                Button {
+                    showNewListAlert = true
+                } label: {
+                    Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundColor(.white.opacity(0.6))
+                        .frame(width: 32, height: 32).background(Circle().fill(.white.opacity(0.1)))
+                }
+            }
+            .padding(.horizontal, 20)
         }
+        .padding(.top, 10)
+    }
+    
+    var emptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: selectedTab == .watched ? "eye.slash" : "bookmark.slash")
+                .font(.system(size: 50)).foregroundColor(.gray)
+            Text(selectedTab == .watched ? "Chưa có phim đã xem" : "Chưa có phim đã lưu").foregroundColor(.gray)
+        }.frame(maxHeight: .infinity)
+    }
+    
+    var actionBar: some View {
+        HStack {
+            Spacer()
+            if selectedListID != nil {
+                Button("Bỏ lọc") { withAnimation { selectedListID = nil } }
+                    .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
+            }
+            Button("Xóa tất cả") {
+                withAnimation {
+                    switch selectedTab {
+                    case .watched:
+                        appState.watchHistory.removeAll()
+                        appState.watchProgressList.removeAll()
+                    case .saved:
+                        if let listID = selectedListID, let idx = appState.movieLists.firstIndex(where: { $0.id == listID }) {
+                            appState.movieLists[idx].movies.removeAll()
+                        } else {
+                            appState.favorites.removeAll()
+                        }
+                    }
+                    appState.save()
+                }
+            }
+            .font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
+        }
+        .padding(.horizontal, 20).padding(.top, 8)
     }
     
     var savedGridView: some View {
@@ -261,9 +216,7 @@ var actionBar: some View {
                         }
                     }
                 }
-                .padding(.vertical, 4)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                .padding(.vertical, 4).listRowBackground(Color.clear).listRowSeparator(.hidden)
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
                         withAnimation {
@@ -279,8 +232,7 @@ var actionBar: some View {
                 }
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
+        .listStyle(.plain).scrollContentBackground(.hidden)
     }
     
     func tabButton(_ tab: LibraryTab) -> some View {
@@ -288,7 +240,10 @@ var actionBar: some View {
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selectedTab = tab; selectedListID = nil }
         } label: {
-            Text(tab.rawValue).font(.system(size: 13, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .gray).frame(maxWidth: .infinity).padding(.vertical, 10).background(Group { if isSelected { Capsule().fill(.ultraThinMaterial.opacity(0.5)) } else { Capsule().fill(Color.clear) } }).clipShape(Capsule())
+            Text(tab.rawValue).font(.system(size: 13, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .gray)
+                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                .background(isSelected ? Capsule().fill(.ultraThinMaterial.opacity(0.5)) : Capsule().fill(Color.clear))
+                .clipShape(Capsule())
         }
     }
     
