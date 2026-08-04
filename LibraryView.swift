@@ -14,19 +14,16 @@ struct LibraryView: View {
     }
     
     var currentMovies: [Movie] {
-        let movies: [Movie]
-        switch selectedTab {
-        case .saved:
-            movies = appState.favorites
-        case .watched:
-            movies = appState.watchHistory
-        }
-        // Lọc theo list nếu đang chọn 1 list
+    switch selectedTab {
+    case .saved:
         if let listID = selectedListID, let list = appState.movieLists.first(where: { $0.id == listID }) {
-            return movies.filter { list.movieIds.contains($0.id) }
+            return list.movies
         }
-        return movies
+        return appState.favorites
+    case .watched:
+        return appState.watchHistory
     }
+}
     
     private let savedColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
