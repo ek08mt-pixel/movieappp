@@ -420,25 +420,23 @@ struct SaveToListPopup: View {
                     ScrollView {
                         ForEach(appState.movieLists) { list in
                             Button {
-                                if !list.movieIds.contains(movie.id) {
-                                    if let idx = appState.movieLists.firstIndex(where: { $0.id == list.id }) {
-                                        appState.movieLists[idx].movieIds.append(movie.id)
-                                        if !appState.favorites.contains(where: { $0.id == movie.id }) {
-                                    
-                                        }
-                                        appState.save()
-                                    }
-                                }
-                                dismiss()
+    if !list.movies.contains(where: { $0.id == movie.id }) {
+        if let idx = appState.movieLists.firstIndex(where: { $0.id == list.id }) {
+            appState.movieLists[idx].movies.append(movie)
+            appState.save()
+        }
+    }
+    dismiss()
+}
                             } label: {
                                 HStack {
                                     Image(systemName: "folder.fill").foregroundColor(.gray)
                                     Text(list.name).foregroundColor(.white)
                                     Spacer()
-                                    Text("\(list.movieIds.count)").font(.caption).foregroundColor(.gray)
-                                    if list.movieIds.contains(movie.id) {
-                                        Image(systemName: "checkmark").foregroundColor(.green)
-                                    }
+                                    Text("\(list.movies.count)").font(.caption).foregroundColor(.gray)
+                                    if list.movies.contains(where: { $0.id == movie.id }) {
+    Image(systemName: "checkmark").foregroundColor(.green)
+}
                                 }
                                 .padding()
                                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.08)))
@@ -454,18 +452,16 @@ struct SaveToListPopup: View {
                                 .textFieldStyle(.plain).foregroundColor(.white)
                                 .padding(10).background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.1)))
                             Button("Tạo") {
-                                if !newListName.trimmingCharacters(in: .whitespaces).isEmpty {
-                                    var newList = MovieList(name: newListName)
-                                    newList.movieIds = [movie.id]
-                                    appState.movieLists.append(newList)
-                                    if !appState.favorites.contains(where: { $0.id == movie.id }) {
-                                    }
-                                    appState.save()
-                                    newListName = ""
-                                    showNewListField = false
-                                    dismiss()
-                                }
-                            }
+    if !newListName.trimmingCharacters(in: .whitespaces).isEmpty {
+        var newList = MovieList(name: newListName)
+        newList.movies = [movie]
+        appState.movieLists.append(newList)
+        appState.save()
+        newListName = ""
+        showNewListField = false
+        dismiss()
+    }
+}
                             .font(.system(size: 13, weight: .bold)).foregroundColor(.white)
                             .padding(.horizontal, 14).padding(.vertical, 10)
                             .background(Capsule().fill(.ultraThinMaterial))
