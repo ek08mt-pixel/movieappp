@@ -242,7 +242,7 @@ struct LibraryView: View {
         } label: {
             Text(tab.rawValue).font(.system(size: 13, weight: isSelected ? .bold : .regular)).foregroundColor(isSelected ? .white : .gray)
                 .frame(maxWidth: .infinity).padding(.vertical, 10)
-                .background(isSelected ? Capsule().fill(.ultraThinMaterial.opacity(0.5)) : Capsule().fill(Color.clear))
+                .background(isSelected ? AnyShapeStyle(.ultraThinMaterial.opacity(0.5)) : AnyShapeStyle(Color.clear))
                 .clipShape(Capsule())
         }
     }
