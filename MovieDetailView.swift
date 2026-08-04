@@ -404,6 +404,7 @@ struct MovieDetailView: View {
         await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) }
     }
 }
+
 struct SaveToListPopup: View {
     let movie: Movie
     @EnvironmentObject var appState: AppState
