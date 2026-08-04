@@ -4,7 +4,6 @@ struct LibraryView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedTab: LibraryTab = .watched
     @State private var selectedListID: String? = nil
-    @State private var playMovie: Movie?
     @State private var showNewListAlert = false
     @State private var newListName = ""
     
@@ -53,14 +52,6 @@ struct LibraryView: View {
                     }
                 }
             }
-            .fullScreenCover(item: $playMovie) { movie in
-                let p = appState.watchProgressList.first { $0.movieId == movie.id }
-                MoviePlayerView(
-                    movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title,
-                    mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode,
-                    posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0
-                ).environmentObject(appState)
-            }
             .alert("Tạo list mới", isPresented: $showNewListAlert) {
                 TextField("Tên list", text: $newListName)
                 Button("Tạo") {
@@ -73,6 +64,20 @@ struct LibraryView: View {
                 Button("Hủy", role: .cancel) { newListName = "" }
             }
         }
+    }
+    
+    // Hàm mới thêm vào
+    func presentPlayer(_ movie: Movie) {
+        guard let topVC = UIApplication.topViewController() else { return }
+        let p = appState.watchProgressList.first { $0.movieId == movie.id }
+        let player = MoviePlayerView(
+            movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title,
+            mediaType: movie.mediaType, seasonNumber: p?.season, episodeNumber: p?.episode,
+            posterURL: movie.posterURL, resumeTime: p?.currentTime ?? 0
+        ).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(player))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
     }
     
     var tabButtons: some View {
@@ -207,7 +212,7 @@ struct LibraryView: View {
                 HStack(spacing: 12) {
                     ZStack(alignment: .center) {
                         CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 12))
-                        Button { playMovie = movie } label: { Circle().fill(.black.opacity(0.6)).frame(width: 36, height: 36).overlay(Image(systemName: "play.fill").font(.system(size: 14)).foregroundColor(.white).offset(x: 1)) }
+                        Button { presentPlayer(movie) } label: { Circle().fill(.black.opacity(0.6)).frame(width: 36, height: 36).overlay(Image(systemName: "play.fill").font(.system(size: 14)).foregroundColor(.white).offset(x: 1)) }
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         NavigationLink(destination: MovieDetailView(movie: movie)) { Text(movie.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white).lineLimit(1) }
@@ -215,7 +220,7 @@ struct LibraryView: View {
                         if has {
                             Text("Tiếp tục từ \(formatProgressTime(p!.currentTime))").font(.system(size: 11)).foregroundColor(.white.opacity(0.6))
                             GeometryReader { g in ZStack(alignment: .leading) { Capsule().fill(.white.opacity(0.1)).frame(height: 4); Capsule().fill(.white.opacity(0.5)).frame(width: max(4, g.size.width * CGFloat(min(p!.currentTime / p!.duration, 1))), height: 4) } }.frame(height: 4)
-                            Button { playMovie = movie } label: { Text("Xem tiếp").font(.system(size: 12, weight: .medium)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.6))).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5)) }
+                            Button { presentPlayer(movie) } label: { Text("Xem tiếp").font(.system(size: 12, weight: .medium)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.6))).overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5)) }
                         }
                     }
                 }
