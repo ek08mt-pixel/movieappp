@@ -41,7 +41,6 @@ struct MovieDetailView: View {
             }
             ScrollView {
                 VStack(spacing: 0) {
-                    // Banner hero
                     ZStack(alignment: .topLeading) {
                         CachedAsyncImage(url: movie.backdropURL, size: .backdrop)
                             .aspectRatio(16/9, contentMode: .fill)
@@ -59,39 +58,34 @@ struct MovieDetailView: View {
                         }
                         .padding(.top, 54).padding(.leading, 20)
                         
-                        // Thể loại + thời lượng - dưới banner hero
                         VStack {
-    Spacer()
-    HStack(spacing: 8) {
-        if let r = vm.detail?.runtime, r > 0 {
-            Text("\(r)m")
-                .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.7))
-        }
-        if let g = vm.detail?.genres, !g.isEmpty {
-            Text(g.prefix(2).compactMap { genre in
-                let mapping: [String: String] = [
-                    "Phim Hành Động": "Action", "Phim Phiêu Lưu": "Adventure", "Phim Hoạt Hình": "Animation",
-                    "Phim Hài": "Comedy", "Phim Hình Sự": "Crime", "Phim Tài Liệu": "Documentary",
-                    "Phim Chính Kịch": "Drama", "Phim Gia Đình": "Family", "Phim Giả Tượng": "Fantasy",
-                    "Phim Lịch Sử": "History", "Phim Kinh Dị": "Horror", "Phim Nhạc": "Music",
-                    "Phim Bí Ẩn": "Mystery", "Phim Lãng Mạn": "Romance", "Phim Khoa Học Viễn Tưởng": "Sci-Fi",
-                    "Phim TV": "TV Movie", "Phim Gây Cấn": "Thriller", "Phim Chiến Tranh": "War",
-                    "Phim Miền Tây": "Western"
-                ]
-                return mapping[genre.name] ?? genre.name.replacingOccurrences(of: "Phim ", with: "")
-            }.joined(separator: " • "))
-            .font(.system(size: 11))
-            .foregroundColor(.white.opacity(0.7))
-        }
-    }
-    .padding(.bottom, 16).padding(.trailing, 20)
-    .frame(maxWidth: .infinity, alignment: .trailing)
-}
+                            Spacer()
+                            HStack(spacing: 8) {
+                                if let r = vm.detail?.runtime, r > 0 {
+                                    Text("\(r)m").font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
+                                }
+                                if let g = vm.detail?.genres, !g.isEmpty {
+                                    Text(g.prefix(2).compactMap { genre in
+                                        let mapping: [String: String] = [
+                                            "Phim Hành Động": "Action", "Phim Phiêu Lưu": "Adventure", "Phim Hoạt Hình": "Animation",
+                                            "Phim Hài": "Comedy", "Phim Hình Sự": "Crime", "Phim Tài Liệu": "Documentary",
+                                            "Phim Chính Kịch": "Drama", "Phim Gia Đình": "Family", "Phim Giả Tượng": "Fantasy",
+                                            "Phim Lịch Sử": "History", "Phim Kinh Dị": "Horror", "Phim Nhạc": "Music",
+                                            "Phim Bí Ẩn": "Mystery", "Phim Lãng Mạn": "Romance", "Phim Khoa Học Viễn Tưởng": "Sci-Fi",
+                                            "Phim TV": "TV Movie", "Phim Gây Cấn": "Thriller", "Phim Chiến Tranh": "War",
+                                            "Phim Miền Tây": "Western"
+                                        ]
+                                        return mapping[genre.name] ?? genre.name.replacingOccurrences(of: "Phim ", with: "")
+                                    }.joined(separator: " • "))
+                                    .font(.system(size: 11)).foregroundColor(.white.opacity(0.7))
+                                }
+                            }
+                            .padding(.bottom, 16).padding(.trailing, 20)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
                     }
                     
                     VStack(alignment: .leading, spacing: 16) {
-                        // Poster + Info
                         HStack(alignment: .top, spacing: 14) {
                             CachedAsyncImage(url: movie.posterURL, size: .detail)
                                 .aspectRatio(2/3, contentMode: .fill)
@@ -102,11 +96,8 @@ struct MovieDetailView: View {
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
-                                Text(movie.title)
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.white)
+                                Text(movie.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
                                 
-                                // Điểm TMDB + ngày + hãng
                                 HStack(spacing: 6) {
                                     if let tmdb = ratings.tmdb {
                                         HStack(spacing: 3) {
@@ -124,10 +115,8 @@ struct MovieDetailView: View {
                                     showFullOverview.toggle()
                                 } label: {
                                     Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
-                                        .lineLimit(showFullOverview ? nil : 4)
-                                        .multilineTextAlignment(.leading)
+                                        .font(.system(size: 13)).foregroundColor(.gray)
+                                        .lineLimit(showFullOverview ? nil : 4).multilineTextAlignment(.leading)
                                 }
                             }
                         }
@@ -146,8 +135,7 @@ struct MovieDetailView: View {
                                 Button {
                                     selectedSource = source
                                 } label: {
-                                    Text(source)
-                                        .font(.system(size: 10, weight: .medium))
+                                    Text(source).font(.system(size: 10, weight: .medium))
                                         .foregroundColor(selectedSource == source ? .white : .white.opacity(0.5))
                                         .padding(.horizontal, 10).padding(.vertical, 5)
                                         .background(Capsule().fill(selectedSource == source ? .white.opacity(0.2) : .white.opacity(0.05)))
@@ -156,7 +144,6 @@ struct MovieDetailView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                         
-                        // Nút Xem + Lưu
                         HStack(spacing: 10) {
                             Button(action: handlePlayButton) {
                                 Label("Xem", systemImage: "play.fill")
@@ -166,21 +153,20 @@ struct MovieDetailView: View {
                                     .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
                             }
                             Button {
-    if appState.favorites.contains(where: { $0.id == movie.id }) {
-        // Đã lưu rồi thì bấm để bỏ lưu
-        appState.favorites.removeAll { $0.id == movie.id }
-        appState.save()
-    } else {
-        showSavePopup = true
-    }
-} label: {
-    Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu",
-          systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "bookmark.fill")
-        .frame(maxWidth: .infinity).padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-        .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
-}
+                                if appState.favorites.contains(where: { $0.id == movie.id }) {
+                                    appState.favorites.removeAll { $0.id == movie.id }
+                                    appState.save()
+                                } else {
+                                    showSavePopup = true
+                                }
+                            } label: {
+                                Label(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu",
+                                      systemImage: appState.favorites.contains(where: { $0.id == movie.id }) ? "checkmark" : "bookmark.fill")
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(.ultraThinMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                                    .clipShape(Capsule()).foregroundColor(.white).font(.system(size: 12, weight: .semibold))
+                            }
                         }
                         
                         if !vm.collectionMovies.isEmpty {
@@ -287,7 +273,6 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        // Diễn viên - có character name
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                             ScrollView(.horizontal) {
@@ -295,17 +280,10 @@ struct MovieDetailView: View {
                                     ForEach(vm.actors.prefix(15)) { a in
                                         NavigationLink(destination: ActorDetailView(actor: a)) {
                                             VStack(spacing: 4) {
-                                                CachedAsyncImage(url: a.profileURL)
-                                                    .aspectRatio(contentMode: .fill)
-                                                    .frame(width: 60, height: 60)
-                                                    .clipShape(Circle())
-                                                Text(a.name)
-                                                    .font(.system(size: 10)).foregroundColor(.white)
-                                                    .lineLimit(1).frame(width: 70)
+                                                CachedAsyncImage(url: a.profileURL).aspectRatio(contentMode: .fill).frame(width: 60, height: 60).clipShape(Circle())
+                                                Text(a.name).font(.system(size: 10)).foregroundColor(.white).lineLimit(1).frame(width: 70)
                                                 if let character = a.character, !character.isEmpty {
-                                                    Text(character)
-                                                        .font(.system(size: 9)).foregroundColor(.gray)
-                                                        .lineLimit(1).frame(width: 70)
+                                                    Text(character).font(.system(size: 9)).foregroundColor(.gray).lineLimit(1).frame(width: 70)
                                                 }
                                             }
                                         }
@@ -321,8 +299,7 @@ struct MovieDetailView: View {
                                     ForEach(vm.similar.prefix(12)) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
                                             VStack(spacing: 6) {
-                                                CachedAsyncImage(url: m.posterURL)
-                                                    .aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10))
+                                                CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 120, height: 180).clipShape(RoundedRectangle(cornerRadius: 10))
                                                 Text(m.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(width: 120)
                                             }
                                         }
@@ -353,14 +330,14 @@ struct MovieDetailView: View {
             await fetchRatings()
         }
         .sheet(isPresented: $showImages) {
-    MovieImagesView(images: vm.images, title: movie.title)
-}
-.sheet(isPresented: $showSavePopup) {
-    SaveToListPopup(movie: movie)
-        .environmentObject(appState)
-        .presentationDetents([.medium])
-}
-    
+            MovieImagesView(images: vm.images, title: movie.title)
+        }
+        .sheet(isPresented: $showSavePopup) {
+            SaveToListPopup(movie: movie)
+                .environmentObject(appState)
+                .presentationDetents([.medium])
+        }
+    }
     
     func handlePlayButton() {
         if !vm.seasons.isEmpty || MappingCache.hasDirectSlug(tmdbID: movie.id, season: 1) {
@@ -405,6 +382,7 @@ struct MovieDetailView: View {
     }
 }
 
+// MARK: - Save To List Popup
 struct SaveToListPopup: View {
     let movie: Movie
     @EnvironmentObject var appState: AppState
@@ -419,7 +397,6 @@ struct SaveToListPopup: View {
                 VStack(spacing: 0) {
                     Text("Lưu vào...").font(.headline).foregroundColor(.white).padding(.top, 20)
                     
-                    // Lưu vào Đã lưu mặc định
                     Button {
                         if !appState.favorites.contains(where: { $0.id == movie.id }) {
                             appState.favorites.append(movie)
@@ -440,7 +417,6 @@ struct SaveToListPopup: View {
                     }
                     .padding(.horizontal, 20).padding(.top, 16)
                     
-                    // Danh sách các list
                     ScrollView {
                         ForEach(appState.movieLists) { list in
                             Button {
@@ -472,7 +448,6 @@ struct SaveToListPopup: View {
                     }
                     .padding(.top, 8)
                     
-                    // Tạo list mới
                     if showNewListField {
                         HStack {
                             TextField("Tên list mới", text: $newListName)
@@ -513,28 +488,24 @@ struct SaveToListPopup: View {
         }
     }
 }
-// InfoBadge, MovieImagesView, WebView giữ nguyên
 
+// MARK: - Info Badge
 struct InfoBadge: View {
     let label: String
     let quality: String
     
     var body: some View {
         HStack(spacing: 4) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
-            Text(quality)
-                .font(.system(size: 7))
-                .foregroundColor(.gray)
+            Text(label).font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.6))
+            Text(quality).font(.system(size: 7)).foregroundColor(.gray)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 6).padding(.vertical, 2)
         .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.05)))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(.white.opacity(0.1), lineWidth: 0.5))
     }
 }
 
+// MARK: - Movie Images View
 struct MovieImagesView: View {
     let images: [URL]
     let title: String
@@ -548,23 +519,20 @@ struct MovieImagesView: View {
                     Text(title).font(.headline).foregroundColor(.white)
                     Spacer()
                     Button("Đóng") { dismiss() }.foregroundColor(.gray)
-                }
-                .padding()
+                }.padding()
                 TabView {
                     ForEach(images, id: \.self) { url in
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fit)
+                        CachedAsyncImage(url: url).aspectRatio(contentMode: .fit)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal, 16)
+                            .clipShape(RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 16)
                     }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
+                }.tabViewStyle(.page(indexDisplayMode: .always))
             }
         }
     }
 }
 
+// MARK: - Web View
 struct WebView: UIViewRepresentable {
     let urlString: String
     
@@ -572,9 +540,7 @@ struct WebView: UIViewRepresentable {
         let wv = WKWebView()
         wv.backgroundColor = .black
         wv.isOpaque = false
-        if let url = URL(string: urlString) {
-            wv.load(URLRequest(url: url))
-        }
+        if let url = URL(string: urlString) { wv.load(URLRequest(url: url)) }
         return wv
     }
     
