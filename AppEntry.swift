@@ -36,6 +36,13 @@ struct WatchProgress: Codable, Equatable {
     var progress: Double { guard duration > 0 else { return 0 }; return min(currentTime / duration, 1.0) }
 }
 
+struct MovieList: Codable, Identifiable, Equatable {
+    var id = UUID().uuidString
+    var name: String
+    var movieIds: [Int] = []
+    var createdAt: Date = Date()
+}
+
 // MARK: - AppState
 class AppState: ObservableObject {
     @Published var favorites: [Movie] = []
@@ -55,6 +62,7 @@ class AppState: ObservableObject {
     
     @Published var notificationMovieId: Int?
     @Published var showNotificationMovie = false
+    @Published var movieLists: [MovieList] = []
     
     init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
@@ -132,7 +140,9 @@ class AppState: ObservableObject {
         if let fav = try? JSONEncoder().encode(favorites) { UserDefaults.standard.set(fav, forKey: "\(prefix)_favorites") }
         if let hist = try? JSONEncoder().encode(watchHistory) { UserDefaults.standard.set(hist, forKey: "\(prefix)_history") }
         if let prog = try? JSONEncoder().encode(watchProgressList) { UserDefaults.standard.set(prog, forKey: "\(prefix)_progress") }
+        if let lists = try? JSONEncoder().encode(movieLists) { UserDefaults.standard.set(lists, forKey: "\(prefix)_movieLists") }
     }
+
     
     func load() {
         let savedEmailData = KeychainHelper.load(key: "lastLoggedInEmail")
@@ -147,6 +157,7 @@ class AppState: ObservableObject {
         if let fav = UserDefaults.standard.data(forKey: "\(prefix)_favorites"), let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
         if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"), let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
         if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"), let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) { watchProgressList = p }
+        if let lists = UserDefaults.standard.data(forKey: "\(prefix)_movieLists"), let l = try? JSONDecoder().decode([MovieList].self, from: lists) { movieLists = l }
     }
 }
 
