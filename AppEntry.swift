@@ -39,7 +39,7 @@ struct WatchProgress: Codable, Equatable {
 struct MovieList: Codable, Identifiable, Equatable {
     var id = UUID().uuidString
     var name: String
-    var movieIds: [Int] = []
+    var movies: [Movie] = []
     var createdAt: Date = Date()
 }
 
