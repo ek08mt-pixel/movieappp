@@ -1,6 +1,23 @@
 import SwiftUI
 import AVKit
 
+// MARK: - Color Hex Extension
+extension Color {
+    init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+        
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+        
+        let r = Double((rgb >> 16) & 0xFF) / 255.0
+        let g = Double((rgb >> 8) & 0xFF) / 255.0
+        let b = Double(rgb & 0xFF) / 255.0
+        
+        self.init(red: r, green: g, blue: b)
+    }
+}
+
 // MARK: - Subtitle Manager
 class SubtitleManager: ObservableObject {
     static let shared = SubtitleManager()
@@ -10,7 +27,12 @@ class SubtitleManager: ObservableObject {
     @AppStorage("subPosition") var position: SubPosition = .bottom
     @AppStorage("subColor") var colorHex: String = "#FFFF00"
     @AppStorage("subBackground") var background: SubBackground = .outline
-    @AppStorage("subFontSize") var fontSize: CGFloat = 16
+    @AppStorage("subFontSize") var fontSizeDouble: Double = 16
+    
+    var fontSize: CGFloat {
+        get { CGFloat(fontSizeDouble) }
+        set { fontSizeDouble = Double(newValue) }
+    }
     
     @Published var currentOffset: Double = 0
     @Published var isDownloading = false
