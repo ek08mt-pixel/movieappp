@@ -52,10 +52,13 @@ struct MoviePlayerView: View {
     @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
     @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
     @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
-@State private var nguonCServers: [(String, URL)] = []
+    @State private var nguonCServers: [(String, URL)] = []
     @State private var imdbIDCache: String?; @State private var hasStartedPlaying = false; @State private var didResume = false
     @State private var isScreenLocked = false
     @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
+    @StateObject private var subManager = SubtitleManager.shared
+    @State private var showSubPopup = false
+    @State private var engSubAdded = false
     @State private var phimapiServers: [String] = []
     @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
     @State private var selectedAudioLabel: String = UserDefaults.standard.string(forKey: "lastAudioLabel_\(0)") ?? "Original"
@@ -183,7 +186,7 @@ selectedSource = initialSource
                     }.padding(.horizontal, 24).padding(.bottom, UIScreen.main.bounds.height * 0.06)
                 }
                 VStack { HStack(spacing: 8) { Button { saveProgress(); dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showEpisodePopup = true } label: { VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } } }; Spacer()
-                    HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 56); Spacer() }
+                    HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSubPopup = true } label: { Text("EN").font(.system(size: 10, weight: .bold)).foregroundColor(engSubAdded ? .yellow : .white.opacity(0.6)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(engSubAdded ? Color.yellow.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 56); Spacer() }
                 if isCasting { VStack { Spacer(); HStack { Spacer(); HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 6, height: 6); Text("Đang phát trên \(castDeviceName)").font(.system(size: 10)).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))).padding(.trailing, 20).padding(.bottom, 100) } } }
             }
             if showEpisodePopup {
@@ -196,7 +199,7 @@ selectedSource = initialSource
             }
             if showNextEpisodePopup { }
             if showOverlay { youtubeOverlay }
-            if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
+            if showSourceMenu || showSettings || showAudioPopup || showSubPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false; showSubPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup }; if showSubPopup { subSettingsPopup } }
         }
         .statusBarHidden()
         .task { if directURL == nil { loadStream() } }
@@ -294,7 +297,100 @@ func selectAudio(_ label: String) {
     }
     showAudioPopup = false 
 }
+
+// MARK: - Subtitle Settings
+var subSettingsPopup: some View {
+    VStack(spacing: 12) {
+        Text("Phụ đề tiếng Anh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+        
+        if subManager.isDownloading {
+            ProgressView().tint(.white)
+            Text("Đang tải...").font(.system(size: 11)).foregroundColor(.gray)
+        } else if !engSubAdded {
+            Button {
+                Task {
+                    let imdbID = try? await fetchIMDB()
+                    if let id = imdbID, let url = await subManager.fetchEnglishSubtitle(imdbID: id, movieId: movieId, season: seasonNumber, episode: episodeNumber) {
+                        await MainActor.run {
+                            addExternalSubtitle(url: url)
+                            engSubAdded = true
+                        }
+                    }
+                }
+            } label: {
+                Text("Tải phụ đề Anh")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(Capsule().fill(.ultraThinMaterial))
+            }
+        } else {
+            HStack(spacing: 16) {
+                Button { subManager.currentOffset -= 0.5; applySubOffset() } label: {
+                    Text("-0.5s").font(.system(size: 11)).foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(.white.opacity(0.1)))
+                }
+                Text("Offset: \(String(format: "%.1f", subManager.currentOffset))s").font(.system(size: 11)).foregroundColor(.gray)
+                Button { subManager.currentOffset += 0.5; applySubOffset() } label: {
+                    Text("+0.5s").font(.system(size: 11)).foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(.white.opacity(0.1)))
+                }
+            }
+            
+            HStack(spacing: 8) {
+                ForEach(SubtitleManager.SubPosition.allCases, id: \.self) { pos in
+                    Button {
+                        subManager.position = pos
+                    } label: {
+                        Text(pos.rawValue).font(.system(size: 10))
+                            .foregroundColor(subManager.position == pos ? .black : .white)
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(Capsule().fill(subManager.position == pos ? .yellow : .white.opacity(0.1)))
+                    }
+                }
+            }
+            
+            HStack(spacing: 8) {
+                ForEach(["#FFFFFF", "#FFFF00", "#00FF00", "#00BFFF"], id: \.self) { hex in
+                    Button {
+                        subManager.colorHex = hex
+                    } label: {
+                        Circle().fill(Color(hex: hex) ?? .white)
+                            .frame(width: 20, height: 20)
+                            .overlay(Circle().stroke(subManager.colorHex == hex ? .white : .clear, lineWidth: 2))
+                    }
+                }
+            }
+            
+            Button("Gỡ phụ đề") {
+                removeExternalSubtitle()
+                engSubAdded = false
+                showSubPopup = false
+            }
+            .font(.system(size: 11)).foregroundColor(.red.opacity(0.7))
+        }
+    }
+    .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
 }
+
+func addExternalSubtitle(url: URL) {
+    guard let currentItem = player.currentItem else { return }
+    let subtitleAsset = AVURLAsset(url: url)
+    let composition = AVMutableComposition()
+    if let subtitleTrack = subtitleAsset.tracks(withMediaType: .text).first {
+        let compTrack = composition.addMutableTrack(withMediaType: .text, preferredTrackID: kCMPersistentTrackID_Invalid)
+        try? compTrack?.insertTimeRange(CMTimeRange(start: .zero, duration: currentItem.duration), of: subtitleTrack, at: .zero)
+    }
+}
+
+func removeExternalSubtitle() {
+    // Remove external subtitle track
+}
+
+func applySubOffset() {
+    subManager.saveOffset(movieId: movieId, season: seasonNumber, episode: episodeNumber, offset: subManager.currentOffset)
+}
+}
+
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
     let player: AVPlayer; @Environment(\.dismiss) var dismiss
