@@ -184,17 +184,8 @@ selectedSource = initialSource
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 4)
-                                .overlay(
-                                    Text(currentSubtitleText)
-                                        .font(subFontName == "Default" ? .system(size: subFontSize, weight: .black) : .custom(subFontName, size: subFontSize))
-                                        .fontWeight(.black)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 4)
-                                        .blur(radius: 3)
-                                        .allowsHitTesting(false)
-                                )
+                                .blur(radius: 3)
+                                .allowsHitTesting(false)
                         }
                         Text(currentSubtitleText)
                             .font(subFontName == "Default" ? .system(size: subFontSize, weight: .semibold) : .custom(subFontName, size: subFontSize))
@@ -375,6 +366,7 @@ var subSettingsPopup: some View {
                 Text("Phụ đề tiếng Anh")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
+                    .lineLimit(1)
                 Spacer()
                 Button {
                     showSubPopup = false
@@ -390,7 +382,10 @@ var subSettingsPopup: some View {
             if subManager.isDownloading {
                 Spacer()
                 ProgressView().tint(.white).scaleEffect(1.2)
-                Text("Đang tải phụ đề...").font(.system(size: 12)).foregroundColor(.gray)
+                Text("Đang tải phụ đề...")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
                 Spacer()
             } else if !engSubAdded {
                 Spacer()
@@ -419,23 +414,23 @@ var subSettingsPopup: some View {
                         // Kiểu chữ
                         sectionHeader("Kiểu chữ")
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 6) {
                                 ForEach(fontOptions(), id: \.self) { font in
                                     Button {
                                         subFontName = font
                                     } label: {
-                                        VStack(spacing: 4) {
+                                        VStack(spacing: 3) {
                                             Text("Ag")
-                                                .font(font == "Default" ? .system(size: 18, weight: .bold) : .custom(font, size: 18))
+                                                .font(font == "Default" ? .system(size: 16, weight: .bold) : .custom(font, size: 16))
                                                 .foregroundColor(subFontName == font ? .black : .white)
-                                                .frame(width: 42, height: 42)
+                                                .frame(width: 36, height: 36)
                                                 .background(Circle().fill(subFontName == font ? .white : .white.opacity(0.1)))
-                                            Text(font == "Default" ? "Mặc định" : font)
-                                                .font(.system(size: 8))
-                                                .foregroundColor(.white.opacity(0.5))
+                                            Text(font == "Default" ? "MD" : String(font.prefix(3)))
+                                                .font(.system(size: 7))
+                                                .foregroundColor(.white.opacity(0.4))
                                                 .lineLimit(1)
-                                                .frame(width: 50)
                                         }
+                                        .frame(width: 40)
                                     }
                                 }
                             }
@@ -454,14 +449,14 @@ var subSettingsPopup: some View {
                         
                         // Màu chữ
                         sectionHeader("Màu chữ")
-                        HStack(spacing: 10) {
-                            ForEach(["#FFFFFF", "#FFFF00", "#00FF00", "#00BFFF", "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6B9D"], id: \.self) { hex in
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                            ForEach(["#FFFFFF", "#FFFF00", "#00FF00", "#00BFFF", "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6B9D", "#FFA500"], id: \.self) { hex in
                                 Button {
                                     subManager.colorHex = hex
                                 } label: {
                                     Circle()
                                         .fill(Color(hex: hex) ?? .white)
-                                        .frame(width: 30, height: 30)
+                                        .frame(width: 28, height: 28)
                                         .overlay(
                                             Circle()
                                                 .stroke(subManager.colorHex == hex ? .white : .clear, lineWidth: 2)
@@ -469,7 +464,7 @@ var subSettingsPopup: some View {
                                         .overlay(
                                             subManager.colorHex == hex ?
                                             Image(systemName: "checkmark")
-                                                .font(.system(size: 10, weight: .bold))
+                                                .font(.system(size: 9, weight: .bold))
                                                 .foregroundColor(hex == "#FFFFFF" || hex == "#FFFF00" || hex == "#FFD93D" ? .black : .white)
                                             : nil
                                         )
@@ -479,7 +474,7 @@ var subSettingsPopup: some View {
                         
                         // Kiểu nền
                         sectionHeader("Kiểu nền")
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             ForEach(SubBackgroundStyle.allCases, id: \.self) { style in
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -487,9 +482,11 @@ var subSettingsPopup: some View {
                                     }
                                 } label: {
                                     Text(style.rawValue)
-                                        .font(.system(size: 10, weight: subBackgroundStyle == style ? .bold : .regular))
+                                        .font(.system(size: 9, weight: subBackgroundStyle == style ? .bold : .regular))
+                                        .minimumScaleFactor(0.7)
+                                        .lineLimit(1)
                                         .foregroundColor(subBackgroundStyle == style ? .black : .white.opacity(0.7))
-                                        .padding(.horizontal, 10)
+                                        .padding(.horizontal, 7)
                                         .padding(.vertical, 7)
                                         .background(Capsule().fill(subBackgroundStyle == style ? .white : .white.opacity(0.1)))
                                 }
@@ -497,44 +494,74 @@ var subSettingsPopup: some View {
                         }
                         
                         // Offset đồng bộ
-                        sectionHeader("Đồng bộ thời gian: \(String(format: "%.1f", subManager.currentOffset))s")
-                        HStack(spacing: 12) {
+                        sectionHeader("Đồng bộ: \(String(format: "%.1f", subManager.currentOffset))s")
+                        HStack(spacing: 6) {
                             Button {
                                 subManager.currentOffset -= 0.5
                                 applySubOffset()
                             } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.left").font(.system(size: 10))
-                                    Text("0.5s")
-                                }
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(Capsule().fill(.white.opacity(0.15)))
+                                Text("-0.5")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8).padding(.vertical, 6)
+                                    .background(Capsule().fill(.white.opacity(0.15)))
+                            }
+                            Button {
+                                subManager.currentOffset -= 0.1
+                                applySubOffset()
+                            } label: {
+                                Text("-0.1")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8).padding(.vertical, 6)
+                                    .background(Capsule().fill(.white.opacity(0.15)))
+                            }
+                            Button {
+                                subManager.currentOffset += 0.1
+                                applySubOffset()
+                            } label: {
+                                Text("+0.1")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8).padding(.vertical, 6)
+                                    .background(Capsule().fill(.white.opacity(0.15)))
                             }
                             Button {
                                 subManager.currentOffset += 0.5
                                 applySubOffset()
                             } label: {
-                                HStack(spacing: 4) {
-                                    Text("0.5s")
-                                    Image(systemName: "arrow.right").font(.system(size: 10))
-                                }
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(Capsule().fill(.white.opacity(0.15)))
+                                Text("+0.5")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8).padding(.vertical, 6)
+                                    .background(Capsule().fill(.white.opacity(0.15)))
                             }
                         }
                         
-                        // Reset
+                        // Sync ngay
+                        Button {
+                            syncSubtitleNow()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.merge")
+                                    .font(.system(size: 9))
+                                Text("Sync ngay")
+                            }
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.yellow)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Capsule().fill(.yellow.opacity(0.15)))
+                        }
+                        
                         Button {
                             subManager.currentOffset = 0
                             applySubOffset()
                         } label: {
-                            Text("Reset offset")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.white.opacity(0.6))
+                            Text("Reset")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.5))
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(Capsule().fill(.white.opacity(0.08)))
                         }
                         
                         // Gỡ phụ đề
@@ -551,11 +578,12 @@ var subSettingsPopup: some View {
                                 .background(Capsule().fill(.white.opacity(0.08)))
                         }
                     }
+                    .clipped()
                 }
             }
         }
-        .padding(20)
-        .frame(width: 290)
+        .padding(18)
+        .frame(width: 270)
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(.ultraThinMaterial.opacity(0.98))
@@ -574,6 +602,7 @@ func sectionHeader(_ text: String) -> some View {
     Text(text)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.white.opacity(0.5))
+        .lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
 }
 
@@ -643,6 +672,27 @@ func startSubtitleTimer() {
                 currentSubtitleText = ""
             }
         }
+    }
+}
+
+func syncSubtitleNow() {
+    guard !parsedSubtitles.isEmpty else { return }
+    let now = currentTime
+    var bestSub: (start: Double, end: Double, text: String)?
+    var bestDiff: Double = .infinity
+    
+    for sub in parsedSubtitles {
+        let mid = (sub.start + sub.end) / 2
+        let diff = abs(now - mid)
+        if diff < bestDiff {
+            bestDiff = diff
+            bestSub = sub
+        }
+    }
+    
+    if let sub = bestSub {
+        subManager.currentOffset = now - sub.start
+        applySubOffset()
     }
 }
 
