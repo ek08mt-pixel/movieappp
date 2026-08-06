@@ -32,6 +32,13 @@ enum VideoGravityMode: CaseIterable {
     mutating func next() { let all = Self.allCases; let idx = all.firstIndex(of: self)!; self = all[(idx + 1) % all.count] }
 }
 
+enum SubBackgroundStyle: String, CaseIterable {
+    case none = "Không nền"
+    case outline = "Viền chữ"
+    case darken = "Nền mờ"
+    case box = "Nền hộp"
+}
+
 struct MoviePlayerView: View {
     let movieId: Int; let movieTitle: String
     var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
@@ -59,6 +66,13 @@ struct MoviePlayerView: View {
     @StateObject private var subManager = SubtitleManager.shared
     @State private var showSubPopup = false
     @State private var engSubAdded = false
+    @State private var currentSubtitleText: String = ""
+    @State private var subtitleTimer: Timer?
+    @State private var parsedSubtitles: [(start: Double, end: Double, text: String)] = []
+    @State private var subFontSize: CGFloat = 18
+    @State private var subPositionY: CGFloat = 80
+    @State private var subBackgroundStyle: SubBackgroundStyle = .outline
+    @State private var subFontName: String = "Default"
     @State private var phimapiServers: [String] = []
     @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
     @State private var selectedAudioLabel: String = UserDefaults.standard.string(forKey: "lastAudioLabel_\(0)") ?? "Original"
@@ -104,9 +118,10 @@ selectedSource = initialSource
                 .onDisappear {
                     saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
                     controlsTimer?.invalidate(); stopCasting()
+                    subtitleTimer?.invalidate(); currentSubtitleText = ""
                     forcePortraitWithDelay()
                 }
-                .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else { toggleControls() } }
+                .onTapGesture { if isScreenLocked { if showControls { isScreenLocked = false; showControls = true; resetControlsTimer() } else { showControls = true; resetControlsTimer() } } else if showOverlay { closeOverlay() } else if showSubPopup { showSubPopup = false } else { toggleControls() } }
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
     let lx = v.startLocation.x
     let screenW = UIScreen.main.bounds.width
@@ -156,7 +171,58 @@ selectedSource = initialSource
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             
-            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup {
+            // Subtitle overlay
+            if !currentSubtitleText.isEmpty && engSubAdded {
+                VStack {
+                    Spacer()
+                    ZStack {
+                        if subBackgroundStyle == .outline {
+                            Text(currentSubtitleText)
+                                .font(subFontName == "Default" ? .system(size: subFontSize, weight: .black) : .custom(subFontName, size: subFontSize))
+                                .fontWeight(.black)
+                                .foregroundColor(.black)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
+                                .overlay(
+                                    Text(currentSubtitleText)
+                                        .font(subFontName == "Default" ? .system(size: subFontSize, weight: .black) : .custom(subFontName, size: subFontSize))
+                                        .fontWeight(.black)
+                                        .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 4)
+                                        .blur(radius: 3)
+                                        .allowsHitTesting(false)
+                                )
+                        }
+                        Text(currentSubtitleText)
+                            .font(subFontName == "Default" ? .system(size: subFontSize, weight: .semibold) : .custom(subFontName, size: subFontSize))
+                            .fontWeight(.semibold)
+                            .foregroundColor(subManager.subtitleColor)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, subBackgroundStyle == .box ? 8 : 4)
+                            .background(
+                                Group {
+                                    switch subBackgroundStyle {
+                                    case .darken:
+                                        RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.5))
+                                    case .box:
+                                        RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.7))
+                                    case .outline, .none:
+                                        Color.clear
+                                    }
+                                }
+                            )
+                    }
+                    .shadow(color: subBackgroundStyle == .none ? .black.opacity(0.8) : .clear, radius: 2, x: 1, y: 1)
+                    .padding(.bottom, subPositionY)
+                }
+                .allowsHitTesting(false)
+            }
+            
+            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup && !showSubPopup {
                 HStack(spacing: 50) {
                     Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.25))) }
                     Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 44, weight: .bold)).foregroundColor(.white).padding(20).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
@@ -199,7 +265,8 @@ selectedSource = initialSource
             }
             if showNextEpisodePopup { }
             if showOverlay { youtubeOverlay }
-            if showSourceMenu || showSettings || showAudioPopup || showSubPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false; showSubPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup }; if showSubPopup { subSettingsPopup } }
+            if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
+            if showSubPopup { subSettingsPopup }
         }
         .statusBarHidden()
         .task { if directURL == nil { loadStream() } }
@@ -298,92 +365,292 @@ func selectAudio(_ label: String) {
     showAudioPopup = false 
 }
 
-// MARK: - Subtitle Settings
+// MARK: - Subtitle Settings Panel
 var subSettingsPopup: some View {
-    VStack(spacing: 12) {
-        Text("Phụ đề tiếng Anh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-        
-        if subManager.isDownloading {
-            ProgressView().tint(.white)
-            Text("Đang tải...").font(.system(size: 11)).foregroundColor(.gray)
-        } else if !engSubAdded {
-            Button {
-                Task {
-                    let imdbID = try? await fetchIMDB()
-                    if let id = imdbID, let url = await subManager.fetchEnglishSubtitle(imdbID: id, movieId: movieId, season: seasonNumber, episode: episodeNumber) {
-                        await MainActor.run {
-                            addExternalSubtitle(url: url)
-                            engSubAdded = true
+    HStack {
+        Color.black.opacity(0.2)
+            .onTapGesture { showSubPopup = false }
+        VStack(spacing: 14) {
+            HStack {
+                Text("Phụ đề tiếng Anh")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button {
+                    showSubPopup = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(6)
+                        .background(Circle().fill(.white.opacity(0.1)))
+                }
+            }
+            
+            if subManager.isDownloading {
+                Spacer()
+                ProgressView().tint(.white).scaleEffect(1.2)
+                Text("Đang tải phụ đề...").font(.system(size: 12)).foregroundColor(.gray)
+                Spacer()
+            } else if !engSubAdded {
+                Spacer()
+                Button {
+                    Task {
+                        let imdbID = try? await fetchIMDB()
+                        if let id = imdbID, let url = await subManager.fetchEnglishSubtitle(imdbID: id, movieId: movieId, season: seasonNumber, episode: episodeNumber) {
+                            await MainActor.run {
+                                addExternalSubtitle(url: url)
+                                engSubAdded = true
+                            }
+                        }
+                    }
+                } label: {
+                    Text("Tải phụ đề Anh")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                }
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Kiểu chữ
+                        sectionHeader("Kiểu chữ")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(fontOptions(), id: \.self) { font in
+                                    Button {
+                                        subFontName = font
+                                    } label: {
+                                        VStack(spacing: 4) {
+                                            Text("Ag")
+                                                .font(font == "Default" ? .system(size: 18, weight: .bold) : .custom(font, size: 18))
+                                                .foregroundColor(subFontName == font ? .black : .white)
+                                                .frame(width: 42, height: 42)
+                                                .background(Circle().fill(subFontName == font ? .white : .white.opacity(0.1)))
+                                            Text(font == "Default" ? "Mặc định" : font)
+                                                .font(.system(size: 8))
+                                                .foregroundColor(.white.opacity(0.5))
+                                                .lineLimit(1)
+                                                .frame(width: 50)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
+                        
+                        // Kích thước
+                        sectionHeader("Kích thước: \(Int(subFontSize))pt")
+                        Slider(value: $subFontSize, in: 12...40, step: 1)
+                            .accentColor(.white)
+                        
+                        // Vị trí
+                        sectionHeader("Vị trí dọc: \(Int(subPositionY))px")
+                        Slider(value: $subPositionY, in: 30...250, step: 10)
+                            .accentColor(.white)
+                        
+                        // Màu chữ
+                        sectionHeader("Màu chữ")
+                        HStack(spacing: 10) {
+                            ForEach(["#FFFFFF", "#FFFF00", "#00FF00", "#00BFFF", "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6B9D"], id: \.self) { hex in
+                                Button {
+                                    subManager.colorHex = hex
+                                } label: {
+                                    Circle()
+                                        .fill(Color(hex: hex) ?? .white)
+                                        .frame(width: 30, height: 30)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(subManager.colorHex == hex ? .white : .clear, lineWidth: 2)
+                                        )
+                                        .overlay(
+                                            subManager.colorHex == hex ?
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(hex == "#FFFFFF" || hex == "#FFFF00" || hex == "#FFD93D" ? .black : .white)
+                                            : nil
+                                        )
+                                }
+                            }
+                        }
+                        
+                        // Kiểu nền
+                        sectionHeader("Kiểu nền")
+                        HStack(spacing: 6) {
+                            ForEach(SubBackgroundStyle.allCases, id: \.self) { style in
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        subBackgroundStyle = style
+                                    }
+                                } label: {
+                                    Text(style.rawValue)
+                                        .font(.system(size: 10, weight: subBackgroundStyle == style ? .bold : .regular))
+                                        .foregroundColor(subBackgroundStyle == style ? .black : .white.opacity(0.7))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 7)
+                                        .background(Capsule().fill(subBackgroundStyle == style ? .white : .white.opacity(0.1)))
+                                }
+                            }
+                        }
+                        
+                        // Offset đồng bộ
+                        sectionHeader("Đồng bộ thời gian: \(String(format: "%.1f", subManager.currentOffset))s")
+                        HStack(spacing: 12) {
+                            Button {
+                                subManager.currentOffset -= 0.5
+                                applySubOffset()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.left").font(.system(size: 10))
+                                    Text("0.5s")
+                                }
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(Capsule().fill(.white.opacity(0.15)))
+                            }
+                            Button {
+                                subManager.currentOffset += 0.5
+                                applySubOffset()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("0.5s")
+                                    Image(systemName: "arrow.right").font(.system(size: 10))
+                                }
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(Capsule().fill(.white.opacity(0.15)))
+                            }
+                        }
+                        
+                        // Reset
+                        Button {
+                            subManager.currentOffset = 0
+                            applySubOffset()
+                        } label: {
+                            Text("Reset offset")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                        
+                        // Gỡ phụ đề
+                        Button {
+                            removeExternalSubtitle()
+                            engSubAdded = false
+                            showSubPopup = false
+                        } label: {
+                            Text("Gỡ phụ đề")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.red.opacity(0.8))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Capsule().fill(.white.opacity(0.08)))
                         }
                     }
                 }
-            } label: {
-                Text("Tải phụ đề Anh")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(Capsule().fill(.ultraThinMaterial))
             }
-        } else {
-            HStack(spacing: 16) {
-                Button { subManager.currentOffset -= 0.5; applySubOffset() } label: {
-                    Text("-0.5s").font(.system(size: 11)).foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(.white.opacity(0.1)))
-                }
-                Text("Offset: \(String(format: "%.1f", subManager.currentOffset))s").font(.system(size: 11)).foregroundColor(.gray)
-                Button { subManager.currentOffset += 0.5; applySubOffset() } label: {
-                    Text("+0.5s").font(.system(size: 11)).foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(.white.opacity(0.1)))
-                }
-            }
-            
-            HStack(spacing: 8) {
-                ForEach(SubtitleManager.SubPosition.allCases, id: \.self) { pos in
-                    Button {
-                        subManager.position = pos
-                    } label: {
-                        Text(pos.rawValue).font(.system(size: 10))
-                            .foregroundColor(subManager.position == pos ? .black : .white)
-                            .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(Capsule().fill(subManager.position == pos ? .yellow : .white.opacity(0.1)))
-                    }
-                }
-            }
-            
-            HStack(spacing: 8) {
-                ForEach(["#FFFFFF", "#FFFF00", "#00FF00", "#00BFFF"], id: \.self) { hex in
-                    Button {
-                        subManager.colorHex = hex
-                    } label: {
-                        Circle().fill(Color(hex: hex) ?? .white)
-                            .frame(width: 20, height: 20)
-                            .overlay(Circle().stroke(subManager.colorHex == hex ? .white : .clear, lineWidth: 2))
-                    }
-                }
-            }
-            
-            Button("Gỡ phụ đề") {
-                removeExternalSubtitle()
-                engSubAdded = false
-                showSubPopup = false
-            }
-            .font(.system(size: 11)).foregroundColor(.red.opacity(0.7))
         }
+        .padding(20)
+        .frame(width: 290)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial.opacity(0.98))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .padding(.trailing, 8)
+        .padding(.vertical, 50)
     }
-    .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
-    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
+    .ignoresSafeArea()
 }
 
+func sectionHeader(_ text: String) -> some View {
+    Text(text)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(.white.opacity(0.5))
+        .frame(maxWidth: .infinity, alignment: .leading)
+}
+
+func fontOptions() -> [String] {
+    return ["Default", "Arial", "Helvetica", "Georgia", "Courier", "Trebuchet MS", "Verdana", "Times New Roman", "Futura", "Noteworthy"]
+}
+
+// MARK: - Subtitle Functions
 func addExternalSubtitle(url: URL) {
-    guard let currentItem = player.currentItem else { return }
-    let subtitleAsset = AVURLAsset(url: url)
-    let composition = AVMutableComposition()
-    if let subtitleTrack = subtitleAsset.tracks(withMediaType: .text).first {
-        let compTrack = composition.addMutableTrack(withMediaType: .text, preferredTrackID: kCMPersistentTrackID_Invalid)
-        try? compTrack?.insertTimeRange(CMTimeRange(start: .zero, duration: currentItem.duration), of: subtitleTrack, at: .zero)
+    do {
+        let srtContent = try String(contentsOf: url, encoding: .utf8)
+        parsedSubtitles = parseSRT(srtContent)
+        startSubtitleTimer()
+    } catch {
+        print("Failed to load SRT: \(error)")
+    }
+}
+
+func parseSRT(_ content: String) -> [(start: Double, end: Double, text: String)] {
+    var results: [(start: Double, end: Double, text: String)] = []
+    let blocks = content.components(separatedBy: "\n\n")
+    
+    for block in blocks {
+        let lines = block.components(separatedBy: "\n").filter { !$0.isEmpty }
+        guard lines.count >= 3 else { continue }
+        
+        let timeLine = lines[1]
+        let timeComponents = timeLine.components(separatedBy: " --> ")
+        guard timeComponents.count == 2 else { continue }
+        
+        let start = parseTime(timeComponents[0])
+        let end = parseTime(timeComponents[1])
+        let text = lines[2...].joined(separator: "\n")
+            .replacingOccurrences(of: "<i>", with: "")
+            .replacingOccurrences(of: "</i>", with: "")
+            .replacingOccurrences(of: "<b>", with: "")
+            .replacingOccurrences(of: "</b>", with: "")
+            .replacingOccurrences(of: "<font color=\"#", with: "")
+            .replacingOccurrences(of: "\">", with: "")
+            .replacingOccurrences(of: "</font>", with: "")
+        
+        results.append((start: start, end: end, text: text))
+    }
+    
+    return results
+}
+
+func parseTime(_ timeString: String) -> Double {
+    let parts = timeString.components(separatedBy: ":")
+    guard parts.count == 3 else { return 0 }
+    let hours = Double(parts[0]) ?? 0
+    let minutes = Double(parts[1]) ?? 0
+    let seconds = Double(parts[2].replacingOccurrences(of: ",", with: ".")) ?? 0
+    return hours * 3600 + minutes * 60 + seconds
+}
+
+func startSubtitleTimer() {
+    subtitleTimer?.invalidate()
+    subtitleTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        let adjustedTime = currentTime + subManager.currentOffset
+        if let currentSub = parsedSubtitles.first(where: { adjustedTime >= $0.start && adjustedTime <= $0.end }) {
+            if currentSubtitleText != currentSub.text {
+                currentSubtitleText = currentSub.text
+            }
+        } else {
+            if !currentSubtitleText.isEmpty {
+                currentSubtitleText = ""
+            }
+        }
     }
 }
 
 func removeExternalSubtitle() {
-    // Remove external subtitle track
+    subtitleTimer?.invalidate()
+    subtitleTimer = nil
+    currentSubtitleText = ""
+    parsedSubtitles.removeAll()
 }
 
 func applySubOffset() {
