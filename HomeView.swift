@@ -574,11 +574,10 @@ struct SectionGrid: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 12))
                                             .shadow(color: .black.opacity(0.3), radius: 3)
                                         
-                                        HStack(alignment: .top, spacing: 6) {
+                                        HStack(alignment: .top, spacing: 4) {
                                             Text("\(index + 1)")
-                                                .font(.system(size: 24, weight: .heavy))
-                                                .foregroundColor(.white.opacity(0.9))
-                                                .frame(width: 22, alignment: .leading)
+                                                .font(.system(size: 18, weight: .bold))
+                                                .foregroundColor(.white.opacity(0.4))
                                             
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(movie.title)
