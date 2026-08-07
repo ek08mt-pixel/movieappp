@@ -146,7 +146,13 @@ struct MovieDetailView: View {
                         if !vm.serverList.isEmpty {
                             HStack(spacing: 6) {
                                 ForEach(vm.serverList.prefix(3), id: \.name) { server in
-                                    InfoBadge(label: server.name, quality: server.qualities)
+                                    Text(server.name)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Capsule().fill(.white.opacity(0.08)))
+                                        .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -220,26 +226,46 @@ struct MovieDetailView: View {
                                     
                                     // Search box nhỏ ngang
                                     HStack(spacing: 4) {
-                                        // Season picker tap - Menu
-                                        Menu {
-                                            ForEach(vm.seasons) { season in
-                                                Button {
-                                                    searchSeason = season.seasonNumber
-                                                    searchedEpisode = nil
-                                                } label: {
-                                                    Text(season.name)
-                                                }
+                                        // Season picker tap - custom dropdown
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                showEpisodeSearch.toggle()
                                             }
                                         } label: {
                                             HStack(spacing: 2) {
                                                 Text("S\(searchSeason)")
                                                     .font(.system(size: 12, weight: .bold))
                                                     .foregroundColor(.white)
-                                                Image(systemName: "chevron.down")
+                                                Image(systemName: showEpisodeSearch ? "chevron.up" : "chevron.down")
                                                     .font(.system(size: 8))
                                                     .foregroundColor(.white.opacity(0.5))
                                             }
                                             .frame(width: 40)
+                                        }
+                                        .overlay(alignment: .topLeading) {
+                                            if showEpisodeSearch {
+                                                VStack(spacing: 0) {
+                                                    ForEach(vm.seasons) { season in
+                                                        Button {
+                                                            searchSeason = season.seasonNumber
+                                                            searchedEpisode = nil
+                                                            showEpisodeSearch = false
+                                                        } label: {
+                                                            Text(season.name)
+                                                                .font(.system(size: 12, weight: searchSeason == season.seasonNumber ? .bold : .regular))
+                                                                .foregroundColor(.white)
+                                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                                .padding(.horizontal, 10)
+                                                                .padding(.vertical, 7)
+                                                        }
+                                                    }
+                                                }
+                                                .frame(width: 120)
+                                                .background(RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial.opacity(0.98)))
+                                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                                                .offset(y: -CGFloat(vm.seasons.count) * 32 - 8)
+                                                .zIndex(100)
+                                            }
                                         }
                                         
                                         Divider()
@@ -289,6 +315,7 @@ struct MovieDetailView: View {
                                             .fill(.ultraThinMaterial.opacity(0.3))
                                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.12), lineWidth: 0.5))
                                     )
+                                    .zIndex(100)
                                 }
                                 
                                 if let searchedEp = searchedEpisode {
