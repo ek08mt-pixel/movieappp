@@ -220,23 +220,27 @@ struct MovieDetailView: View {
                                     
                                     // Search box nhỏ ngang
                                     HStack(spacing: 4) {
-                                        // Season picker vuốt
-                                        Text("S\(searchSeason)")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .frame(width: 30)
-                                            .gesture(
-                                                DragGesture(minimumDistance: 10)
-                                                    .onEnded { value in
-                                                        if value.translation.height < 0, searchSeason < vm.seasons.count {
-                                                            searchSeason += 1
-                                                            searchedEpisode = nil
-                                                        } else if value.translation.height > 0, searchSeason > 1 {
-                                                            searchSeason -= 1
-                                                            searchedEpisode = nil
-                                                        }
-                                                    }
-                                            )
+                                        // Season picker tap - Menu
+                                        Menu {
+                                            ForEach(vm.seasons) { season in
+                                                Button {
+                                                    searchSeason = season.seasonNumber
+                                                    searchedEpisode = nil
+                                                } label: {
+                                                    Text(season.name)
+                                                }
+                                            }
+                                        } label: {
+                                            HStack(spacing: 2) {
+                                                Text("S\(searchSeason)")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.white)
+                                                Image(systemName: "chevron.down")
+                                                    .font(.system(size: 8))
+                                                    .foregroundColor(.white.opacity(0.5))
+                                            }
+                                            .frame(width: 40)
+                                        }
                                         
                                         Divider()
                                             .frame(height: 18)
