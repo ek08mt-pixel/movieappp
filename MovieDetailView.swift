@@ -32,7 +32,7 @@ struct MovieDetailView: View {
     
     var isWatched: (Int, Int) -> Bool {
         { season, episode in
-            appState.watchProgressList.contains { $0.movieId == movie.id && $0.season == season && $0.episode == episode && ($0.currentTime ?? 0) > 0 }
+            appState.watchProgressList.contains { $0.movieId == movie.id && $0.season == season && $0.episode == episode && $0.currentTime > 0 }
         }
     }
     
@@ -457,7 +457,7 @@ func episodeRowContent(season: Int, episode: Int, name: String, stillURL: URL? =
             CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
         } else {
             RoundedRectangle(cornerRadius: 6)
-                .fill(isWatched(season, episode) ? .white.opacity(0.15) : .ultraThinMaterial)
+                .fill(isWatched(season, episode) ? AnyShapeStyle(.white.opacity(0.15)) : AnyShapeStyle(.ultraThinMaterial))
                 .frame(width: 80, height: 45)
                 .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
         }
