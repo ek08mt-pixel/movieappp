@@ -251,8 +251,36 @@ selectedSource = initialSource
                 VStack(spacing: 10) {
                     HStack { Button { showEpisodePopup = false } label: { Image(systemName: "chevron.left").font(.system(size: 14)).foregroundColor(.white) }; Spacer(); Text("Chọn tập").font(.system(size: 13, weight: .bold)).foregroundColor(.white); Spacer(); Circle().fill(.clear).frame(width: 28) }
                     if let detail = selectedSeasonDetail {
-                        ScrollView { LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) { ForEach(detail.episodes) { ep in Button { loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); showEpisodePopup = false } label: { Text("\(ep.episodeNumber)").font(.system(size: 12, weight: .medium)).foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white).frame(height: 36).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 8).fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.1))) } } } }.frame(maxHeight: UIScreen.main.bounds.height * 0.45) }
-                }.padding(14).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 0.4)).frame(width: 240)
+                        let rowCount = ceil(Double(detail.episodes.count) / 4.0)
+                        let gridHeight = min(rowCount * 44 + 8, 280.0)
+                        ScrollView {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                                ForEach(detail.episodes) { ep in
+                                    let isCurrent = ep.episodeNumber == (episodeNumber ?? 1)
+                                    Button {
+                                        loadStream(season: ep.seasonNumber, episode: ep.episodeNumber)
+                                        showEpisodePopup = false
+                                    } label: {
+                                        Text("\(ep.episodeNumber)")
+                                            .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
+                                            .foregroundColor(isCurrent ? .black : .white)
+                                            .frame(height: 36)
+                                            .frame(maxWidth: .infinity)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(isCurrent ? .white : Color.white.opacity(0.1))
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: gridHeight)
+                    }
+                }
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.95)))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 0.4))
+                .frame(width: 240)
             }
             if showNextEpisodePopup { }
             if showOverlay { youtubeOverlay }
