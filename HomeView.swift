@@ -524,6 +524,38 @@ if !vm.trendingAnime.isEmpty {
 
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
+    @EnvironmentObject var appState: AppState
+    
+    var isTVShows: Bool { title == "TV Shows" }
+    var isTopRated: Bool { title == "Đánh giá cao" }
+    
+    func subtitle(for movie: Movie, index: Int) -> String? {
+        if isTVShows {
+            // Thể loại tiếng Anh ngắn gọn
+            if let genreIds = movie.genreIds, let first = genreIds.first {
+                return genreNameEn(first)
+            }
+            return nil
+        } else {
+            // Năm
+            if let date = movie.releaseDate, date.count >= 4 {
+                return String(date.prefix(4))
+            }
+            return movie.yearText
+        }
+    }
+    
+    func genreNameEn(_ id: Int) -> String? {
+        let map: [Int: String] = [
+            28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
+            80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
+            14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
+            9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie",
+            53: "Thriller", 10752: "War", 37: "Western"
+        ]
+        return map[id]
+    }
+    
     var body: some View {
         if movies.isEmpty { EmptyView() } else {
             VStack(alignment: .leading, spacing: 12) {
@@ -535,19 +567,54 @@ struct SectionGrid: View {
                     }
                 }
                 .buttonStyle(.plain).padding(.horizontal, 20)
+                
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 14) {
-                        ForEach(movies.prefix(8)) { movie in
+                    LazyHStack(spacing: 0) {
+                        ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
                             NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 115, height: 172).clipShape(RoundedRectangle(cornerRadius: 12)).shadow(color: .black.opacity(0.3), radius: 3)
-                                    Text(movie.title).font(.system(size: 10)).fontWeight(.semibold).foregroundColor(.white).lineLimit(2).frame(width: 115, alignment: .leading)
+                                HStack(alignment: .top, spacing: 10) {
+                                    // Số to
+                                    Text("\(index + 1)")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.9))
+                                        .frame(width: 24, alignment: .leading)
+                                    
+                                    // Poster
+                                    CachedAsyncImage(url: movie.posterURL)
+                                        .aspectRatio(2/3, contentMode: .fill)
+                                        .frame(width: 100, height: 150)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Spacer().frame(height: 2)
+                                        // Tên phim
+                                        Text(movie.title)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.white)
+                                            .lineLimit(2)
+                                        
+                                        // Thể loại hoặc năm
+                                        if let sub = subtitle(for: movie, index: index) {
+                                            Text(sub)
+                                                .font(.system(size: 10, weight: .medium))
+                                                .foregroundColor(.white.opacity(0.5))
+                                                .lineLimit(1)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    .frame(width: 130, alignment: .leading)
                                 }
                             }
+                            .padding(.trailing, index == min(movies.count, 8) - 1 ? 20 : 0)
+                            .padding(.leading, index == 0 ? 20 : 0)
                         }
-                    }.padding(.horizontal, 20).drawingGroup()
+                    }
+                    .drawingGroup()
                 }
-            }.padding(.top, 24)
+            }
+            .padding(.top, 24)
         }
     }
 }
