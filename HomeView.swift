@@ -408,30 +408,32 @@ if !vm.trendingAnime.isEmpty {
                 VStack {
                     Spacer()
                     
+                    // "CÒN XX PHÚT" - trên bên trái, không background
+                    HStack {
+                        Text(formatRemaining(prog).uppercased())
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white.opacity(0.7))
+                            .shadow(color: .black.opacity(0.8), radius: 3)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 4)
+                    
                     // Thanh tiến trình cao hơn
                     GeometryReader { geo in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.white.opacity(0.2))
-                            .frame(height: 5)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(.white.opacity(0.15))
+                            .frame(height: 6)
                             .overlay(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2)
+                                RoundedRectangle(cornerRadius: 3)
                                     .fill(.white.opacity(0.7))
-                                    .frame(width: max(5, geo.size.width * CGFloat(prog.progress)), height: 5)
+                                    .frame(width: max(5, geo.size.width * CGFloat(prog.progress)), height: 6)
                             }
                     }
-                    .frame(height: 5)
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, 2)
-                }
-                
-                // "Còn XX phút" - chữ to
-                Text(formatRemaining(prog))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
+                    .frame(height: 6)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(.black.opacity(0.55)))
-                    .padding(.top, 6)
+                    .padding(.bottom, 6)
+                }
             }
             .frame(width: 200, height: 112)
             
@@ -442,7 +444,6 @@ if !vm.trendingAnime.isEmpty {
                 .frame(width: 200, alignment: .leading)
                 .padding(.top, 6)
             
-            // "Tiếp tục P3, T2" - font nhỏ, xám nhạt
             if let ep = prog.episode {
                 Text("Tiếp tục P\(prog.season ?? 1), T\(ep)")
                     .font(.system(size: 10, weight: .medium))
