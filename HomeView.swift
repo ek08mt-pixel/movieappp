@@ -407,36 +407,50 @@ if !vm.trendingAnime.isEmpty {
                 
                 VStack {
                     Spacer()
-                    HStack {
-                        if let ep = prog.episode {
-                            Text("S\(prog.season ?? 1):E\(ep)")
-                                .font(.system(size: 8, weight: .bold)).foregroundColor(.white)
-                                .padding(.horizontal, 5).padding(.vertical, 2)
-                                .background(Capsule().fill(.black.opacity(0.6)))
-                        }
-                        Spacer()
-                        Text(formatRemaining(prog))
-                            .font(.system(size: 8, weight: .medium)).foregroundColor(.white)
-                            .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(Capsule().fill(.black.opacity(0.6)))
-                    }
-                    .padding(6)
                     
+                    // Thanh tiến trình cao hơn
                     GeometryReader { geo in
-                        RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.15)).frame(height: 3)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(.white.opacity(0.2))
+                            .frame(height: 5)
                             .overlay(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 1).fill(.white.opacity(0.6))
-                                    .frame(width: geo.size.width * CGFloat(prog.progress), height: 3)
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(.white.opacity(0.7))
+                                    .frame(width: max(5, geo.size.width * CGFloat(prog.progress)), height: 5)
                             }
                     }
-                    .frame(height: 3)
+                    .frame(height: 5)
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 2)
                 }
+                
+                // "Còn XX phút" - chữ to
+                Text(formatRemaining(prog))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(.black.opacity(0.55)))
+                    .padding(.top, 6)
             }
             .frame(width: 200, height: 112)
             
             Text(prog.movieTitle)
-                .font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
-                .lineLimit(1).frame(width: 200, alignment: .leading).padding(.top, 4)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .frame(width: 200, alignment: .leading)
+                .padding(.top, 6)
+            
+            // "Tiếp tục P3, T2" - font nhỏ, xám nhạt
+            if let ep = prog.episode {
+                Text("Tiếp tục P\(prog.season ?? 1), T\(ep)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+                    .lineLimit(1)
+                    .frame(width: 200, alignment: .leading)
+                    .padding(.top, 2)
+            }
         }
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
