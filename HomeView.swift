@@ -525,11 +525,12 @@ if !vm.trendingAnime.isEmpty {
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     
-    var isTVShows: Bool { title == "TV Shows" }
-    var isTopRated: Bool { title == "Đánh giá cao" }
+    var isSpecialStyle: Bool {
+        title == "TV Shows" || title == "24h qua" || title == "Đánh giá cao"
+    }
     
     func subtitle(for movie: Movie) -> String? {
-        if isTVShows {
+        if title == "TV Shows" {
             if let genreIds = movie.genreIds, let first = genreIds.first {
                 let map: [Int: String] = [
                     28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
@@ -561,46 +562,69 @@ struct SectionGrid: View {
                 }
                 .buttonStyle(.plain).padding(.horizontal, 20)
                 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 14) {
-                        ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
-                            NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    // Poster
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(2/3, contentMode: .fill)
-                                        .frame(width: 115, height: 172)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .shadow(color: .black.opacity(0.3), radius: 3)
-                                    
-                                    // Số + Tên phim + Thể loại/Năm
-                                    HStack(alignment: .top, spacing: 6) {
-                                        Text("\(index + 1)")
-                                            .font(.system(size: 24, weight: .heavy))
-                                            .foregroundColor(.white.opacity(0.9))
-                                            .frame(width: 22, alignment: .leading)
+                if isSpecialStyle {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 14) {
+                            ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
+                                NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .aspectRatio(2/3, contentMode: .fill)
+                                            .frame(width: 115, height: 172)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            .shadow(color: .black.opacity(0.3), radius: 3)
                                         
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(movie.title)
-                                                .font(.system(size: 11, weight: .semibold))
-                                                .foregroundColor(.white)
-                                                .lineLimit(2)
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 24, weight: .heavy))
+                                                .foregroundColor(.white.opacity(0.9))
+                                                .frame(width: 22, alignment: .leading)
                                             
-                                            if let sub = subtitle(for: movie) {
-                                                Text(sub)
-                                                    .font(.system(size: 10, weight: .medium))
-                                                    .foregroundColor(.white.opacity(0.5))
-                                                    .lineLimit(1)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(movie.title)
+                                                    .font(.system(size: 11, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(2)
+                                                
+                                                if let sub = subtitle(for: movie) {
+                                                    Text(sub)
+                                                        .font(.system(size: 10, weight: .medium))
+                                                        .foregroundColor(.white.opacity(0.5))
+                                                        .lineLimit(1)
+                                                }
                                             }
                                         }
+                                        .frame(width: 115)
                                     }
-                                    .frame(width: 115)
                                 }
                             }
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
-                    .drawingGroup()
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 14) {
+                            ForEach(movies.prefix(8)) { movie in
+                                NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .aspectRatio(2/3, contentMode: .fill)
+                                            .frame(width: 115, height: 172)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            .shadow(color: .black.opacity(0.3), radius: 3)
+                                        Text(movie.title)
+                                            .font(.system(size: 10))
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                            .lineLimit(2)
+                                            .frame(width: 115, alignment: .leading)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .drawingGroup()
+                    }
                 }
             }
             .padding(.top, 24)
