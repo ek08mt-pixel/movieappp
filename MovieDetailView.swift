@@ -19,6 +19,8 @@ struct MovieDetailView: View {
     @State private var showEpisodeSearch = false
     @State private var selectedSource = "Emew 1"
     @State private var showSavePopup = false
+    @State private var searchSeason: Int = 1
+    @State private var searchedEpisode: Int? = nil
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -26,6 +28,12 @@ struct MovieDetailView: View {
         if let mt = movie.mediaType { return mt }
         if playSeason != nil || playEpisode != nil { return "tv" }
         return nil
+    }
+    
+    var isWatched: (Int, Int) -> Bool {
+        { season, episode in
+            appState.watchProgressList.contains { $0.movieId == movie.id && $0.season == season && $0.episode == episode && ($0.currentTime ?? 0) > 0 }
+        }
     }
     
     var body: some View {
@@ -87,12 +95,33 @@ struct MovieDetailView: View {
                     
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top, spacing: 14) {
-                            CachedAsyncImage(url: movie.posterURL, size: .detail)
-                                .aspectRatio(2/3, contentMode: .fill)
-                                .frame(width: 100, height: 150)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(color: .black.opacity(0.6), radius: 8)
-                                .offset(y: -45)
+                            // Poster với badge chất lượng
+                            ZStack(alignment: .bottom) {
+                                CachedAsyncImage(url: movie.posterURL, size: .detail)
+                                    .aspectRatio(2/3, contentMode: .fill)
+                                    .frame(width: 100, height: 150)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .shadow(color: .black.opacity(0.6), radius: 8)
+                                
+                                // Badge chất lượng
+                                if let quality = getBestQuality() {
+                                    Text(quality)
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(
+                                            Capsule()
+                                                .fill(.ultraThinMaterial.opacity(0.8))
+                                        )
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(.white.opacity(0.3), lineWidth: 0.5)
+                                        )
+                                        .padding(.bottom, 6)
+                                }
+                            }
+                            .offset(y: -45)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Spacer().frame(height: 8)
@@ -190,82 +219,164 @@ struct MovieDetailView: View {
                         
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Seasons & Episodes").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                ForEach(vm.seasons) { season in
-                                    VStack(spacing: 0) {
-                                        Button {
-                                            withAnimation {
-                                                expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber
-                                                if expandedSeason == season.seasonNumber {
-                                                    Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
+                                HStack {
+                                    Text("Seasons & Episodes")
+                                        .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                    Spacer()
+                                    
+                                    // Search box
+                                    HStack(spacing: 0) {
+                                        // Season picker dọc
+                                        VStack(spacing: 0) {
+                                            Button {
+                                                if searchSeason > 1 { searchSeason -= 1; searchedEpisode = nil }
+                                            } label: {
+                                                Image(systemName: "chevron.up")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.white.opacity(0.5))
+                                                    .frame(width: 36, height: 16)
+                                            }
+                                            
+                                            Text("S\(searchSeason)")
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .frame(width: 36, height: 24)
+                                            
+                                            Button {
+                                                if searchSeason < vm.seasons.count { searchSeason += 1; searchedEpisode = nil }
+                                            } label: {
+                                                Image(systemName: "chevron.down")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.white.opacity(0.5))
+                                                    .frame(width: 36, height: 16)
+                                            }
+                                        }
+                                        .frame(width: 36)
+                                        
+                                        Divider()
+                                            .frame(height: 30)
+                                            .background(Color.white.opacity(0.2))
+                                        
+                                        // Episode input
+                                        TextField("Tập", text: $episodeSearchText)
+                                            .keyboardType(.numberPad)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.white)
+                                            .multilineTextAlignment(.center)
+                                            .frame(width: 40)
+                                            .onSubmit {
+                                                if let ep = Int(episodeSearchText), ep > 0 {
+                                                    searchedEpisode = ep
                                                 }
                                             }
+                                        
+                                        Button {
+                                            if let ep = Int(episodeSearchText), ep > 0 {
+                                                searchedEpisode = ep
+                                            }
+                                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                         } label: {
-                                            HStack {
-                                                if let url = season.posterURL {
-                                                    CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
-                                                } else {
-                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60)
-                                                }
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text(season.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
-                                                    Text("\(season.episodeCount) tập").font(.system(size: 11)).foregroundColor(.gray)
-                                                }
-                                                Spacer()
-                                                Image(systemName: expandedSeason == season.seasonNumber ? "chevron.up" : "chevron.down").foregroundColor(.gray)
-                                            }.padding(.vertical, 8)
+                                            Image(systemName: "magnifyingglass")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.white.opacity(0.6))
+                                                .frame(width: 28, height: 28)
                                         }
-                                        if expandedSeason == season.seasonNumber {
-                                            if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
-                                                if vm.sourceEpisodes.isEmpty {
-                                                    ProgressView().tint(.white).padding().onAppear {
-                                                        vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
+                                    }
+                                    .padding(4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(.ultraThinMaterial.opacity(0.3))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                                    )
+                                }
+                                
+                                if let searchedEp = searchedEpisode {
+                                    VStack(spacing: 0) {
+                                        Button {
+                                            let detail = vm.seasonDetails[searchSeason]
+                                            let episodes = detail?.episodes ?? []
+                                            if let ep = episodes.first(where: { $0.episodeNumber == searchedEp }) {
+                                                playSeason = searchSeason
+                                                playEpisode = searchedEp
+                                                presentPlayer()
+                                            }
+                                        } label: {
+                                            HStack(spacing: 10) {
+                                                Text("Tập \(searchedEp)")
+                                                    .font(.system(size: 13, weight: isWatched(searchSeason, searchedEp) ? .bold : .regular))
+                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white : .white.opacity(0.7))
+                                                Spacer()
+                                                Image(systemName: "play.circle")
+                                                    .font(.system(size: 18))
+                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white : .white.opacity(0.5))
+                                            }
+                                            .padding(.vertical, 10)
+                                            .padding(.horizontal, 12)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(isWatched(searchSeason, searchedEp) ? .white.opacity(0.12) : .white.opacity(0.05))
+                                            )
+                                        }
+                                    }
+                                    .padding(.top, 4)
+                                } else {
+                                    // Hiện tất cả season
+                                    ForEach(vm.seasons) { season in
+                                        VStack(spacing: 0) {
+                                            Button {
+                                                withAnimation {
+                                                    expandedSeason = expandedSeason == season.seasonNumber ? nil : season.seasonNumber
+                                                    if expandedSeason == season.seasonNumber {
+                                                        Task { await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber) }
                                                     }
-                                                } else {
-                                                    LazyVStack(spacing: 6) {
-                                                        ForEach(vm.sourceEpisodes) { ep in
-                                                            Button {
-                                                                playSeason = season.seasonNumber; playEpisode = ep.episodeNumber
-                                                                presentPlayer(directURL: URL(string: ep.linkM3u8))
-                                                            } label: {
-                                                                HStack(spacing: 10) {
-                                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                                                                    VStack(alignment: .leading, spacing: 2) {
-                                                                        Text(ep.name).font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                                                        Text(ep.serverName).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                                                    }
-                                                                    Spacer()
-                                                                    Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                                                                }.padding(.vertical, 4)
+                                                }
+                                            } label: {
+                                                HStack {
+                                                    if let url = season.posterURL {
+                                                        CachedAsyncImage(url: url).aspectRatio(2/3, contentMode: .fill).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
+                                                    } else {
+                                                        RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 40, height: 60)
+                                                    }
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(season.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
+                                                        Text("\(season.episodeCount) tập").font(.system(size: 11)).foregroundColor(.gray)
+                                                    }
+                                                    Spacer()
+                                                    Image(systemName: expandedSeason == season.seasonNumber ? "chevron.up" : "chevron.down").foregroundColor(.gray)
+                                                }.padding(.vertical, 8)
+                                            }
+                                            if expandedSeason == season.seasonNumber {
+                                                if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
+                                                    if vm.sourceEpisodes.isEmpty {
+                                                        ProgressView().tint(.white).padding().onAppear {
+                                                            vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
+                                                        }
+                                                    } else {
+                                                        LazyVStack(spacing: 6) {
+                                                            ForEach(vm.sourceEpisodes) { ep in
+                                                                Button {
+                                                                    playSeason = season.seasonNumber; playEpisode = ep.episodeNumber
+                                                                    presentPlayer(directURL: URL(string: ep.linkM3u8))
+                                                                } label: {
+                                                                    episodeRowContent(season: season.seasonNumber, episode: ep.episodeNumber, name: ep.name)
+                                                                }
                                                             }
                                                         }
                                                     }
-                                                }
-                                            } else if let detail = vm.seasonDetails[season.seasonNumber] {
-                                                LazyVStack(spacing: 6) {
-                                                    ForEach(detail.episodes) { ep in
-                                                        Button {
-                                                            playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
-                                                            presentPlayer()
-                                                        } label: {
-                                                            HStack(spacing: 10) {
-                                                                if let still = ep.stillURL {
-                                                                    CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
-                                                                } else {
-                                                                    RoundedRectangle(cornerRadius: 6).fill(.ultraThinMaterial).frame(width: 80, height: 45).overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
-                                                                }
-                                                                VStack(alignment: .leading, spacing: 2) {
-                                                                    Text("Tập \(ep.episodeNumber)").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
-                                                                    Text(ep.name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-                                                                    if let rt = ep.runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
-                                                                }
-                                                                Spacer(); Image(systemName: "play.circle").foregroundColor(.white.opacity(0.6))
-                                                            }.padding(.vertical, 4)
+                                                } else if let detail = vm.seasonDetails[season.seasonNumber] {
+                                                    LazyVStack(spacing: 6) {
+                                                        ForEach(detail.episodes) { ep in
+                                                            Button {
+                                                                playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
+                                                                presentPlayer()
+                                                            } label: {
+                                                                episodeRowContent(season: ep.seasonNumber, episode: ep.episodeNumber, name: ep.name, stillURL: ep.stillURL, runtime: ep.runtime)
+                                                            }
                                                         }
                                                     }
+                                                } else {
+                                                    ProgressView().tint(.white).padding()
                                                 }
-                                            } else {
-                                                ProgressView().tint(.white).padding()
                                             }
                                         }
                                     }
@@ -337,6 +448,46 @@ struct MovieDetailView: View {
                 .environmentObject(appState)
                 .presentationDetents([.medium])
         }
+    }
+    
+    @ViewBuilder
+func episodeRowContent(season: Int, episode: Int, name: String, stillURL: URL? = nil, runtime: Int? = nil) -> some View {
+    HStack(spacing: 10) {
+        if let still = stillURL {
+            CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
+        } else {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isWatched(season, episode) ? .white.opacity(0.15) : .ultraThinMaterial)
+                .frame(width: 80, height: 45)
+                .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+        }
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Tập \(episode)")
+                .font(.system(size: 11, weight: isWatched(season, episode) ? .bold : .regular))
+                .foregroundColor(isWatched(season, episode) ? .white : .white.opacity(0.6))
+            Text(name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+            if let rt = runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
+        }
+        Spacer()
+        Image(systemName: "play.circle")
+            .foregroundColor(isWatched(season, episode) ? .white : .white.opacity(0.5))
+    }
+    .padding(.vertical, 4)
+}
+    
+    func getBestQuality() -> String? {
+        if !vm.serverList.isEmpty {
+            for server in vm.serverList {
+                let q = server.qualities.uppercased()
+                if q.contains("4K") || q.contains("2160") { return "4K" }
+                if q.contains("HD") || q.contains("1080") { return "FHD" }
+                if q.contains("720") { return "HD" }
+            }
+            if let first = vm.serverList.first {
+                return first.qualities
+            }
+        }
+        return nil
     }
     
     func handlePlayButton() {
