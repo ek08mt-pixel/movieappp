@@ -21,6 +21,7 @@ struct MovieDetailView: View {
     @State private var showSavePopup = false
     @State private var searchSeason: Int = 1
     @State private var searchedEpisode: Int? = nil
+    @State private var searchText = ""
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -95,7 +96,6 @@ struct MovieDetailView: View {
                     
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top, spacing: 14) {
-                            // Poster với badge chất lượng
                             ZStack(alignment: .bottom) {
                                 CachedAsyncImage(url: movie.posterURL, size: .detail)
                                     .aspectRatio(2/3, contentMode: .fill)
@@ -103,21 +103,14 @@ struct MovieDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .shadow(color: .black.opacity(0.6), radius: 8)
                                 
-                                // Badge chất lượng
                                 if let quality = getBestQuality() {
                                     Text(quality)
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
-                                        .background(
-                                            Capsule()
-                                                .fill(.ultraThinMaterial.opacity(0.8))
-                                        )
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(.white.opacity(0.3), lineWidth: 0.5)
-                                        )
+                                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.8)))
+                                        .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 0.5))
                                         .padding(.bottom, 6)
                                 }
                             }
@@ -219,74 +212,78 @@ struct MovieDetailView: View {
                         
                         if !vm.seasons.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                HStack {
+                                HStack(alignment: .center, spacing: 10) {
                                     Text("Seasons & Episodes")
                                         .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                    
                                     Spacer()
                                     
-                                    // Search box
-                                    HStack(spacing: 0) {
-                                        // Season picker dọc
-                                        VStack(spacing: 0) {
-                                            Button {
-                                                if searchSeason > 1 { searchSeason -= 1; searchedEpisode = nil }
-                                            } label: {
-                                                Image(systemName: "chevron.up")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundColor(.white.opacity(0.5))
-                                                    .frame(width: 36, height: 16)
-                                            }
-                                            
-                                            Text("S\(searchSeason)")
-                                                .font(.system(size: 13, weight: .bold))
-                                                .foregroundColor(.white)
-                                                .frame(width: 36, height: 24)
-                                            
-                                            Button {
-                                                if searchSeason < vm.seasons.count { searchSeason += 1; searchedEpisode = nil }
-                                            } label: {
-                                                Image(systemName: "chevron.down")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundColor(.white.opacity(0.5))
-                                                    .frame(width: 36, height: 16)
-                                            }
-                                        }
-                                        .frame(width: 36)
+                                    // Search box nhỏ ngang
+                                    HStack(spacing: 4) {
+                                        // Season picker vuốt
+                                        Text("S\(searchSeason)")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .frame(width: 30)
+                                            .gesture(
+                                                DragGesture(minimumDistance: 10)
+                                                    .onEnded { value in
+                                                        if value.translation.height < 0, searchSeason < vm.seasons.count {
+                                                            searchSeason += 1
+                                                            searchedEpisode = nil
+                                                        } else if value.translation.height > 0, searchSeason > 1 {
+                                                            searchSeason -= 1
+                                                            searchedEpisode = nil
+                                                        }
+                                                    }
+                                            )
                                         
                                         Divider()
-                                            .frame(height: 30)
+                                            .frame(height: 18)
                                             .background(Color.white.opacity(0.2))
                                         
-                                        // Episode input
-                                        TextField("Tập", text: $episodeSearchText)
+                                        TextField("Tập", text: $searchText)
                                             .keyboardType(.numberPad)
-                                            .font(.system(size: 13, weight: .medium))
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                             .multilineTextAlignment(.center)
-                                            .frame(width: 40)
+                                            .frame(width: 30)
+                                            .toolbar {
+                                                ToolbarItemGroup(placement: .keyboard) {
+                                                    Spacer()
+                                                    Button("OK") {
+                                                        if let ep = Int(searchText), ep > 0 {
+                                                            searchedEpisode = ep
+                                                        }
+                                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                                    }
+                                                    .font(.system(size: 14, weight: .bold))
+                                                    .foregroundColor(.white)
+                                                }
+                                            }
                                             .onSubmit {
-                                                if let ep = Int(episodeSearchText), ep > 0 {
+                                                if let ep = Int(searchText), ep > 0 {
                                                     searchedEpisode = ep
                                                 }
                                             }
                                         
                                         Button {
-                                            if let ep = Int(episodeSearchText), ep > 0 {
+                                            if let ep = Int(searchText), ep > 0 {
                                                 searchedEpisode = ep
                                             }
                                             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                         } label: {
                                             Image(systemName: "magnifyingglass")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(.white.opacity(0.6))
-                                                .frame(width: 28, height: 28)
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.white.opacity(0.5))
                                         }
                                     }
-                                    .padding(4)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 10)
+                                        RoundedRectangle(cornerRadius: 8)
                                             .fill(.ultraThinMaterial.opacity(0.3))
-                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.12), lineWidth: 0.5))
                                     )
                                 }
                                 
@@ -295,7 +292,7 @@ struct MovieDetailView: View {
                                         Button {
                                             let detail = vm.seasonDetails[searchSeason]
                                             let episodes = detail?.episodes ?? []
-                                            if let ep = episodes.first(where: { $0.episodeNumber == searchedEp }) {
+                                            if episodes.first(where: { $0.episodeNumber == searchedEp }) != nil {
                                                 playSeason = searchSeason
                                                 playEpisode = searchedEp
                                                 presentPlayer()
@@ -304,11 +301,11 @@ struct MovieDetailView: View {
                                             HStack(spacing: 10) {
                                                 Text("Tập \(searchedEp)")
                                                     .font(.system(size: 13, weight: isWatched(searchSeason, searchedEp) ? .bold : .regular))
-                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white : .white.opacity(0.7))
+                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white : .white.opacity(0.6))
                                                 Spacer()
                                                 Image(systemName: "play.circle")
                                                     .font(.system(size: 18))
-                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white : .white.opacity(0.5))
+                                                    .foregroundColor(isWatched(searchSeason, searchedEp) ? .white.opacity(0.8) : .white.opacity(0.5))
                                             }
                                             .padding(.vertical, 10)
                                             .padding(.horizontal, 12)
@@ -320,7 +317,6 @@ struct MovieDetailView: View {
                                     }
                                     .padding(.top, 4)
                                 } else {
-                                    // Hiện tất cả season
                                     ForEach(vm.seasons) { season in
                                         VStack(spacing: 0) {
                                             Button {
@@ -451,29 +447,29 @@ struct MovieDetailView: View {
     }
     
     @ViewBuilder
-func episodeRowContent(season: Int, episode: Int, name: String, stillURL: URL? = nil, runtime: Int? = nil) -> some View {
-    HStack(spacing: 10) {
-        if let still = stillURL {
-            CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
-        } else {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isWatched(season, episode) ? AnyShapeStyle(.white.opacity(0.15)) : AnyShapeStyle(.ultraThinMaterial))
-                .frame(width: 80, height: 45)
-                .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+    func episodeRowContent(season: Int, episode: Int, name: String, stillURL: URL? = nil, runtime: Int? = nil) -> some View {
+        HStack(spacing: 10) {
+            if let still = stillURL {
+                CachedAsyncImage(url: still).aspectRatio(16/9, contentMode: .fill).frame(width: 80, height: 45).clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isWatched(season, episode) ? AnyShapeStyle(.white.opacity(0.15)) : AnyShapeStyle(.ultraThinMaterial))
+                    .frame(width: 80, height: 45)
+                    .overlay(Image(systemName: "play.rectangle").foregroundColor(.white.opacity(0.4)))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tập \(episode)")
+                    .font(.system(size: 11, weight: isWatched(season, episode) ? .bold : .regular))
+                    .foregroundColor(isWatched(season, episode) ? .white : .white.opacity(0.6))
+                Text(name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
+                if let rt = runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
+            }
+            Spacer()
+            Image(systemName: "play.circle")
+                .foregroundColor(isWatched(season, episode) ? .white.opacity(0.8) : .white.opacity(0.5))
         }
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Tập \(episode)")
-                .font(.system(size: 11, weight: isWatched(season, episode) ? .bold : .regular))
-                .foregroundColor(isWatched(season, episode) ? .white : .white.opacity(0.6))
-            Text(name).font(.system(size: 10)).foregroundColor(.gray).lineLimit(1)
-            if let rt = runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
-        }
-        Spacer()
-        Image(systemName: "play.circle")
-            .foregroundColor(isWatched(season, episode) ? .white : .white.opacity(0.5))
+        .padding(.vertical, 4)
     }
-    .padding(.vertical, 4)
-}
     
     func getBestQuality() -> String? {
         if !vm.serverList.isEmpty {
