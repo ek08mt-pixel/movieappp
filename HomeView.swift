@@ -564,42 +564,45 @@ struct SectionGrid: View {
                 
                 if isSpecialStyle {
                     // Style poster ngang cho TV Shows, 24h qua, Đánh giá cao
-                    VStack(spacing: 10) {
-                        ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
-                            NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
-                                HStack(spacing: 8) {
-                                    // Số to
-                                    Text("\(index + 1)")
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.5))
-                                        .frame(width: 28, alignment: .leading)
-                                    
-                                    // Poster ngang
-                                    CachedAsyncImage(url: movie.posterURL)
-                                        .aspectRatio(16/9, contentMode: .fill)
-                                        .frame(width: 100, height: 56)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    
-                                    // Tên phim + thể loại/năm
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(movie.title)
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundColor(.white)
-                                            .lineLimit(2)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 14) {
+                            ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
+                                NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Poster ngang
+                                        CachedAsyncImage(url: movie.backdropURL ?? movie.posterURL)
+                                            .aspectRatio(16/9, contentMode: .fill)
+                                            .frame(width: 200, height: 112)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .shadow(color: .black.opacity(0.3), radius: 3)
                                         
-                                        if let sub = subtitle(for: movie) {
-                                            Text(sub)
-                                                .font(.system(size: 11, weight: .medium))
+                                        // Số + Tên + Subtitle
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 24, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.5))
+                                            
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(movie.title)
+                                                    .font(.system(size: 11, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(2)
+                                                
+                                                if let sub = subtitle(for: movie) {
+                                                    Text(sub)
+                                                        .font(.system(size: 10, weight: .medium))
+                                                        .foregroundColor(.white.opacity(0.5))
+                                                }
+                                            }
                                         }
+                                        .frame(width: 200)
                                     }
-                                    
-                                    Spacer()
                                 }
                             }
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
+                }
                 } else {
                     // Style poster dọc cho các hàng khác
                     ScrollView(.horizontal, showsIndicators: false) {
