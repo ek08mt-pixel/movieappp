@@ -555,7 +555,6 @@ struct SectionGrid: View {
             VStack(alignment: .leading, spacing: 12) {
                 NavigationLink(destination: MovieListView(title: title, movies: movies, fixedQuery: title)) {
                     HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
                         Text(title).font(.title3).fontWeight(.bold).foregroundColor(.white)
                         Image(systemName: "chevron.right").font(.system(size: 14, weight: .light)).foregroundColor(.white.opacity(0.5))
                     }
@@ -568,17 +567,23 @@ struct SectionGrid: View {
                             ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                     VStack(alignment: .leading, spacing: 6) {
-                                        // Poster ngang
-                                        CachedAsyncImage(url: movie.posterURL)
-                                            .aspectRatio(16/9, contentMode: .fill)
-                                            .frame(width: 200, height: 112)
-                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                                            .shadow(color: .black.opacity(0.3), radius: 3)
+                                        // Poster ngang từ backdrop
+                                        if let backdrop = movie.backdropURL {
+                                            CachedAsyncImage(url: backdrop, size: .backdrop)
+                                                .aspectRatio(16/9, contentMode: .fill)
+                                                .frame(width: 200, height: 112)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                .shadow(color: .black.opacity(0.3), radius: 3)
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(.ultraThinMaterial.opacity(0.2))
+                                                .frame(width: 200, height: 112)
+                                        }
                                         
-                                        // Số + Tên + Subtitle - tất cả canh trái
-                                        HStack(alignment: .top, spacing: 6) {
+                                        // Số + Tên + Subtitle
+                                        HStack(alignment: .top, spacing: 8) {
                                             Text("\(index + 1)")
-                                                .font(.system(size: 24, weight: .bold))
+                                                .font(.system(size: 28, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.5))
                                             
                                             VStack(alignment: .leading, spacing: 2) {
