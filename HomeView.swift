@@ -563,20 +563,19 @@ struct SectionGrid: View {
                 .buttonStyle(.plain).padding(.horizontal, 20)
                 
                 if isSpecialStyle {
-                    // Style poster ngang cho TV Shows, 24h qua, Đánh giá cao
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 14) {
                             ForEach(Array(movies.prefix(8).enumerated()), id: \.element.id) { index, movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                     VStack(alignment: .leading, spacing: 6) {
                                         // Poster ngang
-                                        CachedAsyncImage(url: movie.backdropURL ?? movie.posterURL)
+                                        CachedAsyncImage(url: movie.posterURL)
                                             .aspectRatio(16/9, contentMode: .fill)
                                             .frame(width: 200, height: 112)
                                             .clipShape(RoundedRectangle(cornerRadius: 10))
                                             .shadow(color: .black.opacity(0.3), radius: 3)
                                         
-                                        // Số + Tên + Subtitle
+                                        // Số + Tên + Subtitle - tất cả canh trái
                                         HStack(alignment: .top, spacing: 6) {
                                             Text("\(index + 1)")
                                                 .font(.system(size: 24, weight: .bold))
@@ -584,7 +583,7 @@ struct SectionGrid: View {
                                             
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(movie.title)
-                                                    .font(.system(size: 11, weight: .semibold))
+                                                    .font(.system(size: 12, weight: .semibold))
                                                     .foregroundColor(.white)
                                                     .lineLimit(2)
                                                 
@@ -595,7 +594,7 @@ struct SectionGrid: View {
                                                 }
                                             }
                                         }
-                                        .frame(width: 200)
+                                        .frame(maxWidth: 200, alignment: .leading)
                                     }
                                 }
                             }
