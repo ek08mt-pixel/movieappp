@@ -602,7 +602,6 @@ struct SectionGrid: View {
                         }
                         .padding(.horizontal, 20)
                     }
-                }
                 } else {
                     // Style poster dọc cho các hàng khác
                     ScrollView(.horizontal, showsIndicators: false) {
