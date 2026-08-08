@@ -580,8 +580,8 @@ struct SectionGrid: View {
                                                 .frame(width: 200, height: 112)
                                         }
                                         
-                                        // Số + Tên + Subtitle
-                                        HStack(alignment: .top, spacing: 8) {
+                                        // Số + Tên + Subtitle - canh giữa dọc với số
+                                        HStack(alignment: .center, spacing: 8) {
                                             Text("\(index + 1)")
                                                 .font(.system(size: 28, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.5))
