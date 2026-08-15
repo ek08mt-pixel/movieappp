@@ -140,18 +140,25 @@ struct HomeView: View {
                                     RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
                                     Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
                                 }.padding(.horizontal, 20)
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 12) {
-                                        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
-                                    }.padding(.horizontal, 20)
-                                }
+                                if appState.watchProgressList.count <= 2 {
+    HStack(spacing: 12) {
+        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
+    }.padding(.horizontal, 20)
+    .frame(maxWidth: .infinity, alignment: .leading)
+} else {
+    ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 12) {
+            ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
+        }.padding(.horizontal, 20)
+    }
+}
                             }.padding(.top, 24)
                         }
                         
                         // Vì bạn đã xem
-                        if let last = appState.watchHistory.last {
-                            SectionGrid(title: "Vì bạn đã xem \(last.title)", movies: vm.trending24h)
-                        }
+                        if let lastWatched = appState.watchHistory.first {
+    SectionGrid(title: "Vì bạn đã xem \(lastWatched.title)", movies: vm.similarMovies)
+}
                         
                         if let mod = vm.movieOfDay {
                             VStack(alignment: .leading, spacing: 10) {
