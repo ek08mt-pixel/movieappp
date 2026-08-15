@@ -181,7 +181,8 @@ class HomeViewModel: ObservableObject {
             }
         } catch { return [] }
     }
-}
-func loadSimilarForLastWatched(movieId: Int, mediaType: String?) async {
+    
+    func loadSimilarForLastWatched(movieId: Int, mediaType: String?) async {
         similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []
     }
+}
