@@ -116,7 +116,9 @@ selectedSource = initialSource
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
                 .onDisappear {
-                    saveProgress(); player.pause(); player.replaceCurrentItem(with: nil)
+                    saveProgress()
+player.pause()
+player.replaceCurrentItem(with: nil)
                     controlsTimer?.invalidate(); stopCasting()
                     subtitleTimer?.invalidate(); currentSubtitleText = ""
                     forcePortraitWithDelay()
@@ -326,10 +328,19 @@ saveProgress(); case .nguonc: let (url, servers) = try await withCheckedThrowing
 } } catch { await MainActor.run { sourceStatus[selectedSource] = false; errorMessage = error.localizedDescription; isLoading = false } } } }
     func tryResume() { guard !didResume, resumeTime > 0 else { return }; didResume = true; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) } }
     func fetchIMDB() async throws -> String { if let c = imdbIDCache { return c }; var id: String?; if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }; if id == nil || id?.isEmpty == true { let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; id = try? JSONDecoder().decode(E.self, from: data).imdb_id }; guard let f = id, !f.isEmpty else { throw StreamError.noStreamAvailable }; imdbIDCache = f; return f }
-    func saveProgress() { 
-    guard hasStartedPlaying, currentTime > 0 else { return }
-    appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: currentTime, duration: max(duration, 1), lastWatched: Date(), source: selectedSource.rawValue))
-}
+    func saveProgress() {
+        guard hasStartedPlaying else { return }
+        let actualTime = player.currentTime().seconds
+        let actualDuration = player.currentItem?.duration.seconds ?? duration
+        guard actualTime > 0, actualTime < actualDuration - 5 else {
+            // Nếu gần hết phim, đánh dấu đã xem xong
+            if actualTime > 0 {
+                appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: actualDuration, duration: max(actualDuration, 1), lastWatched: Date(), source: selectedSource.rawValue))
+            }
+            return
+        }
+        appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: actualTime, duration: max(actualDuration, 1), lastWatched: Date(), source: selectedSource.rawValue))
+    }
     func saveHistory() { let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType); appState.watchHistory.removeAll { $0.id == movieId }; appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds } } }
     func seek(_ forward: Bool) { let s = forward ? seekSeconds : -seekSeconds; let t = max(0, min(currentTime + s, duration)); player.seek(to: CMTime(seconds: t, preferredTimescale: 600)); currentTime = t }
