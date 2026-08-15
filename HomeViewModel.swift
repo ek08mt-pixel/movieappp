@@ -19,6 +19,7 @@ class HomeViewModel: ObservableObject {
     @Published var onThisDayMovie: OnThisDayItem?
     @Published var isLoading = false
     @Published var trendingAnime: [Movie] = []
+    @Published var similarMovies: [Movie] = []
     
     init() {
         Task { await loadAll() }
@@ -181,3 +182,6 @@ class HomeViewModel: ObservableObject {
         } catch { return [] }
     }
 }
+func loadSimilarForLastWatched(movieId: Int, mediaType: String?) async {
+        similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []
+    }
