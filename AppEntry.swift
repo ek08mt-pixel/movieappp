@@ -124,7 +124,7 @@ class AppState: ObservableObject {
     }
     
     func updateProgress(_ progress: WatchProgress) {
-        watchProgressList.removeAll { $0.movieId == progress.movieId && $0.season == progress.season && $0.episode == progress.episode }
+        watchProgressList.removeAll { $0.movieId == progress.movieId }
         watchProgressList.insert(progress, at: 0)
         if watchProgressList.count > 30 { watchProgressList.removeLast() }
         save()
