@@ -140,16 +140,18 @@ struct HomeView: View {
                                     RoundedRectangle(cornerRadius: 2).fill(.white.opacity(0.55)).frame(width: 3, height: 18)
                                     Text("Tiếp tục xem").font(.title3).fontWeight(.bold).foregroundColor(.white)
                                 }.padding(.horizontal, 20)
-                                if appState.watchProgressList.count <= 2 {
+                                if uniqueProgressList().count <= 2 {
     HStack(spacing: 12) {
         ForEach(uniqueProgressList(), id: \.movieId) { prog in continueWatchingCard(prog) }
-    }.padding(.horizontal, 20)
-    .frame(maxWidth: .infinity, alignment: .leading)
+        Spacer()
+    }
+    .padding(.horizontal, 20)
 } else {
     ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 12) {
             ForEach(uniqueProgressList(), id: \.movieId) { prog in continueWatchingCard(prog) }
-        }.padding(.horizontal, 20)
+        }
+        .padding(.horizontal, 20)
     }
 }
                             }.padding(.top, 24)
