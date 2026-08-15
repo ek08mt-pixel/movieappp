@@ -142,13 +142,13 @@ struct HomeView: View {
                                 }.padding(.horizontal, 20)
                                 if appState.watchProgressList.count <= 2 {
     HStack(spacing: 12) {
-        ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
+        ForEach(uniqueProgressList(), id: \.movieId) { prog in continueWatchingCard(prog) }
     }.padding(.horizontal, 20)
     .frame(maxWidth: .infinity, alignment: .leading)
 } else {
     ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 12) {
-            ForEach(appState.watchProgressList.prefix(10), id: \.movieId) { prog in continueWatchingCard(prog) }
+            ForEach(uniqueProgressList(), id: \.movieId) { prog in continueWatchingCard(prog) }
         }.padding(.horizontal, 20)
     }
 }
@@ -500,6 +500,14 @@ if !vm.trendingAnime.isEmpty {
         return "Sắp hết"
     }
     
+    func uniqueProgressList() -> [WatchProgress] {
+        var seen = Set<Int>()
+        return appState.watchProgressList.filter { prog in
+            if seen.contains(prog.movieId) { return false }
+            seen.insert(prog.movieId)
+            return true
+        }
+    }
     func uniqueGenres() -> [Genre] {
         var seen = Set<String>()
         return vm.genres.filter { genre in
