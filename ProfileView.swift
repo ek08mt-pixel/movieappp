@@ -13,10 +13,7 @@ struct ProfileView: View {
     // Settings - lưu thật
     @AppStorage("userTheme") private var userTheme: String = "dark"
     @AppStorage("seekSeconds") private var seekSeconds: Double = 10
-    @AppStorage("selectedQuality") private var selectedQuality = "FHD"
-    @AppStorage("useCellularData") private var useCellularData = true
     @AppStorage("sleepTimer") private var sleepTimer = "Tắt"
-    @AppStorage("lowDataWarning") private var lowDataWarning = false
     @State private var showClearCacheAlert = false
     @State private var showLanguage = false
     
@@ -24,26 +21,13 @@ struct ProfileView: View {
     @State private var activePopup: PopupType? = nil
     
     enum PopupType: Identifiable {
-        case info, terms, privacy, premium, device
+        case info, terms, privacy, device
         var id: Int { hashValue }
     }
     
     private let appVersion = "1.0"
     private let buildNumber = "1"
-    private let qualityOptions = ["Tự động", "FHD", "4K", "Cao nhất hỗ trợ"]
     private let sleepTimerOptions = ["Tắt", "15 phút", "30 phút", "45 phút", "60 phút", "90 phút"]
-    
-    // Device info
-    private var deviceName: String { UIDevice.current.name }
-    private var deviceModel: String { UIDevice.current.model }
-    private var systemVersion: String { UIDevice.current.systemVersion }
-    private var freeSpace: String {
-        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-           let free = attrs[.systemFreeSize] as? Int64 {
-            return ByteCountFormatter.string(fromByteCount: free, countStyle: .file)
-        }
-        return "N/A"
-    }
     
     var body: some View {
         NavigationStack {
@@ -52,9 +36,8 @@ struct ProfileView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // MARK: - Avatar + Tên + Danh hiệu
+                        // MARK: - Avatar + Tên
                         VStack(spacing: 14) {
-                            // Avatar
                             ZStack(alignment: .bottom) {
                                 if let data = appState.avatarImageData, let uiImage = UIImage(data: data) {
                                     Image(uiImage: uiImage)
@@ -85,7 +68,6 @@ struct ProfileView: View {
                                 .offset(y: 10)
                             }
                             
-                            // Tên
                             HStack(spacing: 6) {
                                 if isEditingName {
                                     HStack(spacing: 4) {
@@ -109,27 +91,70 @@ struct ProfileView: View {
                                     }
                                 }
                             }
-                            
-                            // Danh hiệu - căn giữa
-                            Button {
-                                AchievementManager.shared.refresh(from: appState)
-                                showAchievements = true
-                            } label: {
-                                let rank = AchievementManager.shared.userRankData.currentRank
-                                HStack(spacing: 5) {
-                                    Circle().fill(rank.color).frame(width: 7, height: 7)
-                                    Text(rank.shortName)
-                                        .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.85))
-                                    Text("Lv.\(AchievementManager.shared.userRankData.level)")
-                                        .font(.system(size: 11)).foregroundColor(.gray)
-                                    Image(systemName: "chevron.right").font(.system(size: 8)).foregroundColor(.gray)
-                                }
-                                .padding(.horizontal, 12).padding(.vertical, 5)
-                                .background(Capsule().fill(.white.opacity(0.06)))
-                                .overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.5))
-                            }
                         }
                         .padding(.top, 60)
+                        
+                        // MARK: - THỐNG KÊ
+                        VStack(spacing: 12) {
+                            // 4 ô thống kê - 2 hàng
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                                statsCard(value: formatWatchTime(), label: "Thời gian xem", trend: "+\(trendPercent())% so với tháng trước")
+                                statsCard(value: "\(appState.watchHistory.count)", label: "Phim đã xem")
+                                statsCard(value: "\(totalEpisodesWatched())", label: "Tập đã xem")
+                                statsCard(value: "\(streakDays())", label: "Ngày liên tiếp")
+                            }
+                            
+                            // Thể loại yêu thích
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Thể loại yêu thích")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                HStack(spacing: 20) {
+                                    // Vòng tròn thống kê
+                                    ZStack {
+                                        Circle()
+                                            .stroke(.white.opacity(0.1), lineWidth: 6)
+                                            .frame(width: 70, height: 70)
+                                        Circle()
+                                            .trim(from: 0, to: topGenrePercent())
+                                            .stroke(Color(hex: "#FF6B6B") ?? .red, lineWidth: 6)
+                                            .rotationEffect(.degrees(-90))
+                                            .frame(width: 70, height: 70)
+                                        VStack(spacing: 0) {
+                                            Text("\(Int(topGenrePercent() * 100))%")
+                                                .font(.system(size: 16, weight: .bold))
+                                                .foregroundColor(.white)
+                                            Text(topGenreName())
+                                                .font(.system(size: 9))
+                                                .foregroundColor(.gray)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ForEach(genreStats().prefix(3), id: \.name) { stat in
+                                            HStack(spacing: 6) {
+                                                Circle().fill(stat.color).frame(width: 6, height: 6)
+                                                Text(stat.name)
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.white.opacity(0.7))
+                                                Spacer()
+                                                Text("\(Int(stat.percent * 100))%")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity)
+                            .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.25)))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.06), lineWidth: 0.5))
+                            .padding(.horizontal, 20)
+                        }
                         
                         // MARK: - GIAO DIỆN
                         settingsSection(title: "GIAO DIỆN") {
@@ -140,41 +165,11 @@ struct ProfileView: View {
                             themeRow
                         }
                         
-                        // MARK: - ACCOUNT
-                        settingsSection(title: "ACCOUNT & ĐĂNG KÝ") {
-                            Button { activePopup = .premium } label: {
-                                settingRow(icon: "crown.fill", title: "Gói dịch vụ", trailing: "Premium", iconColor: .yellow)
-                            }
-                            Divider().background(Color.white.opacity(0.06)).padding(.leading, 44)
-                            Button { activePopup = .device } label: {
-                                settingRow(icon: "iphone.gen3", title: "Quản lý thiết bị", trailing: deviceName)
-                            }
-                        }
-                        
                         // MARK: - PHÁT LẠI
                         settingsSection(title: "PHÁT LẠI") {
                             seekRow
                             Divider().background(Color.white.opacity(0.06)).padding(.leading, 44)
                             sleepTimerRow
-                        }
-                        
-                        // MARK: - MẠNG VÀ DỮ LIỆU
-                        settingsSection(title: "MẠNG VÀ DỮ LIỆU") {
-                            qualityRow
-                            Divider().background(Color.white.opacity(0.06)).padding(.leading, 44)
-                            cellularRow
-                            Divider().background(Color.white.opacity(0.06)).padding(.leading, 44)
-                            lowDataRow
-                            Divider().background(Color.white.opacity(0.06)).padding(.leading, 44)
-                            Button { showClearCacheAlert = true } label: {
-                                HStack {
-                                    Image(systemName: "trash.fill").font(.system(size: 14)).foregroundColor(.red.opacity(0.7)).frame(width: 28)
-                                    Text("Xóa bộ nhớ đệm").font(.system(size: 15)).foregroundColor(.white)
-                                    Spacer()
-                                    Text(formatCacheSize()).font(.system(size: 13)).foregroundColor(.gray)
-                                }
-                                .padding(.horizontal, 16).padding(.vertical, 14)
-                            }
                         }
                         
                         // MARK: - THÔNG TIN
@@ -209,22 +204,16 @@ struct ProfileView: View {
                     }
                 }
                 
-                // Popup nhỏ
                 if activePopup != nil {
                     Color.black.opacity(0.5).ignoresSafeArea()
                         .onTapGesture { activePopup = nil }
                         .zIndex(1)
-                    
                     popupContent
                         .zIndex(2)
                 }
             }
             .sheet(isPresented: $showImagePicker) { ImagePicker(image: $inputImage) }
-            .sheet(isPresented: $showAuth) { SmartAuthView { email, password in
-                appState.smartLogin(email: email, password: password); showAuth = false
-            }}
             .sheet(isPresented: $showLanguage) { LanguageSelectionView() }
-            .fullScreenCover(isPresented: $showAchievements) { AchievementView() }
             .alert("Xóa bộ nhớ đệm?", isPresented: $showClearCacheAlert) {
                 Button("Hủy", role: .cancel) { }
                 Button("Xóa", role: .destructive) { clearCache() }
@@ -235,7 +224,87 @@ struct ProfileView: View {
                 }
             }
         }
-        .onAppear { AchievementManager.shared.refresh(from: appState) }
+    }
+    
+    // MARK: - Stats Functions
+    func statsCard(value: String, label: String, trend: String = "") -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(.gray)
+            if !trend.isEmpty {
+                Text(trend)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.green)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.25)))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.06), lineWidth: 0.5))
+    }
+    
+    func formatWatchTime() -> String {
+        let totalSeconds = appState.watchProgressList.reduce(0) { $0 + $1.currentTime }
+        let hours = totalSeconds / 3600
+        if hours >= 1 {
+            return String(format: "%.1f giờ", hours)
+        }
+        let minutes = totalSeconds / 60
+        return "\(Int(minutes)) phút"
+    }
+    
+    func trendPercent() -> Int {
+        let total = appState.watchProgressList.reduce(0) { $0 + $1.currentTime }
+        return max(1, Int(total / 60)) // % tăng so với tháng trước (đơn giản hóa)
+    }
+    
+    func totalEpisodesWatched() -> Int {
+        appState.watchProgressList.filter { $0.episode != nil }.count
+    }
+    
+    func streakDays() -> Int {
+        let dates = appState.watchHistory.compactMap { $0.releaseDate?.prefix(4) }
+        return max(1, Set(dates).count) // Đơn giản hóa - đếm ngày khác nhau
+    }
+    
+    func genreStats() -> [(name: String, percent: Double, color: Color)] {
+        var genreCount: [String: Int] = [:]
+        for movie in appState.watchHistory {
+            if let genres = movie.genreIds {
+                for g in genres {
+                    let name = genreName(g)
+                    genreCount[name, default: 0] += 1
+                }
+            }
+        }
+        let total = max(genreCount.values.reduce(0, +), 1)
+        let colors: [Color] = [Color(hex: "#FF6B6B") ?? .red, Color(hex: "#4D96FF") ?? .blue, Color(hex: "#6BCB77") ?? .green]
+        return genreCount.sorted { $0.value > $1.value }.prefix(3).enumerated().map { index, item in
+            (name: item.key, percent: Double(item.value) / Double(total), color: colors[index % colors.count])
+        }
+    }
+    
+    func topGenreName() -> String {
+        genreStats().first?.name ?? "Chưa có"
+    }
+    
+    func topGenrePercent() -> Double {
+        genreStats().first?.percent ?? 0
+    }
+    
+    func genreName(_ id: Int) -> String {
+        let map: [Int: String] = [
+            28: "Hành động", 12: "Phiêu lưu", 16: "Hoạt hình", 35: "Hài",
+            80: "Hình sự", 99: "Tài liệu", 18: "Chính kịch", 10751: "Gia đình",
+            14: "Giả tưởng", 36: "Lịch sử", 27: "Kinh dị", 10402: "Âm nhạc",
+            9648: "Bí ẩn", 10749: "Lãng mạn", 878: "Khoa học viễn tưởng", 10770: "TV Movie",
+            53: "Gây cấn", 10752: "Chiến tranh", 37: "Miền Tây"
+        ]
+        return map[id] ?? "Khác"
     }
     
     // MARK: - Popup Content
@@ -248,25 +317,14 @@ struct ProfileView: View {
             popupCard(title: "Điều khoản", content: termsText)
         case .privacy:
             popupCard(title: "Bảo mật", content: privacyText)
-        case .premium:
-            VStack(spacing: 16) {
-                Image(systemName: "crown.fill").font(.system(size: 40)).foregroundColor(.yellow)
-                Text("Premium").font(.title2).fontWeight(.bold).foregroundColor(.white)
-                Text("Tính năng đang được phát triển.\nHãy quay lại sau nhé!")
-                    .font(.system(size: 13)).foregroundColor(.gray).multilineTextAlignment(.center)
-            }
-            .padding(24).frame(width: 260)
-            .background(RoundedRectangle(cornerRadius: 20).fill(Color(white: 0.12)))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.1), lineWidth: 0.5))
         case .device:
             VStack(spacing: 14) {
                 Image(systemName: "iphone.gen3").font(.system(size: 36)).foregroundColor(.white.opacity(0.7))
                 Text("Thiết bị của bạn").font(.headline).foregroundColor(.white)
                 VStack(spacing: 6) {
-                    deviceInfoRow(label: "Tên máy", value: deviceName)
-                    deviceInfoRow(label: "Model", value: deviceModel)
-                    deviceInfoRow(label: "iOS", value: systemVersion)
-                    deviceInfoRow(label: "Dung lượng trống", value: freeSpace)
+                    deviceInfoRow(label: "Tên máy", value: UIDevice.current.name)
+                    deviceInfoRow(label: "Model", value: UIDevice.current.model)
+                    deviceInfoRow(label: "iOS", value: UIDevice.current.systemVersion)
                 }
             }
             .padding(24).frame(width: 280)
@@ -360,44 +418,6 @@ struct ProfileView: View {
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
     
-    var qualityRow: some View {
-        HStack {
-            Image(systemName: "tv").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
-            Text("Chất lượng video").font(.system(size: 15)).foregroundColor(.white)
-            Spacer()
-            Picker("", selection: $selectedQuality) {
-                ForEach(qualityOptions, id: \.self) { q in Text(q).tag(q) }
-            }
-            .pickerStyle(.menu).tint(.white)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-    }
-    
-    var cellularRow: some View {
-        HStack {
-            Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
-            Text("Sử dụng mạng di động").font(.system(size: 15)).foregroundColor(.white)
-            Spacer()
-           Toggle("", isOn: $useCellularData)
-    .toggleStyle(SwitchToggleStyle(tint: useCellularData ? .white.opacity(0.6) : .gray.opacity(0.35)))
-    .scaleEffect(0.85)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-    }
-    
-    var lowDataRow: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle").font(.system(size: 16)).foregroundColor(.white.opacity(0.6)).frame(width: 28)
-            Text("Cảnh báo dữ liệu thấp").font(.system(size: 15)).foregroundColor(.white)
-            Spacer()
-            Toggle("", isOn: $lowDataWarning)
-    .toggleStyle(SwitchToggleStyle(tint: lowDataWarning ? .white.opacity(0.6) : .gray.opacity(0.35)))
-    .scaleEffect(0.85)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-    }
-    
-    func formatCacheSize() -> String { "0 KB" }
     func clearCache() {
         URLCache.shared.removeAllCachedResponses()
         ImageCache.shared.clearCache()
