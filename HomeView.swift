@@ -265,7 +265,8 @@ if !vm.trendingAnime.isEmpty {
                         SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
                         SectionGrid(title: "Hàn Quốc", movies: vm.korean)
                         SectionGrid(title: "Nhật Bản", movies: vm.japanese)
-                        SectionGrid(title: "Việt Nam", movies: vm.vietnamese)
+                        SectionGrid(title: "Phim lẻ mới", movies: vm.newMovies)
+SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
                         SectionGrid(title: "Hoạt hình - Anime", movies: vm.anime)
                         Spacer().frame(height: 120)
                     }
