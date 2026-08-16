@@ -40,29 +40,56 @@ enum SubBackgroundStyle: String, CaseIterable {
 }
 
 struct MoviePlayerView: View {
-    let movieId: Int; let movieTitle: String
-    var mediaType: String?; @State var seasonNumber: Int?; @State var episodeNumber: Int?; var posterURL: URL?
+    let movieId: Int
+    let movieTitle: String
+    var mediaType: String?
+    @State var seasonNumber: Int?
+    @State var episodeNumber: Int?
+    var posterURL: URL?
     var resumeTime: Double = 0
     var initialSource: MovieSource = .phimapi
     @State var directURL: URL? = nil
-    @AppStorage("seekSeconds") var seekSeconds: Double = 10
-    @Environment(\.dismiss) var dismiss; @EnvironmentObject var appState: AppState
-    @State private var player = AVPlayer(); @State private var isLoading = true; @State private var errorMessage: String?
-    @State private var selectedSource: MovieSource = .phimapi; @State private var sourceStatus: [MovieSource: Bool] = [:]
-    @State private var showSourceMenu = false; @State private var showSettings = false; @State private var showControls = true
-    @State private var currentTime: Double = 0; @State private var duration: Double = 1; @State private var isSeeking = false
-    @State private var controlsTimer: Timer?; @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
-    @State private var brightness: CGFloat = UIScreen.main.brightness; @State private var showVolumeSlider = false; @State private var showBrightnessSlider = false
-    @State private var volumeTimer: Timer?; @State private var brightnessTimer: Timer?; @State private var pipController: AVPictureInPictureController?
-    @State private var showOverlay = false; @State private var overlayOffset: CGFloat = UIScreen.main.bounds.height
-    @State private var similarMovies: [Movie] = []; @State private var seasons: [TVSeason] = []
-    @State private var selectedSeasonDetail: TVSeasonDetail?; @State private var selectedSeasonNumber: Int?
-    @State private var currentMovie: Movie?; @State private var collectionMovies: [Movie] = []; @State private var selectedMovie: Movie?
-    @State private var showNguonCWebView = false; @State private var nguonCEmbedURL: URL?; @State private var nguonCEpisodeName = ""
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
+    @State private var player = AVPlayer()
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var selectedSource: MovieSource = .phimapi
+    @State private var sourceStatus: [MovieSource: Bool] = [:]
+    @State private var showSourceMenu = false
+    @State private var showSettings = false
+    @State private var showControls = true
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 1
+    @State private var isSeeking = false
+    @State private var controlsTimer: Timer?
+    @State private var volume: Float = AVAudioSession.sharedInstance().outputVolume
+    @State private var brightness: CGFloat = UIScreen.main.brightness
+    @State private var showVolumeSlider = false
+    @State private var showBrightnessSlider = false
+    @State private var volumeTimer: Timer?
+    @State private var brightnessTimer: Timer?
+    @State private var pipController: AVPictureInPictureController?
+    @State private var showOverlay = false
+    @State private var overlayOffset: CGFloat = UIScreen.main.bounds.height
+    @State private var similarMovies: [Movie] = []
+    @State private var seasons: [TVSeason] = []
+    @State private var selectedSeasonDetail: TVSeasonDetail?
+    @State private var selectedSeasonNumber: Int?
+    @State private var currentMovie: Movie?
+    @State private var collectionMovies: [Movie] = []
+    @State private var selectedMovie: Movie?
+    @State private var showNguonCWebView = false
+    @State private var nguonCEmbedURL: URL?
+    @State private var nguonCEpisodeName = ""
     @State private var nguonCServers: [(String, URL)] = []
-    @State private var imdbIDCache: String?; @State private var hasStartedPlaying = false; @State private var didResume = false
+    @State private var imdbIDCache: String?
+    @State private var hasStartedPlaying = false
+    @State private var didResume = false
     @State private var isScreenLocked = false
-    @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
+    @State private var showAudioPopup = false
+    @State private var autoNextTriggered = false
+    @State private var showNextEpisodePopup = false
     @State private var showSpeedPopup = false
     @StateObject private var subManager = SubtitleManager.shared
     @State private var showSubPopup = false
@@ -78,9 +105,13 @@ struct MoviePlayerView: View {
     @State private var selectedServerIndex: Int = UserDefaults.standard.integer(forKey: "lastAudioIndex_\(0)")
     @State private var selectedAudioLabel: String = UserDefaults.standard.string(forKey: "lastAudioLabel_\(0)") ?? "Original"
     @State private var selectedVideoGravity: VideoGravityMode = .fit
-    @State private var selectedQuality: String = "Auto"; @State private var currentStreamURL: URL?; @State private var availableQualities: [String] = ["4K", "2880p", "2160p", "1440p", "1080p", "720p", "480p"]
-    @State private var showCastSheet = false; @State private var showRemoteControl = false
-    @State private var castDeviceName: String = ""; @State private var isCasting = false
+    @State private var selectedQuality: String = "Auto"
+    @State private var currentStreamURL: URL?
+    @State private var availableQualities: [String] = ["4K", "2880p", "2160p", "1440p", "1080p", "720p", "480p"]
+    @State private var showCastSheet = false
+    @State private var showRemoteControl = false
+    @State private var castDeviceName: String = ""
+    @State private var isCasting = false
     @State private var showEpisodePopup = false
     @State private var showSeekPreview = false
     @State private var seekPreviewImage: UIImage?
