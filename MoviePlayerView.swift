@@ -539,6 +539,7 @@ func tryResume() {
             player.play()
         }
     }
+}
     func fetchIMDB() async throws -> String { if let c = imdbIDCache { return c }; var id: String?; if mediaType == "tv" || seasonNumber != nil { id = try? await APIService.shared.fetchExternalIDs(tvId: movieId) }; if id == nil || id?.isEmpty == true { let (data, _) = try await URLSession.shared.data(from: URL(string: "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b")!); struct E: Codable { let imdb_id: String? }; id = try? JSONDecoder().decode(E.self, from: data).imdb_id }; guard let f = id, !f.isEmpty else { throw StreamError.noStreamAvailable }; imdbIDCache = f; return f }
     func saveProgress() {
         let actualTime = player.currentTime().seconds
