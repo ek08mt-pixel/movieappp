@@ -63,6 +63,7 @@ struct MoviePlayerView: View {
     @State private var imdbIDCache: String?; @State private var hasStartedPlaying = false; @State private var didResume = false
     @State private var isScreenLocked = false
     @State private var showAudioPopup = false; @State private var autoNextTriggered = false; @State private var showNextEpisodePopup = false
+    @State private var showSpeedPopup = false
     @StateObject private var subManager = SubtitleManager.shared
     @State private var showSubPopup = false
     @State private var engSubAdded = false
@@ -254,6 +255,11 @@ selectedSource = initialSource
                             Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
                             Button { cycleAspect() } label: { Image(systemName: selectedVideoGravity.icon).font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
                             Button { showAudioPopup = true } label: { Image(systemName: "waveform").font(.system(size: 17)).foregroundColor(.white.opacity(0.9)) }
+                            Button { showSpeedPopup = true } label: { 
+        Text(speedLabel)
+            .font(.system(size: 17, weight: .bold))
+            .foregroundColor(.white.opacity(0.9))
+    }
                         }.padding(.horizontal, 14).padding(.vertical, 7).padding(.leading, 8).background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.6))).overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.1), lineWidth: 0.3))
                         Spacer()
                     }.padding(.horizontal, 24).padding(.bottom, UIScreen.main.bounds.height * 0.06)
@@ -300,8 +306,9 @@ selectedSource = initialSource
             }
             if showNextEpisodePopup { }
             if showOverlay { youtubeOverlay }
-            if showSourceMenu || showSettings || showAudioPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
+            if showSourceMenu || showSettings || showAudioPopup || showSpeedPopup { Color.black.opacity(0.3).ignoresSafeArea().onTapGesture { showSourceMenu = false; showSettings = false; showAudioPopup = false }; if showSourceMenu { sourcePopup }; if showSettings { settingsPopup }; if showAudioPopup { audioPopup } }
             if showSubPopup { subSettingsPopup }
+            if showSpeedPopup { speedPopup }
         }
         .statusBarHidden()
         .task { if directURL == nil { loadStream() } }
@@ -384,6 +391,38 @@ case .nguonc: let (url, servers) = try await withCheckedThrowingContinuation { c
         } 
     }.padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95))).overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 260) 
 }
+    var speedLabel: String {
+        switch player.rate {
+        case 0.5: return "0.5x"
+        case 1.5: return "1.5x"
+        case 2.0: return "2x"
+        default: return "1x"
+        }
+    }
+
+    var speedPopup: some View {
+        VStack(spacing: 8) {
+            Text("Tốc độ").font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+            ForEach(["0.5x", "1x", "1.5x", "2x"], id: \.self) { s in
+                Button {
+                    player.rate = Float(s.replacingOccurrences(of: "x", with: "")) ?? 1.0
+                    showSpeedPopup = false
+                } label: {
+                    Text(s)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(player.rate == (Float(s.replacingOccurrences(of: "x", with: "")) ?? 1.0) ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(player.rate == (Float(s.replacingOccurrences(of: "x", with: "")) ?? 1.0) ? .white : .white.opacity(0.1)))
+                }
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial.opacity(0.95)))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 0.4))
+        .frame(width: 160)
+    }
+
     func audioOptions() -> [String] { 
     if selectedSource == .phimapi && !phimapiServers.isEmpty { return phimapiServers }
     return ["Vietsub", "Lồng Tiếng", "Thuyết minh"] 
