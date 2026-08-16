@@ -4,9 +4,16 @@ import MediaPlayer
 import WebKit
 
 enum StreamError: Error, LocalizedError {
-    case noStreamAvailable, wrongEpisode
+    case noStreamAvailable
+    case wrongEpisode
+    
     var errorDescription: String? {
-        switch self { case .noStreamAvailable: return "Không tìm thấy link"; case .wrongEpisode: return "Không tìm thấy tập này" }
+        switch self {
+        case .noStreamAvailable:
+            return "Không tìm thấy link"
+        case .wrongEpisode:
+            return "Không tìm thấy tập này"
+        }
     }
 }
 
@@ -1027,7 +1034,7 @@ func removeExternalSubtitle() {
 func applySubOffset() {
     subManager.saveOffset(movieId: movieId, season: seasonNumber, episode: episodeNumber, offset: subManager.currentOffset)
 }
-
+}
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
     let player: AVPlayer; @Environment(\.dismiss) var dismiss
