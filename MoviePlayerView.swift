@@ -49,6 +49,7 @@ struct MoviePlayerView: View {
     var resumeTime: Double = 0
     var initialSource: MovieSource = .phimapi
     @State var directURL: URL? = nil
+    @AppStorage("seekSeconds") var seekSeconds: Double = 10
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @State private var player = AVPlayer()
