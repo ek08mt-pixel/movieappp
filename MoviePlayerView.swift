@@ -295,8 +295,61 @@ selectedSource = initialSource
                         Spacer()
                     }.padding(.horizontal, 24).padding(.bottom, UIScreen.main.bounds.height * 0.06)
                 }
-                VStack { HStack(spacing: 8) { Button { saveProgress(); dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).padding(10).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showEpisodePopup = true } label: { VStack(alignment: .leading, spacing: 0) { Text(movieTitle).font(.system(size: 14, weight: .medium)).foregroundColor(.white).lineLimit(1); if !episodeInfo.isEmpty { Text(episodeInfo).font(.system(size: 10)).foregroundColor(.white.opacity(0.5)) } } }; Spacer()
-                    HStack(spacing: 8) { Button { showCastSheet = true } label: { Image(systemName: "airplayvideo").font(.system(size: 14)).foregroundColor(isCasting ? .blue : .white.opacity(0.8)).padding(8).background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25)))).overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSubPopup = true } label: { Text("EN").font(.system(size: 10, weight: .bold)).foregroundColor(engSubAdded ? .yellow : .white.opacity(0.6)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(engSubAdded ? Color.yellow.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5)) }; Button { showSettings = true } label: { Image(systemName: "gearshape.fill").font(.system(size: 14)).foregroundColor(.white.opacity(0.8)).padding(8).background(Circle().fill(.ultraThinMaterial.opacity(0.25))).overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5)) } } }.padding(.horizontal, 12).padding(.top, 56); Spacer() }
+                VStack { 
+    HStack(spacing: 8) { 
+        Button { saveProgress(); dismiss() } label: { 
+            Image(systemName: "chevron.left")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(10)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
+                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        }
+        Button { showEpisodePopup = true } label: { 
+            VStack(alignment: .leading, spacing: 0) { 
+                Text(movieTitle)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                if !episodeInfo.isEmpty { 
+                    Text(episodeInfo)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.5))
+                } 
+            } 
+        }
+        Spacer()
+        HStack(spacing: 8) { 
+            Button { showCastSheet = true } label: { 
+                Image(systemName: "airplayvideo")
+                    .font(.system(size: 14))
+                    .foregroundColor(isCasting ? .blue : .white.opacity(0.8))
+                    .padding(8)
+                    .background(Circle().fill(isCasting ? AnyShapeStyle(Color.blue.opacity(0.3)) : AnyShapeStyle(.ultraThinMaterial.opacity(0.25))))
+                    .overlay(Circle().stroke(isCasting ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5))
+            }
+            Button { showSubPopup = true } label: { 
+                Text("EN")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(engSubAdded ? .yellow : .white.opacity(0.6))
+                    .padding(8)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
+                    .overlay(Circle().stroke(engSubAdded ? Color.yellow.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 0.5))
+            }
+            Button { showSettings = true } label: { 
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(8)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.25)))
+                    .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+            } 
+        } 
+    }  // ← Đóng HStack
+    .padding(.horizontal, 12)
+    .padding(.top, 56)
+    Spacer() 
+}  // ← Đóng VStack
                 if isCasting { VStack { Spacer(); HStack { Spacer(); HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 6, height: 6); Text("Đang phát trên \(castDeviceName)").font(.system(size: 10)).foregroundColor(.white.opacity(0.7)) }.padding(.horizontal, 12).padding(.vertical, 6).background(Capsule().fill(.ultraThinMaterial.opacity(0.5))).padding(.trailing, 20).padding(.bottom, 100) } } }
             }
             if showEpisodePopup {
