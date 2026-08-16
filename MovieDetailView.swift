@@ -200,7 +200,7 @@ struct MovieDetailView: View {
                         if !vm.collectionMovies.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Cùng series").font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                ScrollView(.horizontal) {
+                                ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(vm.collectionMovies.filter { $0.id != movie.id }) { part in
                                             NavigationLink(destination: MovieDetailView(movie: part)) {
@@ -413,7 +413,7 @@ struct MovieDetailView: View {
                         
                         if !vm.actors.isEmpty {
                             Text("Diễn viên").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal) {
+                            ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(vm.actors.prefix(15)) { a in
                                         NavigationLink(destination: ActorDetailView(actor: a)) {
@@ -432,7 +432,7 @@ struct MovieDetailView: View {
                         
                         if !vm.similar.isEmpty {
                             Text("Phim tương tự").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
-                            ScrollView(.horizontal) {
+                            ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(vm.similar.prefix(12)) { m in
                                         NavigationLink(destination: MovieDetailView(movie: m)) {
