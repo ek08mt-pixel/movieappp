@@ -587,9 +587,8 @@ struct SectionGrid: View {
                                         // Poster ngang từ backdrop
                                         if let backdrop = movie.backdropURL {
                                             CachedAsyncImage(url: backdrop, size: .backdrop)
-                                                .aspectRatio(contentMode: .fill)
+                                                .aspectRatio(16/9, contentMode: .fill)
                                                 .frame(width: 200, height: 112)
-                                                .clipped()
                                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                                 .shadow(color: .black.opacity(0.3), radius: 3)
                                     
@@ -632,15 +631,11 @@ struct SectionGrid: View {
                             ForEach(movies.prefix(8)) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                     VStack(alignment: .leading, spacing: 6) {
-                                        ZStack(alignment: .center) {
-                                            CachedAsyncImage(url: movie.posterURL)
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 115, height: 172)
-                                                .clipped()
-                                        }
-                                        .frame(width: 115, height: 172)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .shadow(color: .black.opacity(0.3), radius: 3)
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .aspectRatio(2/3, contentMode: .fill)
+                                            .frame(width: 115, height: 172)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            .shadow(color: .black.opacity(0.3), radius: 3)
                                         Text(movie.title)
                                             .font(.system(size: 10))
                                             .fontWeight(.semibold)
