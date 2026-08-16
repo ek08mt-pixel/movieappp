@@ -436,6 +436,7 @@ selectedSource = initialSource
     imdbIDCache = nil
     autoNextTriggered = false
     showNextEpisodePopup = false
+    didResume = false
     if mediaType == "tv" || s != nil { 
         selectedSeasonNumber = s
         Task { 
@@ -499,7 +500,14 @@ selectedSource = initialSource
                     currentStreamURL = url
                     selectedQuality = detectQuality(from: url)
                     player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                    player.play()
+                    if let rt = resumeAt { 
+                        let seekTime = CMTime(seconds: rt, preferredTimescale: 600)
+                        player.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in 
+                            player.play() 
+                        }
+                    } else { 
+                        player.play() 
+                    }
                     hasStartedPlaying = true
                     sourceStatus[.vsmov] = true
                     isLoading = false
