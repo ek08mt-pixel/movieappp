@@ -98,10 +98,12 @@ struct ProfileView: View {
                         VStack(spacing: 12) {
                             // 4 ô thống kê - 2 hàng
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                                statsCard(value: formatWatchTime(), label: "Thời gian xem", trend: "+\(trendPercent())% so với tháng trước")
+                                statsCard(value: formatWatchTime(), label: "Thời gian xem", trend: "+\(trendPercent())%")
                                 statsCard(value: "\(appState.watchHistory.count)", label: "Phim đã xem")
                                 statsCard(value: "\(totalEpisodesWatched())", label: "Tập đã xem")
                                 statsCard(value: "\(streakDays())", label: "Ngày liên tiếp")
+                            }
+                            .padding(.horizontal, 20)
                             }
                             
                             // Thể loại yêu thích
@@ -228,20 +230,25 @@ struct ProfileView: View {
     
     // MARK: - Stats Functions
     func statsCard(value: String, label: String, trend: String = "") -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(value)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 18, weight: .bold))
                 .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .foregroundColor(.gray)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             if !trend.isEmpty {
                 Text(trend)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.green)
+                    .lineLimit(1)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial.opacity(0.25)))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.06), lineWidth: 0.5))
