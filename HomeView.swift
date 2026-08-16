@@ -22,6 +22,7 @@ struct HomeView: View {
     
     @State private var showContinueDetail = false
     @State private var detailMovie: Movie?
+    @State private var backdropCache: [Int: URL] = [:]
     
     var body: some View {
         NavigationStack {
@@ -404,18 +405,19 @@ if !vm.trendingAnime.isEmpty {
     func continueWatchingCard(_ prog: WatchProgress) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .center) {
-                if let backdrop = backdropURL(for: prog.movieId) {
-                    CachedAsyncImage(url: backdrop, size: .backdrop)
+                if let backdrop = backdropCache[prog.movieId] {
+                    CachedAsyncImage(url: backdrop)
                         .aspectRatio(16/9, contentMode: .fill)
                         .frame(width: 200, height: 112)
-                        .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
-                        .aspectRatio(contentMode: .fill)
+                        .aspectRatio(16/9, contentMode: .fill)
                         .frame(width: 200, height: 112)
-                        .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .onAppear {
+                            Task { await fetchBackdrop(for: prog) }
+                        }
                 }
                 
                 Image(systemName: "play.circle.fill")
@@ -517,6 +519,17 @@ if !vm.trendingAnime.isEmpty {
             if seen.contains(prog.movieId) { return false }
             seen.insert(prog.movieId)
             return true
+        }
+    }
+    func fetchBackdrop(for prog: WatchProgress) async {
+        guard backdropCache[prog.movieId] == nil else { return }
+        if let detail = try? await APIService.shared.movieDetail(movieId: prog.movieId) {
+            if let backdropPath = detail.backdropPath {
+                let url = URL(string: "https://image.tmdb.org/t/p/w500\(backdropPath)")
+                await MainActor.run {
+                    backdropCache[prog.movieId] = url
+                }
+            }
         }
     }
     func backdropURL(for movieId: Int) -> URL? {
