@@ -229,12 +229,13 @@ player.replaceCurrentItem(with: nil)
             Capsule().fill(.white.opacity(0.15)).frame(height: 5)
             Capsule().fill(.white.opacity(0.8)).frame(width: max(5, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5)
             
-            // Thumb tròn
-            Circle()
+            // Thumb chữ nhật bo tròn
+            RoundedRectangle(cornerRadius: 10)
                 .fill(.white)
-                .frame(width: 14, height: 14)
+                .frame(width: 22, height: 22)
                 .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
-                .offset(x: max(0, min(geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 7, geo.size.width - 14)))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 0.5))
+                .offset(x: max(0, min(geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 10, geo.size.width - 20)))
         }
         .frame(height: 20)
         .contentShape(Rectangle())
