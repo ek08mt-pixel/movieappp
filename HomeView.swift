@@ -646,7 +646,6 @@ struct SectionGrid: View {
                             }
                         }
                         .padding(.horizontal, 20)
-                        .drawingGroup()
                     }
                 }
             }
