@@ -627,7 +627,7 @@ struct SectionGrid: View {
                 } else {
                     // Style poster dọc cho các hàng khác
                     ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 14) {
+                        LazyHStack(alignment: .top, spacing: 14) {
                             ForEach(movies.prefix(8)) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie, showBooking: showBooking)) {
                                     VStack(alignment: .leading, spacing: 6) {
@@ -641,7 +641,7 @@ struct SectionGrid: View {
                                             .fontWeight(.semibold)
                                             .foregroundColor(.white)
                                             .lineLimit(2)
-                                            .frame(width: 115, alignment: .leading)
+                                            .frame(width: 115, height: 26, alignment: .topLeading)
                                     }
                                 }
                             }
