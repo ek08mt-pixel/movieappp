@@ -408,15 +408,16 @@ selectedSource = initialSource
     if showAudioPopup { audioPopup }
     if showSpeedPopup { speedPopup }
 }
-        .statusBarHidden()
-        .task { if directURL == nil { loadStream() } }
-        .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
-        .fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName, servers: nguonCServers) } }
-        .fullScreenCover(isPresented: $showRemoteControl) { CastRemoteView(movieTitle: movieTitle, episodeInfo: episodeInfo, posterURL: posterURL, castDeviceName: castDeviceName, player: player, currentTime: $currentTime, duration: $duration, isCasting: $isCasting) }
-        .sheet(isPresented: $showCastSheet) { CastSheetView(showRemote: $showRemoteControl, castDeviceName: $castDeviceName, isCasting: $isCasting, player: player).presentationDetents([.medium, .large]).presentationDragIndicator(.hidden) }.onChange(of: showNguonCWebView) { newValue in
+}  // ← THÊM DẤU NÀY ĐỂ ĐÓNG ZSTACK
+.statusBarHidden()
+.task { if directURL == nil { loadStream() } }
+.fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
+.fullScreenCover(isPresented: $showNguonCWebView) { if let url = nguonCEmbedURL { NguonCPlayerView(embedURL: url, episodeName: nguonCEpisodeName, servers: nguonCServers) } }
+.fullScreenCover(isPresented: $showRemoteControl) { CastRemoteView(movieTitle: movieTitle, episodeInfo: episodeInfo, posterURL: posterURL, castDeviceName: castDeviceName, player: player, currentTime: $currentTime, duration: $duration, isCasting: $isCasting) }
+.sheet(isPresented: $showCastSheet) { CastSheetView(showRemote: $showRemoteControl, castDeviceName: $castDeviceName, isCasting: $isCasting, player: player).presentationDetents([.medium, .large]).presentationDragIndicator(.hidden) }.onChange(of: showNguonCWebView) { newValue in
     if !newValue { dismiss() }
 }
-    }
+}  // ← Đóng body
 
     func forceLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
     func forcePortraitWithDelay() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }; DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } } }
