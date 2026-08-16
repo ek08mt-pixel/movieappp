@@ -404,16 +404,17 @@ if !vm.trendingAnime.isEmpty {
     func continueWatchingCard(_ prog: WatchProgress) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .center) {
-                if let movie = appState.watchHistory.first(where: { $0.id == prog.movieId }),
-                   let backdrop = movie.backdropURL {
+                if let backdrop = backdropURL(for: prog.movieId) {
                     CachedAsyncImage(url: backdrop, size: .backdrop)
                         .aspectRatio(16/9, contentMode: .fill)
                         .frame(width: 200, height: 112)
+                        .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
-                        .aspectRatio(16/9, contentMode: .fill)
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: 200, height: 112)
+                        .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 
@@ -517,6 +518,12 @@ if !vm.trendingAnime.isEmpty {
             seen.insert(prog.movieId)
             return true
         }
+    }
+    func backdropURL(for movieId: Int) -> URL? {
+        if let movie = appState.watchHistory.first(where: { $0.id == movieId }), let backdrop = movie.backdropURL {
+            return backdrop
+        }
+        return nil
     }
     func uniqueGenres() -> [Genre] {
         var seen = Set<String>()
