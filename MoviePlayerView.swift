@@ -228,11 +228,22 @@ player.replaceCurrentItem(with: nil)
         ZStack(alignment: .leading) {
             Capsule().fill(.white.opacity(0.15)).frame(height: 5)
             Capsule().fill(.white.opacity(0.8)).frame(width: max(5, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5)
-        }.frame(height: 20).contentShape(Rectangle()).highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in
+            
+            // Thumb tròn
+            Circle()
+                .fill(.white)
+                .frame(width: 14, height: 14)
+                .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
+                .offset(x: max(0, min(geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 7, geo.size.width - 14)))
+        }
+        .frame(height: 20)
+        .contentShape(Rectangle())
+        .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in
             let r = min(max(v.location.x / geo.size.width, 0), 1)
             currentTime = r * duration; isSeeking = true; seekPreviewTime = currentTime; showSeekPreview = true
         }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false; showSeekPreview = false })
-    }.frame(height: 20)
+    }
+    .frame(height: 20)
     HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
 }.padding(.horizontal, UIScreen.main.bounds.width * 0.15)
                     HStack(spacing: 0) {
