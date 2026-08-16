@@ -20,6 +20,8 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var trendingAnime: [Movie] = []
     @Published var similarMovies: [Movie] = []
+    @Published var newMovies: [Movie] = []      // Phim lẻ mới hot
+    @Published var usukIcons: [Movie] = []      // USUK iconic
     
     init() {
         Task { await loadAll() }
@@ -80,7 +82,10 @@ class HomeViewModel: ObservableObject {
                 if let a = a { self.anime = a }
             }
         }
-        
+        Task {
+            await loadNewMovies()
+            await loadUSUKIcons()
+        }
         onThisDayMovie = await loadOnThisDay()
         isLoading = false
     }
@@ -181,7 +186,70 @@ class HomeViewModel: ObservableObject {
             }
         } catch { return [] }
     }
+    func loadNewMovies() async {
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=50&primary_release_date.gte=2024-01-01&page=1"
+        guard let url = URL(string: urlString) else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Resp: Codable { let results: [MovieResult] }
+            struct MovieResult: Codable {
+                let id: Int; let title: String?; let overview: String
+                let poster_path: String?; let backdrop_path: String?
+                let vote_average: Double; let release_date: String?
+                let genre_ids: [Int]?; let popularity: Double?
+                let vote_count: Int?; let original_language: String?
+            }
+            let response = try JSONDecoder().decode(Resp.self, from: data)
+            newMovies = response.results.map { m in
+                Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
+                      posterPath: m.poster_path, backdropPath: m.backdrop_path,
+                      voteAverage: m.vote_average, releaseDate: m.release_date,
+                      genreIds: m.genre_ids, originalTitle: m.title,
+                      popularity: m.popularity, voteCount: m.vote_count,
+                      adult: false, originalLanguage: m.original_language, mediaType: "movie")
+            }
+        } catch { print("New movies error: \(error)") }
+    }
     
+    func loadUSUKIcons() async {
+        let iconIDs = [162, 350, 4951, 152, 8392, 14, 550, 13, 6479, 1637] // Mean Girls, Devil Wears Prada, 10 Things, v.v
+        var movies: [Movie] = []
+        for id in iconIDs {
+            if let detail = try? await APIService.shared.movieDetail(movieId: id) {
+                let movie = Movie(id: detail.id ?? id, title: detail.title ?? "", overview: detail.overview ?? "",
+                                  posterPath: detail.posterPath, backdropPath: detail.backdropPath,
+                                  voteAverage: detail.voteAverage ?? 0, releaseDate: detail.releaseDate,
+                                  genreIds: detail.genres?.map { $0.id }, originalTitle: detail.originalTitle,
+                                  popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: "movie")
+                movies.append(movie)
+            }
+        }
+        usukIcons = movies
+    }
+    func loadUSUKIcons() async {
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&sort_by=popularity.desc&with_original_language=en&vote_count.gte=100&vote_average.gte=7&with_genres=35,18,10749&page=1"
+        guard let url = URL(string: urlString) else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Resp: Codable { let results: [MovieResult] }
+            struct MovieResult: Codable {
+                let id: Int; let title: String?; let overview: String
+                let poster_path: String?; let backdrop_path: String?
+                let vote_average: Double; let release_date: String?
+                let genre_ids: [Int]?; let popularity: Double?
+                let vote_count: Int?; let original_language: String?
+            }
+            let response = try JSONDecoder().decode(Resp.self, from: data)
+            usukIcons = response.results.map { m in
+                Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
+                      posterPath: m.poster_path, backdropPath: m.backdrop_path,
+                      voteAverage: m.vote_average, releaseDate: m.release_date,
+                      genreIds: m.genre_ids, originalTitle: m.title,
+                      popularity: m.popularity, voteCount: m.vote_count,
+                      adult: false, originalLanguage: m.original_language, mediaType: "movie")
+            }
+        } catch { print("USUK Icons error: \(error)") }
+    }
     func loadSimilarForLastWatched(movieId: Int, mediaType: String?) async {
         similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []
     }
