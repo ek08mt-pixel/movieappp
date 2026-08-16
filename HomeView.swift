@@ -523,11 +523,24 @@ if !vm.trendingAnime.isEmpty {
     }
     func fetchBackdrop(for prog: WatchProgress) async {
         guard backdropCache[prog.movieId] == nil else { return }
-        if let detail = try? await APIService.shared.movieDetail(movieId: prog.movieId) {
-            if let backdropPath = detail.backdropPath {
-                let url = URL(string: "https://image.tmdb.org/t/p/w500\(backdropPath)")
-                await MainActor.run {
-                    backdropCache[prog.movieId] = url
+        if prog.mediaType == "tv" {
+            // TV Show - dùng TV endpoint
+            let urlString = "https://api.themoviedb.org/3/tv/\(prog.movieId)?api_key=b6be36c1c5788565fec6a24811e7cc9b"
+            if let url = URL(string: urlString), let (data, _) = try? await URLSession.shared.data(from: url) {
+                struct TVDetail: Codable { let backdrop_path: String? }
+                if let detail = try? JSONDecoder().decode(TVDetail.self, from: data), let path = detail.backdrop_path {
+                    await MainActor.run {
+                        backdropCache[prog.movieId] = URL(string: "https://image.tmdb.org/t/p/w500\(path)")
+                    }
+                }
+            }
+        } else {
+            if let detail = try? await APIService.shared.movieDetail(movieId: prog.movieId) {
+                if let backdropPath = detail.backdropPath {
+                    let url = URL(string: "https://image.tmdb.org/t/p/w500\(backdropPath)")
+                    await MainActor.run {
+                        backdropCache[prog.movieId] = url
+                    }
                 }
             }
         }
