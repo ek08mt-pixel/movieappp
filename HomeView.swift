@@ -404,10 +404,18 @@ if !vm.trendingAnime.isEmpty {
     func continueWatchingCard(_ prog: WatchProgress) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .center) {
-                CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
-                    .aspectRatio(16/9, contentMode: .fill)
-                    .frame(width: 200, height: 112)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                if let movie = appState.watchHistory.first(where: { $0.id == prog.movieId }),
+                   let backdrop = movie.backdropURL {
+                    CachedAsyncImage(url: backdrop, size: .backdrop)
+                        .aspectRatio(16/9, contentMode: .fill)
+                        .frame(width: 200, height: 112)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else {
+                    CachedAsyncImage(url: URL(string: prog.posterPath ?? ""))
+                        .aspectRatio(16/9, contentMode: .fill)
+                        .frame(width: 200, height: 112)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
                 
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 32))
