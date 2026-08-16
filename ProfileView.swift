@@ -104,7 +104,6 @@ struct ProfileView: View {
                                 statsCard(value: "\(streakDays())", label: "Ngày liên tiếp")
                             }
                             .padding(.horizontal, 20)
-                            }
                             
                             // Thể loại yêu thích
                             VStack(alignment: .leading, spacing: 12) {
