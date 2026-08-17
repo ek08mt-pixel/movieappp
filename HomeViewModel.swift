@@ -138,8 +138,10 @@ class HomeViewModel: ObservableObject {
     }
     
     private func loadTrendingTVPages() async -> [Movie] {
-        let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=1"
-        guard let url = URL(string: urlString) else { return [] }
+    var all: [Movie] = []
+    for page in 1...10 {
+        let urlString = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=\(page)"
+        guard let url = URL(string: urlString) else { break }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct TVResponse: Codable { let results: [TVResult] }
@@ -151,7 +153,7 @@ class HomeViewModel: ObservableObject {
                 let vote_count: Int?; let original_language: String?
             }
             let response = try JSONDecoder().decode(TVResponse.self, from: data)
-            return response.results.map { tv in
+            let results = response.results.map { tv in
                 Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
                       posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
                       voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
@@ -159,12 +161,18 @@ class HomeViewModel: ObservableObject {
                       popularity: tv.popularity, voteCount: tv.vote_count,
                       adult: false, originalLanguage: tv.original_language, mediaType: "tv")
             }
-        } catch { return [] }
+            all.append(contentsOf: results)
+            if results.count < 20 { break }
+        } catch { break }
     }
+    return all
+}
     
     private func loadTrendingAnime() async -> [Movie] {
-        let urlString = "https://api.themoviedb.org/3/discover/tv?api_key=b6be36c1c5788565fec6a24811e7cc9b&with_genres=16&sort_by=popularity.desc&language=vi-VN&page=1&vote_count.gte=30&first_air_date.gte=2024-01-01"
-        guard let url = URL(string: urlString) else { return [] }
+    var all: [Movie] = []
+    for page in 1...10 {
+        let urlString = "https://api.themoviedb.org/3/discover/tv?api_key=b6be36c1c5788565fec6a24811e7cc9b&with_genres=16&sort_by=popularity.desc&language=vi-VN&page=\(page)&vote_count.gte=30"
+        guard let url = URL(string: urlString) else { break }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct TVResp: Codable { let results: [TVRes] }
@@ -176,7 +184,7 @@ class HomeViewModel: ObservableObject {
                 let vote_count: Int?; let original_language: String?
             }
             let response = try JSONDecoder().decode(TVResp.self, from: data)
-            return response.results.filter { !($0.name ?? "").isEmpty }.map { tv in
+            let results = response.results.filter { !($0.name ?? "").isEmpty }.map { tv in
                 Movie(id: tv.id, title: tv.name ?? "Unknown", overview: tv.overview,
                       posterPath: tv.poster_path, backdropPath: tv.backdrop_path,
                       voteAverage: tv.vote_average, releaseDate: tv.first_air_date,
@@ -184,12 +192,18 @@ class HomeViewModel: ObservableObject {
                       popularity: tv.popularity, voteCount: tv.vote_count,
                       adult: false, originalLanguage: tv.original_language, mediaType: "tv")
             }
-        } catch { return [] }
+            all.append(contentsOf: results)
+            if results.count < 20 { break }
+        } catch { break }
     }
+    return all
+}
     
     func loadNewMovies() async {
-        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=50&primary_release_date.gte=2024-01-01&page=1"
-        guard let url = URL(string: urlString) else { return }
+    var all: [Movie] = []
+    for page in 1...10 {
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=50&primary_release_date.gte=2024-01-01&page=\(page)"
+        guard let url = URL(string: urlString) else { break }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             struct Resp: Codable { let results: [MovieResult] }
@@ -201,7 +215,7 @@ class HomeViewModel: ObservableObject {
                 let vote_count: Int?; let original_language: String?
             }
             let response = try JSONDecoder().decode(Resp.self, from: data)
-            newMovies = response.results.map { m in
+            let results = response.results.map { m in
                 Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
                       posterPath: m.poster_path, backdropPath: m.backdrop_path,
                       voteAverage: m.vote_average, releaseDate: m.release_date,
@@ -209,8 +223,12 @@ class HomeViewModel: ObservableObject {
                       popularity: m.popularity, voteCount: m.vote_count,
                       adult: false, originalLanguage: m.original_language, mediaType: "movie")
             }
-        } catch { print("New movies error: \(error)") }
+            all.append(contentsOf: results)
+            if results.count < 20 { break }
+        } catch { break }
     }
+    newMovies = all
+}
     
     // Gộp 2 function loadUSUKIcons thành 1
     func loadUSUKIcons() async {
