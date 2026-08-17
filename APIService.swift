@@ -125,7 +125,15 @@ class APIService {
         return response.results.map { $0.withPlaceholder() }
     }
     
-    func koreanMovies() async throws -> [Movie] { try await discoverMovies(lang: "ko", sortBy: "popularity.desc") }
+    func koreanMovies() async throws -> [Movie] {
+    try await fetchMultiplePages(maxPages: 15) { [self] page in
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50&without_genres=10749&certification_country=KR&certification.lte=R"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+    }
+}
    // Nhật Bản - lọc kỹ hơn
 func japaneseMovies() async throws -> [Movie] {
     try await fetchMultiplePages(maxPages: 10) { [self] page in
