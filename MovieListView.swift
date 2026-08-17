@@ -142,15 +142,29 @@ struct MovieListView: View {
         } else if isGenreQuery {
     let genreId = genreID(for: fixedQuery)
     
-    if fixedQuery == "BL" || fixedQuery == "GL" || fixedQuery == "LGBTQ+" {
-        let keywordId = keywordID(for: fixedQuery)
-        allData = (try? await APIService.shared.discoverTVWithKeyword(keywordId: keywordId, page: page)) ?? []
+    if fixedQuery == "BL" {
+        allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 240305, page: page)) ?? []
+        if allData.isEmpty {
+            allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 324058, page: page)) ?? []
+        }
+        if allData.isEmpty {
+            allData = (try? await APIService.shared.discoverTVWithKeyword(keywordId: 240305, page: page)) ?? []
+        }
+    } else if fixedQuery == "GL" {
+        allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 315385, page: page)) ?? []
+        if allData.isEmpty {
+            allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 319341, page: page)) ?? []
+        }
+        if allData.isEmpty {
+            allData = (try? await APIService.shared.discoverTVWithKeyword(keywordId: 315385, page: page)) ?? []
+        }
     } else if genreId > 0 {
         allData = (try? await APIService.shared.moviesByGenre(genreId: genreId, page: page)) ?? []
     } else {
         let keywordId = keywordID(for: fixedQuery)
         allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
     }
+}
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
             
