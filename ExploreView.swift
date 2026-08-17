@@ -193,43 +193,164 @@ struct CategoryFullView: View {
     let category: CategoryConfig
     @State private var movies: [Movie] = []
     @State private var isLoading = true
+    @State private var currentPage = 1
+    @State private var totalPages = 1
     @Environment(\.dismiss) var dismiss
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            
             if isLoading && movies.isEmpty {
                 ProgressView().tint(.white)
             } else if movies.isEmpty {
                 Text("Không tìm thấy").foregroundColor(.gray)
             } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(movies) { movie in
-                            NavigationLink(destination: MovieDetailView(movie: movie)) {
-                                VStack(spacing: 6) {
-                                    CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                                    Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
-                                        Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Title
+                            Text(category.name)
+                                .font(.title2).fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 80)
+                                .id("top")
+                            
+                            // Grid phim
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                ForEach(movies) { movie in
+                                    NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                        VStack(spacing: 6) {
+                                            CachedAsyncImage(url: movie.posterURL)
+                                                .aspectRatio(2/3, contentMode: .fill)
+                                                .frame(maxWidth: .infinity)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                                            Text(movie.title)
+                                                .font(.system(size: 9, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .lineLimit(2)
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                                                Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                                            }
+                                        }
+                                        .padding(6)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.2)))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            // Phân trang - chỉ hiện nếu > 1 trang
+                            if totalPages > 1 {
+                                HStack(spacing: 12) {
+                                    Button {
+                                        if currentPage > 1 {
+                                            currentPage -= 1
+                                            Task { 
+                                                await loadPage(currentPage)
+                                                withAnimation { proxy.scrollTo("top", anchor: .top) }
+                                            }
+                                        }
+                                    } label: {
+                                        Text("< trước")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(currentPage > 1 ? .white : .gray.opacity(0.5))
+                                    }
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(1...min(totalPages, 10), id: \.self) { page in
+                                                Button {
+                                                    currentPage = page
+                                                    Task { 
+                                                        await loadPage(page)
+                                                        withAnimation { proxy.scrollTo("top", anchor: .top) }
+                                                    }
+                                                } label: {
+                                                    Text("\(page)")
+                                                        .font(.system(size: 12, weight: page == currentPage ? .bold : .regular))
+                                                        .foregroundColor(page == currentPage ? .black : .white)
+                                                        .frame(width: 28, height: 28)
+                                                        .background(page == currentPage ? .white : .white.opacity(0.1))
+                                                        .clipShape(Circle())
+                                                }
+                                            }
+                                            
+                                            if totalPages > 10 {
+                                                Text("...")
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(.gray)
+                                                
+                                                Button {
+                                                    currentPage = totalPages
+                                                    Task { 
+                                                        await loadPage(totalPages)
+                                                        withAnimation { proxy.scrollTo("top", anchor: .top) }
+                                                    }
+                                                } label: {
+                                                    Text("\(totalPages)")
+                                                        .font(.system(size: 12, weight: totalPages == currentPage ? .bold : .regular))
+                                                        .foregroundColor(totalPages == currentPage ? .black : .white)
+                                                        .frame(width: 28, height: 28)
+                                                        .background(totalPages == currentPage ? .white : .white.opacity(0.1))
+                                                        .clipShape(Circle())
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    Button {
+                                        if currentPage < totalPages {
+                                            currentPage += 1
+                                            Task { 
+                                                await loadPage(currentPage)
+                                                withAnimation { proxy.scrollTo("top", anchor: .top) }
+                                            }
+                                        }
+                                    } label: {
+                                        Text("sau >")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(currentPage < totalPages ? .white : .gray.opacity(0.5))
                                     }
                                 }
-                                .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial.opacity(0.2)))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
                             }
-                            .buttonStyle(.plain)
+                            
+                            Spacer().frame(height: 50)
                         }
                     }
-                    .padding(.horizontal, 16).padding(.top, 90).padding(.bottom, 100)
                 }
             }
+            
             BackButton()
         }
         .navigationBarHidden(true)
         .task {
-            do { movies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type) } catch { movies = [] }
+            await loadPage(1)
             isLoading = false
+        }
+    }
+    
+    func loadPage(_ page: Int) async {
+        do {
+            let all = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type)
+            let filtered = all.filter { !($0.adult ?? false) }
+            await MainActor.run {
+                movies = Array(filtered.prefix(30))
+                totalPages = max(1, Int(ceil(Double(filtered.count) / 30.0)))
+            }
+        } catch {
+            await MainActor.run {
+                movies = []
+                totalPages = 1
+            }
         }
     }
 }
