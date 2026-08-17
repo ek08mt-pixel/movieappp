@@ -6,13 +6,13 @@ struct ActorDetailView: View {
     @State private var movies: [Movie] = []
     @State private var isLoading = true
     @State private var showFullBio = false
+    @State private var selectedMovie: Movie?
     @Environment(\.dismiss) var dismiss
     
     private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Blur background từ ảnh diễn viên
             if let url = actor.profileURL {
                 CachedAsyncImage(url: url)
                     .aspectRatio(contentMode: .fill)
@@ -95,20 +95,14 @@ struct ActorDetailView: View {
                                     Text("Phim tiêu biểu")
                                         .font(.headline).fontWeight(.bold).foregroundColor(.white)
                                     Spacer()
-                                    if movies.count > 9 {
-                                        NavigationLink(destination: ActorMoviesView(actorName: actor.name, movies: movies)) {
-                                            HStack(spacing: 4) {
-                                                Text("Xem tất cả").font(.caption).foregroundColor(.gray)
-                                                Image(systemName: "chevron.right").font(.system(size: 10)).foregroundColor(.gray)
-                                            }
-                                        }
-                                    }
                                 }
                                 .padding(.horizontal)
                                 
                                 LazyVGrid(columns: columns, spacing: 15) {
                                     ForEach(movies.prefix(9)) { movie in
-                                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                                        Button {
+                                            selectedMovie = movie
+                                        } label: {
                                             VStack(spacing: 6) {
                                                 if let url = movie.posterURL {
                                                     CachedAsyncImage(url: url)
@@ -126,8 +120,6 @@ struct ActorDetailView: View {
                                                 Text(movie.title)
                                                     .font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
                                             }
-                                            .scaleEffect(1.0)
-                                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: UUID())
                                         }
                                         .buttonStyle(ScaleButtonStyle())
                                     }
@@ -156,6 +148,9 @@ struct ActorDetailView: View {
             .padding(.leading, 20)
         }
         .navigationBarHidden(true)
+        .fullScreenCover(item: $selectedMovie) { movie in
+            MovieDetailView(movie: movie)
+        }
         .task {
             actorDetail = try? await APIService.shared.actorDetail(actorId: actor.id)
             movies = (try? await APIService.shared.actorMovies(actorId: actor.id)) ?? []
@@ -184,6 +179,7 @@ struct ScaleButtonStyle: ButtonStyle {
 struct ActorMoviesView: View {
     let actorName: String
     let movies: [Movie]
+    @State private var selectedMovie: Movie?
     @Environment(\.dismiss) var dismiss
     
     private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
@@ -196,7 +192,9 @@ struct ActorMoviesView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 15) {
                     ForEach(movies) { movie in
-                        NavigationLink(destination: MovieDetailView(movie: movie)) {
+                        Button {
+                            selectedMovie = movie
+                        } label: {
                             VStack(spacing: 6) {
                                 if let url = movie.posterURL {
                                     CachedAsyncImage(url: url)
@@ -241,5 +239,8 @@ struct ActorMoviesView: View {
             .padding(.leading, 20)
         }
         .navigationBarHidden(true)
+        .fullScreenCover(item: $selectedMovie) { movie in
+            MovieDetailView(movie: movie)
+        }
     }
 }
