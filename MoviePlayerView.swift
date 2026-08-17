@@ -429,18 +429,26 @@ selectedSource = initialSource
     func closeOverlay() { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { overlayOffset = UIScreen.main.bounds.height }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { showOverlay = false } }
     func openMovie(_ movie: Movie) { closeOverlay(); player.pause(); forcePortraitWithDelay(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selectedMovie = movie } }
     func prevEpisode() { 
-    guard let ep = episodeNumber, ep > 1 else { return }
-    directURL = nil
-    autoNextTriggered = false; showNextEpisodePopup = false
-    loadStream(season: seasonNumber, episode: ep - 1) 
-}
+        guard let ep = episodeNumber, ep > 1 else { return }
+        directURL = nil
+        autoNextTriggered = false
+        showNextEpisodePopup = false
+        currentTime = 0
+        duration = 1
+        didResume = false
+        loadStream(season: seasonNumber, episode: ep - 1) 
+    }
     func nextEpisode() { 
-    guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
-    directURL = nil
-    showNextEpisodePopup = false; autoNextTriggered = true
-    loadStream(season: seasonNumber, episode: ep + 1)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { self.autoNextTriggered = false }
-}
+        guard let ep = episodeNumber, let detail = selectedSeasonDetail, ep < detail.episodes.count else { return }
+        directURL = nil
+        showNextEpisodePopup = false
+        autoNextTriggered = true
+        currentTime = 0
+        duration = 1
+        didResume = false
+        loadStream(season: seasonNumber, episode: ep + 1)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { self.autoNextTriggered = false }
+    }
     func loadOverlayData() { Task { similarMovies = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? []; if mediaType == "tv" { seasons = (try? await APIService.shared.fetchTVSeasons(tvId: movieId)) ?? []; if let s = seasonNumber { selectedSeasonNumber = s; selectedSeasonDetail = try? await APIService.shared.fetchSeasonDetail(tvId: movieId, seasonNumber: s) } }; if let detail = try? await APIService.shared.movieDetail(movieId: movieId), let cid = detail.belongsToCollection?.id, let col = try? await APIService.shared.collectionDetail(collectionId: cid) { collectionMovies = col.parts }; currentMovie = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType) } }
     func loadStream(season: Int? = nil, episode: Int? = nil, resumeAt: Double? = nil) { 
     if let s = season { seasonNumber = s }
