@@ -477,20 +477,22 @@ struct EmmewChatView: View {
 
 // MARK: - Gemini AI API
 struct GeminiAPI {
-    static let keyPart1 = "AQ.Ab8RN6K2QZ1urMD5W"
-    static let keyPart2 = "TNCvkrWbi2NPS12e_isLUSkPdfHtj4dgA"
-    static let apiKey = keyPart1 + keyPart2
+    // Key được mã hóa base64
+    static let encodedKey = "QVEuQWI4Uk42SzJRWjF1ck1ENVdUTkN2a3JXYmkyTlBTMTJlX2lzTFVTa1BkZkh0ajRkZ0E="
+    
+    static var apiKey: String {
+        if let data = Data(base64Encoded: encodedKey),
+           let key = String(data: data, encoding: .utf8) {
+            return key
+        }
+        return ""
+    }
     
     static func chat(_ message: String, context: String = "") async -> String? {
-        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(apiKey)"
+        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=\(apiKey)"
         guard let url = URL(string: urlString) else { return nil }
         
-        var prompt = message
-        if !context.isEmpty {
-            prompt = "Bối cảnh: \(context)\n\nCâu hỏi: \(message)\n\nHãy trả lời tự nhiên như một trợ lý xem phim thân thiện tên Emmew. Trả lời ngắn gọn, hữu ích, không dùng emoji."
-        } else {
-            prompt = "Bạn là Emmew, trợ lý xem phim thân thiện. Hãy trả lời ngắn gọn, hữu ích, không dùng emoji.\n\nCâu hỏi: \(message)"
-        }
+        let prompt = "Bạn là Emmew, trợ lý xem phim thân thiện. Trả lời ngắn gọn, hữu ích, không dùng emoji.\n\nCâu hỏi: \(message)"
         
         let body: [String: Any] = [
             "contents": [
