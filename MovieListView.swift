@@ -117,43 +117,74 @@ struct MovieListView: View {
     }
     
     func loadPage(_ page: Int) async {
-        isLoading = true
-        defer { isLoading = false }
+    isLoading = true
+    defer { isLoading = false }
+    
+    var allData: [Movie] = []
+    
+    if isYearQuery, let year = Int(fixedQuery) {
+        allData = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
+    } else if isCountryQuery {
+        let langMap: [String: String] = [
+            "usuk": "en", "korean": "ko", "japanese": "ja",
+            "vietnamese": "vi", "china": "zh", "india": "hi",
+            "thailand": "th", "france": "fr", "uk": "en",
+            "australia": "en", "mexico": "es", "spain": "es",
+            "brazil": "pt", "russia": "ru", "germany": "de",
+            "italy": "it", "canada": "en", "sweden": "sv"
+        ]
+        let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
+        allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
+    } else {
+        // Dùng movies truyền vào trước
+        let initial = movies.filter { !($0.adult ?? false) }
         
-        var newMovies: [Movie] = []
-        
-        if isYearQuery, let year = Int(fixedQuery) {
-            newMovies = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
-        } else if isCountryQuery {
-            let langMap: [String: String] = [
-                "usuk": "en", "korean": "ko", "japanese": "ja",
-                "vietnamese": "vi", "china": "zh", "india": "hi",
-                "thailand": "th", "france": "fr", "uk": "en",
-                "australia": "en", "mexico": "es", "spain": "es",
-                "brazil": "pt", "russia": "ru", "germany": "de",
-                "italy": "it", "canada": "en", "sweden": "sv"
-            ]
-            let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
-            newMovies = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
+        if initial.count >= 30 {
+            // Đủ phim thì chia trang
+            allData = initial
         } else {
-            let q = fixedQuery.isEmpty ? title : fixedQuery
-            newMovies = (try? await APIService.shared.searchMovies(query: q, page: page)) ?? []
-        }
-        
-        let filtered = newMovies.filter { !($0.adult ?? false) }
-        await MainActor.run {
-            if !filtered.isEmpty {
-                allMovies = Array(filtered.prefix(30))
-                if filtered.count >= 20 {
-                    totalPages = 5
-                } else {
-                    totalPages = max(currentPage, 1)
-                }
-            } else {
-                let initial = movies.filter { !($0.adult ?? false) }
-                allMovies = Array(initial.prefix(30))
-                totalPages = max(1, Int(ceil(Double(initial.count) / 30.0)))
+            // Thiếu phim thì gọi thêm API theo title
+            switch title {
+            case "TV Shows":
+                allData = (try? await APIService.shared.trendingTV()) ?? initial
+            case "24h qua":
+                allData = (try? await APIService.shared.trending24h()) ?? initial
+            case "Đang chiếu rạp":
+                allData = (try? await APIService.shared.nowPlaying()) ?? initial
+            case "Đánh giá cao":
+                allData = (try? await APIService.shared.topRated()) ?? initial
+            case "Âu Mỹ":
+                allData = (try? await APIService.shared.usukMovies()) ?? initial
+            case "Hàn Quốc":
+                allData = (try? await APIService.shared.koreanMovies()) ?? initial
+            case "Nhật Bản":
+                allData = (try? await APIService.shared.japaneseMovies()) ?? initial
+            case "Phim lẻ mới":
+                allData = (try? await APIService.shared.popular()) ?? initial
+            case "Hoạt hình - Anime":
+                allData = (try? await APIService.shared.animeMovies()) ?? initial
+            case "USUK Icons":
+                allData = (try? await APIService.shared.discoverMovies(lang: "en", sortBy: "popularity.desc")) ?? initial
+            default:
+                allData = initial
             }
+        }
+    }
+    
+    let filtered = allData.filter { !($0.adult ?? false) }
+    await MainActor.run {
+        if !filtered.isEmpty {
+            let start = (page - 1) * 30
+            let end = min(start + 30, filtered.count)
+            if start < filtered.count {
+                allMovies = Array(filtered[start..<end])
+                totalPages = max(1, Int(ceil(Double(filtered.count) / 30.0)))
+            } else {
+                allMovies = []
+            }
+        } else {
+            allMovies = []
+            totalPages = 1
         }
     }
 }
