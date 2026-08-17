@@ -472,45 +472,54 @@ struct SearchView: View {
         }
     }
     
-    func loadTrendingActors() async {
-    let urlString = "https://api.themoviedb.org/3/trending/person/week?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
+   func loadTrendingActors() async {
+    // Lấy diễn viên từ phim hot thay vì trending person
+    let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&page=1"
     guard let url = URL(string: urlString) else { return }
     
     do {
         let (data, _) = try await URLSession.shared.data(from: url)
-        struct PersonResponse: Codable { let results: [PersonResult] }
-        struct PersonResult: Codable {
-            let id: Int; let name: String; let profile_path: String?
-            let known_for_department: String?
-            let known_for: [KnownFor]?
-            let popularity: Double?
-        }
-        struct KnownFor: Codable {
-            let adult: Bool?
-            let media_type: String?
-            let title: String?
-            let name: String?
-            let vote_count: Int?
+        struct MovieResponse: Codable { let results: [MovieResult] }
+        struct MovieResult: Codable {
+            let id: Int; let title: String?
             let genre_ids: [Int]?
         }
-        let response = try JSONDecoder().decode(PersonResponse.self, from: data)
-        await MainActor.run {
-            trendingActors = response.results
-                .filter { actor in
-                    // Chỉ lấy diễn viên
-                    guard actor.known_for_department == "Acting" else { return false }
-                    // Loại bỏ phim người lớn (chỉ loại nếu TẤT CẢ phim đều adult)
-                    let allAdult = actor.known_for?.allSatisfy { $0.adult == true } ?? false
-                    if allAdult { return false }
-                    return true
+        let response = try JSONDecoder().decode(MovieResponse.self, from: data)
+        
+        var actorIds: Set<Int> = []
+        var actors: [Actor] = []
+        
+        // Lấy credits từ từng phim hot
+        for movie in response.results.prefix(5) {
+            let creditsURL = "https://api.themoviedb.org/3/movie/\(movie.id)/credits?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
+            guard let creditsUrl = URL(string: creditsURL) else { continue }
+            let (creditsData, _) = try await URLSession.shared.data(from: creditsUrl)
+            struct CreditsResponse: Codable {
+                let cast: [CastResult]
+            }
+            struct CastResult: Codable {
+                let id: Int; let name: String; let profile_path: String?
+                let known_for_department: String?
+                let popularity: Double?
+            }
+            let credits = try JSONDecoder().decode(CreditsResponse.self, from: creditsData)
+            for cast in credits.cast.prefix(5) {
+                if cast.known_for_department == "Acting" && !actorIds.contains(cast.id) {
+                    actorIds.insert(cast.id)
+                    actors.append(Actor(id: cast.id, name: cast.name, character: nil, profilePath: cast.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: cast.known_for_department))
                 }
-                .sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
-                .prefix(21)
-                .map { Actor(id: $0.id, name: $0.name, character: nil, profilePath: $0.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: $0.known_for_department) }
+                if actors.count >= 21 { break }
+            }
+            if actors.count >= 21 { break }
+        }
+        
+        await MainActor.run {
+            trendingActors = actors
         }
     } catch {
         print("Trending actors error: \(error)")
     }
+}
 }
     
     func performSearch() async {
