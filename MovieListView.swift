@@ -140,9 +140,15 @@ struct MovieListView: View {
             let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
             allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
         } else if isGenreQuery {
-            // Search theo từ khóa tiếng Anh
-            let enQuery = englishKeyword(for: fixedQuery)
-            allData = (try? await APIService.shared.searchMovies(query: enQuery, page: page)) ?? []
+            // Dùng genre ID chuẩn TMDB
+            let genreId = genreID(for: fixedQuery)
+            if genreId > 0 {
+                allData = (try? await APIService.shared.moviesByGenre(genreId: genreId, page: page)) ?? []
+            } else {
+                // Thể loại đặc biệt dùng keyword search
+                let keyword = englishKeyword(for: fixedQuery)
+                allData = (try? await APIService.shared.searchMovies(query: keyword, page: page)) ?? []
+            }
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
             
@@ -228,5 +234,41 @@ struct MovieListView: View {
             "GL": "girl love"
         ]
         return map[genre] ?? genre
+    }
+}
+func genreID(for genre: String) -> Int {
+        let map: [String: Int] = [
+            "Hành Động": 28,
+            "Hài Hước": 35,
+            "Tình Cảm": 10749,
+            "Kinh Dị": 27,
+            "Giật Gân": 53,
+            "Bí Ẩn": 9648,
+            "Khoa Học Viễn Tưởng": 878,
+            "Kỳ Ảo": 14,
+            "Gia Đình": 10751,
+            "Chính Kịch": 18,
+            "Phiêu Lưu": 12,
+            "Âm Nhạc": 10402,
+            "Hình Sự": 80,
+            "Lịch Sử": 36,
+            "Tài Liệu": 99,
+            "Truyền Hình": 10770,
+            "Talk Show": 10767,
+            "Thể Thao": 10770,
+            "Võ Thuật": 0,
+            "Tâm Lý": 0,
+            "Cổ Trang": 0,
+            "Sinh Tồn": 0,
+            "Zombie": 0,
+            "Siêu Anh Hùng": 0,
+            "Công Nghệ": 0,
+            "Thảm Họa": 0,
+            "Xuyên Không": 0,
+            "Học Đường": 0,
+            "BL": 0,
+            "GL": 0
+        ]
+        return map[genre] ?? 0
     }
 }
