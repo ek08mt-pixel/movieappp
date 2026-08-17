@@ -348,7 +348,6 @@ struct EmmewChatView: View {
                                         .background(messages[index].isUser ? .white : Color.white.opacity(0.08))
                                         .clipShape(RoundedRectangle(cornerRadius: 14))
                                     
-                                    // Hiển thị phim hàng dọc
                                     if !messages[index].movies.isEmpty {
                                         VStack(spacing: 8) {
                                             ForEach(messages[index].movies.prefix(10)) { movie in
@@ -440,6 +439,46 @@ struct EmmewChatView: View {
             }
         }
     }
+    
+    func sendMessage() {
+        guard !input.isEmpty else { return }
+        let question = input
+        input = ""
+        messages.append((text: question, movies: [], isUser: true))
+        isThinking = true
+        chatFocused = false
+        
+        Task {
+            let aiResponse = await GeminiAPI.chat(question) ?? "Xin lỗi, Emmew chưa hiểu câu hỏi. Bạn thử hỏi lại nhé."
+            
+            let lowercased = question.lowercased()
+            let movieId: Int
+            let mediaType = "movie"
+            
+            if lowercased.contains("hành động") || lowercased.contains("action") {
+                movieId = 98
+            } else if lowercased.contains("tình cảm") || lowercased.contains("lãng mạn") || lowercased.contains("romance") {
+                movieId = 194
+            } else if lowercased.contains("kinh dị") || lowercased.contains("horror") {
+                movieId = 274
+            } else if lowercased.contains("hài") || lowercased.contains("comedy") {
+                movieId = 350
+            } else if lowercased.contains("hoạt hình") || lowercased.contains("anime") {
+                movieId = 129
+            } else if lowercased.contains("viễn tưởng") || lowercased.contains("sci-fi") {
+                movieId = 157336
+            } else {
+                movieId = 162
+            }
+            
+            let similar = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? movies
+            await MainActor.run {
+                messages.append((text: aiResponse, movies: similar, isUser: false))
+                isThinking = false
+            }
+        }
+    }
+}
     
     func sendMessage() {
         guard !input.isEmpty else { return }
