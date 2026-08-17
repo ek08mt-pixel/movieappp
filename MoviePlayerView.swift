@@ -132,18 +132,19 @@ struct MoviePlayerView: View {
             Color.black.ignoresSafeArea()
             CustomPlayerVC(player: player, pipController: $pipController, gravity: selectedVideoGravity).ignoresSafeArea()
                 .onAppear {
-                   if let url = directURL {
-    currentStreamURL = url
-    selectedQuality = detectQuality(from: url)
-    player.replaceCurrentItem(with: AVPlayerItem(url: url))
-    player.play()
-    hasStartedPlaying = true
-    isLoading = false
-    sourceStatus[selectedSource] = true
-    saveHistory()
-} else {
-    loadStream(resumeAt: resumeTime > 0 ? resumeTime : nil)
-}
+    print("DEBUG resumeTime: \(resumeTime)")
+    if let url = directURL {
+        currentStreamURL = url
+        selectedQuality = detectQuality(from: url)
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        player.play()
+        hasStartedPlaying = true
+        isLoading = false
+        sourceStatus[selectedSource] = true
+        saveHistory()
+    } else {
+        loadStream(resumeAt: resumeTime > 0 ? resumeTime : nil)
+    }
                      player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
                     forceLandscape()
