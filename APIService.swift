@@ -355,7 +355,7 @@ func japaneseMovies() async throws -> [Movie] {
     return all
 }
     
-    private func fetchMultiplePages(maxPages: Int = 5, fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
+    private func fetchMultiplePages(maxPages: Int = 10, fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
     var all: [Movie] = []
     for page in 1...maxPages { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
     return all
