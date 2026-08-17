@@ -271,4 +271,3 @@ func genreID(for genre: String) -> Int {
         ]
         return map[genre] ?? 0
     }
-}
