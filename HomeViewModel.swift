@@ -53,10 +53,6 @@ class HomeViewModel: ObservableObject {
         isLoading = false
     }
     
-    // Các hàm còn lại giữ nguyên như file của bạn
-    // (loadTrendingTVPages, loadTrendingAnime, loadNewMovies, loadUSUKIcons, loadSimilarForLastWatched)
-}
-    
     private func loadTrendingTVPages() async -> [Movie] {
         var all: [Movie] = []
         let firstPageURL = "https://api.themoviedb.org/3/trending/tv/day?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&page=1"
