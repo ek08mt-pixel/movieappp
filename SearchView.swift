@@ -15,6 +15,7 @@ struct SearchView: View {
     @State private var searchMode: SearchMode = .movies
     @State private var actors: [Actor] = []
     @State private var recentSearches: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
+    @State private var currentRecommendIndex = 0
     
     enum SearchMode: String, CaseIterable { case movies = "Phim", actors = "Diễn viên" }
     
@@ -32,16 +33,29 @@ struct SearchView: View {
                     VisualEffectBlur(blurStyle: .systemUltraThinMaterialDark)
                 }
                 .ignoresSafeArea()
+                .onTapGesture {
+                    focused = false  // Tap bên ngoài để tắt bàn phím
+                }
                 
                 VStack(spacing: 0) {
                     VStack(spacing: 8) {
                         HStack {
                             Image(systemName: "magnifyingglass").foregroundColor(.gray)
-                            TextField(searchMode == .movies ? "Tìm phim..." : "Tìm diễn viên...", text: $vm.query).focused($focused).foregroundColor(.white)
+                            TextField(searchMode == .movies ? "Tìm phim..." : "Tìm diễn viên...", text: $vm.query)
+                                .focused($focused)
+                                .foregroundColor(.white)
                                 .onSubmit { saveSearch(vm.query) }
                                 .onChange(of: vm.query) { _ in Task { await performSearch() } }
-                            if !vm.query.isEmpty { Button { vm.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundColor(.gray) } }
-                            if focused { Button("Đóng") { focused = false }.foregroundColor(.white).font(.caption) }
+                            if !vm.query.isEmpty { 
+                                Button { vm.query = "" } label: { 
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.gray) 
+                                } 
+                            }
+                            if focused { 
+                                Button("Đóng") { focused = false }
+                                    .foregroundColor(.white)
+                                    .font(.caption) 
+                            }
                         }
                         .padding(12)
                         .background(
@@ -52,6 +66,9 @@ struct SearchView: View {
                             RoundedRectangle(cornerRadius: 20)
                                 .stroke(.white.opacity(0.2), lineWidth: 1)
                         )
+                        .onTapGesture {
+                            focused = true  // Chỉ focus khi bấm vào thanh search
+                        }
                         
                         Picker("", selection: $searchMode) {
                             ForEach(SearchMode.allCases, id: \.self) { mode in Text(mode.rawValue).tag(mode) }
@@ -60,8 +77,8 @@ struct SearchView: View {
                         .onChange(of: searchMode) { _ in
                             vm.query = ""
                             actors = []
-                            vm.results = []
-                            Task { await performSearch() }
+                            vm.results = vm.trending
+                            focused = false
                         }
                     }
                     .padding(.horizontal).padding(.top, 54)
@@ -132,7 +149,7 @@ struct SearchView: View {
                                             
                                             HStack(spacing: 8) {
                                                 Button {
-                                                    Task { await loadRecommended() }
+                                                    Task { await loadAnotherRecommend() }
                                                 } label: {
                                                     Text("Rcm lại")
                                                         .font(.system(size: 11, weight: .medium))
@@ -231,9 +248,11 @@ struct SearchView: View {
             }
         }
         .onAppear { 
-            focused = true
             Task { 
                 await vm.loadTrending()
+                if vm.results.isEmpty {
+                    vm.results = vm.trending
+                }
                 if recommendedMovie == nil {
                     recommendedMovie = vm.results.randomElement()
                     await loadRecommended()
@@ -259,6 +278,21 @@ struct SearchView: View {
         let similar = (try? await APIService.shared.similar(movieId: movie.id, mediaType: movie.mediaType)) ?? []
         await MainActor.run {
             recommendedMovies = similar
+        }
+    }
+    
+    func loadAnotherRecommend() async {
+        // Lấy phim ngẫu nhiên khác từ danh sách
+        let allMovies = vm.results.isEmpty ? vm.trending : vm.results
+        guard !allMovies.isEmpty else { return }
+        
+        // Lấy phim khác với phim hiện tại
+        let otherMovies = allMovies.filter { $0.id != recommendedMovie?.id }
+        if let newMovie = otherMovies.randomElement() {
+            await MainActor.run {
+                recommendedMovie = newMovie
+            }
+            await loadRecommended()
         }
     }
     
@@ -292,11 +326,15 @@ struct EmmewChatView: View {
     @State private var input = ""
     @State private var isThinking = false
     @Environment(\.dismiss) var dismiss
+    @FocusState private var chatFocused: Bool
     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
+                    .onTapGesture {
+                        chatFocused = false
+                    }
                 
                 VStack(spacing: 0) {
                     ScrollView {
@@ -310,25 +348,51 @@ struct EmmewChatView: View {
                                         .background(messages[index].isUser ? .white : Color.white.opacity(0.08))
                                         .clipShape(RoundedRectangle(cornerRadius: 14))
                                     
+                                    // Hiển thị phim hàng dọc
                                     if !messages[index].movies.isEmpty {
-                                        ScrollView(.horizontal, showsIndicators: false) {
-                                            HStack(spacing: 12) {
-                                                ForEach(messages[index].movies.prefix(6)) { movie in
-                                                    VStack(spacing: 6) {
-                                                        CachedAsyncImage(url: movie.posterURL)
-                                                            .aspectRatio(2/3, contentMode: .fill)
-                                                            .frame(width: 100, height: 150)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        VStack(spacing: 8) {
+                                            ForEach(messages[index].movies.prefix(10)) { movie in
+                                                HStack(spacing: 12) {
+                                                    CachedAsyncImage(url: movie.posterURL)
+                                                        .aspectRatio(2/3, contentMode: .fill)
+                                                        .frame(width: 50, height: 75)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                    
+                                                    VStack(alignment: .leading, spacing: 4) {
                                                         Text(movie.title)
-                                                            .font(.system(size: 10, weight: .medium))
+                                                            .font(.system(size: 13, weight: .medium))
                                                             .foregroundColor(.white)
                                                             .lineLimit(2)
-                                                            .frame(width: 100)
-                                                        Text("FHD • \(movie.yearText)")
+                                                        
+                                                        HStack(spacing: 4) {
+                                                            Image(systemName: "star.fill")
+                                                                .font(.system(size: 9))
+                                                                .foregroundColor(.yellow)
+                                                            Text(movie.ratingText)
+                                                                .font(.system(size: 10))
+                                                                .foregroundColor(.gray)
+                                                            
+                                                            Text("•")
+                                                                .font(.system(size: 10))
+                                                                .foregroundColor(.gray)
+                                                            
+                                                            Text(movie.yearText)
+                                                                .font(.system(size: 10))
+                                                                .foregroundColor(.gray)
+                                                        }
+                                                        
+                                                        Text("FHD")
                                                             .font(.system(size: 8))
-                                                            .foregroundColor(.gray)
+                                                            .foregroundColor(.yellow.opacity(0.7))
+                                                            .padding(.horizontal, 6)
+                                                            .padding(.vertical, 2)
+                                                            .background(Capsule().fill(.yellow.opacity(0.15)))
                                                     }
+                                                    
+                                                    Spacer()
                                                 }
+                                                .padding(8)
+                                                .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.05)))
                                             }
                                         }
                                     }
@@ -353,6 +417,7 @@ struct EmmewChatView: View {
                             .foregroundColor(.white)
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5)))
+                            .focused($chatFocused)
                         
                         Button {
                             sendMessage()
@@ -382,11 +447,42 @@ struct EmmewChatView: View {
         input = ""
         messages.append((text: question, movies: [], isUser: true))
         isThinking = true
+        chatFocused = false
         
         Task {
-            let similar = (try? await APIService.shared.similar(movieId: 162, mediaType: "movie")) ?? movies
+            // Tạo câu trả lời dựa trên câu hỏi
+            let lowercased = question.lowercased()
+            var responseText = ""
+            var movieId = 162 // Mặc định
+            var mediaType = "movie"
+            
+            // Phân tích câu hỏi đơn giản
+            if lowercased.contains("hành động") || lowercased.contains("action") {
+                responseText = "Emmew tìm được mấy phim hành động hay cho bạn nè 💥"
+                movieId = 98 // Gladiator
+            } else if lowercased.contains("tình cảm") || lowercased.contains("lãng mạn") || lowercased.contains("romance") {
+                responseText = "Phim tình cảm lãng mạn đây nè 💕"
+                movieId = 194 // Amélie
+            } else if lowercased.contains("kinh dị") || lowercased.contains("horror") {
+                responseText = "Phim kinh dị rùng rợn đây nè 👻"
+                movieId = 274 // Silence of the Lambs
+            } else if lowercased.contains("hài") || lowercased.contains("comedy") {
+                responseText = "Phim hài vui nhộn đây nè 😂"
+                movieId = 350 // Mean Girls
+            } else if lowercased.contains("hoạt hình") || lowercased.contains("anime") {
+                responseText = "Phim hoạt hình hay đây nè 🎬"
+                movieId = 129 // Spirited Away
+            } else if lowercased.contains("viễn tưởng") || lowercased.contains("sci-fi") {
+                responseText = "Phim viễn tưởng hay đây nè 🚀"
+                movieId = 157336 // Interstellar
+            } else {
+                responseText = "Emmew tìm được mấy phim giống bạn hỏi nè ✨"
+                movieId = 162
+            }
+            
+            let similar = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? movies
             await MainActor.run {
-                messages.append((text: "Emmew tìm được mấy phim giống \(question) cho bạn nè ✨", movies: similar, isUser: false))
+                messages.append((text: responseText, movies: similar, isUser: false))
                 isThinking = false
             }
         }
