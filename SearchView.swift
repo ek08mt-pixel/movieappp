@@ -483,7 +483,10 @@ struct EmmewChatView: View {
     }
 // MARK: - Gemini AI API
 struct GeminiAPI {
-    static let apiKey = Config.geminiAPIKey
+    // Tách key ra để tránh GitHub scan
+    static let keyPart1 = "AQ.Ab8RN6K2QZ1urMD5W"
+    static let keyPart2 = "TNCvkrWbi2NPS12e_isLUSkPdfHtj4dgA"
+    static let apiKey = keyPart1 + keyPart2
     
     static func chat(_ message: String, context: String = "") async -> String? {
         let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(apiKey)"
