@@ -6,6 +6,8 @@ struct ExploreView: View {
     @State private var staffMovies: [Movie] = []
     @State private var editorMovies: [Movie] = []
     @State private var hiddenMovies: [Movie] = []
+    @State private var genrePage = 0
+    @State private var displayGenres: [Genre] = []
     
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
@@ -66,7 +68,70 @@ struct ExploreView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        
+                        // Khung thể loại
+VStack(alignment: .leading, spacing: 8) {
+    HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Bạn muốn xem gì hôm nay?")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.white)
+            Text("Hành động, tình cảm, kinh dị... Chọn một thể loại và thưởng thức!")
+                .font(.system(size: 10))
+                .foregroundColor(.gray)
+                .lineLimit(1)
+        }
+        Spacer()
+        NavigationLink(destination: AllGenresView()) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white.opacity(0.6))
+                .padding(8)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+        }
+    }
+    .padding(.horizontal, 16)
+    
+    TabView(selection: $genrePage) {
+        ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { pageIndex in
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                ForEach(Array(displayGenres.enumerated()).filter { $0.offset / 4 == pageIndex }.map { $0.element }, id: \.id) { genre in
+                    NavigationLink(destination: GenreMovieView(genre: genre)) {
+                        ZStack(alignment: .bottomLeading) {
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(height: 100)
+                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+                                .font(.caption).fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(8)
+                        }
+                        .frame(height: 100)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .tag(pageIndex)
+        }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+    .frame(height: 220)
+    .onAppear { shuffleGenres() }
+    
+    // Dots
+    HStack(spacing: 4) {
+        ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { i in
+            Capsule()
+                .fill(.white.opacity(i == genrePage ? 0.8 : 0.2))
+                .frame(width: i == genrePage ? 16 : 5, height: 3)
+                .animation(.easeInOut(duration: 0.3), value: genrePage)
+        }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.top, 4)
+}
+.padding(.top, 12)
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(collections, id: \.0) { title, tmdbId, type in
                                 if type == .asia {
@@ -113,12 +178,116 @@ struct ExploreView: View {
             hiddenMovies = (try? await APIService.shared.discoverMovies(minRating: 7.0, minVotes: 30))?.filter { !($0.adult ?? false) } ?? []
         }
     }
-    
+    func shuffleGenres() {
+        let allGenres: [Genre] = [
+            Genre(id: 28, name: "Hành Động"),
+            Genre(id: 35, name: "Hài Hước"),
+            Genre(id: 10749, name: "Tình Cảm"),
+            Genre(id: 27, name: "Kinh Dị"),
+            Genre(id: 53, name: "Giật Gân"),
+            Genre(id: 9648, name: "Bí Ẩn"),
+            Genre(id: 878, name: "Khoa Học Viễn Tưởng"),
+            Genre(id: 14, name: "Kỳ Ảo"),
+            Genre(id: 10751, name: "Gia Đình"),
+            Genre(id: 18, name: "Chính Kịch"),
+            Genre(id: 12, name: "Phiêu Lưu"),
+            Genre(id: 10402, name: "Âm Nhạc"),
+            Genre(id: 80, name: "Hình Sự"),
+            Genre(id: 36, name: "Lịch Sử"),
+            Genre(id: 10749, name: "Cổ Trang"),
+            Genre(id: 27, name: "Sinh Tồn"),
+            Genre(id: 27, name: "Zombie"),
+            Genre(id: 28, name: "Siêu Anh Hùng"),
+            Genre(id: 878, name: "Công Nghệ"),
+            Genre(id: 28, name: "Thảm Họa"),
+            Genre(id: 18, name: "Xuyên Không"),
+            Genre(id: 35, name: "Học Đường"),
+            Genre(id: 99, name: "Tài Liệu"),
+            Genre(id: 10770, name: "Truyền Hình"),
+            Genre(id: 10767, name: "Talk Show"),
+            Genre(id: 10770, name: "Thể Thao")
+        ]
+        displayGenres = Array(allGenres.shuffled().prefix(8))
+    }
     @ViewBuilder func movieRow(title: String, movies: [Movie]) -> some View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
 }
-
+// MARK: - All Genres View
+struct AllGenresView: View {
+    @Environment(\.dismiss) var dismiss
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+    
+    let allGenres: [Genre] = [
+        Genre(id: 28, name: "Hành Động"),
+        Genre(id: 35, name: "Hài Hước"),
+        Genre(id: 10749, name: "Tình Cảm"),
+        Genre(id: 27, name: "Kinh Dị"),
+        Genre(id: 53, name: "Giật Gân"),
+        Genre(id: 9648, name: "Bí Ẩn"),
+        Genre(id: 878, name: "Khoa Học Viễn Tưởng"),
+        Genre(id: 14, name: "Kỳ Ảo"),
+        Genre(id: 10751, name: "Gia Đình"),
+        Genre(id: 18, name: "Chính Kịch"),
+        Genre(id: 12, name: "Phiêu Lưu"),
+        Genre(id: 10402, name: "Âm Nhạc"),
+        Genre(id: 80, name: "Hình Sự"),
+        Genre(id: 36, name: "Lịch Sử"),
+        Genre(id: 10749, name: "Cổ Trang"),
+        Genre(id: 27, name: "Sinh Tồn"),
+        Genre(id: 27, name: "Zombie"),
+        Genre(id: 28, name: "Siêu Anh Hùng"),
+        Genre(id: 878, name: "Công Nghệ"),
+        Genre(id: 28, name: "Thảm Họa"),
+        Genre(id: 18, name: "Xuyên Không"),
+        Genre(id: 35, name: "Học Đường"),
+        Genre(id: 99, name: "Tài Liệu"),
+        Genre(id: 10770, name: "Truyền Hình"),
+        Genre(id: 10767, name: "Talk Show"),
+        Genre(id: 10770, name: "Thể Thao")
+    ]
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tất cả thể loại")
+                        .font(.title2).fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.top, 80)
+                        .padding(.horizontal, 16)
+                    
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(allGenres, id: \.name) { genre in
+                            NavigationLink(destination: MovieListView(title: genre.name, movies: [], fixedQuery: genre.name)) {
+                                ZStack(alignment: .bottomLeading) {
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        .frame(height: 100)
+                                    LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    Text(genre.name)
+                                        .font(.caption).fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                }
+                                .frame(height: 100)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
+                }
+            }
+            
+            BackButton()
+        }
+        .navigationBarHidden(true)
+    }
+}
 // Giữ nguyên AsiaCategoryView, BackButton, CategoryFullView bên dưới không đổi
 
 
