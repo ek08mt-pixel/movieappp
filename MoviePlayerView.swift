@@ -485,7 +485,11 @@ selectedSource = initialSource
                     selectedQuality = detectQuality(from: result.0)
                     let item = AVPlayerItem(url: result.0)
 player.replaceCurrentItem(with: item)
-player.seek(to: .zero) { _ in
+if let rt = resumeAt {
+    player.seek(to: CMTime(seconds: rt, preferredTimescale: 600)) { _ in player.play() }
+} else if resumeTime > 0 && !didResume {
+    player.seek(to: CMTime(seconds: resumeTime, preferredTimescale: 600)) { _ in player.play() }
+} else {
     player.play()
 }
 hasStartedPlaying = true
