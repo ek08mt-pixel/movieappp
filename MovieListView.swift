@@ -70,7 +70,6 @@ struct MovieListView: View {
                                 .padding()
                         }
                         
-                        // Chỉ hiện số trang căn giữa
                         if totalPages > 1 {
                             HStack(spacing: 8) {
                                 ForEach(1...totalPages, id: \.self) { page in
@@ -117,74 +116,72 @@ struct MovieListView: View {
     }
     
     func loadPage(_ page: Int) async {
-    isLoading = true
-    defer { isLoading = false }
-    
-    var allData: [Movie] = []
-    
-    if isYearQuery, let year = Int(fixedQuery) {
-        allData = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
-    } else if isCountryQuery {
-        let langMap: [String: String] = [
-            "usuk": "en", "korean": "ko", "japanese": "ja",
-            "vietnamese": "vi", "china": "zh", "india": "hi",
-            "thailand": "th", "france": "fr", "uk": "en",
-            "australia": "en", "mexico": "es", "spain": "es",
-            "brazil": "pt", "russia": "ru", "germany": "de",
-            "italy": "it", "canada": "en", "sweden": "sv"
-        ]
-        let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
-        allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
-    } else {
-        // Dùng movies truyền vào trước
-        let initial = movies.filter { !($0.adult ?? false) }
+        isLoading = true
+        defer { isLoading = false }
         
-        if initial.count >= 30 {
-            // Đủ phim thì chia trang
-            allData = initial
+        var allData: [Movie] = []
+        
+        if isYearQuery, let year = Int(fixedQuery) {
+            allData = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
+        } else if isCountryQuery {
+            let langMap: [String: String] = [
+                "usuk": "en", "korean": "ko", "japanese": "ja",
+                "vietnamese": "vi", "china": "zh", "india": "hi",
+                "thailand": "th", "france": "fr", "uk": "en",
+                "australia": "en", "mexico": "es", "spain": "es",
+                "brazil": "pt", "russia": "ru", "germany": "de",
+                "italy": "it", "canada": "en", "sweden": "sv"
+            ]
+            let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
+            allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
         } else {
-            // Thiếu phim thì gọi thêm API theo title
-            switch title {
-            case "TV Shows":
-                allData = (try? await APIService.shared.trendingTV()) ?? initial
-            case "24h qua":
-                allData = (try? await APIService.shared.trending24h()) ?? initial
-            case "Đang chiếu rạp":
-                allData = (try? await APIService.shared.nowPlaying()) ?? initial
-            case "Đánh giá cao":
-                allData = (try? await APIService.shared.topRated()) ?? initial
-            case "Âu Mỹ":
-                allData = (try? await APIService.shared.usukMovies()) ?? initial
-            case "Hàn Quốc":
-                allData = (try? await APIService.shared.koreanMovies()) ?? initial
-            case "Nhật Bản":
-                allData = (try? await APIService.shared.japaneseMovies()) ?? initial
-            case "Phim lẻ mới":
-                allData = (try? await APIService.shared.popular()) ?? initial
-            case "Hoạt hình - Anime":
-                allData = (try? await APIService.shared.animeMovies()) ?? initial
-            case "USUK Icons":
-                allData = (try? await APIService.shared.discoverMovies(lang: "en", sortBy: "popularity.desc")) ?? initial
-            default:
+            let initial = movies.filter { !($0.adult ?? false) }
+            
+            if initial.count >= 30 {
                 allData = initial
+            } else {
+                switch title {
+                case "TV Shows":
+                    allData = (try? await APIService.shared.trendingTV()) ?? initial
+                case "24h qua":
+                    allData = (try? await APIService.shared.trending24h()) ?? initial
+                case "Đang chiếu rạp":
+                    allData = (try? await APIService.shared.nowPlaying()) ?? initial
+                case "Đánh giá cao":
+                    allData = (try? await APIService.shared.topRated()) ?? initial
+                case "Âu Mỹ":
+                    allData = (try? await APIService.shared.usukMovies()) ?? initial
+                case "Hàn Quốc":
+                    allData = (try? await APIService.shared.koreanMovies()) ?? initial
+                case "Nhật Bản":
+                    allData = (try? await APIService.shared.japaneseMovies()) ?? initial
+                case "Phim lẻ mới":
+                    allData = (try? await APIService.shared.popular()) ?? initial
+                case "Hoạt hình - Anime":
+                    allData = (try? await APIService.shared.animeMovies()) ?? initial
+                case "USUK Icons":
+                    allData = (try? await APIService.shared.discoverMovies(lang: "en", sortBy: "popularity.desc")) ?? initial
+                default:
+                    allData = initial
+                }
             }
         }
-    }
-    
-    let filtered = allData.filter { !($0.adult ?? false) }
-    await MainActor.run {
-        if !filtered.isEmpty {
-            let start = (page - 1) * 30
-            let end = min(start + 30, filtered.count)
-            if start < filtered.count {
-                allMovies = Array(filtered[start..<end])
-                totalPages = max(1, Int(ceil(Double(filtered.count) / 30.0)))
+        
+        let filtered = allData.filter { !($0.adult ?? false) }
+        await MainActor.run {
+            if !filtered.isEmpty {
+                let start = (page - 1) * 30
+                let end = min(start + 30, filtered.count)
+                if start < filtered.count {
+                    allMovies = Array(filtered[start..<end])
+                    totalPages = max(1, Int(ceil(Double(filtered.count) / 30.0)))
+                } else {
+                    allMovies = []
+                }
             } else {
                 allMovies = []
+                totalPages = 1
             }
-        } else {
-            allMovies = []
-            totalPages = 1
         }
     }
 }
