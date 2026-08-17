@@ -484,19 +484,14 @@ selectedSource = initialSource
                     currentStreamURL = result.0
                     selectedQuality = detectQuality(from: result.0)
                     let item = AVPlayerItem(url: result.0)
-                    player.replaceCurrentItem(with: item)
-                    if let rt = resumeAt { 
-                        let seekTime = CMTime(seconds: rt, preferredTimescale: 600)
-                        player.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in 
-                            player.play() 
-                        }
-                    } else { 
-                        player.play() 
-                    }
-                    hasStartedPlaying = true
-                    sourceStatus[.phimapi] = true
-                    isLoading = false
-                    tryResume()
+player.replaceCurrentItem(with: item)
+player.seek(to: .zero) { _ in
+    player.play()
+}
+hasStartedPlaying = true
+sourceStatus[.phimapi] = true
+isLoading = false
+didResume = false
                 }
                 saveHistory()
             case .nguonc: 
