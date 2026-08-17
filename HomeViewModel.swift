@@ -201,8 +201,10 @@ class HomeViewModel: ObservableObject {
     
     func loadNewMovies() async {
     var all: [Movie] = []
+    // Load phim lẻ mới từ nhiều quốc gia
     for page in 1...10 {
-        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=50&primary_release_date.gte=2024-01-01&page=\(page)"
+        // USUK
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=primary_release_date.desc&vote_count.gte=30&primary_release_date.gte=2024-01-01&page=\(page)&with_original_language=en|ko|ja|zh|vi"
         guard let url = URL(string: urlString) else { break }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -213,16 +215,19 @@ class HomeViewModel: ObservableObject {
                 let vote_average: Double; let release_date: String?
                 let genre_ids: [Int]?; let popularity: Double?
                 let vote_count: Int?; let original_language: String?
+                let adult: Bool?
             }
             let response = try JSONDecoder().decode(Resp.self, from: data)
-            let results = response.results.map { m in
-                Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
-                      posterPath: m.poster_path, backdropPath: m.backdrop_path,
-                      voteAverage: m.vote_average, releaseDate: m.release_date,
-                      genreIds: m.genre_ids, originalTitle: m.title,
-                      popularity: m.popularity, voteCount: m.vote_count,
-                      adult: false, originalLanguage: m.original_language, mediaType: "movie")
-            }
+            let results = response.results
+                .filter { !($0.adult ?? false) }  // Lọc phim sex
+                .map { m in
+                    Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
+                          posterPath: m.poster_path, backdropPath: m.backdrop_path,
+                          voteAverage: m.vote_average, releaseDate: m.release_date,
+                          genreIds: m.genre_ids, originalTitle: m.title,
+                          popularity: m.popularity, voteCount: m.vote_count,
+                          adult: m.adult ?? false, originalLanguage: m.original_language, mediaType: "movie")
+                }
             all.append(contentsOf: results)
             if results.count < 20 { break }
         } catch { break }
