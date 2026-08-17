@@ -520,7 +520,6 @@ struct SearchView: View {
         print("Trending actors error: \(error)")
     }
 }
-}
     
     func performSearch() async {
         if searchMode == .movies {
