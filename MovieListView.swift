@@ -140,13 +140,17 @@ struct MovieListView: View {
             let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
             allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
         } else if isGenreQuery {
-            let genreId = genreID(for: fixedQuery)
-            if genreId > 0 {
-                allData = (try? await APIService.shared.moviesByGenre(genreId: genreId, page: page)) ?? []
-            } else {
-                let keywordId = keywordID(for: fixedQuery)
-                allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
-            }
+    let genreId = genreID(for: fixedQuery)
+    
+    if fixedQuery == "BL" || fixedQuery == "GL" || fixedQuery == "LGBTQ+" {
+        let keywordId = keywordID(for: fixedQuery)
+        allData = (try? await APIService.shared.discoverTVWithKeyword(keywordId: keywordId, page: page)) ?? []
+    } else if genreId > 0 {
+        allData = (try? await APIService.shared.moviesByGenre(genreId: genreId, page: page)) ?? []
+    } else {
+        let keywordId = keywordID(for: fixedQuery)
+        allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
+    }
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
             
@@ -271,8 +275,9 @@ func genreID(for genre: String) -> Int {
     }
     func keywordID(for genre: String) -> Int {
         let map: [String: Int] = [
-            "BL": 227144,
-            "GL": 229047,
+            "BL": 167018,
+            "GL": 167019,
+            "LGBTQ+": 9672,
             "Zombie": 12377,
             "Sinh Tồn": 11322,
             "Xuyên Không": 9665,
