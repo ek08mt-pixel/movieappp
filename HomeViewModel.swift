@@ -236,51 +236,41 @@ class HomeViewModel: ObservableObject {
 }
     
     func loadUSUKIcons() async {
-    let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&sort_by=vote_average.desc&with_original_language=en&vote_count.gte=5000&vote_average.gte=8&without_genres=10749&page=1"
-    guard let url = URL(string: urlString) else { return }
+    var allMovies: [Movie] = []
     
-    do {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        struct Resp: Codable { let results: [MovieResult] }
-        struct MovieResult: Codable {
-            let id: Int; let title: String?; let overview: String
-            let poster_path: String?; let backdrop_path: String?
-            let vote_average: Double; let release_date: String?
-            let genre_ids: [Int]?; let popularity: Double?
-            let vote_count: Int?; let original_language: String?
-            let adult: Bool?
-        }
-        let response = try JSONDecoder().decode(Resp.self, from: data)
-        let movies = response.results
-            .filter { !($0.adult ?? false) }
-            .map { m in
-                Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
-                      posterPath: m.poster_path, backdropPath: m.backdrop_path,
-                      voteAverage: m.vote_average, releaseDate: m.release_date,
-                      genreIds: m.genre_ids, originalTitle: m.title,
-                      popularity: m.popularity, voteCount: m.vote_count,
-                      adult: m.adult ?? false, originalLanguage: m.original_language, mediaType: "movie")
-            }
+    // Dùng API discover lấy phim USUK kinh điển (vote > 3000, điểm > 7.5, ra mắt trước 2020)
+    for page in 1...5 {
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=en-US&sort_by=vote_count.desc&with_original_language=en&vote_count.gte=3000&vote_average.gte=7.5&primary_release_date.lte=2020-12-31&without_genres=10749&page=\(page)"
+        guard let url = URL(string: urlString) else { break }
         
-        // Nếu API trả về ít hơn 20 phim, bổ sung thêm danh sách iconic
-        if movies.count < 20 {
-            let iconIDs = [155, 27205, 157336, 550, 13, 278, 238, 424, 98, 274, 857, 1124, 597, 603, 680, 350, 152, 4951, 8392, 14]
-            var allMovies = movies
-            for id in iconIDs {
-                if !allMovies.contains(where: { $0.id == id }) {
-                    if let detail = try? await APIService.shared.movieDetail(movieId: id) {
-                        let movie = Movie(id: detail.id ?? id, title: detail.title ?? "", overview: detail.overview ?? "", posterPath: detail.posterPath, backdropPath: detail.backdropPath, voteAverage: detail.voteAverage ?? 0, releaseDate: detail.releaseDate, genreIds: detail.genres?.map { $0.id }, originalTitle: detail.title, popularity: nil, voteCount: nil, adult: false, originalLanguage: "en", mediaType: "movie")
-                        allMovies.append(movie)
-                    }
-                }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Resp: Codable { let results: [MovieResult] }
+            struct MovieResult: Codable {
+                let id: Int; let title: String?; let overview: String
+                let poster_path: String?; let backdrop_path: String?
+                let vote_average: Double; let release_date: String?
+                let genre_ids: [Int]?; let popularity: Double?
+                let vote_count: Int?; let original_language: String?
+                let adult: Bool?
             }
-            usukIcons = allMovies
-        } else {
-            usukIcons = movies
-        }
-    } catch {
-        print("USUK Icons error: \(error)")
+            let response = try JSONDecoder().decode(Resp.self, from: data)
+            let results = response.results
+                .filter { !($0.adult ?? false) }
+                .map { m in
+                    Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
+                          posterPath: m.poster_path, backdropPath: m.backdrop_path,
+                          voteAverage: m.vote_average, releaseDate: m.release_date,
+                          genreIds: m.genre_ids, originalTitle: m.title,
+                          popularity: m.popularity, voteCount: m.vote_count,
+                          adult: m.adult ?? false, originalLanguage: m.original_language, mediaType: "movie")
+                }
+            allMovies.append(contentsOf: results)
+            if results.count < 20 { break }
+        } catch { break }
     }
+    
+    usukIcons = allMovies
 }
     
     func loadSimilarForLastWatched(movieId: Int, mediaType: String?) async {
