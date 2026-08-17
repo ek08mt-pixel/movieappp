@@ -473,26 +473,47 @@ struct SearchView: View {
     }
     
     func loadTrendingActors() async {
-        let urlString = "https://api.themoviedb.org/3/trending/person/week?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
-        guard let url = URL(string: urlString) else { return }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            struct PersonResponse: Codable { let results: [PersonResult] }
-            struct PersonResult: Codable {
-                let id: Int; let name: String; let profile_path: String?; let known_for_department: String?
-            }
-            let response = try JSONDecoder().decode(PersonResponse.self, from: data)
-            await MainActor.run {
-                trendingActors = response.results
-                    .filter { $0.known_for_department == "Acting" }
-                    .prefix(21)
-                    .map { Actor(id: $0.id, name: $0.name, character: nil, profilePath: $0.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: $0.known_for_department) }
-            }
-        } catch {
-            print("Trending actors error: \(error)")
+    let urlString = "https://api.themoviedb.org/3/trending/person/week?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
+    guard let url = URL(string: urlString) else { return }
+    
+    do {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        struct PersonResponse: Codable { let results: [PersonResult] }
+        struct PersonResult: Codable {
+            let id: Int; let name: String; let profile_path: String?
+            let known_for_department: String?
+            let known_for: [KnownFor]?
+            let popularity: Double?
         }
+        struct KnownFor: Codable {
+            let adult: Bool?
+            let media_type: String?
+            let title: String?
+            let name: String?
+            let vote_count: Int?
+            let genre_ids: [Int]?
+        }
+        let response = try JSONDecoder().decode(PersonResponse.self, from: data)
+        await MainActor.run {
+            trendingActors = response.results
+                .filter { actor in
+                    // Chỉ lấy diễn viên
+                    guard actor.known_for_department == "Acting" else { return false }
+                    // Loại bỏ phim người lớn
+                    let hasAdult = actor.known_for?.contains { $0.adult == true } ?? false
+                    if hasAdult { return false }
+                    // Chỉ lấy người có ít nhất 1 phim có vote_count > 50
+                    let hasGoodContent = actor.known_for?.contains { ($0.vote_count ?? 0) > 50 } ?? false
+                    return hasGoodContent
+                }
+                .sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
+                .prefix(21)
+                .map { Actor(id: $0.id, name: $0.name, character: nil, profilePath: $0.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: $0.known_for_department) }
+        }
+    } catch {
+        print("Trending actors error: \(error)")
     }
+}
     
     func performSearch() async {
         if searchMode == .movies {
