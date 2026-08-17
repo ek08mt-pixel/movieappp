@@ -32,7 +32,6 @@ struct MovieListView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Title
                         Text(title)
                             .font(.title2).fontWeight(.bold)
                             .foregroundColor(.white)
@@ -41,7 +40,6 @@ struct MovieListView: View {
                             .padding(.top, 80)
                             .id("top")
                         
-                        // Grid phim
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(allMovies) { movie in
                                 NavigationLink(destination: MovieDetailView(movie: movie)) {
@@ -72,79 +70,24 @@ struct MovieListView: View {
                                 .padding()
                         }
                         
-                        // Phân trang - chỉ hiện nếu có hơn 1 trang
+                        // Chỉ hiện số trang căn giữa
                         if totalPages > 1 {
-                            HStack(spacing: 12) {
-                                Button {
-                                    if currentPage > 1 {
-                                        currentPage -= 1
-                                        Task { 
-                                            await loadPage(currentPage)
+                            HStack(spacing: 8) {
+                                ForEach(1...totalPages, id: \.self) { page in
+                                    Button {
+                                        currentPage = page
+                                        Task {
+                                            await loadPage(page)
                                             withAnimation { proxy.scrollTo("top", anchor: .top) }
                                         }
+                                    } label: {
+                                        Text("\(page)")
+                                            .font(.system(size: 12, weight: page == currentPage ? .bold : .regular))
+                                            .foregroundColor(page == currentPage ? .black : .white)
+                                            .frame(width: 28, height: 28)
+                                            .background(page == currentPage ? .white : .white.opacity(0.1))
+                                            .clipShape(Circle())
                                     }
-                                } label: {
-                                    Text("< trước")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(currentPage > 1 ? .white : .gray.opacity(0.5))
-                                }
-                                
-                                // Số trang
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        ForEach(1...min(totalPages, 10), id: \.self) { page in
-                                            Button {
-                                                currentPage = page
-                                                Task { 
-                                                    await loadPage(page)
-                                                    withAnimation { proxy.scrollTo("top", anchor: .top) }
-                                                }
-                                            } label: {
-                                                Text("\(page)")
-                                                    .font(.system(size: 12, weight: page == currentPage ? .bold : .regular))
-                                                    .foregroundColor(page == currentPage ? .black : .white)
-                                                    .frame(width: 28, height: 28)
-                                                    .background(page == currentPage ? .white : .white.opacity(0.1))
-                                                    .clipShape(Circle())
-                                            }
-                                        }
-                                        
-                                        // Nếu nhiều hơn 10 trang, hiện dấu ...
-                                        if totalPages > 10 {
-                                            Text("...")
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.gray)
-                                            
-                                            Button {
-                                                currentPage = totalPages
-                                                Task { 
-                                                    await loadPage(totalPages)
-                                                    withAnimation { proxy.scrollTo("top", anchor: .top) }
-                                                }
-                                            } label: {
-                                                Text("\(totalPages)")
-                                                    .font(.system(size: 12, weight: totalPages == currentPage ? .bold : .regular))
-                                                    .foregroundColor(totalPages == currentPage ? .black : .white)
-                                                    .frame(width: 28, height: 28)
-                                                    .background(totalPages == currentPage ? .white : .white.opacity(0.1))
-                                                    .clipShape(Circle())
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                Button {
-                                    if currentPage < totalPages {
-                                        currentPage += 1
-                                        Task { 
-                                            await loadPage(currentPage)
-                                            withAnimation { proxy.scrollTo("top", anchor: .top) }
-                                        }
-                                    }
-                                } label: {
-                                    Text("sau >")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(currentPage < totalPages ? .white : .gray.opacity(0.5))
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -156,7 +99,6 @@ struct MovieListView: View {
                 }
             }
             
-            // Nút back
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 24, weight: .bold))
@@ -170,48 +112,48 @@ struct MovieListView: View {
         }
         .navigationBarHidden(true)
         .task {
-    // Luôn gọi API để lấy phim theo trang
-    await loadPage(1)
-}
-    func loadPage(_ page: Int) async {
-    isLoading = true
-    defer { isLoading = false }
-    
-    var newMovies: [Movie] = []
-    
-    if isYearQuery, let year = Int(fixedQuery) {
-        newMovies = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
-    } else if isCountryQuery {
-        let langMap: [String: String] = [
-            "usuk": "en", "korean": "ko", "japanese": "ja",
-            "vietnamese": "vi", "china": "zh", "india": "hi",
-            "thailand": "th", "france": "fr", "uk": "en",
-            "australia": "en", "mexico": "es", "spain": "es",
-            "brazil": "pt", "russia": "ru", "germany": "de",
-            "italy": "it", "canada": "en", "sweden": "sv"
-        ]
-        let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
-        newMovies = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
-    } else {
-        let q = fixedQuery.isEmpty ? title : fixedQuery
-        newMovies = (try? await APIService.shared.searchMovies(query: q, page: page)) ?? []
+            await loadPage(1)
+        }
     }
     
-    let filtered = newMovies.filter { !($0.adult ?? false) }
-    await MainActor.run {
-        if !filtered.isEmpty {
-            allMovies = Array(filtered.prefix(30))
-            // Nếu đủ 20 phim thì ước lượng có thêm trang
-            if filtered.count >= 20 {
-                totalPages = 5
-            } else {
-                totalPages = max(currentPage, 1)
-            }
+    func loadPage(_ page: Int) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        var newMovies: [Movie] = []
+        
+        if isYearQuery, let year = Int(fixedQuery) {
+            newMovies = (try? await APIService.shared.discoverMoviesByYear(year, page: page)) ?? []
+        } else if isCountryQuery {
+            let langMap: [String: String] = [
+                "usuk": "en", "korean": "ko", "japanese": "ja",
+                "vietnamese": "vi", "china": "zh", "india": "hi",
+                "thailand": "th", "france": "fr", "uk": "en",
+                "australia": "en", "mexico": "es", "spain": "es",
+                "brazil": "pt", "russia": "ru", "germany": "de",
+                "italy": "it", "canada": "en", "sweden": "sv"
+            ]
+            let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
+            newMovies = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
         } else {
-            // Nếu API không trả về, dùng movies truyền vào
-            let initial = movies.filter { !($0.adult ?? false) }
-            allMovies = Array(initial.prefix(30))
-            totalPages = max(1, Int(ceil(Double(initial.count) / 30.0)))
+            let q = fixedQuery.isEmpty ? title : fixedQuery
+            newMovies = (try? await APIService.shared.searchMovies(query: q, page: page)) ?? []
+        }
+        
+        let filtered = newMovies.filter { !($0.adult ?? false) }
+        await MainActor.run {
+            if !filtered.isEmpty {
+                allMovies = Array(filtered.prefix(30))
+                if filtered.count >= 20 {
+                    totalPages = 5
+                } else {
+                    totalPages = max(currentPage, 1)
+                }
+            } else {
+                let initial = movies.filter { !($0.adult ?? false) }
+                allMovies = Array(initial.prefix(30))
+                totalPages = max(1, Int(ceil(Double(initial.count) / 30.0)))
+            }
         }
     }
 }
