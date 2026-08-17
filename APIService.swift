@@ -372,18 +372,20 @@ func japaneseMovies() async throws -> [Movie] {
 }
     
     private func fetchMultiplePages(maxPages: Int = 10, fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
-    var all: [Movie] = []
-    for page in 1...maxPages { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
-    return all
-}
-}
-func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
+        var all: [Movie] = []
+        for page in 1...maxPages { let p = try await fetcher(page); all.append(contentsOf: p); if p.count < 20 { break } }
+        return all
+    }
+    
+    func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
     }
+}
+
 extension Movie {
     func withPlaceholder() -> Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
