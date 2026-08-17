@@ -206,6 +206,8 @@ VStack(alignment: .leading, spacing: 8) {
             Genre(id: 10770, name: "Truyền Hình"),
             Genre(id: 10767, name: "Talk Show"),
             Genre(id: 10770, name: "Thể Thao")
+            Genre(id: 10749, name: "BL"),
+            Genre(id: 10749, name: "GL"),
         ]
         displayGenres = Array(allGenres.shuffled().prefix(8))
     }
@@ -245,6 +247,8 @@ struct AllGenresView: View {
         Genre(id: 10770, name: "Truyền Hình"),
         Genre(id: 10767, name: "Talk Show"),
         Genre(id: 10770, name: "Thể Thao")
+        Genre(id: 10749, name: "BL"),
+        Genre(id: 10749, name: "GL"),
     ]
     
     var body: some View {
