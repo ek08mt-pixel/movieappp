@@ -499,12 +499,10 @@ struct SearchView: View {
                 .filter { actor in
                     // Chỉ lấy diễn viên
                     guard actor.known_for_department == "Acting" else { return false }
-                    // Loại bỏ phim người lớn
-                    let hasAdult = actor.known_for?.contains { $0.adult == true } ?? false
-                    if hasAdult { return false }
-                    // Chỉ lấy người có ít nhất 1 phim có vote_count > 50
-                    let hasGoodContent = actor.known_for?.contains { ($0.vote_count ?? 0) > 50 } ?? false
-                    return hasGoodContent
+                    // Loại bỏ phim người lớn (chỉ loại nếu TẤT CẢ phim đều adult)
+                    let allAdult = actor.known_for?.allSatisfy { $0.adult == true } ?? false
+                    if allAdult { return false }
+                    return true
                 }
                 .sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
                 .prefix(21)
