@@ -27,14 +27,13 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
-                // Background blur trong suốt thay vì full đen
                 ZStack {
                     Color.black.opacity(0.75)
                     VisualEffectBlur(blurStyle: .systemUltraThinMaterialDark)
                 }
                 .ignoresSafeArea()
                 .onTapGesture {
-                    focused = false  // Tap bên ngoài để tắt bàn phím
+                    focused = false
                 }
                 
                 VStack(spacing: 0) {
@@ -46,15 +45,15 @@ struct SearchView: View {
                                 .foregroundColor(.white)
                                 .onSubmit { saveSearch(vm.query) }
                                 .onChange(of: vm.query) { _ in Task { await performSearch() } }
-                            if !vm.query.isEmpty { 
-                                Button { vm.query = "" } label: { 
-                                    Image(systemName: "xmark.circle.fill").foregroundColor(.gray) 
-                                } 
+                            if !vm.query.isEmpty {
+                                Button { vm.query = "" } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
+                                }
                             }
-                            if focused { 
+                            if focused {
                                 Button("Đóng") { focused = false }
                                     .foregroundColor(.white)
-                                    .font(.caption) 
+                                    .font(.caption)
                             }
                         }
                         .padding(12)
@@ -67,7 +66,7 @@ struct SearchView: View {
                                 .stroke(.white.opacity(0.2), lineWidth: 1)
                         )
                         .onTapGesture {
-                            focused = true  // Chỉ focus khi bấm vào thanh search
+                            focused = true
                         }
                         
                         Picker("", selection: $searchMode) {
@@ -85,7 +84,6 @@ struct SearchView: View {
                     
                     if vm.query.isEmpty && searchMode == .movies {
                         ScrollView {
-                            // Recent searches
                             if !recentSearches.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
@@ -127,7 +125,6 @@ struct SearchView: View {
                                 .padding(.top, 16)
                             }
                             
-                            // Emmew Recommended
                             if let movie = recommendedMovie {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Emmew Recommended")
@@ -247,8 +244,8 @@ struct SearchView: View {
                 EmmewChatView(movies: recommendedMovies)
             }
         }
-        .onAppear { 
-            Task { 
+        .onAppear {
+            Task {
                 await vm.loadTrending()
                 if vm.results.isEmpty {
                     vm.results = vm.trending
@@ -257,7 +254,7 @@ struct SearchView: View {
                     recommendedMovie = vm.results.randomElement()
                     await loadRecommended()
                 }
-            } 
+            }
         }
     }
     
@@ -282,11 +279,9 @@ struct SearchView: View {
     }
     
     func loadAnotherRecommend() async {
-        // Lấy phim ngẫu nhiên khác từ danh sách
         let allMovies = vm.results.isEmpty ? vm.trending : vm.results
         guard !allMovies.isEmpty else { return }
         
-        // Lấy phim khác với phim hiện tại
         let otherMovies = allMovies.filter { $0.id != recommendedMovie?.id }
         if let newMovie = otherMovies.randomElement() {
             await MainActor.run {
@@ -479,50 +474,9 @@ struct EmmewChatView: View {
         }
     }
 }
-    
-    func sendMessage() {
-        guard !input.isEmpty else { return }
-        let question = input
-        input = ""
-        messages.append((text: question, movies: [], isUser: true))
-        isThinking = true
-        chatFocused = false
-        
-        Task {
-            // Hỏi Gemini
-            let aiResponse = await GeminiAPI.chat(question) ?? "Xin lỗi, Emmew chưa hiểu câu hỏi. Bạn thử hỏi lại nhé."
-            
-            // Dựa vào câu hỏi để lấy phim phù hợp
-            let lowercased = question.lowercased()
-            let movieId: Int
-            let mediaType = "movie"
-            
-            if lowercased.contains("hành động") || lowercased.contains("action") {
-                movieId = 98
-            } else if lowercased.contains("tình cảm") || lowercased.contains("lãng mạn") || lowercased.contains("romance") {
-                movieId = 194
-            } else if lowercased.contains("kinh dị") || lowercased.contains("horror") {
-                movieId = 274
-            } else if lowercased.contains("hài") || lowercased.contains("comedy") {
-                movieId = 350
-            } else if lowercased.contains("hoạt hình") || lowercased.contains("anime") {
-                movieId = 129
-            } else if lowercased.contains("viễn tưởng") || lowercased.contains("sci-fi") {
-                movieId = 157336
-            } else {
-                movieId = 162
-            }
-            
-            let similar = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? movies
-            await MainActor.run {
-                messages.append((text: aiResponse, movies: similar, isUser: false))
-                isThinking = false
-            }
-        }
-    }
+
 // MARK: - Gemini AI API
 struct GeminiAPI {
-    // Tách key ra để tránh GitHub scan
     static let keyPart1 = "AQ.Ab8RN6K2QZ1urMD5W"
     static let keyPart2 = "TNCvkrWbi2NPS12e_isLUSkPdfHtj4dgA"
     static let apiKey = keyPart1 + keyPart2
@@ -571,6 +525,7 @@ struct GeminiAPI {
         return nil
     }
 }
+
 // MARK: - Visual Effect Blur (UIKit bridge)
 struct VisualEffectBlur: UIViewRepresentable {
     var blurStyle: UIBlurEffect.Style
