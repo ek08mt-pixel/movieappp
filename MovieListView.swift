@@ -24,6 +24,11 @@ struct MovieListView: View {
         return countries.contains(fixedQuery.lowercased())
     }
     
+    var isGenreQuery: Bool {
+        let genres = ["Hành Động", "Hài Hước", "Tình Cảm", "Kinh Dị", "Giật Gân", "Bí Ẩn", "Khoa Học Viễn Tưởng", "Kỳ Ảo", "Gia Đình", "Chính Kịch", "Phiêu Lưu", "Âm Nhạc", "Võ Thuật", "Hình Sự", "Tâm Lý", "Lịch Sử", "Cổ Trang", "Sinh Tồn", "Zombie", "Siêu Anh Hùng", "Công Nghệ", "Thảm Họa", "Xuyên Không", "Học Đường", "Tài Liệu", "Truyền Hình", "Talk Show", "Thể Thao", "BL", "GL"]
+        return genres.contains(fixedQuery)
+    }
+    
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: [Color(white: 0.08), Color(white: 0.02), .black], startPoint: .top, endPoint: .bottom)
@@ -134,6 +139,10 @@ struct MovieListView: View {
             ]
             let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
             allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
+        } else if isGenreQuery {
+            // Search theo từ khóa tiếng Anh
+            let enQuery = englishKeyword(for: fixedQuery)
+            allData = (try? await APIService.shared.searchMovies(query: enQuery, page: page)) ?? []
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
             
@@ -160,7 +169,7 @@ struct MovieListView: View {
                 case "Hoạt hình - Anime":
                     allData = (try? await APIService.shared.animeMovies()) ?? initial
                 case "USUK Icons":
-    allData = initial  // Dùng movies truyền vào từ Home
+                    allData = initial
                 default:
                     allData = initial
                 }
@@ -183,5 +192,41 @@ struct MovieListView: View {
                 totalPages = 1
             }
         }
+    }
+    
+    func englishKeyword(for genre: String) -> String {
+        let map: [String: String] = [
+            "Hành Động": "action",
+            "Hài Hước": "comedy",
+            "Tình Cảm": "romance",
+            "Kinh Dị": "horror",
+            "Giật Gân": "thriller",
+            "Bí Ẩn": "mystery",
+            "Khoa Học Viễn Tưởng": "sci-fi",
+            "Kỳ Ảo": "fantasy",
+            "Gia Đình": "family",
+            "Chính Kịch": "drama",
+            "Phiêu Lưu": "adventure",
+            "Âm Nhạc": "music",
+            "Võ Thuật": "martial arts",
+            "Hình Sự": "crime",
+            "Tâm Lý": "psychological thriller",
+            "Lịch Sử": "historical drama",
+            "Cổ Trang": "period drama",
+            "Sinh Tồn": "survival",
+            "Zombie": "zombie",
+            "Siêu Anh Hùng": "superhero",
+            "Công Nghệ": "technology",
+            "Thảm Họa": "disaster",
+            "Xuyên Không": "time travel",
+            "Học Đường": "high school",
+            "Tài Liệu": "documentary",
+            "Truyền Hình": "tv movie",
+            "Talk Show": "talk show",
+            "Thể Thao": "sports",
+            "BL": "boy love",
+            "GL": "girl love"
+        ]
+        return map[genre] ?? genre
     }
 }
