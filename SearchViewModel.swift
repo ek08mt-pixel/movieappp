@@ -13,12 +13,13 @@ class SearchViewModel: ObservableObject {
         let m = (try? await movies) ?? []
         let t = (try? await tvShows) ?? []
         trending = (m + t).sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
+        results = trending  // 👈 THÊM DÒNG NÀY
     }
     
     func search() async {
         task?.cancel()
         let q = query.trimmingCharacters(in: .whitespaces)
-        if q.isEmpty { results = []; return }
+        if q.isEmpty { results = trending; return }  // 👈 SỬA DÒNG NÀY
         task = Task {
             try? await Task.sleep(nanoseconds: 100_000_000)
             if !Task.isCancelled {
