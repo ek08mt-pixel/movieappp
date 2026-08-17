@@ -450,45 +450,85 @@ struct EmmewChatView: View {
         chatFocused = false
         
         Task {
-            // Tạo câu trả lời dựa trên câu hỏi
-            let lowercased = question.lowercased()
-            var responseText = ""
-            var movieId = 162 // Mặc định
-            var mediaType = "movie"
+            // Hỏi Gemini
+            let aiResponse = await GeminiAPI.chat(question) ?? "Xin lỗi, Emmew chưa hiểu câu hỏi. Bạn thử hỏi lại nhé."
             
-            // Phân tích câu hỏi đơn giản
+            // Dựa vào câu hỏi để lấy phim phù hợp
+            let lowercased = question.lowercased()
+            let movieId: Int
+            let mediaType = "movie"
+            
             if lowercased.contains("hành động") || lowercased.contains("action") {
-                responseText = "Emmew tìm được mấy phim hành động hay cho bạn nè 💥"
-                movieId = 98 // Gladiator
+                movieId = 98
             } else if lowercased.contains("tình cảm") || lowercased.contains("lãng mạn") || lowercased.contains("romance") {
-                responseText = "Phim tình cảm lãng mạn đây nè 💕"
-                movieId = 194 // Amélie
+                movieId = 194
             } else if lowercased.contains("kinh dị") || lowercased.contains("horror") {
-                responseText = "Phim kinh dị rùng rợn đây nè 👻"
-                movieId = 274 // Silence of the Lambs
+                movieId = 274
             } else if lowercased.contains("hài") || lowercased.contains("comedy") {
-                responseText = "Phim hài vui nhộn đây nè 😂"
-                movieId = 350 // Mean Girls
+                movieId = 350
             } else if lowercased.contains("hoạt hình") || lowercased.contains("anime") {
-                responseText = "Phim hoạt hình hay đây nè 🎬"
-                movieId = 129 // Spirited Away
+                movieId = 129
             } else if lowercased.contains("viễn tưởng") || lowercased.contains("sci-fi") {
-                responseText = "Phim viễn tưởng hay đây nè 🚀"
-                movieId = 157336 // Interstellar
+                movieId = 157336
             } else {
-                responseText = "Emmew tìm được mấy phim giống bạn hỏi nè ✨"
                 movieId = 162
             }
             
             let similar = (try? await APIService.shared.similar(movieId: movieId, mediaType: mediaType)) ?? movies
             await MainActor.run {
-                messages.append((text: responseText, movies: similar, isUser: false))
+                messages.append((text: aiResponse, movies: similar, isUser: false))
                 isThinking = false
             }
         }
     }
+// MARK: - Gemini AI API
+struct GeminiAPI {
+    static let apiKey = Config.geminiAPIKey
+    
+    static func chat(_ message: String, context: String = "") async -> String? {
+        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return nil }
+        
+        var prompt = message
+        if !context.isEmpty {
+            prompt = "Bối cảnh: \(context)\n\nCâu hỏi: \(message)\n\nHãy trả lời tự nhiên như một trợ lý xem phim thân thiện tên Emmew. Trả lời ngắn gọn, hữu ích, không dùng emoji."
+        } else {
+            prompt = "Bạn là Emmew, trợ lý xem phim thân thiện. Hãy trả lời ngắn gọn, hữu ích, không dùng emoji.\n\nCâu hỏi: \(message)"
+        }
+        
+        let body: [String: Any] = [
+            "contents": [
+                [
+                    "parts": [
+                        ["text": prompt]
+                    ]
+                ]
+            ]
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let candidates = json["candidates"] as? [[String: Any]],
+               let first = candidates.first,
+               let content = first["content"] as? [String: Any],
+               let parts = content["parts"] as? [[String: Any]],
+               let text = parts.first?["text"] as? String {
+                return text
+            }
+        } catch {
+            print("Gemini error: \(error)")
+        }
+        return nil
+    }
 }
-
 // MARK: - Visual Effect Blur (UIKit bridge)
 struct VisualEffectBlur: UIViewRepresentable {
     var blurStyle: UIBlurEffect.Style
