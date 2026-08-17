@@ -130,6 +130,12 @@ VStack(alignment: .leading, spacing: 8) {
                             RoundedRectangle(cornerRadius: 14)
                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .frame(height: 100)
+                                if let posterURL = genrePosters[genre.name], let url = URL(string: posterURL) {
+    CachedAsyncImage(url: url)
+        .aspectRatio(contentMode: .fill)
+        .frame(height: 100)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+}
                             LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                             Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
