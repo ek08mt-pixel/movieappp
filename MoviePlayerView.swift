@@ -142,7 +142,7 @@ struct MoviePlayerView: View {
     sourceStatus[selectedSource] = true
     saveHistory()
 } else {
-    loadStream()
+    loadStream(resumeAt: resumeTime > 0 ? resumeTime : nil)
 }
                      player.play(); player.volume = volume
                     setupTimeObserver(); resetControlsTimer(); loadOverlayData()
