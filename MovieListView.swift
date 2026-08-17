@@ -160,7 +160,7 @@ struct MovieListView: View {
                 case "Hoạt hình - Anime":
                     allData = (try? await APIService.shared.animeMovies()) ?? initial
                 case "USUK Icons":
-                    allData = (try? await APIService.shared.discoverMovies(lang: "en", sortBy: "popularity.desc")) ?? initial
+    allData = initial  // Dùng movies truyền vào từ Home
                 default:
                     allData = initial
                 }
