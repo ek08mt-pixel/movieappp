@@ -479,7 +479,9 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
             continueMovieId = prog.movieId; continueMovieTitle = prog.movieTitle
             continueMediaType = prog.mediaType; continueSeason = prog.season
             continueEpisode = prog.episode; continuePosterURL = URL(string: prog.posterPath ?? "")
-            continueCurrentTime = prog.currentTime; presentContinuePlayer()
+            continueCurrentTime = prog.currentTime
+            print("DEBUG resumeTime: \(continueCurrentTime)")
+            presentContinuePlayer()
         }
         .contextMenu {
             Button {
