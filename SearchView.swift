@@ -6,6 +6,12 @@ struct SearchView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMovie: Movie?
     @State private var selectedActor: Actor?
+    @State private var recommendedMovie: Movie?
+    @State private var recommendedMovies: [Movie] = []
+    @State private var showEmmewChat = false
+    @State private var emmewQuestion = ""
+    @State private var emmewResponse = ""
+    @State private var isEmmewThinking = false
     @State private var searchMode: SearchMode = .movies
     @State private var actors: [Actor] = []
     @State private var recentSearches: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
@@ -61,49 +67,117 @@ struct SearchView: View {
                     .padding(.horizontal).padding(.top, 54)
                     
                     if vm.query.isEmpty && searchMode == .movies {
-                        // Recent searches
-                        if !recentSearches.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("Tìm kiếm gần đây").font(.system(size: 13, weight: .semibold)).foregroundColor(.gray)
-                                    Spacer()
-                                    Button("Xóa tất cả") {
-                                        recentSearches.removeAll()
-                                        saveRecent()
+                        ScrollView {
+                            // Recent searches
+                            if !recentSearches.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Tìm kiếm gần đây").font(.system(size: 13, weight: .semibold)).foregroundColor(.gray)
+                                        Spacer()
+                                        Button("Xóa tất cả") {
+                                            recentSearches.removeAll()
+                                            saveRecent()
+                                        }
+                                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
                                     }
-                                    .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
-                                }
-                                .padding(.horizontal, 16)
-                                
-                                FlowLayout(spacing: 8) {
-                                    ForEach(recentSearches, id: \.self) { term in
-                                        HStack(spacing: 6) {
-                                            Button {
-                                                vm.query = term
-                                                Task { await performSearch() }
-                                            } label: {
-                                                Text(term)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    
+                                    FlowLayout(spacing: 8) {
+                                        ForEach(recentSearches, id: \.self) { term in
+                                            HStack(spacing: 6) {
+                                                Button {
+                                                    vm.query = term
+                                                    Task { await performSearch() }
+                                                } label: {
+                                                    Text(term)
+                                                        .font(.system(size: 13))
+                                                        .foregroundColor(.white)
+                                                }
+                                                Button {
+                                                    recentSearches.removeAll { $0 == term }
+                                                    saveRecent()
+                                                } label: {
+                                                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundColor(.white.opacity(0.6))
+                                                }
                                             }
-                                            Button {
-                                                recentSearches.removeAll { $0 == term }
-                                                saveRecent()
-                                            } label: {
-                                                Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundColor(.white.opacity(0.6))
+                                            .padding(.horizontal, 12).padding(.vertical, 8)
+                                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
+                                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                                .padding(.top, 16)
+                            }
+                            
+                            // Emmew Recommended
+                            if let movie = recommendedMovie {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Emmew Recommended")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.6))
+                                    
+                                    HStack(spacing: 12) {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text(movie.title)
+                                                .font(.system(size: 16, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .lineLimit(2)
+                                            
+                                            if let year = movie.releaseDate?.prefix(4) {
+                                                Text("\(year) • Phim bộ • FHD")
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.gray)
+                                            }
+                                            
+                                            HStack(spacing: 8) {
+                                                Button {
+                                                    Task { await loadRecommended() }
+                                                } label: {
+                                                    Text("Rcm lại")
+                                                        .font(.system(size: 11, weight: .medium))
+                                                        .foregroundColor(.white)
+                                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                                        .background(Capsule().fill(.white.opacity(0.1)))
+                                                }
+                                                
+                                                Button {
+                                                    selectedMovie = movie
+                                                } label: {
+                                                    Text("Xem ngay")
+                                                        .font(.system(size: 11, weight: .bold))
+                                                        .foregroundColor(.black)
+                                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                                        .background(Capsule().fill(.white))
+                                                }
+                                                
+                                                Button {
+                                                    showEmmewChat = true
+                                                } label: {
+                                                    Text("Hỏi Emmew")
+                                                        .font(.system(size: 11, weight: .medium))
+                                                        .foregroundColor(.yellow)
+                                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                                        .background(Capsule().fill(.yellow.opacity(0.15)))
+                                                }
                                             }
                                         }
-                                        .padding(.horizontal, 12).padding(.vertical, 8)
-                                        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
-                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                                        
+                                        Spacer()
+                                        
+                                        CachedAsyncImage(url: movie.posterURL)
+                                            .aspectRatio(2/3, contentMode: .fill)
+                                            .frame(width: 80, height: 120)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
                                     }
                                 }
+                                .padding(16)
+                                .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
                                 .padding(.horizontal, 16)
+                                .padding(.top, 16)
                             }
-                            .padding(.top, 16)
                         }
-                        
-                        Spacer()
                     } else if searchMode == .movies {
                         if vm.results.isEmpty && !vm.query.isEmpty {
                             VStack(spacing: 12) { Image(systemName: "movieclapper").font(.system(size: 40)).foregroundColor(.gray); Text("Không tìm thấy").foregroundColor(.gray) }.frame(maxHeight: .infinity)
@@ -152,8 +226,20 @@ struct SearchView: View {
             }
             .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
             .fullScreenCover(item: $selectedActor) { actor in ActorDetailView(actor: actor) }
+            .sheet(isPresented: $showEmmewChat) {
+                EmmewChatView(movies: recommendedMovies)
+            }
         }
-        .onAppear { focused = true; Task { await vm.loadTrending() } }
+        .onAppear { 
+            focused = true
+            Task { 
+                await vm.loadTrending()
+                if recommendedMovie == nil {
+                    recommendedMovie = vm.results.randomElement()
+                    await loadRecommended()
+                }
+            } 
+        }
     }
     
     func saveSearch(_ term: String) {
@@ -166,6 +252,14 @@ struct SearchView: View {
     
     func saveRecent() {
         UserDefaults.standard.set(recentSearches, forKey: "recentSearches")
+    }
+    
+    func loadRecommended() async {
+        guard let movie = recommendedMovie else { return }
+        let similar = (try? await APIService.shared.similar(movieId: movie.id, mediaType: movie.mediaType)) ?? []
+        await MainActor.run {
+            recommendedMovies = similar
+        }
     }
     
     func performSearch() async {
@@ -187,6 +281,114 @@ struct SearchView: View {
                     actors = response.results.map { Actor(id: $0.id, name: $0.name, character: nil, profilePath: $0.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: $0.known_for_department) }
                 }
             } catch { print("Search actors error: \(error)") }
+        }
+    }
+}
+
+// MARK: - Emmew Chat View
+struct EmmewChatView: View {
+    let movies: [Movie]
+    @State private var messages: [(text: String, movies: [Movie], isUser: Bool)] = []
+    @State private var input = ""
+    @State private var isThinking = false
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(messages.indices, id: \.self) { index in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(messages[index].text)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(messages[index].isUser ? .black : .white)
+                                        .padding(12)
+                                        .background(messages[index].isUser ? .white : Color.white.opacity(0.08))
+                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    
+                                    if !messages[index].movies.isEmpty {
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 12) {
+                                                ForEach(messages[index].movies.prefix(6)) { movie in
+                                                    VStack(spacing: 6) {
+                                                        CachedAsyncImage(url: movie.posterURL)
+                                                            .aspectRatio(2/3, contentMode: .fill)
+                                                            .frame(width: 100, height: 150)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        Text(movie.title)
+                                                            .font(.system(size: 10, weight: .medium))
+                                                            .foregroundColor(.white)
+                                                            .lineLimit(2)
+                                                            .frame(width: 100)
+                                                        Text("FHD • \(movie.yearText)")
+                                                            .font(.system(size: 8))
+                                                            .foregroundColor(.gray)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if isThinking {
+                                HStack(spacing: 4) {
+                                    Circle().fill(.gray).frame(width: 6, height: 6)
+                                    Circle().fill(.gray.opacity(0.7)).frame(width: 6, height: 6)
+                                    Circle().fill(.gray.opacity(0.4)).frame(width: 6, height: 6)
+                                }
+                                .padding()
+                            }
+                        }
+                        .padding()
+                    }
+                    
+                    HStack(spacing: 8) {
+                        TextField("Hỏi Emmew...", text: $input)
+                            .textFieldStyle(.plain)
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial.opacity(0.5)))
+                        
+                        Button {
+                            sendMessage()
+                        } label: {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("Emmew AI")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Đóng") { dismiss() }
+                        .foregroundColor(.white)
+                }
+            }
+        }
+    }
+    
+    func sendMessage() {
+        guard !input.isEmpty else { return }
+        let question = input
+        input = ""
+        messages.append((text: question, movies: [], isUser: true))
+        isThinking = true
+        
+        Task {
+            let similar = (try? await APIService.shared.similar(movieId: 162, mediaType: "movie")) ?? movies
+            await MainActor.run {
+                messages.append((text: "Emmew tìm được mấy phim giống \(question) cho bạn nè ✨", movies: similar, isUser: false))
+                isThinking = false
+            }
         }
     }
 }
