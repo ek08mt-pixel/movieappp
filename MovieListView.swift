@@ -140,14 +140,12 @@ struct MovieListView: View {
             let lang = langMap[fixedQuery.lowercased()] ?? fixedQuery.lowercased()
             allData = (try? await APIService.shared.discoverMovies(lang: lang, sortBy: "popularity.desc", page: page)) ?? []
         } else if isGenreQuery {
-            // Dùng genre ID chuẩn TMDB
             let genreId = genreID(for: fixedQuery)
             if genreId > 0 {
                 allData = (try? await APIService.shared.moviesByGenre(genreId: genreId, page: page)) ?? []
             } else {
-                // Thể loại đặc biệt dùng keyword search
-                let keyword = englishKeyword(for: fixedQuery)
-                allData = (try? await APIService.shared.searchMovies(query: keyword, page: page)) ?? []
+                let keywordId = keywordID(for: fixedQuery)
+                allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
             }
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
@@ -268,6 +266,23 @@ func genreID(for genre: String) -> Int {
             "Học Đường": 0,
             "BL": 0,
             "GL": 0
+        ]
+        return map[genre] ?? 0
+    }
+    func keywordID(for genre: String) -> Int {
+        let map: [String: Int] = [
+            "BL": 227144,
+            "GL": 229047,
+            "Zombie": 12377,
+            "Sinh Tồn": 11322,
+            "Xuyên Không": 9665,
+            "Siêu Anh Hùng": 9663,
+            "Học Đường": 13043,
+            "Võ Thuật": 490,
+            "Cổ Trang": 11322,
+            "Tâm Lý": 11322,
+            "Thảm Họa": 1538,
+            "Công Nghệ": 4563
         ]
         return map[genre] ?? 0
     }
