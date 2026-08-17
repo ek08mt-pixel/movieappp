@@ -120,19 +120,7 @@ struct HomeView: View {
                             }.padding(.bottom, 16)
                         }
                         
-                        if !vm.genres.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 10) {
-                                    ForEach(uniqueGenres().prefix(12)) { g in
-                                        NavigationLink(destination: GenreMovieView(genre: g)) {
-                                            Text(g.name.replacingOccurrences(of: "Phim ", with: ""))
-                                                .font(.caption).fontWeight(.medium).foregroundColor(.white.opacity(0.7))
-                                                .padding(.horizontal, 14).padding(.vertical, 7).background(Capsule().fill(.ultraThinMaterial.opacity(0.4)))
-                                        }
-                                    }
-                                }.padding(.horizontal, 20)
-                            }.padding(.vertical, 10)
-                        }
+                        
                         
                         // Continue Watching
                         if !appState.watchProgressList.isEmpty {
