@@ -9,13 +9,13 @@ struct SearchView: View {
     @State private var recommendedMovie: Movie?
     @State private var recommendedMovies: [Movie] = []
     @State private var showEmmewChat = false
-    @State private var emmewQuestion = ""
-    @State private var emmewResponse = ""
-    @State private var isEmmewThinking = false
     @State private var searchMode: SearchMode = .movies
     @State private var actors: [Actor] = []
     @State private var recentSearches: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
     @State private var currentRecommendIndex = 0
+    @State private var hotMovies: [Movie] = []
+    @State private var currentPage = 1
+    @State private var totalPages = 5
     
     enum SearchMode: String, CaseIterable { case movies = "Phim", actors = "Diễn viên" }
     
@@ -37,6 +37,7 @@ struct SearchView: View {
                 }
                 
                 VStack(spacing: 0) {
+                    // Thanh search + Picker
                     VStack(spacing: 8) {
                         HStack {
                             Image(systemName: "magnifyingglass").foregroundColor(.gray)
@@ -82,49 +83,55 @@ struct SearchView: View {
                     }
                     .padding(.horizontal).padding(.top, 54)
                     
-                    if vm.query.isEmpty && searchMode == .movies {
-                        ScrollView {
-                            if !recentSearches.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Text("Tìm kiếm gần đây").font(.system(size: 13, weight: .semibold)).foregroundColor(.gray)
-                                        Spacer()
-                                        Button("Xóa tất cả") {
-                                            recentSearches.removeAll()
-                                            saveRecent()
-                                        }
-                                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
-                                    }
-                                    .padding(.horizontal, 16)
-                                    
-                                    FlowLayout(spacing: 8) {
-                                        ForEach(recentSearches, id: \.self) { term in
-                                            HStack(spacing: 6) {
-                                                Button {
-                                                    vm.query = term
-                                                    Task { await performSearch() }
-                                                } label: {
-                                                    Text(term)
-                                                        .font(.system(size: 13))
-                                                        .foregroundColor(.white)
-                                                }
-                                                Button {
-                                                    recentSearches.removeAll { $0 == term }
-                                                    saveRecent()
-                                                } label: {
-                                                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundColor(.white.opacity(0.6))
-                                                }
-                                            }
-                                            .padding(.horizontal, 12).padding(.vertical, 8)
-                                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
-                                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                    // Nếu đang search
+                    if !vm.query.isEmpty && searchMode == .movies {
+                        if vm.results.isEmpty {
+                            VStack(spacing: 12) { 
+                                Image(systemName: "movieclapper").font(.system(size: 40)).foregroundColor(.gray)
+                                Text("Không tìm thấy").foregroundColor(.gray) 
+                            }.frame(maxHeight: .infinity)
+                        } else {
+                            ScrollView {
+                                LazyVGrid(columns: columns, spacing: 15) {
+                                    ForEach(vm.results) { movie in
+                                        MovieCardView(movie: movie) {
+                                            saveSearch(movie.title)
+                                            if let callback = onSelectMovie { callback(movie); dismiss() }
+                                            else { selectedMovie = movie }
                                         }
                                     }
-                                    .padding(.horizontal, 16)
-                                }
-                                .padding(.top, 16)
+                                }.padding(.horizontal, 16).padding(.bottom, 100)
                             }
-                            
+                        }
+                    } else if !vm.query.isEmpty && searchMode == .actors {
+                        // Actor search
+                        if actors.isEmpty {
+                            VStack(spacing: 12) { 
+                                Image(systemName: "person.fill.questionmark").font(.system(size: 40)).foregroundColor(.gray)
+                                Text("Không tìm thấy diễn viên").foregroundColor(.gray) 
+                            }.frame(maxHeight: .infinity)
+                        } else {
+                            ScrollView {
+                                LazyVGrid(columns: actorColumns, spacing: 14) {
+                                    ForEach(actors) { actor in
+                                        Button { selectedActor = actor } label: {
+                                            VStack(spacing: 8) {
+                                                if let url = actor.profileURL {
+                                                    CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(width: 80, height: 80).clipShape(Circle()).overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                                                } else {
+                                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 80, height: 80).overlay(Text(String(actor.name.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.gray))
+                                                }
+                                                Text(actor.name).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
+                                            }
+                                        }
+                                    }
+                                }.padding(.horizontal, 16).padding(.bottom, 100)
+                            }
+                        }
+                    } else {
+                        // Query rỗng - hiện main content
+                        ScrollView {
+                            // Emmew Recommended (luôn hiện)
                             if let movie = recommendedMovie {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Emmew Recommended")
@@ -139,8 +146,17 @@ struct SearchView: View {
                                                 .lineLimit(2)
                                             
                                             if let year = movie.releaseDate?.prefix(4) {
-                                                Text("\(year) • Phim bộ • FHD")
+                                                Text("\(year) • \(movie.mediaType == "tv" ? "Phim bộ" : "Phim lẻ") • FHD")
                                                     .font(.system(size: 11))
+                                                    .foregroundColor(.gray)
+                                            }
+                                            
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "star.fill")
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.yellow)
+                                                Text(movie.ratingText)
+                                                    .font(.system(size: 10))
                                                     .foregroundColor(.gray)
                                             }
                                             
@@ -191,49 +207,108 @@ struct SearchView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.top, 16)
                             }
-                        }
-                    } else if searchMode == .movies {
-                        if vm.results.isEmpty && !vm.query.isEmpty {
-                            VStack(spacing: 12) { Image(systemName: "movieclapper").font(.system(size: 40)).foregroundColor(.gray); Text("Không tìm thấy").foregroundColor(.gray) }.frame(maxHeight: .infinity)
-                        } else {
-                            ScrollView {
+                            
+                            // Tìm kiếm gần đây (chỉ hiện khi focused)
+                            if focused && !recentSearches.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Tìm kiếm gần đây").font(.system(size: 13, weight: .semibold)).foregroundColor(.gray)
+                                        Spacer()
+                                        Button("Xóa tất cả") {
+                                            recentSearches.removeAll()
+                                            saveRecent()
+                                        }
+                                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
+                                    }
+                                    .padding(.horizontal, 16)
+                                    
+                                    FlowLayout(spacing: 8) {
+                                        ForEach(recentSearches, id: \.self) { term in
+                                            HStack(spacing: 6) {
+                                                Button {
+                                                    vm.query = term
+                                                    Task { await performSearch() }
+                                                } label: {
+                                                    Text(term)
+                                                        .font(.system(size: 13))
+                                                        .foregroundColor(.white)
+                                                }
+                                                Button {
+                                                    recentSearches.removeAll { $0 == term }
+                                                    saveRecent()
+                                                } label: {
+                                                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundColor(.white.opacity(0.6))
+                                                }
+                                            }
+                                            .padding(.horizontal, 12).padding(.vertical, 8)
+                                            .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
+                                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.1), lineWidth: 0.5))
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                                .padding(.top, 16)
+                            }
+                            
+                            // Hot hit dạo này
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Hot hit dạo này")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                
                                 LazyVGrid(columns: columns, spacing: 15) {
-                                    ForEach(vm.results) { movie in
-                                        Button {
-                                            saveSearch(movie.title)
+                                    ForEach(hotMovies) { movie in
+                                        MovieCardView(movie: movie) {
                                             if let callback = onSelectMovie { callback(movie); dismiss() }
                                             else { selectedMovie = movie }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                
+                                // Phân trang
+                                HStack(spacing: 16) {
+                                    Button {
+                                        if currentPage > 1 {
+                                            currentPage -= 1
+                                            Task { await loadHotMovies() }
+                                        }
+                                    } label: {
+                                        Text("< trước")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(currentPage > 1 ? .white : .gray.opacity(0.5))
+                                    }
+                                    
+                                    ForEach(1...totalPages, id: \.self) { page in
+                                        Button {
+                                            currentPage = page
+                                            Task { await loadHotMovies() }
                                         } label: {
-                                            VStack(spacing: 6) {
-                                                CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 8)).shadow(color: .black.opacity(0.3), radius: 3).overlay(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.12)).opacity(movie.posterURL == nil ? 1 : 0))
-                                                Text(movie.title).font(.system(size: 9, weight: .medium)).foregroundColor(.white).lineLimit(2)
-                                                HStack(spacing: 2) { Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow); Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray) }
-                                            }
+                                            Text("\(page)")
+                                                .font(.system(size: 12, weight: page == currentPage ? .bold : .regular))
+                                                .foregroundColor(page == currentPage ? .black : .white)
+                                                .frame(width: 28, height: 28)
+                                                .background(page == currentPage ? .white : .white.opacity(0.1))
+                                                .clipShape(Circle())
                                         }
                                     }
-                                }.padding(.horizontal, 16).padding(.bottom, 100)
-                            }
-                        }
-                    } else if searchMode == .actors {
-                        if actors.isEmpty && !vm.query.isEmpty {
-                            VStack(spacing: 12) { Image(systemName: "person.fill.questionmark").font(.system(size: 40)).foregroundColor(.gray); Text("Không tìm thấy diễn viên").foregroundColor(.gray) }.frame(maxHeight: .infinity)
-                        } else {
-                            ScrollView {
-                                LazyVGrid(columns: actorColumns, spacing: 14) {
-                                    ForEach(actors) { actor in
-                                        Button { selectedActor = actor } label: {
-                                            VStack(spacing: 8) {
-                                                if let url = actor.profileURL {
-                                                    CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(width: 80, height: 80).clipShape(Circle()).overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
-                                                } else {
-                                                    Circle().fill(.ultraThinMaterial.opacity(0.4)).frame(width: 80, height: 80).overlay(Text(String(actor.name.prefix(1))).font(.system(size: 30, weight: .bold)).foregroundColor(.gray))
-                                                }
-                                                Text(actor.name).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2).multilineTextAlignment(.center)
-                                            }
+                                    
+                                    Button {
+                                        if currentPage < totalPages {
+                                            currentPage += 1
+                                            Task { await loadHotMovies() }
                                         }
+                                    } label: {
+                                        Text("sau >")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(currentPage < totalPages ? .white : .gray.opacity(0.5))
                                     }
-                                }.padding(.horizontal, 16).padding(.bottom, 100)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
                             }
+                            .padding(.top, 20)
                         }
                     }
                 }
@@ -254,10 +329,12 @@ struct SearchView: View {
                     recommendedMovie = vm.results.randomElement()
                     await loadRecommended()
                 }
+                await loadHotMovies()
             }
         }
     }
     
+    // MARK: - Functions
     func saveSearch(_ term: String) {
         guard !term.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         recentSearches.removeAll { $0 == term }
@@ -291,6 +368,36 @@ struct SearchView: View {
         }
     }
     
+    func loadHotMovies() async {
+        let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=100&page=\(currentPage)"
+        guard let url = URL(string: urlString) else { return }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct Resp: Codable { let results: [MovieResult] }
+            struct MovieResult: Codable {
+                let id: Int; let title: String?; let overview: String
+                let poster_path: String?; let backdrop_path: String?
+                let vote_average: Double; let release_date: String?
+                let genre_ids: [Int]?; let popularity: Double?
+                let vote_count: Int?; let original_language: String?
+            }
+            let response = try JSONDecoder().decode(Resp.self, from: data)
+            await MainActor.run {
+                hotMovies = response.results.map { m in
+                    Movie(id: m.id, title: m.title ?? "Unknown", overview: m.overview,
+                          posterPath: m.poster_path, backdropPath: m.backdrop_path,
+                          voteAverage: m.vote_average, releaseDate: m.release_date,
+                          genreIds: m.genre_ids, originalTitle: m.title,
+                          popularity: m.popularity, voteCount: m.vote_count,
+                          adult: false, originalLanguage: m.original_language, mediaType: "movie")
+                }
+            }
+        } catch {
+            print("Hot movies error: \(error)")
+        }
+    }
+    
     func performSearch() async {
         if searchMode == .movies {
             await vm.search()
@@ -313,6 +420,35 @@ struct SearchView: View {
         }
     }
 }
+
+// MARK: - Movie Card View (tái sử dụng)
+struct MovieCardView: View {
+    let movie: Movie
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                CachedAsyncImage(url: movie.posterURL)
+                    .aspectRatio(2/3, contentMode: .fill)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .shadow(color: .black.opacity(0.3), radius: 3)
+                    .overlay(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.12)).opacity(movie.posterURL == nil ? 1 : 0))
+                Text(movie.title)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                HStack(spacing: 2) {
+                    Image(systemName: "star.fill").font(.system(size: 7)).foregroundColor(.yellow)
+                    Text(movie.ratingText).font(.system(size: 8)).foregroundColor(.gray)
+                }
+            }
+        }
+    }
+}
+
+// ... phần còn lại giữ nguyên (EmmewChatView, GeminiAPI, VisualEffectBlur, FlowLayout)
 
 // MARK: - Emmew Chat View
 struct EmmewChatView: View {
