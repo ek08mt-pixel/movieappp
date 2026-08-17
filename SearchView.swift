@@ -13,6 +13,7 @@ struct SearchView: View {
     @State private var actors: [Actor] = []
     @State private var recentSearches: [String] = UserDefaults.standard.stringArray(forKey: "recentSearches") ?? []
     @State private var currentRecommendIndex = 0
+    @State private var showFullRecommend = false
     @State private var hotMovies: [Movie] = []
     @State private var currentPage = 1
     @State private var totalPages = 5
@@ -131,82 +132,115 @@ struct SearchView: View {
                     } else {
                         // Query rỗng - hiện main content
                         ScrollView {
-                            // Emmew Recommended (luôn hiện)
-                            if let movie = recommendedMovie {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Emmew Recommended")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.6))
-                                    
-                                    HStack(spacing: 12) {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text(movie.title)
-                                                .font(.system(size: 16, weight: .bold))
-                                                .foregroundColor(.white)
-                                                .lineLimit(2)
-                                            
-                                            if let year = movie.releaseDate?.prefix(4) {
-                                                Text("\(year) • \(movie.mediaType == "tv" ? "Phim bộ" : "Phim lẻ") • FHD")
-                                                    .font(.system(size: 11))
-                                                    .foregroundColor(.gray)
-                                            }
-                                            
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "star.fill")
-                                                    .font(.system(size: 9))
-                                                    .foregroundColor(.yellow)
-                                                Text(movie.ratingText)
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.gray)
-                                            }
-                                            
-                                            HStack(spacing: 8) {
-                                                Button {
-                                                    Task { await loadAnotherRecommend() }
-                                                } label: {
-                                                    Text("Rcm lại")
-                                                        .font(.system(size: 11, weight: .medium))
-                                                        .foregroundColor(.white)
-                                                        .padding(.horizontal, 12).padding(.vertical, 6)
-                                                        .background(Capsule().fill(.white.opacity(0.1)))
-                                                }
-                                                
-                                                Button {
-                                                    selectedMovie = movie
-                                                } label: {
-                                                    Text("Xem ngay")
-                                                        .font(.system(size: 11, weight: .bold))
-                                                        .foregroundColor(.black)
-                                                        .padding(.horizontal, 12).padding(.vertical, 6)
-                                                        .background(Capsule().fill(.white))
-                                                }
-                                                
-                                                Button {
-                                                    showEmmewChat = true
-                                                } label: {
-                                                    Text("Hỏi Emmew")
-                                                        .font(.system(size: 11, weight: .medium))
-                                                        .foregroundColor(.yellow)
-                                                        .padding(.horizontal, 12).padding(.vertical, 6)
-                                                        .background(Capsule().fill(.yellow.opacity(0.15)))
-                                                }
-                                            }
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        CachedAsyncImage(url: movie.posterURL)
-                                            .aspectRatio(2/3, contentMode: .fill)
-                                            .frame(width: 80, height: 120)
-                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                }
-                                .padding(16)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                            }
+                            // Trong ScrollView, thay thế phần Emmew Recommended
+if let movie = recommendedMovie {
+    VStack(alignment: .leading, spacing: 12) {
+        Text("Emmew Recommended")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundColor(.white.opacity(0.6))
+        
+        if !showFullRecommend {
+            // Trạng thái ban đầu - chưa bấm RCM
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bí quyết chọn phim hay mỗi ngày cho bạn ✨")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+                
+                HStack(spacing: 10) {
+                    Button {
+                        showFullRecommend = true
+                    } label: {
+                        Text("RCM")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 20).padding(.vertical, 8)
+                            .background(Capsule().fill(.white))
+                    }
+                    
+                    Button {
+                        showEmmewChat = true
+                    } label: {
+                        Text("Hỏi Emmew")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.yellow)
+                            .padding(.horizontal, 20).padding(.vertical, 8)
+                            .background(Capsule().fill(.yellow.opacity(0.15)))
+                    }
+                }
+            }
+        } else {
+            // Trạng thái đầy đủ - sau khi bấm RCM
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(movie.title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                    
+                    if let year = movie.releaseDate?.prefix(4) {
+                        Text("\(year) • \(movie.mediaType == "tv" ? "Phim bộ" : "Phim lẻ") • FHD")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(.yellow)
+                        Text(movie.ratingText)
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await loadAnotherRecommend() }
+                        } label: {
+                            Text("Rcm lại")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12).padding(.vertical, 6)
+                                .background(Capsule().fill(.white.opacity(0.1)))
+                        }
+                        
+                        Button {
+                            selectedMovie = movie
+                        } label: {
+                            Text("Xem ngay")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 12).padding(.vertical, 6)
+                                .background(Capsule().fill(.white))
+                        }
+                        
+                        Button {
+                            showEmmewChat = true
+                        } label: {
+                            Text("Hỏi Emmew")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.yellow)
+                                .padding(.horizontal, 12).padding(.vertical, 6)
+                                .background(Capsule().fill(.yellow.opacity(0.15)))
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                CachedAsyncImage(url: movie.posterURL)
+    .aspectRatio(2/3, contentMode: .fill)
+    .frame(width: 80, height: 120)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .id(movie.id)  // Thêm dòng này
+            }
+        }
+    }
+    .padding(16)
+    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.4)))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.15), lineWidth: 0.5))
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+}
                             
                             // Tìm kiếm gần đây (chỉ hiện khi focused)
                             if focused && !recentSearches.isEmpty {
@@ -356,17 +390,19 @@ struct SearchView: View {
     }
     
     func loadAnotherRecommend() async {
-        let allMovies = vm.results.isEmpty ? vm.trending : vm.results
-        guard !allMovies.isEmpty else { return }
-        
-        let otherMovies = allMovies.filter { $0.id != recommendedMovie?.id }
-        if let newMovie = otherMovies.randomElement() {
-            await MainActor.run {
-                recommendedMovie = newMovie
-            }
-            await loadRecommended()
+    let allMovies = vm.results.isEmpty ? vm.trending : vm.results
+    guard !allMovies.isEmpty else { return }
+    
+    // Lấy phim khác với phim hiện tại
+    let otherMovies = allMovies.filter { $0.id != recommendedMovie?.id }
+    if let newMovie = otherMovies.randomElement() {
+        await MainActor.run {
+            recommendedMovie = newMovie
+            recommendedMovies = []  // Reset để load lại
         }
+        await loadRecommended()
     }
+}
     
     func loadHotMovies() async {
         let urlString = "https://api.themoviedb.org/3/discover/movie?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&sort_by=popularity.desc&vote_count.gte=100&page=\(currentPage)"
