@@ -159,15 +159,13 @@ func japaneseMovies() async throws -> [Movie] {
         return response.results.map { $0.withPlaceholder() }
     }
     
-    func discoverMovies(lang: String, sortBy: String) async throws -> [Movie] {
-        try await fetchMultiplePages { [self] page in
-            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
-            guard let url = URL(string: urlString) else { return [] }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try decoder.decode(MovieResponse.self, from: data)
-            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-        }
-    }
+    func discoverMovies(lang: String, sortBy: String, page: Int = 1) async throws -> [Movie] {
+    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
+    guard let url = URL(string: urlString) else { return [] }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    let response = try decoder.decode(MovieResponse.self, from: data)
+    return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+}
     
     func movieDetail(movieId: Int) async throws -> MovieDetail? {
         let urlString = "\(baseURL)/movie/\(movieId)?api_key=\(apiKey)&language=\(language)&append_to_response=credits"
@@ -253,13 +251,13 @@ func japaneseMovies() async throws -> [Movie] {
         return try? decoder.decode(CollectionDetail.self, from: data)
     }
     
-    func discoverMoviesByYear(_ year: Int) async throws -> [Movie] {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.map { $0.withPlaceholder() }
-    }
+    func discoverMoviesByYear(_ year: Int, page: Int = 1) async throws -> [Movie] {
+    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+    guard let url = URL(string: urlString) else { return [] }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    let response = try decoder.decode(MovieResponse.self, from: data)
+    return response.results.map { $0.withPlaceholder() }
+}
     
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
         switch type {
