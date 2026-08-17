@@ -399,7 +399,6 @@ func japaneseMovies() async throws -> [Movie] {
                   adult: false, originalLanguage: tv.original_language, mediaType: "tv")
         }
     }
-}
     
     func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
