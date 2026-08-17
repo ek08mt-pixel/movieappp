@@ -37,7 +37,7 @@ struct ExploreView: View {
     "Tài Liệu": "https://media.themoviedb.org/t/p/w500_and_h282_face/qhSfXdkrIzwYsyQ3Z9ehFmO3zjy.jpg",
     "Truyền Hình": "https://media.themoviedb.org/t/p/w500_and_h282_face/zE9W0do2DF7hsdRPho8W3GOb2AA.jpg",
     "BL": "https://media.themoviedb.org/t/p/w500_and_h282_face/oJ98AdaU2zllrsnRSckTC9SBt14.jpg",
-    "GL": "https://media.themoviedb.org/t/p/w500_and_h282_face/xG3b2YNEBxYEY67BvsvvJk3n8D7.jpg"
+    "GL": "https://media.themoviedb.org/t/p/w500_and_h282_face/xG3b2YNEBxYEY67BvsvvJk3n8D7.jpg",
 ]
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
