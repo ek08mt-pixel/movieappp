@@ -164,7 +164,6 @@ struct MovieListView: View {
         let keywordId = keywordID(for: fixedQuery)
         allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
     }
-}
         } else {
             let initial = movies.filter { !($0.adult ?? false) }
             
