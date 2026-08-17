@@ -377,15 +377,7 @@ func japaneseMovies() async throws -> [Movie] {
         return all
     }
     
-    func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-    }
-}
-func discoverTVWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
+    func discoverTVWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
         let urlString = "\(baseURL)/discover/tv?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -407,6 +399,17 @@ func discoverTVWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie
                   adult: false, originalLanguage: tv.original_language, mediaType: "tv")
         }
     }
+}
+    
+    func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+    }
+}
+
 extension Movie {
     func withPlaceholder() -> Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
