@@ -9,6 +9,36 @@ struct ExploreView: View {
     @State private var genrePage = 0
     @State private var displayGenres: [Genre] = []
     
+    let genrePosters: [String: String] = [
+    "Hành Động": "https://media.themoviedb.org/t/p/w500_and_h282_face/2rjI2uXmjitMAaXVO21r9ao7v2j.jpg",
+    "Hài Hước": "https://media.themoviedb.org/t/p/w500_and_h282_face/85k0kaoRgGmF6ACq0M61AFxhjLN.jpg",
+    "Tình Cảm": "https://media.themoviedb.org/t/p/w500_and_h282_face/oQaVV7p916HO5MDI820zzs1pin9.jpg",
+    "Kinh Dị": "https://media.themoviedb.org/t/p/w1000_and_h563_face/9ZChoA7J3C3c144vDl6q2QDmERP.jpg",
+    "Giật Gân": "https://media.themoviedb.org/t/p/w500_and_h282_face/H5HjE7Xb9N09rbWn1zBfxgI8uz.jpg",
+    "Bí Ẩn": "https://media.themoviedb.org/t/p/w1000_and_h563_face/flxau5Iu7bChQHsESqvGZ3FQRaI.jpg",
+    "Khoa Học Viễn Tưởng": "https://media.themoviedb.org/t/p/w1000_and_h563_face/6KDDoTq8Vq3HuQHULzuvPiCJbMI.jpg",
+    "Kỳ Ảo": "https://media.themoviedb.org/t/p/w500_and_h282_face/9pBv1BOSloAUgAkF0meJWdnbV4Q.jpg",
+    "Gia Đình": "https://media.themoviedb.org/t/p/w500_and_h282_face/fBieUo3SdItUrXZE16YxbpjwXIe.jpg",
+    "Chính Kịch": "https://media.themoviedb.org/t/p/w500_and_h282_face/yt9m5CiU2MZkQoNl1kqLPODNR4t.jpg",
+    "Phiêu Lưu": "https://media.themoviedb.org/t/p/w1000_and_h563_face/bg6ciVcsJiN7Ovx5dnIholRweN0.jpg",
+    "Âm Nhạc": "https://media.themoviedb.org/t/p/w500_and_h282_face/jOodAXQo4VovqV8YruBTW63zWDx.jpg",
+    "Võ Thuật": "https://media.themoviedb.org/t/p/w1000_and_h563_face/yAEqrOgg6aB2sodeywPM3Pigubr.jpg",
+    "Hình Sự": "https://media.themoviedb.org/t/p/w500_and_h282_face/2J283YNxKhxAqHeVegUJ5mzLfGb.jpg",
+    "Tâm Lý": "https://media.themoviedb.org/t/p/w1000_and_h563_face/iCTnFRWCtAwW9dYvsgDEF7rEyWM.jpg",
+    "Lịch Sử": "https://media.themoviedb.org/t/p/w1000_and_h563_face/qJbDKWdTQd0IicRKqGoVF7QTmTo.jpg",
+    "Cổ Trang": "https://media.themoviedb.org/t/p/w1000_and_h563_face/mITjiHXxA5NZzMEG9YG9MB59BrL.jpg",
+    "Sinh Tồn": "https://media.themoviedb.org/t/p/w1000_and_h563_face/oTE4lNs4PSG5iIWjqaTdCIFJ4Bs.jpg",
+    "Zombie": "https://media.themoviedb.org/t/p/w1000_and_h563_face/pMTQDxyDVCM8EyWwwXRDgN5R7uf.jpg",
+    "Siêu Anh Hùng": "https://media.themoviedb.org/t/p/w500_and_h282_face/eQySd26OW7UmCuaeBOL7qy6foMn.jpg",
+    "Công Nghệ": "https://media.themoviedb.org/t/p/w500_and_h282_face/drRxbu2OHG0DEENptZ8wI5f0uEU.jpg",
+    "Thảm Họa": "https://media.themoviedb.org/t/p/w1000_and_h563_face/cLFbDVfhllIMybpo2fkGNzehiQG.jpg",
+    "Xuyên Không": "https://media.themoviedb.org/t/p/w500_and_h282_face/tulwYlHHvreBlIbzfMzzUK0oxAV.jpg",
+    "Học Đường": "https://media.themoviedb.org/t/p/w1000_and_h563_face/7I5o1pauNbi9fpp6Bq4OzRjaQfC.jpg",
+    "Tài Liệu": "https://media.themoviedb.org/t/p/w500_and_h282_face/qhSfXdkrIzwYsyQ3Z9ehFmO3zjy.jpg",
+    "Truyền Hình": "https://media.themoviedb.org/t/p/w500_and_h282_face/zE9W0do2DF7hsdRPho8W3GOb2AA.jpg",
+    "BL": "https://media.themoviedb.org/t/p/w500_and_h282_face/oJ98AdaU2zllrsnRSckTC9SBt14.jpg",
+    "GL": "https://media.themoviedb.org/t/p/w500_and_h282_face/xG3b2YNEBxYEY67BvsvvJk3n8D7.jpg"
+]
     let collections: [(String, Int, CategoryConfig.CategoryType)] = [
         ("IMDb Top", 210024, .keyword),
         ("Netflix", 213, .studio), ("Marvel", 420, .studio),
