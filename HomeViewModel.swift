@@ -28,7 +28,7 @@ class HomeViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         
-        // Load tuần tự từng cái để tránh 503
+        // Load tuần tự
         trending24h = (try? await APIService.shared.trending24hFast()) ?? []
         movieOfDay = trending24h.randomElement()
         
@@ -52,6 +52,10 @@ class HomeViewModel: ObservableObject {
         
         isLoading = false
     }
+    
+    // Các hàm còn lại giữ nguyên như file của bạn
+    // (loadTrendingTVPages, loadTrendingAnime, loadNewMovies, loadUSUKIcons, loadSimilarForLastWatched)
+}
     
     private func loadTrendingTVPages() async -> [Movie] {
         var all: [Movie] = []
