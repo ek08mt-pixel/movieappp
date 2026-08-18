@@ -570,4 +570,3 @@ struct CategoryFullView: View {
             movies = []
         }
     }
-}
