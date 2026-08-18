@@ -171,17 +171,16 @@ VStack(alignment: .leading, spacing: 8) {
     .padding(.top, 4)
 }
 .padding(.top, 12)
-                        VStack(alignment: .leading, spacing: 8) {
-    VStack(alignment: .leading, spacing: 2) {
-        Text("Hôm nay bạn chọn bên nào?")
-            .font(.system(size: 15, weight: .bold))
-            .foregroundColor(.white)
-        Text("Netflix, Disney, Marvel, DC... Bấm vào để khám phá")
-            .font(.system(size: 10))
-            .foregroundColor(.gray)
-            .lineLimit(1)
-    }
-    .padding(.horizontal, 16)
+                        VStack(alignment: .leading, spacing: 2) {
+    Text("Hôm nay bạn chọn bên nào?")
+        .font(.system(size: 15, weight: .bold))
+        .foregroundColor(.white)
+    Text("Netflix, Disney, Marvel, DC... Chọn một để khám phá")
+        .font(.system(size: 10))
+        .foregroundColor(.gray)
+        .lineLimit(1)
+}
+.padding(.horizontal, 16)
     
     LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
         ForEach(collections, id: \.0) { title, tmdbId, type in
