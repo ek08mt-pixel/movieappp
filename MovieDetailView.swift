@@ -1013,11 +1013,15 @@ struct NewThemeDetailView: View {
             .presentationDetents([.medium, .large])
     }
     .sheet(isPresented: $showSavePopup) {
-        SaveToListPopup(movie: movie)
-            .environmentObject(appState)
-            .presentationDetents([.medium])
+            SaveToListPopup(movie: movie)
+                .environmentObject(appState)
+                .presentationDetents([.medium])
+        }
+        .task {
+            await vm.load(movieId: movie.id, mediaType: movie.mediaType)
+            await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
+        }
     }
-}
     func getQuality() -> String {
         if !vm.serverList.isEmpty {
             for server in vm.serverList {
