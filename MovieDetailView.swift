@@ -472,12 +472,13 @@ struct MovieDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true)
-.onAppear {
-    UITabBar.appearance().isHidden = true
-}
-.onDisappear {
-    UITabBar.appearance().isHidden = false
-}
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await vm.load(movieId: movie.id, mediaType: movie.mediaType)
             await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
@@ -998,12 +999,12 @@ struct NewThemeDetailView: View {
         .padding(.top, 54)
     }
     .navigationBarHidden(true)
-.onAppear {
-    UITabBar.appearance().isHidden = true
-}
-.onDisappear {
-    UITabBar.appearance().isHidden = false
-}
+    .onAppear {
+        NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+    }
+    .onDisappear {
+        NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+    }
     .sheet(isPresented: $showEpisodePopup) {
         EpisodePopupView(vm: vm, movie: movie, season: selectedSeason ?? 1)
             .environmentObject(appState)
