@@ -46,12 +46,15 @@ struct MainTabView: View {
                     }
                 }
                 .padding(.vertical, 12).padding(.horizontal, 24)
-                .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+                .background(Capsule().fill(.ultraThinMaterial.opacity(0.6)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+.background(Capsule().fill(Color.black.opacity(0.4)))
                 
                 Button { showSearch = true } label: {
-                    Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .medium)).foregroundColor(.white.opacity(0.7)).padding(.vertical, 21).padding(.horizontal, 19)
-                        .background(Capsule().fill(.ultraThinMaterial.opacity(0.35)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
-                }
+    Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .medium)).foregroundColor(.white.opacity(0.7)).padding(.vertical, 21).padding(.horizontal, 19)
+        .background(Capsule().fill(.ultraThinMaterial.opacity(0.6)).overlay(Capsule().stroke(.white.opacity(0.1), lineWidth: 0.3)))
+        .background(Capsule().fill(Color.black.opacity(0.4)))
+        .shadow(color: .white.opacity(0.1), radius: 8, x: 0, y: -4)
+}
             }
             .padding(.bottom, 10)
         }
@@ -146,17 +149,23 @@ struct MiniPlayerView: View {
 struct LiquidTabIcon: View {
     let icon: String; let label: String; let isSelected: Bool; let action: () -> Void
     @State private var isPressed = false
+    @State private var shakeAngle: Double = 0
     
     var body: some View {
         Button {
             withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
+            shakeAngle = -3
+            withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) { shakeAngle = 3 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) { shakeAngle = 0 }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = false } }
             action()
         } label: {
             ZStack {
                 if isSelected {
-                    Capsule().fill(.white.opacity(0.2)).frame(width: 74, height: 54).overlay(Capsule().fill(.ultraThinMaterial.opacity(0.4))).overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.3))
-                }
+    Capsule().fill(Color.black.opacity(0.5)).frame(width: 74, height: 54).overlay(Capsule().fill(.ultraThinMaterial.opacity(0.5))).overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.3))
+}
                 VStack(spacing: 2) {
                     Image(systemName: icon).font(.system(size: isSelected ? 16 : 18, weight: isSelected ? .semibold : .regular))
                     Text(label).font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .medium : .regular))
@@ -164,6 +173,7 @@ struct LiquidTabIcon: View {
                 .foregroundColor(isSelected ? .white : .white.opacity(0.45))
             }
             .scaleEffect(isPressed ? 0.92 : 1.0)
+            .rotationEffect(.degrees(shakeAngle))
             .animation(.interpolatingSpring(stiffness: 500, damping: 10), value: isPressed)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }
