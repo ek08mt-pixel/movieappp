@@ -22,6 +22,7 @@ struct MovieDetailView: View {
     @State private var searchSeason: Int = 1
     @State private var searchedEpisode: Int? = nil
     @State private var searchText = ""
+    @State private var useNewTheme = false
     
     var releaseDateText: String { movie.releaseDate ?? movie.yearText }
     
@@ -38,6 +39,10 @@ struct MovieDetailView: View {
     }
     
     var body: some View {
+    if useNewTheme {
+        NewThemeDetailView(movie: movie, vm: vm)
+            .environmentObject(appState)
+    } else {
         ZStack {
             Color.black.ignoresSafeArea()
             GeometryReader { geo in
@@ -67,6 +72,17 @@ struct MovieDetailView: View {
                         }
                         .padding(.top, 54).padding(.leading, 20)
                         
+                        Button {
+    useNewTheme = true
+} label: {
+    Image(systemName: "circle.grid.2x2")
+        .font(.system(size: 14, weight: .bold))
+        .foregroundColor(.white)
+        .padding(10)
+        .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+}
+.padding(.top, 54).padding(.trailing, 20)
+
                         VStack {
                             Spacer()
                             HStack(spacing: 8) {
@@ -717,4 +733,365 @@ struct WebView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
+// MARK: - New Theme Detail View
+struct NewThemeDetailView: View {
+    let movie: Movie
+    @ObservedObject var vm: MovieDetailViewModel
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    @State private var showFullOverview = false
+    @State private var selectedSeason: Int? = nil
+    @State private var showEpisodePopup = false
+    @State private var selectedEpisode: Int? = nil
+    @State private var showSavePopup = false
+    
+    var releaseDateText: String { movie.releaseDate ?? movie.yearText }
+    
+    var body: some View {
+        ZStack {
+            // Background poster dọc full màn hình
+            GeometryReader { geo in
+                CachedAsyncImage(url: movie.posterURL, size: .detail)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .blur(radius: 20)
+                    .overlay(Color.black.opacity(0.4))
+                    .ignoresSafeArea()
+            }
+            
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Poster dọc bự
+                    CachedAsyncImage(url: movie.posterURL, size: .detail)
+                        .aspectRatio(2/3, contentMode: .fit)
+                        .frame(width: UIScreen.main.bounds.width * 0.75, height: UIScreen.main.bounds.height * 0.55)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(color: .black.opacity(0.6), radius: 15)
+                        .padding(.top, 80)
+                    
+                    // Khung vuông blur mờ bo cong nửa dưới
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Tên phim
+                        Text(movie.title)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                        
+                        // Thể loại
+                        if let genres = vm.detail?.genres, !genres.isEmpty {
+                            HStack(spacing: 6) {
+                                ForEach(genres.prefix(3), id: \.id) { genre in
+                                    Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.white.opacity(0.7))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().fill(.white.opacity(0.1)))
+                                }
+                            }
+                        }
+                        
+                        // Điểm TMDB + ngày + thời lượng
+                        HStack(spacing: 8) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.yellow)
+                                Text(String(format: "%.1f", movie.voteAverage))
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            Text("•").foregroundColor(.gray)
+                            Text(releaseDateText)
+                                .font(.system(size: 11))
+                                .foregroundColor(.gray)
+                            Text("•").foregroundColor(.gray)
+                            if let runtime = vm.detail?.runtime, runtime > 0 {
+                                Text("\(runtime) phút")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        
+                        // Nội dung phim
+                        Text(movie.overview.isEmpty ? "Chưa có mô tả." : movie.overview)
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.8))
+                            .lineLimit(showFullOverview ? nil : 3)
+                            .multilineTextAlignment(.leading)
+                        
+                        if movie.overview.count > 120 {
+                            Button(showFullOverview ? "Ẩn bớt" : "More") {
+                                withAnimation { showFullOverview.toggle() }
+                            }
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white.opacity(0.6))
+                        }
+                        
+                        // Nút Xem ngay + Lưu
+                        HStack(spacing: 10) {
+                            // Xem ngay - khung trắng
+                            Button {
+                                presentPlayer()
+                            } label: {
+                                Text("Xem ngay")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Capsule().fill(.white))
+                            }
+                            
+                            // Lưu - khung viền trắng
+                            Button {
+                                if appState.favorites.contains(where: { $0.id == movie.id }) {
+                                    appState.favorites.removeAll { $0.id == movie.id }
+                                    appState.save()
+                                } else {
+                                    showSavePopup = true
+                                }
+                            } label: {
+                                Text(appState.favorites.contains(where: { $0.id == movie.id }) ? "Đã lưu" : "Lưu")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
+                                    .background(Capsule().stroke(.white.opacity(0.5), lineWidth: 1))
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(.ultraThinMaterial.opacity(0.85))
+                            .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
+                    )
+                    .padding(.horizontal, 16)
+                    .offset(y: -30)
+                    
+                    // Phần dưới - background đen
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Seasons hoặc Related Movies
+                        if !vm.seasons.isEmpty {
+                            Text("Seasons")
+                                .font(.title3).fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(vm.seasons) { season in
+                                        Button {
+                                            selectedSeason = season.seasonNumber
+                                            showEpisodePopup = true
+                                        } label: {
+                                            VStack(spacing: 6) {
+                                                if let url = season.posterURL {
+                                                    CachedAsyncImage(url: url)
+                                                        .aspectRatio(2/3, contentMode: .fill)
+                                                        .frame(width: 100, height: 150)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .fill(.ultraThinMaterial)
+                                                        .frame(width: 100, height: 150)
+                                                }
+                                                Text(season.name)
+                                                    .font(.system(size: 10, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(1)
+                                                Text("\(season.episodeCount) tập")
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else if !vm.similar.isEmpty {
+                            Text("Related Movies")
+                                .font(.title3).fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(vm.similar.prefix(10)) { m in
+                                        NavigationLink(destination: MovieDetailView(movie: m)) {
+                                            VStack(spacing: 6) {
+                                                CachedAsyncImage(url: m.posterURL)
+                                                    .aspectRatio(2/3, contentMode: .fill)
+                                                    .frame(width: 100, height: 150)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                Text(m.title)
+                                                    .font(.system(size: 10))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(2)
+                                                    .frame(width: 100)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Top Cast
+                        if !vm.actors.isEmpty {
+                            Text("Top Cast")
+                                .font(.title3).fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(vm.actors.prefix(15)) { actor in
+                                        NavigationLink(destination: ActorDetailView(actor: actor)) {
+                                            VStack(spacing: 6) {
+                                                CachedAsyncImage(url: actor.profileURL)
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(width: 70, height: 70)
+                                                    .clipShape(Circle())
+                                                if let character = actor.character, !character.isEmpty {
+                                                    Text(character)
+                                                        .font(.system(size: 10, weight: .semibold))
+                                                        .foregroundColor(.white)
+                                                        .lineLimit(1)
+                                                        .frame(width: 80)
+                                                }
+                                                Text(actor.name)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                                    .lineLimit(1)
+                                                    .frame(width: 80)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .background(Color.black.ignoresSafeArea())
+                    .padding(.bottom, 50)
+                }
+            }
+            .ignoresSafeArea(edges: .top)
+            
+            // Nút back
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(14)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+            }
+            .padding(.top, 54)
+            .padding(.leading, 20)
+        }
+        .navigationBarHidden(true)
+        .sheet(isPresented: $showEpisodePopup) {
+            EpisodePopupView(vm: vm, movie: movie, season: selectedSeason ?? 1)
+                .environmentObject(appState)
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showSavePopup) {
+            SaveToListPopup(movie: movie)
+                .environmentObject(appState)
+                .presentationDetents([.medium])
+        }
+    }
+    
+    func presentPlayer() {
+        guard let topVC = UIApplication.topViewController() else { return }
+        let moviePlayer = MoviePlayerView(
+            movieId: movie.id,
+            movieTitle: movie.title,
+            mediaType: movie.mediaType,
+            seasonNumber: nil,
+            episodeNumber: nil,
+            posterURL: movie.posterURL,
+            initialSource: .phimapi
+        ).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+    }
+}
+
+// MARK: - Episode Popup View
+struct EpisodePopupView: View {
+    @ObservedObject var vm: MovieDetailViewModel
+    let movie: Movie
+    let season: Int
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        ZStack {
+            Color(white: 0.1).ignoresSafeArea()
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Tập phim - Season \(season)")
+                        .font(.headline).foregroundColor(.white)
+                    Spacer()
+                    Button("Đóng") { dismiss() }.foregroundColor(.gray)
+                }
+                .padding()
+                
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        if let detail = vm.seasonDetails[season] {
+                            ForEach(detail.episodes) { ep in
+                                Button {
+                                    presentPlayer(episode: ep.episodeNumber)
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Text("Tập \(ep.episodeNumber)")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.white)
+                                        Spacer()
+                                        if let runtime = ep.runtime {
+                                            Text("\(runtime) phút")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.gray)
+                                        }
+                                        Image(systemName: "play.circle")
+                                            .foregroundColor(.white.opacity(0.5))
+                                    }
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 12)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+                                }
+                            }
+                        } else {
+                            ProgressView().tint(.white).padding()
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .task {
+            await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season)
+        }
+    }
+    
+    func presentPlayer(episode: Int) {
+        guard let topVC = UIApplication.topViewController() else { return }
+        let moviePlayer = MoviePlayerView(
+            movieId: movie.id,
+            movieTitle: movie.title,
+            mediaType: "tv",
+            seasonNumber: season,
+            episodeNumber: episode,
+            posterURL: movie.posterURL,
+            initialSource: .phimapi
+        ).environmentObject(appState)
+        let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
+        hosting.modalPresentationStyle = .fullScreen
+        topVC.present(hosting, animated: true)
+        dismiss()
+    }
 }
