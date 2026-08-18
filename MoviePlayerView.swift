@@ -134,31 +134,34 @@ struct MoviePlayerView: View {
                 .onAppear {
     print("DEBUG resumeTime: \(resumeTime)")
     if let url = directURL {
-    currentStreamURL = url
-    selectedQuality = detectQuality(from: url)
-    player.replaceCurrentItem(with: AVPlayerItem(url: url))
-    
-    // Seek đến resumeTime nếu có
-    if resumeTime > 0 {
-        let seekTime = CMTime(seconds: resumeTime, preferredTimescale: 600)
-        player.seek(to: seekTime) { _ in
-            self.player.play()
+        currentStreamURL = url
+        selectedQuality = detectQuality(from: url)
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        
+        // Seek đến resumeTime nếu có
+        if resumeTime > 0 {
+            let seekTime = CMTime(seconds: resumeTime, preferredTimescale: 600)
+            player.seek(to: seekTime) { _ in
+                self.player.play()
+            }
+        } else {
+            player.play()
         }
-    } else {
-        player.play()
-    }
-    
-    hasStartedPlaying = true
-    isLoading = false
-    sourceStatus[selectedSource] = true
-    saveHistory()
-}
+        
+        hasStartedPlaying = true
+        isLoading = false
+        sourceStatus[selectedSource] = true
+        saveHistory()
     } else {
         loadStream(resumeAt: resumeTime > 0 ? resumeTime : nil)
     }
-                     player.play(); player.volume = volume
-                    setupTimeObserver(); resetControlsTimer(); loadOverlayData()
-                    forceLandscape()
+    
+    player.play()
+    player.volume = volume
+    setupTimeObserver()
+    resetControlsTimer()
+    loadOverlayData()
+    forceLandscape()
                     let testKey = "\(movieId)_S\(seasonNumber ?? 1)_E\(episodeNumber ?? 1)_server0"
 if let _ = MappingCache.shared.dict(for: "phimapi_stream_cache")[testKey] {
     errorMessage = "Cached: \(testKey)"
