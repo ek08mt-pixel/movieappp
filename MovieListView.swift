@@ -168,8 +168,10 @@ struct MovieListView: View {
         let keywordId = keywordID(for: fixedQuery)
         allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: keywordId, page: page)) ?? []
     }
-        } else {
-            let initial = movies.filter { !($0.adult ?? false) }
+        } else if fixedQuery == "Cartoon Icons" {
+    allData = await loadCartoonMovies()
+} else {
+    let initial = movies.filter { !($0.adult ?? false) }
             
             if initial.count >= 30 {
                 allData = initial
