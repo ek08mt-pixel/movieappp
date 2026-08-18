@@ -171,33 +171,48 @@ VStack(alignment: .leading, spacing: 8) {
     .padding(.top, 4)
 }
 .padding(.top, 12)
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                            ForEach(collections, id: \.0) { title, tmdbId, type in
-                                if type == .asia {
-                                    NavigationLink(destination: AsiaCategoryView()) {
-                                        ZStack(alignment: .bottomLeading) {
-                                            RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
-                                            if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
-                                                CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
-                                            }
-                                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
-                                            Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
-                                        }.frame(height: 100)
-                                    }
-                                } else {
-                                    NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
-                                        ZStack(alignment: .bottomLeading) {
-                                            RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
-                                            if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
-                                                CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
-                                            }
-                                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
-                                            Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
-                                        }.frame(height: 100)
-                                    }
-                                }
-                            }
-                        }.padding(.horizontal, 16)
+                        VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 2) {
+        Text("Hôm nay bạn chọn bên nào?")
+            .font(.system(size: 15, weight: .bold))
+            .foregroundColor(.white)
+        Text("Netflix, Disney, Marvel, DC... Bấm vào để khám phá")
+            .font(.system(size: 10))
+            .foregroundColor(.gray)
+            .lineLimit(1)
+    }
+    .padding(.horizontal, 16)
+    
+    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        ForEach(collections, id: \.0) { title, tmdbId, type in
+            if type == .asia {
+                NavigationLink(destination: AsiaCategoryView()) {
+                    ZStack(alignment: .bottomLeading) {
+                        RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
+                        if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
+                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
+                        Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
+                    }.frame(height: 100)
+                }
+            } else {
+                NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
+                    ZStack(alignment: .bottomLeading) {
+                        RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
+                        if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
+                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
+                        Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
+                    }.frame(height: 100)
+                }
+            }
+        }
+    }
+}
+.padding(.horizontal, 16)
                         
                         if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
