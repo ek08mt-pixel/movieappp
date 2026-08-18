@@ -142,11 +142,12 @@ struct MovieListView: View {
         } else if isGenreQuery {
     let genreId = genreID(for: fixedQuery)
     
-    if fixedQuery == "BL" {
-        allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 240305, page: page)) ?? []
-       if fixedQuery == "Cartoon Icons" {
+    if fixedQuery == "Cartoon Icons" {
     allData = await loadCartoonMovies()
 }
+    if fixedQuery == "BL" {
+        allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 240305, page: page)) ?? []
+
          if allData.isEmpty {
             allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 324058, page: page)) ?? []
         }
