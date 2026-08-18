@@ -764,10 +764,12 @@ GeometryReader { geo in
 }
             
             ScrollView {
-                VStack(spacing: 0) {
-                    
-                    // Khung vuông blur mờ bo cong nửa dưới
-                    VStack(alignment: .leading, spacing: 12) {
+    VStack(spacing: 0) {
+        // Khoảng trống để khung blur nằm dưới màn hình
+        Spacer().frame(height: UIScreen.main.bounds.height * 0.5)
+        
+        // Khung vuông blur mờ bo cong nửa dưới
+        VStack(alignment: .leading, spacing: 12) {
                         // Tên phim
                         Text(movie.title)
                             .font(.system(size: 22, weight: .bold))
