@@ -25,7 +25,7 @@ struct MovieListView: View {
     }
     
     var isGenreQuery: Bool {
-        let genres = ["Hành Động", "Hài Hước", "Tình Cảm", "Kinh Dị", "Giật Gân", "Bí Ẩn", "Khoa Học Viễn Tưởng", "Kỳ Ảo", "Gia Đình", "Chính Kịch", "Phiêu Lưu", "Âm Nhạc", "Võ Thuật", "Hình Sự", "Tâm Lý", "Lịch Sử", "Cổ Trang", "Sinh Tồn", "Zombie", "Siêu Anh Hùng", "Công Nghệ", "Thảm Họa", "Xuyên Không", "Học Đường", "Tài Liệu", "Truyền Hình", "Talk Show", "Thể Thao", "BL", "GL"]
+        let genres = ["Hành Động", "Hài Hước", "Cartoon Icons", "Tình Cảm", "Kinh Dị", "Giật Gân", "Bí Ẩn", "Khoa Học Viễn Tưởng", "Kỳ Ảo", "Gia Đình", "Chính Kịch", "Phiêu Lưu", "Âm Nhạc", "Võ Thuật", "Hình Sự", "Tâm Lý", "Lịch Sử", "Cổ Trang", "Sinh Tồn", "Zombie", "Siêu Anh Hùng", "Công Nghệ", "Thảm Họa", "Xuyên Không", "Học Đường", "Tài Liệu", "Truyền Hình", "Viễn Tây", "Thanh Xuân", "BL", "GL"]
         return genres.contains(fixedQuery)
     }
     
@@ -144,7 +144,10 @@ struct MovieListView: View {
     
     if fixedQuery == "BL" {
         allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 240305, page: page)) ?? []
-        if allData.isEmpty {
+       if fixedQuery == "Cartoon Icons" {
+    allData = await loadCartoonMovies()
+}
+         if allData.isEmpty {
             allData = (try? await APIService.shared.discoverMoviesWithKeyword(keywordId: 324058, page: page)) ?? []
         }
         if allData.isEmpty {
@@ -304,3 +307,40 @@ func genreID(for genre: String) -> Int {
         ]
         return map[genre] ?? 0
     }
+    func loadCartoonMovies() async -> [Movie] {
+    let cartoonIDs = [
+        3255, 3616, 4066, 4045, 3087, 10744, 3213, 4274, 4234, 4235,
+        4236, 4237, 4238, 15260, 10531, 10312, 61974, 61973, 70800, 75006,
+        63247, 30272, 61975, 4200, 3805, 1896, 3625, 3639, 3630, 3050,
+        40075, 79242, 85999, 101305, 61663, 4569, 4564, 3271, 5318, 5305,
+        4587, 6589, 5309, 5300, 4594, 3745, 3486, 3744, 3144, 3130,
+        4210, 4231, 3746, 3747, 3748, 387, 2150, 2523, 246, 2710,
+        3250, 1020, 4205, 3812, 5297, 3249, 3131, 4232, 4233, 82452,
+        207, 3750, 6254, 2098, 1610, 1992, 2369, 1304, 1857, 1962,
+        1482, 1553, 1434
+    ]
+    
+    var movies: [Movie] = []
+    for id in cartoonIDs {
+        if let detail = try? await APIService.shared.tvDetail(tvId: id) {
+            let movie = Movie(
+                id: detail.id ?? id,
+                title: detail.title ?? "",
+                overview: detail.overview ?? "",
+                posterPath: detail.posterPath,
+                backdropPath: detail.backdropPath,
+                voteAverage: detail.voteAverage ?? 0,
+                releaseDate: detail.releaseDate,
+                genreIds: detail.genres?.map { $0.id },
+                originalTitle: detail.title,
+                popularity: nil,
+                voteCount: nil,
+                adult: false,
+                originalLanguage: nil,
+                mediaType: "tv"
+            )
+            movies.append(movie)
+        }
+    }
+    return movies
+}
