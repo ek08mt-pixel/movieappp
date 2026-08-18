@@ -151,9 +151,14 @@ struct LiquidTabIcon: View {
     @State private var isPressed = false
     @State private var shakeAngle: Double = 0
     
+    func vibrate() {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+    }
     var body: some View {
         Button {
             withAnimation(.interpolatingSpring(stiffness: 500, damping: 10)) { isPressed = true }
+            vibrate()
             shakeAngle = -3
             withAnimation(.spring(response: 0.15, dampingFraction: 0.4)) { shakeAngle = 3 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
