@@ -479,6 +479,7 @@ struct MovieDetailView: View {
     if !useNewTheme {
         NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
     }
+    }
         .toolbar(.hidden, for: .tabBar)
         .task {
             await vm.load(movieId: movie.id, mediaType: movie.mediaType)
