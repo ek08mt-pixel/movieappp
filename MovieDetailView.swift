@@ -472,7 +472,12 @@ struct MovieDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarHidden(true)
-        .toolbar(Visibility.hidden, for: .tabBar)
+.onAppear {
+    UITabBar.appearance().isHidden = true
+}
+.onDisappear {
+    UITabBar.appearance().isHidden = false
+}
         .task {
             await vm.load(movieId: movie.id, mediaType: movie.mediaType)
             await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
@@ -860,8 +865,7 @@ struct NewThemeDetailView: View {
                         .padding(24)
 .background(
     RoundedRectangle(cornerRadius: 24)
-        .fill(.ultraThinMaterial)
-.background(Color.black.opacity(0.5))
+        .fill(.regularMaterial)
         .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.5), lineWidth: 0.3))
 )
 .padding(.horizontal, 12)
@@ -994,7 +998,12 @@ struct NewThemeDetailView: View {
         .padding(.top, 54)
     }
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .tabBar)
+.onAppear {
+    UITabBar.appearance().isHidden = true
+}
+.onDisappear {
+    UITabBar.appearance().isHidden = false
+}
     .sheet(isPresented: $showEpisodePopup) {
         EpisodePopupView(vm: vm, movie: movie, season: selectedSeason ?? 1)
             .environmentObject(appState)
