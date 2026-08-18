@@ -70,7 +70,6 @@ struct MainTabView: View {
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
     }
 }
-}
 
 // MARK: - MiniPlayerView (OST)
 struct MiniPlayerView: View {
