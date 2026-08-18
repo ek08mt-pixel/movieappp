@@ -857,14 +857,14 @@ struct NewThemeDetailView: View {
                                 }
                             }
                         }
-                        .padding(20)
-                        .background(
+                        .padding(24)
+.background(
     RoundedRectangle(cornerRadius: 24)
-        .fill(.ultraThinMaterial.opacity(0.4))
+        .fill(.ultraThinMaterial.opacity(0.75))
         .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.5), lineWidth: 0.3))
 )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 20)
+.padding(.horizontal, 12)
+.padding(.bottom, 10)
                     }
                 
                 // Phần dưới - background đen (giữ nguyên)
