@@ -102,75 +102,76 @@ struct ExploreView: View {
                         }
                         .padding(.horizontal, 16)
                         // Khung thể loại
-VStack(alignment: .leading, spacing: 8) {
-    HStack(spacing: 6) {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Bạn muốn xem gì hôm nay?")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.white)
-            Text("Hành động, tình cảm, kinh dị... Chọn một thể loại và thưởng thức!")
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
-                .lineLimit(1)
-        }
-        Spacer()
-        NavigationLink(destination: AllGenresView()) {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white.opacity(0.6))
-                .padding(8)
-                .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
-        }
-    }
-    .padding(.horizontal, 16)
-    
-    TabView(selection: $genrePage) {
-        ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { pageIndex in
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(Array(displayGenres.enumerated()).filter { $0.offset / 4 == pageIndex }.map { $0.element }, id: \.id) { genre in
-                    NavigationLink(destination: MovieListView(title: genre.name, movies: [], fixedQuery: genre.name)) {
-                        ZStack(alignment: .bottomLeading) {
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(height: 100)
-                                if let posterURL = genrePosters[genre.name], let url = URL(string: posterURL) {
-    CachedAsyncImage(url: url)
-        .aspectRatio(contentMode: .fill)
-        .frame(height: 100)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-}
-                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                            Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
-                                .font(.caption).fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(8)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 6) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Bạn muốn xem gì hôm nay?")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(.white)
+                                    Text("Hành động, tình cảm, kinh dị... Chọn một thể loại và thưởng thức!")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.gray)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                NavigationLink(destination: AllGenresView()) {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .padding(8)
+                                        .background(Circle().fill(.ultraThinMaterial.opacity(0.4)))
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            TabView(selection: $genrePage) {
+                                ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { pageIndex in
+                                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                                        ForEach(Array(displayGenres.enumerated()).filter { $0.offset / 4 == pageIndex }.map { $0.element }, id: \.id) { genre in
+                                            NavigationLink(destination: MovieListView(title: genre.name, movies: [], fixedQuery: genre.name)) {
+                                                ZStack(alignment: .bottomLeading) {
+                                                    RoundedRectangle(cornerRadius: 14)
+                                                        .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                        .frame(height: 100)
+                                                    if let posterURL = genrePosters[genre.name], let url = URL(string: posterURL) {
+                                                        CachedAsyncImage(url: url)
+                                                            .aspectRatio(contentMode: .fill)
+                                                            .frame(height: 100)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                                    }
+                                                    LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                                    Text(genre.name.replacingOccurrences(of: "Phim ", with: ""))
+                                                        .font(.caption).fontWeight(.bold)
+                                                        .foregroundColor(.white)
+                                                        .padding(8)
+                                                }
+                                                .frame(height: 100)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .tag(pageIndex)
+                                }
+                            }
+                            .tabViewStyle(.page(indexDisplayMode: .never))
+                            .frame(height: 220)
+                            .onAppear { shuffleGenres() }
+                            
+                            // Dots
+                            HStack(spacing: 4) {
+                                ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { i in
+                                    Capsule()
+                                        .fill(.white.opacity(i == genrePage ? 0.8 : 0.2))
+                                        .frame(width: i == genrePage ? 16 : 5, height: 3)
+                                        .animation(.easeInOut(duration: 0.3), value: genrePage)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
                         }
-                        .frame(height: 100)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .tag(pageIndex)
-        }
-    }
-    .tabViewStyle(.page(indexDisplayMode: .never))
-    .frame(height: 220)
-    .onAppear { shuffleGenres() }
-    
-    // Dots
-    HStack(spacing: 4) {
-        ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { i in
-            Capsule()
-                .fill(.white.opacity(i == genrePage ? 0.8 : 0.2))
-                .frame(width: i == genrePage ? 16 : 5, height: 3)
-                .animation(.easeInOut(duration: 0.3), value: genrePage)
-        }
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.top, 4)
-}
-.padding(.top, 12)
+                        .padding(.top, 12)
+                        
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Hôm nay bạn chọn bên nào?")
                                 .font(.system(size: 15, weight: .bold))
@@ -181,36 +182,35 @@ VStack(alignment: .leading, spacing: 8) {
                                 .lineLimit(1)
                         }
                         .padding(.horizontal, 16)
-    
-    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-        ForEach(collections, id: \.0) { title, tmdbId, type in
-            if type == .asia {
-                NavigationLink(destination: AsiaCategoryView()) {
-                    ZStack(alignment: .bottomLeading) {
-                        RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
-                        if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
-                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                        
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            ForEach(collections, id: \.0) { title, tmdbId, type in
+                                if type == .asia {
+                                    NavigationLink(destination: AsiaCategoryView()) {
+                                        ZStack(alignment: .bottomLeading) {
+                                            RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
+                                            if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
+                                                CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                                            }
+                                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
+                                            Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
+                                        }.frame(height: 100)
+                                    }
+                                } else {
+                                    NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
+                                        ZStack(alignment: .bottomLeading) {
+                                            RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
+                                            if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
+                                                CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
+                                            }
+                                            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
+                                            Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
+                                        }.frame(height: 100)
+                                    }
+                                }
+                            }
                         }
-                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
-                        Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
-                    }.frame(height: 100)
-                }
-            } else {
-                NavigationLink(destination: CategoryFullView(category: CategoryConfig(id: 0, name: title, posterName: "", type: type, tmdbId: tmdbId))) {
-                    ZStack(alignment: .bottomLeading) {
-                        RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(height: 100)
-                        if let p = posterMap[title], let url = URL(string: "https://image.tmdb.org/t/p/w500\(p)") {
-                            CachedAsyncImage(url: url).aspectRatio(contentMode: .fill).frame(height: 100).clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 14))
-                        Text(title).font(.caption).fontWeight(.bold).foregroundColor(.white).padding(8)
-                    }.frame(height: 100)
-                }
-            }
-        }
-    }
-}
-.padding(.horizontal, 16)
+                        .padding(.horizontal, 16)
                         
                         if !staffMovies.isEmpty { movieRow(title: "Staff Picks", movies: staffMovies) }
                         if !editorMovies.isEmpty { movieRow(title: "Editor's Choice", movies: editorMovies) }
@@ -258,7 +258,7 @@ VStack(alignment: .leading, spacing: 8) {
             Genre(id: 99, name: "Tài Liệu"),
             Genre(id: 10770, name: "Truyền Hình"),
             Genre(id: 37, name: "Viễn Tây"),
-Genre(id: 10749, name: "Thanh Xuân"),
+            Genre(id: 10749, name: "Thanh Xuân"),
             Genre(id: 10749, name: "BL"),
             Genre(id: 10749, name: "GL"),
         ]
@@ -267,12 +267,13 @@ Genre(id: 10749, name: "Thanh Xuân"),
     @ViewBuilder func movieRow(title: String, movies: [Movie]) -> some View {
         VStack(alignment: .leading, spacing: 10) { Text(title).font(.headline).fontWeight(.bold).foregroundColor(.white).padding(.horizontal); ScrollView(.horizontal, showsIndicators: false) { LazyHStack(spacing: 12) { ForEach(movies.prefix(20)) { m in NavigationLink(destination: MovieDetailView(movie: m)) { CachedAsyncImage(url: m.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 10)) } } }.padding(.horizontal) } }
     }
+}
+
 // MARK: - All Genres View
 struct AllGenresView: View {
     @Environment(\.dismiss) var dismiss
     private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     
-    // THÊM Ở ĐÂY
     let genrePosters: [String: String] = [
         "Hành Động": "https://media.themoviedb.org/t/p/w500_and_h282_face/2rjI2uXmjitMAaXVO21r9ao7v2j.jpg",
         "Hài Hước": "https://media.themoviedb.org/t/p/w500_and_h282_face/85k0kaoRgGmF6ACq0M61AFxhjLN.jpg",
@@ -307,7 +308,6 @@ struct AllGenresView: View {
         "GL": "https://media.themoviedb.org/t/p/w500_and_h282_face/xG3b2YNEBxYEY67BvsvvJk3n8D7.jpg"
     ]
     
-    
     let allGenres: [Genre] = [
         Genre(id: 28, name: "Hành Động"),
         Genre(id: 35, name: "Hài Hước"),
@@ -335,7 +335,7 @@ struct AllGenresView: View {
         Genre(id: 99, name: "Tài Liệu"),
         Genre(id: 10770, name: "Truyền Hình"),
         Genre(id: 37, name: "Viễn Tây"),
-Genre(id: 10749, name: "Thanh Xuân"),
+        Genre(id: 10749, name: "Thanh Xuân"),
         Genre(id: 10749, name: "BL"),
         Genre(id: 10749, name: "GL"),
     ]
@@ -358,17 +358,17 @@ Genre(id: 10749, name: "Thanh Xuân"),
                             NavigationLink(destination: MovieListView(title: genre.name, movies: [], fixedQuery: genre.name)) {
                                 ZStack(alignment: .bottomLeading) {
                                     RoundedRectangle(cornerRadius: 14)
-    .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
-    .frame(height: 100)
-
-if let posterURL = genrePosters[genre.name], let url = URL(string: posterURL) {
-    CachedAsyncImage(url: url)
-        .aspectRatio(contentMode: .fill)
-        .frame(height: 100)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-}
-
-LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                                        .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        .frame(height: 100)
+                                    
+                                    if let posterURL = genrePosters[genre.name], let url = URL(string: posterURL) {
+                                        CachedAsyncImage(url: url)
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(height: 100)
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    }
+                                    
+                                    LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
                                         .clipShape(RoundedRectangle(cornerRadius: 14))
                                     Text(genre.name)
                                         .font(.caption).fontWeight(.bold)
@@ -389,8 +389,6 @@ LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPo
         .navigationBarHidden(true)
     }
 }
-// Giữ nguyên AsiaCategoryView, BackButton, CategoryFullView bên dưới không đổi
-
 
 // MARK: - Asia Category View
 struct AsiaCategoryView: View {
@@ -515,7 +513,6 @@ struct CategoryFullView: View {
                             }
                             .padding(.horizontal, 16)
                             
-                            // Chỉ hiện số trang, căn giữa
                             if totalPages > 1 {
                                 HStack(spacing: 8) {
                                     ForEach(1...totalPages, id: \.self) { page in
@@ -568,3 +565,5 @@ struct CategoryFullView: View {
         } else {
             movies = []
         }
+    }
+}
