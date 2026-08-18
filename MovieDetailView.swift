@@ -72,17 +72,20 @@ struct MovieDetailView: View {
                         }
                         .padding(.top, 54).padding(.leading, 20)
                         
-                        Button {
-    useNewTheme = true
-} label: {
-    Image(systemName: "circle.grid.2x2")
-        .font(.system(size: 14, weight: .bold))
-        .foregroundColor(.white)
-        .padding(10)
-        .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+                        HStack {
+    Spacer()
+    Button {
+        useNewTheme = true
+    } label: {
+        Image(systemName: "circle.grid.2x2")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundColor(.white)
+            .padding(10)
+            .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+    }
 }
-.padding(.top, 54).padding(.trailing, 20)
-
+.padding(.top, 54)
+.padding(.trailing, 20)
                         VStack {
                             Spacer()
                             HStack(spacing: 8) {
@@ -750,16 +753,15 @@ struct NewThemeDetailView: View {
     
     var body: some View {
         ZStack {
-            // Background poster dọc full màn hình
-            GeometryReader { geo in
-                CachedAsyncImage(url: movie.posterURL, size: .detail)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-                    .blur(radius: 20)
-                    .overlay(Color.black.opacity(0.4))
-                    .ignoresSafeArea()
-            }
+            // Background poster dọc full màn hình (mờ)
+GeometryReader { geo in
+    CachedAsyncImage(url: movie.posterURL, size: .detail)
+        .aspectRatio(contentMode: .fill)
+        .frame(width: geo.size.width, height: geo.size.height)
+        .clipped()
+        .overlay(Color.black.opacity(0.3))
+        .ignoresSafeArea()
+}
             
             ScrollView {
                 VStack(spacing: 0) {
@@ -977,18 +979,24 @@ struct NewThemeDetailView: View {
             }
             .ignoresSafeArea(edges: .top)
             
-            // Nút back
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(14)
-                    .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
-            }
-            .padding(.top, 54)
-            .padding(.leading, 20)
+            // Nút back - đặt ở top left
+VStack {
+    HStack {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+                .padding(14)
+                .background(Circle().fill(.ultraThinMaterial.opacity(0.3)))
+        }
+        Spacer()
+    }
+    Spacer()
+}
+.padding(.horizontal, 20)
+.padding(.top, 54)
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showEpisodePopup) {
