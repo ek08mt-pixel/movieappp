@@ -128,7 +128,7 @@ VStack(alignment: .leading, spacing: 8) {
         ForEach(0..<max(1, (displayGenres.count + 3) / 4), id: \.self) { pageIndex in
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(Array(displayGenres.enumerated()).filter { $0.offset / 4 == pageIndex }.map { $0.element }, id: \.id) { genre in
-                    NavigationLink(destination: GenreMovieView(genre: genre)) {
+                    NavigationLink(destination: MovieListView(title: genre.name, movies: [], fixedQuery: genre.name)) {
                         ZStack(alignment: .bottomLeading) {
                             RoundedRectangle(cornerRadius: 14)
                                 .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.08)], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -172,7 +172,6 @@ VStack(alignment: .leading, spacing: 8) {
 }
 .padding(.top, 12)
                         VStack(alignment: .leading, spacing: 8) {
-    VStack(alignment: .leading, spacing: 8) {
     VStack(alignment: .leading, spacing: 2) {
         Text("Hôm nay bạn chọn bên nào?")
             .font(.system(size: 15, weight: .bold))
