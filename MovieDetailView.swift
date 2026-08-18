@@ -756,17 +756,29 @@ struct NewThemeDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 // Poster full màn hình với khung blur đè lên
-                CachedAsyncImage(url: movie.posterURL, size: .detail)
+                CachedAsyncImage(url: movie.posterURL)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
                     .clipped()
                     .overlay(alignment: .bottom) {
                         // Khung blur nằm đè lên nửa dưới poster
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(movie.title)
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(2)
+                            HStack(alignment: .top) {
+    Text(movie.title)
+        .font(.system(size: 22, weight: .bold))
+        .foregroundColor(.white)
+        .lineLimit(2)
+    
+    Spacer()
+    
+    // Chất lượng góc trên phải
+    Text(getQuality())
+        .font(.system(size: 9, weight: .bold))
+        .foregroundColor(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().stroke(.white.opacity(0.5), lineWidth: 0.5))
+}
                             
                             if let genres = vm.detail?.genres, !genres.isEmpty {
                                 HStack(spacing: 6) {
@@ -809,12 +821,12 @@ struct NewThemeDetailView: View {
                                 .multilineTextAlignment(.leading)
                             
                             if movie.overview.count > 120 {
-                                Button(showFullOverview ? "Ẩn bớt" : "More") {
-                                    withAnimation { showFullOverview.toggle() }
-                                }
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
-                            }
+    Button(showFullOverview ? "ẩn bớt" : "more") {
+        withAnimation { showFullOverview.toggle() }
+    }
+    .font(.system(size: 11))
+    .foregroundColor(.orange)
+}
                             
                             HStack(spacing: 10) {
                                 Button {
@@ -847,10 +859,10 @@ struct NewThemeDetailView: View {
                         }
                         .padding(20)
                         .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(.ultraThinMaterial.opacity(0.85))
-                                .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
-                        )
+    RoundedRectangle(cornerRadius: 24)
+        .fill(.ultraThinMaterial.opacity(0.4))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.5), lineWidth: 0.3))
+)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 20)
                     }
@@ -992,6 +1004,18 @@ struct NewThemeDetailView: View {
             .presentationDetents([.medium])
     }
 }
+    func getQuality() -> String {
+        if !vm.serverList.isEmpty {
+            for server in vm.serverList {
+                let q = server.qualities.uppercased()
+                if q.contains("4K") || q.contains("2160") { return "4K" }
+                if q.contains("HD") || q.contains("1080") { return "FHD" }
+                if q.contains("720") { return "HD" }
+            }
+            return vm.serverList.first?.qualities ?? "FHD"
+        }
+        return "FHD"
+    }
     
     func presentPlayer() {
         guard let topVC = UIApplication.topViewController() else { return }
