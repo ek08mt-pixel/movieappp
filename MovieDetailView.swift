@@ -864,7 +864,7 @@ GeometryReader { geo in
                             .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15), lineWidth: 0.5))
                     )
                     .padding(.horizontal, 16)
-                    .offset(y: -30)
+                
                     
                     // Phần dưới - background đen
                     VStack(alignment: .leading, spacing: 20) {
