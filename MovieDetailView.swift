@@ -765,13 +765,6 @@ GeometryReader { geo in
             
             ScrollView {
                 VStack(spacing: 0) {
-                    // Poster dọc bự
-                    CachedAsyncImage(url: movie.posterURL, size: .detail)
-                        .aspectRatio(2/3, contentMode: .fit)
-                        .frame(width: UIScreen.main.bounds.width * 0.75, height: UIScreen.main.bounds.height * 0.55)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: .black.opacity(0.6), radius: 15)
-                        .padding(.top, 80)
                     
                     // Khung vuông blur mờ bo cong nửa dưới
                     VStack(alignment: .leading, spacing: 12) {
