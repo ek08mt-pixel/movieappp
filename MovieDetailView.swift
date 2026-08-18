@@ -765,8 +765,11 @@ GeometryReader { geo in
             
             ScrollView {
     VStack(spacing: 0) {
-        // Khoảng trống để khung blur nằm dưới màn hình
-        Spacer().frame(height: UIScreen.main.bounds.height * 0.5)
+        // Poster full màn hình
+        CachedAsyncImage(url: movie.posterURL, size: .detail)
+            .aspectRatio(contentMode: .fill)
+            .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+            .clipped()
         
         // Khung vuông blur mờ bo cong nửa dưới
         VStack(alignment: .leading, spacing: 12) {
