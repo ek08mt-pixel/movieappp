@@ -20,6 +20,7 @@ class HomeViewModel: ObservableObject {
     @Published var newMovies: [Movie] = []
     @Published var usukIcons: [Movie] = []
     
+    
     init() {
         Task { await loadAll() }
     }
