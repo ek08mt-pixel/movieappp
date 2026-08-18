@@ -492,7 +492,7 @@ struct MovieDetailView: View {
                 .presentationDetents([.medium])
         }
     }
-    
+    } 
     @ViewBuilder
     func episodeRowContent(season: Int, episode: Int, name: String, stillURL: URL? = nil, runtime: Int? = nil) -> some View {
         HStack(spacing: 10) {
