@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showSearch = false
+    @State private var isTabBarVisible = true
     @State private var homeID = UUID()
     @State private var exploreID = UUID()
     @State private var libraryID = UUID()
@@ -28,8 +29,9 @@ struct MainTabView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
             
-            HStack(spacing: 10) {
-                HStack(spacing: 31) {
+            if isTabBarVisible {
+                HStack(spacing: 10) {
+                    HStack(spacing: 31) {
                     LiquidTabIcon(icon: "house.fill", label: "Home", isSelected: selectedTab == 0) {
                         if selectedTab == 0 { homeID = UUID() } else { selectedTab = 0 }
                     }
@@ -55,6 +57,14 @@ struct MainTabView: View {
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: selectedTab)
+        .onAppear {
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("HideTabBar"), object: nil, queue: .main) { _ in
+                isTabBarVisible = false
+            }
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowTabBar"), object: nil, queue: .main) { _ in
+                isTabBarVisible = true
+            }
+        }
         .sheet(isPresented: $showSearch) { SearchView() }
         .fullScreenCover(isPresented: $ostManager.showOSTView) { OSTView() }
     }
