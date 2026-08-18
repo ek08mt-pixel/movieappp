@@ -311,32 +311,35 @@ func genreID(for genre: String) -> Int {
         return map[genre] ?? 0
     }
     func loadCartoonMovies() async -> [Movie] {
-    let cartoonIDs = [
-        3255, 3616, 4066, 4045, 3087, 10744, 3213, 4274, 4234, 4235,
-        4236, 4237, 4238, 15260, 10531, 10312, 61974, 61973, 70800, 75006,
-        63247, 30272, 61975, 4200, 3805, 1896, 3625, 3639, 3630, 3050
+    let cartoonNames = [
+        "The Powerpuff Girls", "Dexter's Laboratory", "Johnny Bravo", "Ed Edd n Eddy",
+        "Samurai Jack", "Ben 10", "Teen Titans", "Courage the Cowardly Dog",
+        "The Grim Adventures of Billy & Mandy", "Camp Lazlo", "Foster's Home for Imaginary Friends",
+        "Chowder", "The Marvelous Misadventures of Flapjack", "Adventure Time", "Regular Show",
+        "The Amazing World of Gumball", "Clarence", "Uncle Grandpa", "OK K.O.! Let's Be Heroes",
+        "Craig of the Creek", "We Bare Bears", "Steven Universe", "Teen Titans Go!",
+        "Phineas and Ferb", "Kim Possible", "Recess", "The Proud Family", "Lilo & Stitch: The Series",
+        "The Emperor's New School", "American Dragon: Jake Long", "Gravity Falls", "The Owl House",
+        "Amphibia", "Big City Greens", "Star vs. the Forces of Evil", "DuckTales",
+        "Darkwing Duck", "Chip 'n Dale: Rescue Rangers", "TaleSpin", "Aladdin: The Series",
+        "Hercules: The Animated Series", "The Little Mermaid: The Series", "Tarzan: The Series",
+        "Jungle Cubs", "101 Dalmatians: The Series", "The Weekenders", "Fillmore!",
+        "Lloyd in Space", "Dave the Barbarian", "Brandy & Mr. Whiskers", "The Replacements",
+        "Yin Yang Yo!", "Mickey Mouse Clubhouse", "Sofia the First", "Doc McStuffins",
+        "SpongeBob SquarePants", "The Fairly OddParents", "Danny Phantom", "Avatar: The Last Airbender",
+        "Hey Arnold!", "Rugrats", "The Wild Thornberrys", "CatDog", "Rocko's Modern Life",
+        "Aaahh!!! Real Monsters", "The Adventures of Jimmy Neutron: Boy Genius", "My Life as a Teenage Robot",
+        "El Tigre: The Adventures of Manny Rivera", "The Mighty B!", "Bluey", "Dora the Explorer",
+        "Paw Patrol", "Tom and Jerry", "Looney Tunes", "Scooby-Doo, Where Are You!",
+        "The Flintstones", "The Jetsons", "Popeye the Sailor", "Teenage Mutant Ninja Turtles",
+        "He-Man and the Masters of the Universe", "ThunderCats", "Transformers G1", "Family Guy"
     ]
     
     var movies: [Movie] = []
-    for id in cartoonIDs {
-        if let detail = try? await APIService.shared.tvDetail(tvId: id) {
-            let movie = Movie(
-                id: detail.id ?? id,
-                title: detail.title ?? "",
-                overview: detail.overview ?? "",
-                posterPath: detail.posterPath,
-                backdropPath: detail.backdropPath,
-                voteAverage: detail.voteAverage ?? 0,
-                releaseDate: detail.releaseDate,
-                genreIds: detail.genres?.map { $0.id },
-                originalTitle: detail.title,
-                popularity: nil,
-                voteCount: nil,
-                adult: false,
-                originalLanguage: nil,
-                mediaType: "tv"
-            )
-            movies.append(movie)
+    for name in cartoonNames {
+        if let results = try? await APIService.shared.searchTVShows(query: name, page: 1),
+           let first = results.first {
+            movies.append(first)
         }
     }
     return movies
