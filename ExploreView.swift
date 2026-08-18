@@ -12,6 +12,7 @@ struct ExploreView: View {
     let genrePosters: [String: String] = [
     "Hành Động": "https://media.themoviedb.org/t/p/w500_and_h282_face/2rjI2uXmjitMAaXVO21r9ao7v2j.jpg",
     "Hài Hước": "https://media.themoviedb.org/t/p/w500_and_h282_face/85k0kaoRgGmF6ACq0M61AFxhjLN.jpg",
+    "Cartoon Icons": "https://media.themoviedb.org/t/p/w500_and_h282_face/lgGZ2ysbRyAOi2VgIZpp6k8qILj.jpg",
     "Tình Cảm": "https://media.themoviedb.org/t/p/w500_and_h282_face/oQaVV7p916HO5MDI820zzs1pin9.jpg",
     "Kinh Dị": "https://media.themoviedb.org/t/p/w1000_and_h563_face/9ZChoA7J3C3c144vDl6q2QDmERP.jpg",
     "Giật Gân": "https://media.themoviedb.org/t/p/w500_and_h282_face/H5HjE7Xb9N09rbWn1zBfxgI8uz.jpg",
@@ -220,6 +221,7 @@ VStack(alignment: .leading, spacing: 8) {
         let allGenres: [Genre] = [
             Genre(id: 28, name: "Hành Động"),
             Genre(id: 35, name: "Hài Hước"),
+            Genre(id: 16, name: "Cartoon Icons"),
             Genre(id: 10749, name: "Tình Cảm"),
             Genre(id: 27, name: "Kinh Dị"),
             Genre(id: 53, name: "Giật Gân"),
@@ -263,6 +265,7 @@ struct AllGenresView: View {
         "Hành Động": "https://media.themoviedb.org/t/p/w500_and_h282_face/2rjI2uXmjitMAaXVO21r9ao7v2j.jpg",
         "Hài Hước": "https://media.themoviedb.org/t/p/w500_and_h282_face/85k0kaoRgGmF6ACq0M61AFxhjLN.jpg",
         "Tình Cảm": "https://media.themoviedb.org/t/p/w500_and_h282_face/oQaVV7p916HO5MDI820zzs1pin9.jpg",
+        "Cartoon Icons": "https://media.themoviedb.org/t/p/w500_and_h282_face/lgGZ2ysbRyAOi2VgIZpp6k8qILj.jpg",
         "Kinh Dị": "https://media.themoviedb.org/t/p/w1000_and_h563_face/9ZChoA7J3C3c144vDl6q2QDmERP.jpg",
         "Giật Gân": "https://media.themoviedb.org/t/p/w500_and_h282_face/H5HjE7Xb9N09rbWn1zBfxgI8uz.jpg",
         "Bí Ẩn": "https://media.themoviedb.org/t/p/w1000_and_h563_face/flxau5Iu7bChQHsESqvGZ3FQRaI.jpg",
@@ -296,6 +299,7 @@ struct AllGenresView: View {
     let allGenres: [Genre] = [
         Genre(id: 28, name: "Hành Động"),
         Genre(id: 35, name: "Hài Hước"),
+        Genre(id: 16, name: "Cartoon Icons"),
         Genre(id: 10749, name: "Tình Cảm"),
         Genre(id: 27, name: "Kinh Dị"),
         Genre(id: 53, name: "Giật Gân"),
