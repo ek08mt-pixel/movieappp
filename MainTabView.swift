@@ -55,7 +55,8 @@ struct MainTabView: View {
             }
             .padding(.bottom, 10)
         }
-        .ignoresSafeArea(.keyboard)
+    }
+    .ignoresSafeArea(.keyboard)
         .animation(.spring(response: 0.4), value: selectedTab)
         .onAppear {
             NotificationCenter.default.addObserver(forName: NSNotification.Name("HideTabBar"), object: nil, queue: .main) { _ in
