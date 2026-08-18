@@ -569,4 +569,3 @@ struct CategoryFullView: View {
         } else {
             movies = []
         }
-    }
