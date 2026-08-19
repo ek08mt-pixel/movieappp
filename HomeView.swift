@@ -584,11 +584,13 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
     func stopAutoScroll() { timer?.invalidate(); timer = nil }
     func startAnimeAutoScroll() { animeTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: true) { _ in withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { animeCurrentIndex = (animeCurrentIndex + 1) % min(vm.anime.count, 8) } } }
     func stopAnimeAutoScroll() { animeTimer?.invalidate(); animeTimer = nil }
-}
-func shuffleBigCards() {
+    
+    func shuffleBigCards() {
         hotMovies = Array(vm.trending24h.shuffled().prefix(4))
         popularMovies = Array(vm.trending24h.shuffled().prefix(4))
     }
+}
+
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     
