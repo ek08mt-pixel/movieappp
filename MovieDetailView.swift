@@ -1062,18 +1062,44 @@ struct EpisodePopupView: View {
     
     var body: some View {
         ZStack {
-            Color(white: 0.1).ignoresSafeArea()
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Tập phim - Season \(season)")
-                        .font(.headline).foregroundColor(.white)
-                    Spacer()
-                    Button("Đóng") { dismiss() }.foregroundColor(.gray)
-                }
-                .padding()
-                
-                ScrollView {
-                    LazyVStack(spacing: 8) {
+            Color.black.ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Poster phim
+                    CachedAsyncImage(url: movie.posterURL)
+                        .aspectRatio(2/3, contentMode: .fill)
+                        .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * 0.3)
+                        .clipped()
+                        .overlay(
+                            LinearGradient(
+                                colors: [.clear, .black],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .overlay(alignment: .bottomLeading) {
+                            // Khung tên phim đè lên poster
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(movie.title)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .lineLimit(2)
+                                Text("Season \(season)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.regularMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.3), lineWidth: 0.3))
+                            )
+                            .padding(16)
+                        }
+                    
+                    // Danh sách tập
+                    VStack(spacing: 8) {
                         if let detail = vm.seasonDetails[season] {
                             ForEach(detail.episodes) { ep in
                                 Button {
@@ -1083,27 +1109,55 @@ struct EpisodePopupView: View {
                                         Text("Tập \(ep.episodeNumber)")
                                             .font(.system(size: 13, weight: .medium))
                                             .foregroundColor(.white)
+                                        
                                         Spacer()
+                                        
                                         if let runtime = ep.runtime {
                                             Text("\(runtime) phút")
                                                 .font(.system(size: 10))
                                                 .foregroundColor(.gray)
                                         }
+                                        
                                         Image(systemName: "play.circle")
+                                            .font(.system(size: 16))
                                             .foregroundColor(.white.opacity(0.5))
                                     }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 12)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(.ultraThinMaterial.opacity(0.5))
+                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.15), lineWidth: 0.3))
+                                    )
                                 }
                             }
                         } else {
                             ProgressView().tint(.white).padding()
                         }
                     }
-                    .padding()
+                    .padding(16)
                 }
             }
+            .ignoresSafeArea(edges: .top)
+            
+            // Nút đóng
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(10)
+                            .background(Circle().fill(.regularMaterial))
+                    }
+                }
+                Spacer()
+            }
+            .padding(.top, 54)
+            .padding(.trailing, 16)
         }
         .task {
             await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season)
