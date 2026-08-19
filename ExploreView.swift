@@ -387,6 +387,12 @@ struct AllGenresView: View {
             BackButton()
         }
         .navigationBarHidden(true)
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
     }
 }
 
@@ -442,6 +448,12 @@ struct AsiaCategoryView: View {
             }
             BackButton()
         }.navigationBarHidden(true)
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
         .task { allMovies = (try? await APIService.shared.fetchAsiaMovies(language: nil)) ?? []; filterMovies(); isLoading = false }
     }
     
@@ -543,6 +555,12 @@ struct CategoryFullView: View {
             BackButton()
         }
         .navigationBarHidden(true)
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
         .task {
             do {
                 allMovies = try await APIService.shared.fetchMovies(by: category.tmdbId, type: category.type)
