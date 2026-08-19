@@ -1017,7 +1017,8 @@ struct NewThemeDetailView: View {
                 showEpisodePopup = false
             })
                 .environmentObject(appState)
-                .frame(maxHeight: min(UIScreen.main.bounds.height * 0.6, CGFloat(max(300, (vm.seasonDetails[selectedSeason ?? 1]?.episodes.count ?? 1) * 90))))
+                .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
+                .fixedSize(horizontal: false, vertical: true)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal, 16)
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
@@ -1077,10 +1078,7 @@ struct EpisodePopupView: View {
     private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
     
     var body: some View {
-        ZStack {
-            Color(white: 0.08).ignoresSafeArea()
-            
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -1155,6 +1153,7 @@ struct EpisodePopupView: View {
                 }
             }
         }
+        .background(Color(white: 0.08))
         .task {
             await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season)
         }
