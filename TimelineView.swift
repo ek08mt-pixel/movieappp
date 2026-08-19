@@ -47,7 +47,13 @@ struct TimelineView: View {
             }.padding(.top, 54).padding(.leading, 20)
         }
         .navigationBarHidden(true)
-        .onAppear { loadMovies() }
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+            loadMovies()
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
     }
     
     func loadMovies() {
