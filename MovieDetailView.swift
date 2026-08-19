@@ -40,8 +40,8 @@ struct MovieDetailView: View {
     
     var body: some View {
     if useNewTheme {
-        NewThemeDetailView(movie: movie, vm: vm)
-            .environmentObject(appState)
+        NewThemeDetailView(movie: movie, vm: MovieDetailViewModel())
+    .environmentObject(appState)
     } else {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -748,7 +748,7 @@ struct WebView: UIViewRepresentable {
 // MARK: - New Theme Detail View
 struct NewThemeDetailView: View {
     let movie: Movie
-    @ObservedObject var vm: MovieDetailViewModel
+    @StateObject var vm: MovieDetailViewModel
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     @State private var showFullOverview = false
