@@ -115,6 +115,12 @@ struct MovieListView: View {
             .padding(.leading, 20)
         }
         .navigationBarHidden(true)
+        .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
+        }
         .task {
             await loadPage(1)
         }
