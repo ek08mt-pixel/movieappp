@@ -102,6 +102,7 @@ struct OSTView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
+            NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
             ostManager.togglePlayback = { togglePlayback() }
             ostManager.stopPlayback = {
                 ostManager.audioPlayer?.pause(); isPlaying = false; currentTrack = nil
@@ -110,6 +111,7 @@ struct OSTView: View {
             }
         }
         .onDisappear {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowTabBar"), object: nil)
             if isPlaying, let track = currentTrack {
                 ostManager.currentTrack = track.title; ostManager.currentMovie = track.movie
                 ostManager.currentPoster = track.posterPath; ostManager.isPlaying = true
