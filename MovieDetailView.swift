@@ -1157,7 +1157,6 @@ struct EpisodePopupView: View {
         .task {
             await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season)
         }
-    }
     
     func presentPlayer(episode: Int) {
         guard let topVC = UIApplication.topViewController() else { return }
