@@ -1017,7 +1017,7 @@ struct NewThemeDetailView: View {
                 showEpisodePopup = false
             })
                 .environmentObject(appState)
-                .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
+                .frame(maxHeight: min(UIScreen.main.bounds.height * 0.6, CGFloat(max(300, (vm.seasonDetails[season]?.episodes.count ?? 1) * 90))))
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal, 16)
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
