@@ -1013,7 +1013,9 @@ struct NewThemeDetailView: View {
             Color.black.opacity(0.5).ignoresSafeArea()
                 .onTapGesture { showEpisodePopup = false }
             
-            EpisodePopupView(vm: vm, movie: movie, season: selectedSeason ?? 1)
+            EpisodePopupView(vm: vm, movie: movie, season: selectedSeason ?? 1, onDismiss: {
+                showEpisodePopup = false
+            })
                 .environmentObject(appState)
                 .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -1068,8 +1070,9 @@ struct EpisodePopupView: View {
     @ObservedObject var vm: MovieDetailViewModel
     let movie: Movie
     let season: Int
+    let onDismiss: () -> Void
     @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) var dismiss
+    
     
     private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
     
@@ -1091,20 +1094,20 @@ struct EpisodePopupView: View {
                     }
                     Spacer()
                     Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.white.opacity(0.6))
-                    }
+    onDismiss()
+} label: {
+    Image(systemName: "xmark.circle.fill")
+        .font(.system(size: 22))
+        .foregroundColor(.white.opacity(0.6))
+}
                 }
                 .padding(16)
                 
                 Divider().background(Color.white.opacity(0.1))
                 
                 // Danh sách tập - 2 cột
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 8) {
+                ScrollView(showsIndicators: false) {
+    LazyVGrid(columns: columns, spacing: 8) {
                         if let detail = vm.seasonDetails[season] {
                             ForEach(detail.episodes) { ep in
                                 Button {
@@ -1171,6 +1174,6 @@ struct EpisodePopupView: View {
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
         hosting.modalPresentationStyle = .fullScreen
         topVC.present(hosting, animated: true)
-        dismiss()
+    
     }
 }
