@@ -23,6 +23,9 @@ struct HomeView: View {
     @State private var showContinueDetail = false
     @State private var detailMovie: Movie?
     @State private var backdropCache: [Int: URL] = [:]
+    @State private var hotMovies: [Movie] = []
+    @State private var popularMovies: [Movie] = []
+    @State private var bigCardTimer: Timer?
     
     var body: some View {
         NavigationStack {
@@ -246,8 +249,8 @@ if !vm.trendingAnime.isEmpty {
                         SectionGrid(title: "24h qua", movies: vm.trending24h)
                         SectionGrid(title: "Đang chiếu rạp", movies: vm.nowPlaying, showBooking: true)
                         HStack(spacing: 12) {
-                            BigCard(title: "Phim Hot", icon: "flame.fill", movies: Array(vm.trending24h.shuffled()))
-                            BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: Array(vm.trending24h.shuffled()))
+                            BigCard(title: "Phim Hot", icon: "flame.fill", movies: hotMovies)
+BigCard(title: "Phổ Biến", icon: "chart.line.uptrend.xyaxis", movies: popularMovies)
                         }.padding(.horizontal, 20).padding(.top, 24)
                         SectionGrid(title: "Đánh giá cao", movies: vm.topRated)
                         SectionGrid(title: "Âu Mỹ", movies: vm.usuk)
@@ -386,6 +389,18 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
                     MovieDetailView(movie: movie)
                 }
             }
+        }
+        .onAppear {
+            shuffleBigCards()
+            bigCardTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: true) { _ in
+                withAnimation {
+                    shuffleBigCards()
+                }
+            }
+        }
+        .onDisappear {
+            bigCardTimer?.invalidate()
+            bigCardTimer = nil
         }
         .task { await vm.loadAll() }
     }
@@ -570,7 +585,10 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
     func startAnimeAutoScroll() { animeTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: true) { _ in withAnimation(.interpolatingSpring(stiffness: 300, damping: 20)) { animeCurrentIndex = (animeCurrentIndex + 1) % min(vm.anime.count, 8) } } }
     func stopAnimeAutoScroll() { animeTimer?.invalidate(); animeTimer = nil }
 }
-
+func shuffleBigCards() {
+        hotMovies = Array(vm.trending24h.shuffled().prefix(4))
+        popularMovies = Array(vm.trending24h.shuffled().prefix(4))
+    }
 struct SectionGrid: View {
     let title: String; let movies: [Movie]; var showBooking: Bool = false
     
