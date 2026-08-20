@@ -20,8 +20,18 @@ class MovieDetailViewModel: ObservableObject {
     func load(movieId: Int, mediaType: String?) async {
         isLoading = true
         let type = mediaType ?? "movie"
+        
+        // Luôn thử load seasons trước (nếu là phim bộ)
+        let tvSeasons = await loadSeasonsDirectly(tvId: movieId)
+        if !tvSeasons.isEmpty {
+            seasons = tvSeasons
+            for season in seasons {
+                await loadSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber)
+            }
+        }
+        
         if type == "tv" {
-            seasons = await loadSeasonsDirectly(tvId: movieId)
+            // đã load seasons ở trên
         } else {
             detail = try? await APIService.shared.movieDetail(movieId: movieId)
             if let collectionId = detail?.belongsToCollection?.id {
@@ -31,17 +41,13 @@ class MovieDetailViewModel: ObservableObject {
             }
         }
         isLoading = false
+        
         async let actorsTask = APIService.shared.actors(movieId: movieId, mediaType: type)
         async let similarTask = APIService.shared.similar(movieId: movieId, mediaType: type)
         async let imagesTask = APIService.shared.movieImages(movieId: movieId, mediaType: type)
         actors = (try? await actorsTask) ?? []
         similar = (try? await similarTask) ?? []
         images = (try? await imagesTask) ?? []
-        if type == "tv" {
-            for season in seasons {
-                await loadSeasonDetail(tvId: movieId, seasonNumber: season.seasonNumber)
-            }
-        }
     }
     
     func loadServers(movieId: Int, mediaType: String?, title: String) async {
