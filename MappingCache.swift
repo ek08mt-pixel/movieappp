@@ -239,7 +239,6 @@ final class NguonCService {
                                 if embedURL != nil { break }
                             }
                         }
-                    }
                     } else {
                         if let embed = movie["embed"] as? String { embedURL = URL(string: embed) }
                     }
