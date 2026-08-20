@@ -484,11 +484,9 @@ struct MovieDetailView: View {
         .task {
             await vm.load(movieId: movie.id, mediaType: movie.mediaType)
             await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
-            if movie.mediaType == "tv" {
-                for season in vm.seasons {
-                    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
-                }
-            }
+            for season in vm.seasons {
+    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
+}
             if MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) == nil {
                 vm.autoFindSlug(tmdbID: movie.id, title: movie.title, year: movie.yearText, season: 1)
             }
