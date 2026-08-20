@@ -426,6 +426,13 @@ struct MovieDetailView: View {
                                             }
                                         }
                                     }
+                                    .onAppear {
+                                        if vm.seasonDetails[season.seasonNumber] == nil {
+                                            Task {
+                                                await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
