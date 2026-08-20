@@ -252,7 +252,6 @@ struct MovieDetailView: View {
                 }
             }
         }
-    }
                                 HStack(alignment: .center, spacing: 10) {
                                     Text("Seasons & Episodes")
                                         .font(.title3).fontWeight(.bold).foregroundColor(.white)
