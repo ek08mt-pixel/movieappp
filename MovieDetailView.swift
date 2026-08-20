@@ -240,7 +240,19 @@ struct MovieDetailView: View {
                         }
                         
                         if !vm.seasons.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 12) {
+        // nội dung
+    }
+    .id(selectedSource)
+    .onAppear {
+        if vm.seasonDetails.isEmpty {
+            Task {
+                for season in vm.seasons {
+                    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
+                }
+            }
+        }
+    }
                                 HStack(alignment: .center, spacing: 10) {
                                     Text("Seasons & Episodes")
                                         .font(.title3).fontWeight(.bold).foregroundColor(.white)
