@@ -224,17 +224,22 @@ final class NguonCService {
                     
                     if let s = season, let e = episode {
                         if let episodes = movie["episodes"] as? [[String: Any]] {
-                            let effectiveEp = e
                             for server in episodes {
+                                // Check season nếu có
+                                if let serverSeason = server["season"] as? Int, serverSeason != s { continue }
+                                if let seasonName = server["season_name"] as? String, seasonName.contains("\(s)") == false && !seasonName.lowercased().contains("season \(s)") { continue }
+                                
                                 if let items = server["items"] as? [[String: Any]] {
                                     for item in items {
-                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, matchEpisode(name: name, target: effectiveEp) {
+                                        if let name = item["name"] as? String, let embed = item["embed"] as? String, matchEpisode(name: name, target: e) {
                                             embedURL = URL(string: embed); break
                                         }
                                     }
                                 }
+                                if embedURL != nil { break }
                             }
                         }
+                    }
                     } else {
                         if let embed = movie["embed"] as? String { embedURL = URL(string: embed) }
                     }
