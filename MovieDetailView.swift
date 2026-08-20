@@ -178,10 +178,14 @@ struct MovieDetailView: View {
                         }
                         
                         HStack(spacing: 8) {
-                            ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in
-                                Button {
-                                    selectedSource = source
-                                } label: {
+    ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in
+        Button {
+            selectedSource = source
+            // Load seasons khi chọn nguồn
+            Task {
+                await vm.load(movieId: movie.id, mediaType: movie.mediaType ?? "tv")
+            }
+        } label: {
                                     Text(source).font(.system(size: 10, weight: .medium))
                                         .foregroundColor(selectedSource == source ? .white : .white.opacity(0.5))
                                         .padding(.horizontal, 10).padding(.vertical, 5)
