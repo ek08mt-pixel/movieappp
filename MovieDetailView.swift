@@ -402,38 +402,38 @@ struct MovieDetailView: View {
         .font(.system(size: 10))
         .foregroundColor(.yellow)
     
-    if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
-                                                    if vm.sourceEpisodes.isEmpty {
-                                                        ProgressView().tint(.white).padding().onAppear {
-                                                            vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
-                                                        }
-                                                    } else {
-                                                        LazyVStack(spacing: 6) {
-                                                            ForEach(vm.sourceEpisodes) { ep in
-                                                                Button {
-                                                                    playSeason = season.seasonNumber; playEpisode = ep.episodeNumber
-                                                                    presentPlayer(directURL: URL(string: ep.linkM3u8))
-                                                                } label: {
-                                                                    episodeRowContent(season: season.seasonNumber, episode: ep.episodeNumber, name: ep.name)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                } else if let detail = vm.seasonDetails[season.seasonNumber] {
-                                                    LazyVStack(spacing: 6) {
-                                                        ForEach(detail.episodes) { ep in
-                                                            Button {
-                                                                playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
-                                                                presentPlayer()
-                                                            } label: {
-                                                                episodeRowContent(season: ep.seasonNumber, episode: ep.episodeNumber, name: ep.name, stillURL: ep.stillURL, runtime: ep.runtime)
-                                                            }
-                                                        }
-                                                    }
-                                                } else {
-                                                    ProgressView().tint(.white).padding()
-                                                }
-                                            }
+    if selectedSource == "Emew 1", let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
+        if vm.sourceEpisodes.isEmpty {
+            ProgressView().tint(.white).padding().onAppear {
+                vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
+            }
+        } else {
+            LazyVStack(spacing: 6) {
+                ForEach(vm.sourceEpisodes) { ep in
+                    Button {
+                        playSeason = season.seasonNumber; playEpisode = ep.episodeNumber
+                        presentPlayer(directURL: URL(string: ep.linkM3u8))
+                    } label: {
+                        episodeRowContent(season: season.seasonNumber, episode: ep.episodeNumber, name: ep.name)
+                    }
+                }
+            }
+        }
+    } else if let detail = vm.seasonDetails[season.seasonNumber] {
+        LazyVStack(spacing: 6) {
+            ForEach(detail.episodes) { ep in
+                Button {
+                    playSeason = ep.seasonNumber; playEpisode = ep.episodeNumber
+                    presentPlayer()
+                } label: {
+                    episodeRowContent(season: ep.seasonNumber, episode: ep.episodeNumber, name: ep.name, stillURL: ep.stillURL, runtime: ep.runtime)
+                }
+            }
+        }
+    } else {
+        ProgressView().tint(.white).padding()
+    }
+}
                                         }
                                     }
                                 }
