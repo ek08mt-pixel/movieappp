@@ -398,9 +398,6 @@ struct MovieDetailView: View {
                                                 }.padding(.vertical, 8)
                                             }
                                             if expandedSeason == season.seasonNumber {
-    Text("Debug: \(vm.seasonDetails.count) seasons loaded | Selected: \(selectedSource)")
-        .font(.system(size: 10))
-        .foregroundColor(.yellow)
     
     if selectedSource == "Emew 1", let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
         if vm.sourceEpisodes.isEmpty {
