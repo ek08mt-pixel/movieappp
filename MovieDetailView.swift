@@ -494,7 +494,6 @@ struct MovieDetailView: View {
         vm.autoFindSlug(tmdbID: movie.id, title: movie.title, year: movie.yearText, season: 1)
     }
     await fetchRatings()
-}
         }
         .sheet(isPresented: $showImages) {
             MovieImagesView(images: vm.images, title: movie.title)
