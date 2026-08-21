@@ -398,7 +398,11 @@ struct MovieDetailView: View {
                                                 }.padding(.vertical, 8)
                                             }
                                             if expandedSeason == season.seasonNumber {
-                                                if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
+    Text("Debug: \(vm.seasonDetails.count) seasons loaded | Selected: \(selectedSource)")
+        .font(.system(size: 10))
+        .foregroundColor(.yellow)
+    
+    if let slug = MappingCache.getDirectSlug(tmdbID: movie.id, season: season.seasonNumber) {
                                                     if vm.sourceEpisodes.isEmpty {
                                                         ProgressView().tint(.white).padding().onAppear {
                                                             vm.loadSourceEpisodes(tmdbID: movie.id, season: season.seasonNumber, slug: slug)
