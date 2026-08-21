@@ -181,9 +181,11 @@ struct MovieDetailView: View {
     ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in
         Button {
             selectedSource = source
-            // Load seasons khi chọn nguồn
-            Task {
-                await vm.load(movieId: movie.id, mediaType: movie.mediaType ?? "tv")
+            // Chỉ load seasons nếu chưa có
+            if vm.seasons.isEmpty {
+                Task {
+                    await vm.load(movieId: movie.id, mediaType: movie.mediaType ?? "tv")
+                }
             }
         } label: {
                                     Text(source).font(.system(size: 10, weight: .medium))
@@ -486,15 +488,13 @@ struct MovieDetailView: View {
     }
         .toolbar(.hidden, for: .tabBar)
         .task {
-            await vm.load(movieId: movie.id, mediaType: movie.mediaType)
-            await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType, title: movie.title)
-            for season in vm.seasons {
-    await vm.loadSeasonDetail(tvId: movie.id, seasonNumber: season.seasonNumber)
+    await vm.load(movieId: movie.id, mediaType: movie.mediaType ?? "tv")
+    await vm.loadServers(movieId: movie.id, mediaType: movie.mediaType ?? "tv", title: movie.title)
+    if MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) == nil {
+        vm.autoFindSlug(tmdbID: movie.id, title: movie.title, year: movie.yearText, season: 1)
+    }
+    await fetchRatings()
 }
-            if MappingCache.getDirectSlug(tmdbID: movie.id, season: 1) == nil {
-                vm.autoFindSlug(tmdbID: movie.id, title: movie.title, year: movie.yearText, season: 1)
-            }
-            await fetchRatings()
         }
         .sheet(isPresented: $showImages) {
             MovieImagesView(images: vm.images, title: movie.title)
