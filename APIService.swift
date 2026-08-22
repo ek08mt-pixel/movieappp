@@ -413,55 +413,11 @@ class APIService {
     }
     
     func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> String? {
-        let cdn = "https://cdn4.lilune.shop"
-        let domain = "https://phimfun.net/"
-        let lang = "vi"
-        
-        let getURL = URL(string: "https://moviking.neuronix.sbs/geturl")!
-        var request = URLRequest(url: getURL)
-        request.httpMethod = "POST"
-        request.setValue("https://phimfun.net/", forHTTPHeaderField: "Referer")
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-        
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        var body = ""
-        body += "--\(boundary)\r\n"
-        body += "Content-Disposition: form-data; name=\"id\"\r\n\r\n\(UUID().uuidString)\r\n"
-        body += "--\(boundary)\r\n"
-        body += "Content-Disposition: form-data; name=\"renderer\"\r\n\r\n\r\n"
-        body += "--\(boundary)\r\n"
-        body += "Content-Disposition: form-data; name=\"videoId\"\r\n\r\n\(videoId)\r\n"
-        body += "--\(boundary)\r\n"
-        body += "Content-Disposition: form-data; name=\"domain\"\r\n\r\n\(domain)\r\n"
-        body += "--\(boundary)--\r\n"
-        request.httpBody = body.data(using: .utf8)
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            guard let dataString = String(data: data, encoding: .utf8) else { return nil }
-            
-            let streamURLString = "\(cdn)/streaming?id=\(videoId)&subId=&web=\(web)&\(dataString)&cdn=\(cdn)&lang=\(lang)"
-            guard let streamURL = URL(string: streamURLString) else { return nil }
-            
-            var streamRequest = URLRequest(url: streamURL)
-            streamRequest.setValue(cdn, forHTTPHeaderField: "Referer")
-            streamRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-            
-            let (streamData, _) = try await URLSession.shared.data(for: streamRequest)
-            let streamContent = String(data: streamData, encoding: .utf8) ?? ""
-            
-            if streamContent.contains(".m3u8") {
-                if let range = streamContent.range(of: "https?://[^\"']*\\.m3u8[^\"']*", options: .regularExpression) {
-                    return String(streamContent[range])
-                }
-            }
-            
-            return streamURLString
-            
-        } catch {
-            print("PhimFun error: \(error)")
-            return nil
+    let embedURL = "https://moviking.neuronix.sbs/embed?id=\(videoId)&web=\(web)&lang=vi"
+    
+    return await withCheckedContinuation { continuation in
+        PhimFunExtractor.shared.extractStreamURL(embedURL: embedURL) { streamURL in
+            continuation.resume(returning: streamURL)
         }
     }
 }
