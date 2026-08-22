@@ -8,7 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
-- name: Test PhimFun geturl
+
+      - name: Test PhimFun geturl
         run: |
           curl -s -X POST "https://moviking.neuronix.sbs/geturl" \
             -H "Referer: https://phimfun.net/" \
