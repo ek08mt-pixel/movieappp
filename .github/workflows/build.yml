@@ -7,7 +7,30 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
+  
+      - name: Build
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          SWIFT_FILES=$(find . -name "*.swift" | tr '\n' ' ')
+          echo "Files: $SWIFT_FILES"
+          
+          xcrun -sdk iphoneos swiftc \
+            -target arm64-apple-ios18.0 \
+            -O \
+            -framework SwiftUI \
+            -framework UIKit \
+            -framework Foundation \
+            -framework WebKit \
+            -framework AVKit \
+            -framework MediaPlayer \
+            -framework AVFoundation \
+            -o App \
+            $SWIFT_FILES
+          
+          echo "Binary size:"
+          ls -la App
+          file App
+      
       - name: Package IPA
         run: |
           mkdir -p Payload/PhimHay.app
