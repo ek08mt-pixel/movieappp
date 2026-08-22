@@ -515,20 +515,36 @@ didResume = false
                 }
                 saveHistory()
             case .nguonc: 
-                let (url, servers) = try await withCheckedThrowingContinuation { c in 
-                    NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
-                }
-                await MainActor.run { 
-                    nguonCEmbedURL = url
-                    nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"
-                    nguonCServers = servers
-                    currentTime = 1
-                    duration = 1
-                    isLoading = false
-                    sourceStatus[.nguonc] = true
-                    hasStartedPlaying = true
-                    showNguonCWebView = true
-                }
+    let (url, servers) = try await withCheckedThrowingContinuation { c in 
+        NguonCService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
+    }
+    
+    // Thử lấy m3u8 trước
+    if let embedURL = url?.absoluteString,
+       let m3u8 = await NguonCExtractor.extractM3U8FromNguonC(embedURL: embedURL) {
+        await MainActor.run {
+            currentStreamURL = URL(string: m3u8)
+            selectedQuality = "FHD"
+            player.replaceCurrentItem(with: AVPlayerItem(url: URL(string: m3u8)!))
+            player.play()
+            hasStartedPlaying = true
+            isLoading = false
+            sourceStatus[.nguonc] = true
+            saveHistory()
+        }
+    } else {
+        // Fallback sang webview
+        await MainActor.run { 
+            nguonCEmbedURL = url
+            nguonCEpisodeName = "\(movieTitle) - Tập \(ep)"
+            nguonCServers = servers
+            currentTime = 1
+            duration = 1
+            isLoading = false
+            sourceStatus[.nguonc] = true
+            hasStartedPlaying = true
+            showNguonCWebView = true
+        }
             case .vsmov: 
                 let url = try await withCheckedThrowingContinuation { c in 
                     VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
