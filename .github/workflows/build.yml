@@ -7,17 +7,7 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-  
 
-      - name: Test PhimFun geturl
-        run: |
-          curl -v -X POST "https://moviking.neuronix.sbs/geturl" \
-            -H "Referer: https://phimfun.net/" \
-            -H "User-Agent: Mozilla/5.0" \
-            -F "id=test123" \
-            -F "renderer=" \
-            -F "videoId=d6099c3066a54f9084ef4e4f691300e7" \
-            -F "domain=https://phimfun.net/" 2>&1 | tail -30
 
       - name: Build
         run: |
