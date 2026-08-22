@@ -8,12 +8,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Debug streamLib Tail
+      - name: Debug streamLib End
         run: |
+          echo "Tổng số dòng:"
           curl -s "https://moviking.neuronix.sbs/Content/JS/streamLib.js?e=1" \
             -H "Referer: https://moviking.neuronix.sbs/" \
-            -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1" \
-            | tail -80
+            -H "User-Agent: Mozilla/5.0" \
+            | wc -l
+          echo "=== Dòng 80-200 ==="
+          curl -s "https://moviking.neuronix.sbs/Content/JS/streamLib.js?e=1" \
+            -H "Referer: https://moviking.neuronix.sbs/" \
+            -H "User-Agent: Mozilla/5.0" \
+            | sed -n '80,200p'
 
       - name: Package IPA
         run: |
