@@ -17,13 +17,15 @@ class APIService {
             return response.results.map { $0.withPlaceholder() }
         }
     }
+    
     func trending24hFast() async throws -> [Movie] {
-    let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=1"
-    guard let url = URL(string: urlString) else { return [] }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    let response = try decoder.decode(MovieResponse.self, from: data)
-    return response.results.map { $0.withPlaceholder() }
-}
+        let urlString = "\(baseURL)/trending/movie/day?api_key=\(apiKey)&language=\(language)&page=1"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.map { $0.withPlaceholder() }
+    }
+    
     func trendingTV() async throws -> [Movie] {
         try await fetchMultiplePages(maxPages: 10) { [self] page in
             let urlString = "\(baseURL)/trending/tv/day?api_key=\(apiKey)&language=\(language)&page=\(page)"
@@ -126,44 +128,46 @@ class APIService {
     }
     
     func koreanMovies() async throws -> [Movie] {
-    try await fetchMultiplePages(maxPages: 15) { [self] page in
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50&without_genres=10749&certification_country=KR&certification.lte=R"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        try await fetchMultiplePages(maxPages: 15) { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ko&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50&without_genres=10749&certification_country=KR&certification.lte=R"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
     }
-}
-   // Nhật Bản - lọc kỹ hơn
-func japaneseMovies() async throws -> [Movie] {
-    try await fetchMultiplePages(maxPages: 10) { [self] page in
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ja&without_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&certification_country=JP&certification.lte=R"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+    
+    func japaneseMovies() async throws -> [Movie] {
+        try await fetchMultiplePages(maxPages: 10) { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=ja&without_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&certification_country=JP&certification.lte=R"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
     }
-}
+    
     func vietnameseMovies() async throws -> [Movie] { try await discoverMovies(lang: "vi", sortBy: "popularity.desc") }
+    
     func usukMovies() async throws -> [Movie] {
-    try await fetchMultiplePages(maxPages: 15) { [self] page in
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=en&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&without_genres=10749"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        try await fetchMultiplePages(maxPages: 15) { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=en&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=100&without_genres=10749"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
     }
-}
     
     func animeMovies() async throws -> [Movie] {
-    try await fetchMultiplePages(maxPages: 10) { [self] page in
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50"
-        guard let url = URL(string: urlString) else { return [] }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        try await fetchMultiplePages(maxPages: 10) { [self] page in
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_genres=16&sort_by=popularity.desc&language=\(language)&page=\(page)&vote_count.gte=50"
+            guard let url = URL(string: urlString) else { return [] }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+        }
     }
-}
     
     func discoverMovies(minRating: Double? = nil, minVotes: Int? = nil) async throws -> [Movie] {
         var urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&sort_by=popularity.desc&language=\(language)"
@@ -176,12 +180,12 @@ func japaneseMovies() async throws -> [Movie] {
     }
     
     func discoverMovies(lang: String, sortBy: String, page: Int = 1) async throws -> [Movie] {
-    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
-    guard let url = URL(string: urlString) else { return [] }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    let response = try decoder.decode(MovieResponse.self, from: data)
-    return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-}
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_original_language=\(lang)&sort_by=\(sortBy)&language=\(language)&page=\(page)&vote_count.gte=30"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+    }
     
     func movieDetail(movieId: Int) async throws -> MovieDetail? {
         let urlString = "\(baseURL)/movie/\(movieId)?api_key=\(apiKey)&language=\(language)&append_to_response=credits"
@@ -268,12 +272,12 @@ func japaneseMovies() async throws -> [Movie] {
     }
     
     func discoverMoviesByYear(_ year: Int, page: Int = 1) async throws -> [Movie] {
-    let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)&page=\(page)"
-    guard let url = URL(string: urlString) else { return [] }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    let response = try decoder.decode(MovieResponse.self, from: data)
-    return response.results.map { $0.withPlaceholder() }
-}
+        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&primary_release_year=\(year)&sort_by=popularity.desc&language=\(language)&page=\(page)"
+        guard let url = URL(string: urlString) else { return [] }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try decoder.decode(MovieResponse.self, from: data)
+        return response.results.map { $0.withPlaceholder() }
+    }
     
     func fetchMovies(by categoryID: Int, type: CategoryConfig.CategoryType) async throws -> [Movie] {
         switch type {
@@ -357,19 +361,19 @@ func japaneseMovies() async throws -> [Movie] {
     }
     
     func fetchAsiaMovies(language: String?) async throws -> [Movie] {
-    let langFilter = language != nil ? "&with_original_language=\(language!)" : "&with_original_language=ko|ja|zh|vi|th|cn"
-    var all: [Movie] = []
-    for page in 1...10 {
-        let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)\(langFilter)&sort_by=primary_release_date.desc&language=\(self.language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
-        guard let url = URL(string: urlString) else { break }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let response = try decoder.decode(MovieResponse.self, from: data)
-        let results = response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-        all.append(contentsOf: results)
-        if results.count < 20 { break }
+        let langFilter = language != nil ? "&with_original_language=\(language!)" : "&with_original_language=ko|ja|zh|vi|th|cn"
+        var all: [Movie] = []
+        for page in 1...10 {
+            let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)\(langFilter)&sort_by=primary_release_date.desc&language=\(self.language)&page=\(page)&without_genres=16&certification_country=US&certification.lte=PG-13"
+            guard let url = URL(string: urlString) else { break }
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try decoder.decode(MovieResponse.self, from: data)
+            let results = response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
+            all.append(contentsOf: results)
+            if results.count < 20 { break }
+        }
+        return all
     }
-    return all
-}
     
     private func fetchMultiplePages(maxPages: Int = 10, fetcher: @escaping (Int) async throws -> [Movie]) async throws -> [Movie] {
         var all: [Movie] = []
@@ -406,10 +410,9 @@ func japaneseMovies() async throws -> [Movie] {
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-       }
-    } 
+    }
     
-func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> String? {
+    func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> String? {
         let cdn = "https://cdn4.lilune.shop"
         let domain = "https://phimfun.net/"
         let lang = "vi"
@@ -461,6 +464,8 @@ func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> Strin
             return nil
         }
     }
+}
+
 extension Movie {
     func withPlaceholder() -> Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
