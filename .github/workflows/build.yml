@@ -8,13 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Get streamLib Full
+      - name: Debug Inline JS
         run: |
-          curl -s "https://moviking.neuronix.sbs/Content/JS/streamLib.js?e=1" \
-            -H "Referer: https://moviking.neuronix.sbs/" \
-            -H "User-Agent: Mozilla/5.0" \
-            > streamLib.js
-          cat streamLib.js
+          curl -s "https://moviking.neuronix.sbs/embed?id=d6099c3066a54f9084ef4e4f691300e7&web=phimfun.net&lang=vi" \
+            -H "Referer: https://phimfun.net/" \
+            -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1" \
+            | grep -A 50 '<script>' | head -100
 
       - name: Package IPA
         run: |
