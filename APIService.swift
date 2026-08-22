@@ -406,8 +406,8 @@ func japaneseMovies() async throws -> [Movie] {
         let (data, _) = try await URLSession.shared.data(from: url)
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
-    }
-    
+       }
+    } 
     
 func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> String? {
         let cdn = "https://cdn4.lilune.shop"
