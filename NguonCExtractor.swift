@@ -1,5 +1,6 @@
 import Foundation
 import WebKit
+import CryptoKit
 
 // MARK: - Regex Extractor
 class NguonCExtractor {
@@ -34,6 +35,65 @@ class NguonCExtractor {
             return String(html[swiftRange])
         }
         return nil
+    }
+    
+    // MARK: - NEW: Extract m3u8 from NguonC embed
+    static func extractM3U8FromNguonC(embedURL: String) async -> String? {
+        guard let url = URL(string: embedURL) else { return nil }
+        
+        do {
+            // 1. Tải HTML embed
+            var request = URLRequest(url: url)
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let html = String(data: data, encoding: .utf8) else { return nil }
+            
+            // 2. Tìm data-obf
+            guard let obfRange = html.range(of: "data-obf=\"([^\"]+)\"", options: .regularExpression) else { return nil }
+            let obf = String(html[obfRange])
+                .replacingOccurrences(of: "data-obf=\"", with: "")
+                .replacingOccurrences(of: "\"", with: "")
+            
+            // 3. Giải mã base64 lần 1
+            guard let obfData = Data(base64Encoded: obf),
+                  let obfJSON = try? JSONSerialization.jsonObject(with: obfData) as? [String: Any],
+                  let sUb = obfJSON["sUb"] as? String else { return nil }
+            
+            // 4. Giải mã base64 lần 2
+            guard let sUbData = Data(base64Encoded: sUb),
+                  let sUbJSON = try? JSONSerialization.jsonObject(with: sUbData) as? [String: Any],
+                  let a = sUbJSON["a"] as? String else { return nil }
+            
+            // 5. Tạo streamURL
+            let baseHost = "https://embed13.streamc.xyz"
+            let streamPath = "/\(a)"
+            let streamURLString = baseHost + streamPath
+            
+            guard let streamURL = URL(string: streamURLString) else { return nil }
+            
+            // 6. Fetch streamURL
+            var streamRequest = URLRequest(url: streamURL)
+            streamRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            streamRequest.setValue(embedURL, forHTTPHeaderField: "Referer")
+            
+            let (streamData, _) = try await URLSession.shared.data(for: streamRequest)
+            guard let m3u8Content = String(data: streamData, encoding: .utf8) else { return nil }
+            
+            // 7. Kiểm tra AES encryption
+            if m3u8Content.contains("#EXT-X-KEY:METHOD=AES") {
+                // Cần giải mã AES - phức tạp hơn
+                print("NguonC: Stream bị mã hóa AES, cần giải mã")
+                return nil
+            }
+            
+            // 8. Nếu không mã hóa, trả về URL stream trực tiếp
+            return streamURLString
+            
+        } catch {
+            print("NguonC extract error: \(error)")
+            return nil
+        }
     }
 }
 
