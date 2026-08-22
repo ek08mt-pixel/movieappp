@@ -178,7 +178,7 @@ struct MovieDetailView: View {
                         }
                         
                         HStack(spacing: 8) {
-    ForEach(["Emew 1", "Emew 2", "Emew 3"], id: \.self) { source in
+    ForEach(["Emew 1", "Emew 2", "Emew 3", "Emew 4"], id: \.self) { source in
         Button {
             selectedSource = source
             // Chỉ load seasons nếu chưa có
