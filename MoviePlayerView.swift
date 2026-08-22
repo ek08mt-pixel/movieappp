@@ -520,8 +520,7 @@ didResume = false
     }
     
     // Thử lấy m3u8 trước
-    if let embedURL = url.absoluteString,
-       let m3u8 = await NguonCExtractor.extractM3U8FromNguonC(embedURL: embedURL) {
+    if let m3u8 = await NguonCExtractor.extractM3U8FromNguonC(embedURL: url.absoluteString) {
         await MainActor.run {
             currentStreamURL = URL(string: m3u8)
             selectedQuality = "FHD"
