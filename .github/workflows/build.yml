@@ -7,7 +7,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-  -  name: Debug PhimFun
+      
+      - name: Debug PhimFun   
         run: |
           echo "=== Embed with Referer ==="
           curl -s "https://moviking.neuronix.sbs/embed?id=d6099c3066a54f9084ef4e4f691300e7&web=phimfun.net&lang=vi" \
