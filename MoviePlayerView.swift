@@ -520,7 +520,7 @@ didResume = false
     }
     
     // Thử lấy m3u8 trước
-    if let embedURL = url?.absoluteString,
+    if let embedURL = url.absoluteString,
        let m3u8 = await NguonCExtractor.extractM3U8FromNguonC(embedURL: embedURL) {
         await MainActor.run {
             currentStreamURL = URL(string: m3u8)
@@ -545,7 +545,7 @@ didResume = false
             hasStartedPlaying = true
             showNguonCWebView = true
         }
-        }
+        
             case .vsmov: 
                 let url = try await withCheckedThrowingContinuation { c in 
                     VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
