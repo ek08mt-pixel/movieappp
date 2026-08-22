@@ -7,7 +7,26 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      
+      - name: Debug NguonC
+        run: |
+          echo "=== HTML embed ==="
+          curl -s "https://embed13.streamc.xyz/embed.php?hash=4162e8af76157c209f039944e92f7a9c" | head -50
+          echo ""
+          echo "=== Stream URL ==="
+          # Giải mã data-obf để lấy stream URL
+          OBF=$(curl -s "https://embed13.streamc.xyz/embed.php?hash=4162e8af76157c209f039944e92f7a9c" | grep -o 'data-obf="[^"]*"' | sed 's/data-obf="//;s/"//')
+          echo "OBF: $OBF"
+          DECODED1=$(echo "$OBF" | base64 --decode 2>/dev/null)
+          echo "DECODED1: $DECODED1"
+          SUB=$(echo "$DECODED1" | python3 -c "import sys,json; print(json.load(sys.stdin)['sUb'])" 2>/dev/null)
+          echo "SUB: $SUB"
+          DECODED2=$(echo "$SUB" | base64 --decode 2>/dev/null)
+          echo "DECODED2: $DECODED2"
+          A=$(echo "$DECODED2" | python3 -c "import sys,json; print(json.load(sys.stdin)['a'])" 2>/dev/null)
+          echo "A: $A"
+          echo ""
+          echo "=== Fetch stream ==="
+          curl -s "https://embed13.streamc.xyz/$A" | head -20
       - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
