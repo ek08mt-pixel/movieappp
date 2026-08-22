@@ -545,7 +545,7 @@ didResume = false
             hasStartedPlaying = true
             showNguonCWebView = true
         }
-        
+        }
             case .vsmov: 
                 let url = try await withCheckedThrowingContinuation { c in 
                     VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
