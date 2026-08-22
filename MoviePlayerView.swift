@@ -17,7 +17,12 @@ enum StreamError: Error, LocalizedError {
     }
 }
 
-enum MovieSource: String, CaseIterable { case phimapi="Emew 1", nguonc="Emew 2", vsmov="Emew 3" }
+enum MovieSource: String, CaseIterable { 
+    case phimapi = "Emew 1"
+    case nguonc = "Emew 2"
+    case vsmov = "Emew 3"
+    case phimfun = "Emew 4"
+}
 
 struct CastDevice: Identifiable {
     let id = UUID(); let name: String; let icon: String; let type: CastDeviceType
@@ -545,6 +550,24 @@ didResume = false
             showNguonCWebView = true
         }
         }
+        case .phimfun:
+    if let m3u8 = await APIService.shared.getPhimFunM3U8(videoId: String(movieId)) {
+        await MainActor.run {
+            currentStreamURL = URL(string: m3u8)
+            selectedQuality = "FHD"
+            player.replaceCurrentItem(with: AVPlayerItem(url: URL(string: m3u8)!))
+            player.play()
+            hasStartedPlaying = true
+            isLoading = false
+            sourceStatus[.phimfun] = true
+            saveHistory()
+        }
+    } else {
+        await MainActor.run {
+            isLoading = false
+            errorMessage = "Không lấy được stream PhimFun"
+        }
+    }
             case .vsmov: 
                 let url = try await withCheckedThrowingContinuation { c in 
                     VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
