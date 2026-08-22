@@ -551,21 +551,16 @@ didResume = false
         }
         }
         case .phimfun:
-    if let m3u8 = await APIService.shared.getPhimFunM3U8(videoId: String(movieId)) {
+    if let streamURL = await APIService.shared.getPhimFunM3U8(videoId: String(movieId)) {
         await MainActor.run {
-            currentStreamURL = URL(string: m3u8)
+            currentStreamURL = URL(string: streamURL)
             selectedQuality = "FHD"
-            player.replaceCurrentItem(with: AVPlayerItem(url: URL(string: m3u8)!))
+            player.replaceCurrentItem(with: AVPlayerItem(url: URL(string: streamURL)!))
             player.play()
             hasStartedPlaying = true
             isLoading = false
             sourceStatus[.phimfun] = true
             saveHistory()
-        }
-    } else {
-        await MainActor.run {
-            isLoading = false
-            errorMessage = "Không lấy được stream PhimFun"
         }
     }
             case .vsmov: 
