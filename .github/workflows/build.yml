@@ -8,18 +8,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Debug streamLib End
+      - name: Get streamLib Full
         run: |
-          echo "Tổng số dòng:"
           curl -s "https://moviking.neuronix.sbs/Content/JS/streamLib.js?e=1" \
             -H "Referer: https://moviking.neuronix.sbs/" \
             -H "User-Agent: Mozilla/5.0" \
-            | wc -l
-          echo "=== Dòng 80-200 ==="
-          curl -s "https://moviking.neuronix.sbs/Content/JS/streamLib.js?e=1" \
-            -H "Referer: https://moviking.neuronix.sbs/" \
-            -H "User-Agent: Mozilla/5.0" \
-            | sed -n '80,200p'
+            > streamLib.js
+          cat streamLib.js
 
       - name: Package IPA
         run: |
