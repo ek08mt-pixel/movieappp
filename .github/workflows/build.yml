@@ -9,6 +9,14 @@ jobs:
       - uses: actions/checkout@v4
 
 
+- name: Debug VSMOV
+        run: |
+          echo "=== Search ==="
+          curl -s "https://vsmov.com/api/tim-kiem?keyword=Bird%20Box" | head -100
+          echo ""
+          echo "=== Detail ==="
+          curl -s "https://vsmov.com/api/phim/bird-box" | head -200
+
       - name: Build
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
