@@ -8,7 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-- name: Debug VSMOV
+
+      - name: Debug VSMOV
         run: |
           echo "=== Search ==="
           curl -s "https://vsmov.com/api/tim-kiem?keyword=Bird%20Box" | head -100
