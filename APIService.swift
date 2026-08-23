@@ -412,16 +412,6 @@ class APIService {
         return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
     }
     
-    func getPhimFunM3U8(videoId: String, web: String = "phimfun.net") async -> String? {
-    let embedURL = "https://moviking.neuronix.sbs/embed?id=\(videoId)&web=\(web)&lang=vi"
-    
-    return await withCheckedContinuation { continuation in
-        PhimFunExtractor.shared.extractStreamURL(embedURL: embedURL) { streamURL in
-            continuation.resume(returning: streamURL)
-        }
-    }
-}
-}
 extension Movie {
     func withPlaceholder() -> Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
