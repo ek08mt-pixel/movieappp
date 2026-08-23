@@ -552,44 +552,58 @@ didResume = false
         }
         
     case .videasy:
-    do {
-        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-        guard let url = URL(string: urlString) else {
-            await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
-            return
-        }
-        let (data, _) = try await URLSession.shared.data(from: url)
-        struct E: Codable { let imdb_id: String? }
-        let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-        
-        let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
-            tmdbId: movieId,
-            title: movieTitle,
-            year: currentMovie?.yearText,
-            imdbId: movieImdbID,
-            mediaType: "movie",
-            seasonId: nil,
-            episodeId: nil,
-            totalSeasons: nil
-        )
-        
-        await MainActor.run {
-            currentStreamURL = result.streamURL
-            selectedQuality = detectQuality(from: result.streamURL)
-            player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
-            player.play()
-            hasStartedPlaying = true
-            isLoading = false
-            sourceStatus[.videasy] = true
-            didResume = false
-        }
-        saveHistory()
-    } catch {
-        await MainActor.run {
-            errorMessage = "Videasy: \(error.localizedDescription)"
-            isLoading = false
-        }
-    }
+                await MainActor.run {
+                    errorMessage = "Đang lấy IMDB..."
+                    isLoading = true
+                }
+                
+                do {
+                    let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
+                    guard let url = URL(string: urlString) else {
+                        await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
+                        return
+                    }
+                    
+                    let (data, response) = try await URLSession.shared.data(from: url)
+                    print("HTTP status: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                    
+                    struct E: Codable { let imdb_id: String? }
+                    let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+                    
+                    await MainActor.run { errorMessage = "IMDB: \(movieImdbID)" }
+                    
+                    // Thêm delay 2s để thấy message
+                    try await Task.sleep(nanoseconds: 2_000_000_000)
+                    
+                    let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
+                        tmdbId: movieId,
+                        title: movieTitle,
+                        year: currentMovie?.yearText,
+                        imdbId: movieImdbID,
+                        mediaType: "movie",
+                        seasonId: nil,
+                        episodeId: nil,
+                        totalSeasons: nil
+                    )
+                    
+                    await MainActor.run {
+                        currentStreamURL = result.streamURL
+                        selectedQuality = detectQuality(from: result.streamURL)
+                        player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
+                        player.play()
+                        hasStartedPlaying = true
+                        isLoading = false
+                        sourceStatus[.videasy] = true
+                        didResume = false
+                    }
+                    saveHistory()
+                    
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "Lỗi: \(error.localizedDescription)"
+                        isLoading = false
+                    }
+                }
     
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
