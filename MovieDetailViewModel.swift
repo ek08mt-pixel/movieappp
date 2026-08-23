@@ -103,6 +103,34 @@ class MovieDetailViewModel: ObservableObject {
         }
     }
     
+    func loadSpeedRaceLightServers(movieId: Int, title: String, year: String, mediaType: String) async {
+    isLoadingServers = true
+    
+    do {
+        let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
+            tmdbId: movieId,
+            title: title,
+            year: year,
+            mediaType: mediaType
+        )
+        
+        await MainActor.run {
+            self.serverList = [(name: result.serverName, qualities: "FHD/4K")]
+            self.isLoadingServers = false
+        }
+        
+        // Cache stream URL
+        let cacheKey = "speedracelight_\(movieId)"
+        MappingCache.shared.save([cacheKey: result.streamURL.absoluteString], for: "speedracelight_stream_cache")
+        
+    } catch {
+        print("❌ SpeedRaceLight failed: \(error)")
+        await MainActor.run {
+            self.isLoadingServers = false
+        }
+    }
+}
+
     func loadSourceEpisodes(tmdbID: Int, season: Int, slug: String) {
      self.sourceEpisodes = []
      PhimAPIService.shared.fetchRawEpisodes(slug: slug) { [weak self] episodes in
