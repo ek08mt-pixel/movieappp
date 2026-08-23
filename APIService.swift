@@ -403,7 +403,6 @@ class APIService {
                   adult: false, originalLanguage: tv.original_language, mediaType: "tv")
         }
     }
-    }
     
     func discoverMoviesWithKeyword(keywordId: Int, page: Int = 1) async throws -> [Movie] {
         let urlString = "\(baseURL)/discover/movie?api_key=\(apiKey)&with_keywords=\(keywordId)&sort_by=popularity.desc&language=\(language)&page=\(page)"
@@ -412,9 +411,10 @@ class APIService {
         let response = try decoder.decode(MovieResponse.self, from: data)
         return response.results.filter { !($0.adult ?? false) }.map { $0.withPlaceholder() }
     }
-    
+}  // ← THÊM DẤU NÀY ĐỂ ĐÓNG CLASS APIService
+
 extension Movie {
     func withPlaceholder() -> Movie {
         return Movie(id: id, title: title, overview: overview, posterPath: posterPath ?? "/placeholder.jpg", backdropPath: backdropPath, voteAverage: voteAverage, releaseDate: releaseDate, genreIds: genreIds, originalTitle: originalTitle, popularity: popularity, voteCount: voteCount, adult: adult, originalLanguage: originalLanguage, mediaType: mediaType)
     }
-}
+}  // ← THÊM DẤU NÀY ĐỂ ĐÓNG extension Movie
