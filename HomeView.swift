@@ -502,9 +502,15 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
         guard let id = continueMovieId, let topVC = UIApplication.topViewController() else { return }
         let prog = appState.watchProgressList.first(where: { $0.movieId == id })
         let src: MovieSource
-        if let source = prog?.source {
-            src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : .vsmov
-        } else { src = .phimapi }
+if let source = prog?.source {
+    switch source {
+    case "Emew 1": src = .phimapi
+    case "Emew 2": src = .nguonc
+    case "Emew 3": src = .vsmov
+    case "Videasy": src = .videasy
+    default: src = .phimapi
+    }
+} else { src = .phimapi }
         let moviePlayer = MoviePlayerView(movieId: id, movieTitle: continueMovieTitle, mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode, posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src).environmentObject(appState)
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
         hosting.modalPresentationStyle = .fullScreen
