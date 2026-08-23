@@ -552,23 +552,41 @@ didResume = false
         }
         
     case .videasy:
-    let actualMediaType: String
-    if mediaType == "tv" || s != nil {
-        actualMediaType = "tv"
+    // Xác định mediaType riêng cho Videasy
+    let videasyMediaType: String
+    if mediaType == "tv" || seasonNumber != nil {
+        // Nếu thực sự là TV show (có seasons)
+        videasyMediaType = "tv"
     } else {
-        actualMediaType = "movie"
+        // Nếu là movie
+        videasyMediaType = "movie"
+    }
+    
+    // Lấy IMDB ID đúng
+    let videasyImdbID: String
+    if videasyMediaType == "movie" {
+        // Lấy IMDB cho movie
+        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
+        let (data, _) = try await URLSession.shared.data(from: URL(string: urlString)!)
+        struct E: Codable { let imdb_id: String? }
+        videasyImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+    } else {
+        videasyImdbID = imdbID
     }
     
     let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
         tmdbId: movieId,
         title: movieTitle,
         year: currentMovie?.yearText,
-        imdbId: imdbID,
-        mediaType: actualMediaType,
-        seasonId: actualMediaType == "tv" ? "\(s ?? 1)" : nil,
-        episodeId: actualMediaType == "tv" ? "\(ep)" : nil,
-        totalSeasons: actualMediaType == "tv" ? "\(s ?? 1)" : nil
+        imdbId: videasyImdbID,
+        mediaType: videasyMediaType,
+        seasonId: videasyMediaType == "tv" ? "\(seasonNumber ?? 1)" : nil,
+        episodeId: videasyMediaType == "tv" ? "\(episodeNumber ?? 1)" : nil,
+        totalSeasons: videasyMediaType == "tv" ? "\(seasonNumber ?? 1)" : nil
     )
+    
+    // ... xử lý kết quả
+    
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
         VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
