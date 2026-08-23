@@ -21,6 +21,7 @@ enum MovieSource: String, CaseIterable {
     case phimapi = "Emew 1"
     case nguonc = "Emew 2"
     case vsmov = "Emew 3"
+    case videasy = "Videasy"
 }
 
 struct CastDevice: Identifiable {
@@ -549,6 +550,27 @@ didResume = false
             showNguonCWebView = true
         }
         }
+        
+    case .videasy:
+    let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
+        tmdbId: movieId,
+        title: movieTitle,
+        year: currentMovie?.yearText,
+        imdbId: imdbID,
+        mediaType: mediaType ?? "movie",
+        seasonId: s != nil ? "\(s!)" : nil,
+        episodeId: ep != nil ? "\(ep)" : nil
+    )
+    await MainActor.run {
+        currentStreamURL = result.streamURL
+        selectedQuality = detectQuality(from: result.streamURL)
+        player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
+        player.play()
+        hasStartedPlaying = true
+        isLoading = false
+        sourceStatus[.videasy] = true
+        saveHistory()
+    }
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
         VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
