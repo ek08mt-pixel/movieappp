@@ -554,7 +554,11 @@ didResume = false
     case .videasy:
     do {
         let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-        let (data, _) = try await URLSession.shared.data(from: URL(string: urlString)!)
+        guard let url = URL(string: urlString) else {
+            await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
+            return
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
         struct E: Codable { let imdb_id: String? }
         let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
         
@@ -582,7 +586,7 @@ didResume = false
         saveHistory()
     } catch {
         await MainActor.run {
-            errorMessage = "Videasy lỗi: \(error.localizedDescription)"
+            errorMessage = "Videasy: \(error.localizedDescription)"
             isLoading = false
         }
     }
