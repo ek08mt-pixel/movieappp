@@ -427,7 +427,7 @@ selectedSource = initialSource
     if showAudioPopup { audioPopup }
     if showSpeedPopup { speedPopup }
 }
-}  // ← THÊM DẤU NÀY ĐỂ ĐÓNG ZSTACK
+}  // ← Đóng ZStack
 .statusBarHidden()
 .task { if directURL == nil { loadStream() } }
 .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
@@ -579,6 +579,15 @@ didResume = false
             sourceStatus[.vsmov] = false
         }
     }
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
+}
 
 func tryResume() { 
         guard !didResume, resumeTime > 0 else { return }
@@ -1075,7 +1084,8 @@ func removeExternalSubtitle() {
 func applySubOffset() {
     subManager.saveOffset(movieId: movieId, season: seasonNumber, episode: episodeNumber, offset: subManager.currentOffset)
 }
-}
+}  // ← Đóng struct MoviePlayerView
+
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
     let player: AVPlayer; @Environment(\.dismiss) var dismiss
