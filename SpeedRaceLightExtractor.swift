@@ -245,57 +245,119 @@ guard httpResponse.statusCode == 200 else {
     // MARK: - Decrypt (RC4 + Base64)
     
     private func decrypt(data: Data, seed: String) throws -> Data {
-        // Bước 1: Decode Base64 URL-safe
-        guard let base64String = String(data: data, encoding: .utf8) else {
-            throw NSError(domain: "Decrypt", code: 3, userInfo: [NSLocalizedDescriptionKey: "Không thể convert data sang string"])
-        }
-        
-        let normalized = base64String
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        
-        let padded = normalized.padding(toLength: ((normalized.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
-        
-        guard let decodedData = Data(base64Encoded: padded) else {
-            throw NSError(domain: "Decrypt", code: 4, userInfo: [NSLocalizedDescriptionKey: "Base64 decode failed"])
-        }
-        
-        // Bước 2: RC4 decrypt
-        let keyBytes = Array(seed.utf8)
-        var sBox = Array(0...255)
-        var j = 0
-        
-        for i in 0..<256 {
-            j = (j + sBox[i] + Int(keyBytes[i % keyBytes.count])) & 255
-            sBox.swapAt(i, j)
-        }
-        
-        var decrypted = [UInt8](repeating: 0, count: decodedData.count)
-        var i = 0
-        j = 0
-        
-        for k in 0..<decodedData.count {
-            i = (i + 1) & 255
-            j = (j + sBox[i]) & 255
-            sBox.swapAt(i, j)
-            let t = (sBox[i] + sBox[j]) & 255
-            decrypted[k] = decodedData[k] ^ UInt8(sBox[t])
-        }
-        
-        // Bước 3: Kiểm tra magic bytes [109, 118, 109, 49] = "mvm1"
-        let magicBytes: [UInt8] = [109, 118, 109, 49]
-        
-        guard decrypted.count > magicBytes.count else {
-            throw NSError(domain: "Decrypt", code: 5, userInfo: [NSLocalizedDescriptionKey: "Decrypted quá ngắn: \(decrypted.count) bytes"])
-        }
-        
-        for i in 0..<magicBytes.count {
-            guard decrypted[i] == magicBytes[i] else {
-                throw NSError(domain: "Decrypt", code: 6, userInfo: [NSLocalizedDescriptionKey: "Magic bytes sai tại vị trí \(i): expected \(magicBytes[i]) got \(decrypted[i])"])
-            }
-        }
-        
-        // Bước 4: Bỏ 4 byte magic
-        return Data(decrypted.dropFirst(magicBytes.count))
+    // Bước 1: Decode Base64 URL-safe
+    guard let base64String = String(data: data, encoding: .utf8) else {
+        throw NSError(domain: "Decrypt", code: 3, userInfo: [NSLocalizedDescriptionKey: "Không thể convert data sang string"])
     }
+    
+    let normalized = base64String
+        .replacingOccurrences(of: "-", with: "+")
+        .replacingOccurrences(of: "_", with: "/")
+    
+    let padded = normalized.padding(toLength: ((normalized.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
+    
+    guard let decodedData = Data(base64Encoded: padded) else {
+        throw NSError(domain: "Decrypt", code: 4, userInfo: [NSLocalizedDescriptionKey: "Base64 decode failed"])
+    }
+    
+    let bytes = [UInt8](decodedData)
+    
+    // Bước 2: Thuật toán từ JS
+    // Constants
+    let f: [UInt32] = [
+        1116352408, 1899447441, 3049323471, 3921009573,
+        961987163, 1508970993, 2453635748, 2870763221,
+        3624381080, 310598401, 607225278, 1426881987,
+        1925078388, 2162078206, 2614888103, 3248222580
+    ]
+    
+    let h: [UInt8] = [109, 118, 109, 49] // "mvm1"
+    
+    // FNV hash của seed
+    func fnvHash(_ str: String) -> UInt32 {
+        var hash: UInt32 = 2166136261
+        for byte in str.utf8 {
+            hash = (hash ^ UInt32(byte)) &* 16777619
+        }
+        return hash
+    }
+    
+    func w(_ x: UInt32) -> UInt32 {
+        var y = x
+        y ^= y >> 16
+        y = y &* 2246822507
+        y ^= y >> 13
+        y = y &* 3266489909
+        y ^= y >> 16
+        return y
+    }
+    
+    func rotl(_ x: UInt32, _ n: Int) -> UInt32 {
+        return (x << UInt32(n)) | (x >> UInt32(32 - n))
+    }
+    
+    // Tạo S-box 61 phần tử
+    var sBox = [UInt32](repeating: 0, count: 61)
+    
+    let seedHash = w(fnvHash(seed) ^ w(0 ^ 2654435769))
+    
+    var acc = seedHash
+    
+    for i in 0..<8 {
+        if (i * (i + 1) & 1) == 0 {
+            let idx = Int(acc % 61)
+            acc = rotl((acc &+ 2654435769) & 0xFFFFFFFF, 7 + (7 & i))
+            sBox[idx] = (acc ^ w(acc)) & 0xFFFFFFFF
+            acc = w((acc &+ UInt32(idx)) & 0xFFFFFFFF)
+        } else {
+            sBox[i] = f[15 & i]
+        }
+    }
+    
+    var finalAcc = w(2779096485 ^ acc)
+    
+    // Giải mã
+    var decrypted = [UInt8]()
+    var byteIndex = 0
+    
+    for byte in bytes {
+        let idx = Int(finalAcc % 61)
+        
+        var d = sBox[idx] & 0xFFFFFFFF
+        let xorVal = (d ^ (2654435769 &* UInt32(byteIndex + 1))) & 0xFFFFFFFF
+        
+        let iVal = 0 - (idx in sBox ? 1 : 0)  // Trong Swift cần check index có trong range không
+        
+        let s = finalAcc
+        let a = xorVal
+        
+        var l = (s ^ a) & 0xFFFFFFFF
+        l = (l | ((s & a & UInt32(iVal)) & 0xFFFFFFFF)) & 0xFFFFFFFF
+        
+        let shifted = rotl((l &+ finalAcc) & 0xFFFFFFFF, 31 & idx)
+        let shifted2 = rotl(finalAcc, 31 & (idx * 7))
+        
+        finalAcc = w((shifted ^ shifted2) &+ 2654435769)
+        
+        sBox[idx] = finalAcc
+        
+        decrypted.append(UInt8(byte ^ UInt8(finalAcc & 0xFF)))
+        
+        byteIndex += 1
+    }
+    
+    // Bước 3: Kiểm tra magic bytes
+    let magicBytes: [UInt8] = [109, 118, 109, 49]
+    
+    guard decrypted.count > magicBytes.count else {
+        throw NSError(domain: "Decrypt", code: 5, userInfo: [NSLocalizedDescriptionKey: "Decrypted quá ngắn"])
+    }
+    
+    for i in 0..<magicBytes.count {
+        guard decrypted[i] == magicBytes[i] else {
+            throw NSError(domain: "Decrypt", code: 6, userInfo: [NSLocalizedDescriptionKey: "Magic bytes sai tại \(i): expected \(magicBytes[i]) got \(decrypted[i])"])
+        }
+    }
+    
+    return Data(decrypted.dropFirst(magicBytes.count))
 }
