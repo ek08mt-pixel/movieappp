@@ -346,6 +346,7 @@ final class VSMOVService {
             } catch { completion(.failure(error)) }
         }.resume()
     }
+}  // ← THÊM DẤU NÀY ĐỂ ĐÓNG CLASS VSMOVService
 
 // MARK: - PhimAPI Service (Emew 1)
 final class PhimAPIService {
