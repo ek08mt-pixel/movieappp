@@ -552,25 +552,23 @@ didResume = false
         }
         
     case .videasy:
+    let actualMediaType: String
+    if mediaType == "tv" || s != nil {
+        actualMediaType = "tv"
+    } else {
+        actualMediaType = "movie"
+    }
+    
     let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
         tmdbId: movieId,
         title: movieTitle,
         year: currentMovie?.yearText,
         imdbId: imdbID,
-        mediaType: mediaType ?? "movie",
-        seasonId: s != nil ? "\(s!)" : nil,
-        episodeId: ep != nil ? "\(ep)" : nil
+        mediaType: actualMediaType,
+        seasonId: actualMediaType == "tv" ? "\(s ?? 1)" : nil,
+        episodeId: actualMediaType == "tv" ? "\(ep)" : nil,
+        totalSeasons: actualMediaType == "tv" ? "\(s ?? 1)" : nil
     )
-    await MainActor.run {
-        currentStreamURL = result.streamURL
-        selectedQuality = detectQuality(from: result.streamURL)
-        player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
-        player.play()
-        hasStartedPlaying = true
-        isLoading = false
-        sourceStatus[.videasy] = true
-        saveHistory()
-    }
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
         VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
