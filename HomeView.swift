@@ -503,7 +503,7 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
         let prog = appState.watchProgressList.first(where: { $0.movieId == id })
         let src: MovieSource
         if let source = prog?.source {
-            src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : source == "Emew 3" ? .vsmov : source == "Emew 4" ? .phimfun : .phimapi
+            src = source == "Emew 1" ? .phimapi : source == "Emew 2" ? .nguonc : .vsmov
         } else { src = .phimapi }
         let moviePlayer = MoviePlayerView(movieId: id, movieTitle: continueMovieTitle, mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode, posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src).environmentObject(appState)
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
