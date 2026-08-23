@@ -204,12 +204,18 @@ guard httpResponse.statusCode == 200 else {
         
         // Decrypt response
         do {
-            let decryptedData = try decrypt(data: data, seed: seed)
-            let sourcesResponse = try JSONDecoder().decode(SourcesResponse.self, from: decryptedData)
-            return sourcesResponse
-        } catch {
-            throw NSError(domain: "Decrypt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Decrypt/parse: \(error.localizedDescription)"])
-        }
+    let decryptedData = try decrypt(data: data, seed: seed)
+    
+    // In decrypted text để debug
+    if let text = String(data: decryptedData, encoding: .utf8) {
+        print("📄 Decrypted: \(text.prefix(300))")
+    }
+    
+    let sourcesResponse = try JSONDecoder().decode(SourcesResponse.self, from: decryptedData)
+    return sourcesResponse
+} catch {
+    throw NSError(domain: "Decrypt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Decrypt/parse: \(error.localizedDescription)"])
+}
     }
     
     // MARK: - Find Best M3U8
