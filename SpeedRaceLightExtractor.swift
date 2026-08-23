@@ -326,7 +326,7 @@ guard httpResponse.statusCode == 200 else {
         var d = sBox[idx] & 0xFFFFFFFF
         let xorVal = (d ^ (2654435769 &* UInt32(byteIndex + 1))) & 0xFFFFFFFF
         
-        let iVal = 0 - (idx in sBox ? 1 : 0)  // Trong Swift cần check index có trong range không
+        let iVal = 0 - (idx >= 0 && idx < sBox.count ? 1 : 0) // Trong Swift cần check index có trong range không
         
         let s = finalAcc
         let a = xorVal
