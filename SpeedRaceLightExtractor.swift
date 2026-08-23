@@ -90,17 +90,17 @@ class SpeedRaceLightExtractor {
                 debugLog += "🔍 Thử \(server.name)...\n"
                 
                 let sources = try await fetchSources(
-                    endpoint: server.endpoint,
-                    title: title,
-                    mediaType: mediaType,
-                    year: year,
-                    tmdbId: tmdbId,
-                    imdbId: imdbId,
-                    seasonId: seasonId,
-                    episodeId: episodeId,
-                    totalSeasons: totalSeasons,
-                    seed: seed
-                )
+    endpoint: server.endpoint,
+    title: title,
+    mediaType: "movie",
+    year: year,
+    tmdbId: tmdbId,
+    imdbId: imdbId,
+    seasonId: nil,
+    episodeId: nil,
+    totalSeasons: nil,
+    seed: seed
+)
                 
                 debugLog += "   Sources: \(sources.sources?.count ?? 0)\n"
                 
@@ -171,9 +171,7 @@ class SpeedRaceLightExtractor {
             URLQueryItem(name: "year", value: year),
             URLQueryItem(name: "tmdbId", value: "\(tmdbId)"),
             URLQueryItem(name: "imdbId", value: imdbId),
-            URLQueryItem(name: "totalSeasons", value: totalSeasons),
-            URLQueryItem(name: "episodeId", value: episodeId),
-            URLQueryItem(name: "seasonId", value: seasonId),
+            // Bỏ qua season/episode cho movie
             URLQueryItem(name: "enc", value: "2"),
             URLQueryItem(name: "seed", value: seed)
         ]
