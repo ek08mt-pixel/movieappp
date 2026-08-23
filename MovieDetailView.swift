@@ -555,7 +555,14 @@ struct MovieDetailView: View {
     
     func presentPlayer(directURL: URL? = nil) {
         guard let topVC = UIApplication.topViewController() else { return }
-        let src: MovieSource = selectedSource == "Emew 1" ? .phimapi : selectedSource == "Emew 2" ? .nguonc : .vsmov
+        let src: MovieSource
+switch selectedSource {
+case "Emew 1": src = .phimapi
+case "Emew 2": src = .nguonc
+case "Emew 3": src = .vsmov
+case "Emew 4": src = .videasy
+default: src = .phimapi
+}
         let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src, directURL: directURL).environmentObject(appState)
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
         hosting.modalPresentationStyle = .fullScreen
