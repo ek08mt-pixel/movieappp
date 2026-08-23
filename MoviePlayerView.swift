@@ -550,36 +550,35 @@ didResume = false
         }
         }
             case .vsmov: 
-                let url = try await withCheckedThrowingContinuation { c in 
-                    VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
+    let url = try await withCheckedThrowingContinuation { c in 
+        VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
+    }
+    await MainActor.run { 
+        let urlString = url.absoluteString
+        print("VSMOV URL: \(urlString.prefix(200))")
+        
+        if urlString.contains("m3u8") || urlString.contains("mp4") {
+            currentStreamURL = url
+            selectedQuality = detectQuality(from: url)
+            player.replaceCurrentItem(with: AVPlayerItem(url: url))
+            if let rt = resumeAt { 
+                let seekTime = CMTime(seconds: rt, preferredTimescale: 600)
+                player.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in 
+                    player.play() 
                 }
-                await MainActor.run { 
-                    currentStreamURL = url
-                    selectedQuality = detectQuality(from: url)
-                    player.replaceCurrentItem(with: AVPlayerItem(url: url))
-                    if let rt = resumeAt { 
-                        let seekTime = CMTime(seconds: rt, preferredTimescale: 600)
-                        player.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in 
-                            player.play() 
-                        }
-                    } else { 
-                        player.play() 
-                    }
-                    hasStartedPlaying = true
-                    sourceStatus[.vsmov] = true
-                    isLoading = false
-                    tryResume()
-                }
-            } 
-        } catch { 
-            await MainActor.run { 
-                sourceStatus[selectedSource] = false
-                errorMessage = error.localizedDescription
-                isLoading = false
-            } 
-        } 
-    } 
-}
+            } else { 
+                player.play() 
+            }
+            hasStartedPlaying = true
+            sourceStatus[.vsmov] = true
+            isLoading = false
+            tryResume()
+        } else {
+            errorMessage = "URL không phải m3u8/mp4"
+            isLoading = false
+            sourceStatus[.vsmov] = false
+        }
+    }
 
 func tryResume() { 
         guard !didResume, resumeTime > 0 else { return }
