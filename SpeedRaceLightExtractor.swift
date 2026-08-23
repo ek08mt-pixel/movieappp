@@ -50,14 +50,14 @@ class SpeedRaceLightExtractor {
     
     // MARK: - Server Endpoints
     private var servers: [(name: String, endpoint: String)] {
-    [
-        ("Yoru", "\(baseAPI)/cdn/sources-with-title"),
-        ("Neon", "\(baseAPI)/vsrc/sources-with-title"),
-        ("Breach", "\(baseAPI)/m4uhd/sources-with-title"),
-        ("Cypher", "\(baseAPI)/downloader2/sources-with-title"),
-        ("Vyse", "\(baseAPI)/hdmovie/sources-with-title")
-    ]
-}
+        [
+            ("Yoru", "\(baseAPI)/cdn/sources-with-title"),
+            ("Neon", "\(baseAPI)/vsrc/sources-with-title"),
+            ("Breach", "\(baseAPI)/m4uhd/sources-with-title"),
+            ("Cypher", "\(baseAPI)/downloader2/sources-with-title"),
+            ("Vyse", "\(baseAPI)/hdmovie/sources-with-title")
+        ]
+    }
     
     // MARK: - Public Method
     
@@ -72,16 +72,22 @@ class SpeedRaceLightExtractor {
         totalSeasons: String? = nil
     ) async throws -> (streamURL: URL, subtitles: [Subtitle], serverName: String) {
         
-        print("🔍 [Videasy] Bắt đầu extract cho tmdbId: \(tmdbId)")
+        var debugLog = ""
         
         // Bước 1: Lấy seed
-        let seed = try await fetchSeed(mediaId: tmdbId)
-        print("🔍 [Videasy] Seed: \(seed)")
+        let seed: String
+        do {
+            seed = try await fetchSeed(mediaId: tmdbId)
+            debugLog += "✅ Seed OK: \(seed.prefix(20))...\n"
+        } catch {
+            debugLog += "❌ Seed fail: \(error.localizedDescription)\n"
+            throw NSError(domain: "Videasy", code: 1, userInfo: [NSLocalizedDescriptionKey: debugLog])
+        }
         
         // Bước 2: Thử từng server
         for server in servers {
             do {
-                print("🔍 [Videasy] Thử server: \(server.name)")
+                debugLog += "🔍 Thử \(server.name)...\n"
                 
                 let sources = try await fetchSources(
                     endpoint: server.endpoint,
@@ -96,40 +102,28 @@ class SpeedRaceLightExtractor {
                     seed: seed
                 )
                 
-                print("🔍 [Videasy] \(server.name) - Sources count: \(sources.sources?.count ?? 0)")
-                print("🔍 [Videasy] \(server.name) - Subtitles count: \(sources.subtitles?.count ?? sources.tracks?.count ?? 0)")
+                debugLog += "   Sources: \(sources.sources?.count ?? 0)\n"
                 
-                // In ra danh sách sources
-                if let sourcesList = sources.sources {
-                    for (index, source) in sourcesList.enumerated() {
-                        print("📄 [Videasy] Source \(index): quality=\(source.quality ?? "nil"), type=\(source.type ?? "nil"), url=\(source.url?.prefix(100) ?? "nil")")
-                    }
-                }
-                
-                // Tìm m3u8 URL chất lượng cao nhất
                 if let m3u8URL = findBestM3U8(from: sources) {
-                    print("✅ [Videasy] Tìm thấy m3u8: \(m3u8URL.absoluteString.prefix(200))")
+                    debugLog += "✅ Tìm thấy m3u8!\n"
                     let subtitles = sources.subtitles ?? sources.tracks ?? []
                     return (m3u8URL, subtitles, server.name)
                 } else {
-                    print("⚠️ [Videasy] \(server.name) - Không có m3u8")
+                    debugLog += "   ❌ Không có m3u8\n"
                 }
             } catch {
-                print("❌ [Videasy] \(server.name) - Lỗi: \(error)")
-                continue
+                debugLog += "   ❌ \(error.localizedDescription)\n"
             }
         }
         
-        print("❌ [Videasy] Tất cả server đều thất bại")
-        throw StreamError.noStreamAvailable
+        debugLog += "❌ Tất cả server thất bại"
+        throw NSError(domain: "Videasy", code: 2, userInfo: [NSLocalizedDescriptionKey: debugLog])
     }
     
     // MARK: - Fetch Seed
     
     private func fetchSeed(mediaId: Int) async throws -> String {
         let urlString = "\(baseAPI)/seed?mediaId=\(mediaId)"
-        print("🔍 [Videasy] Fetch seed URL: \(urlString)")
-        
         guard let url = URL(string: urlString) else { throw StreamError.invalidResponse }
         
         var request = URLRequest(url: url)
@@ -138,33 +132,21 @@ class SpeedRaceLightExtractor {
         request.setValue("https://player.videasy.to/", forHTTPHeaderField: "Referer")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [Videasy] Seed - Không phải HTTP response")
-                throw StreamError.invalidResponse
-            }
-            
-            print("🔍 [Videasy] Seed HTTP status: \(httpResponse.statusCode)")
-            
-            guard httpResponse.statusCode == 200 else {
-                print("❌ [Videasy] Seed HTTP error: \(httpResponse.statusCode)")
-                throw StreamError.invalidResponse
-            }
-            
-            // In raw response
-            if let rawText = String(data: data, encoding: .utf8) {
-                print("📄 [Videasy] Seed response: \(rawText)")
-            }
-            
-            let seedResponse = try JSONDecoder().decode(SeedResponse.self, from: data)
-            return seedResponse.seed
-            
-        } catch {
-            print("❌ [Videasy] Seed fetch error: \(error)")
-            throw StreamError.invalidResponse
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NSError(domain: "Seed", code: 0, userInfo: [NSLocalizedDescriptionKey: "HTTP status không phải 200"])
         }
+        
+        // Kiểm tra error response
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let error = json["error"] as? String {
+            throw NSError(domain: "Seed", code: 1, userInfo: [NSLocalizedDescriptionKey: error])
+        }
+        
+        let seedResponse = try JSONDecoder().decode(SeedResponse.self, from: data)
+        return seedResponse.seed
     }
     
     // MARK: - Fetch Sources
@@ -198,64 +180,32 @@ class SpeedRaceLightExtractor {
         
         guard let url = components.url else { throw StreamError.invalidResponse }
         
-        print("🔍 [Videasy] Fetch sources URL: \(url.absoluteString.prefix(300))")
-        
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
         request.setValue("https://player.videasy.to/", forHTTPHeaderField: "Referer")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "HTTP status không phải 200"])
+        }
+        
+        // Kiểm tra nếu response là JSON error
+        if let jsonError = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let error = jsonError["error"] as? String {
+            throw NSError(domain: "Sources", code: 1, userInfo: [NSLocalizedDescriptionKey: "API: \(error)"])
+        }
+        
+        // Decrypt response
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [Videasy] Sources - Không phải HTTP response")
-                throw StreamError.invalidResponse
-            }
-            
-            print("🔍 [Videasy] Sources HTTP status: \(httpResponse.statusCode)")
-            print("🔍 [Videasy] Sources data size: \(data.count) bytes")
-            
-            guard httpResponse.statusCode == 200 else {
-                print("❌ [Videasy] Sources HTTP error: \(httpResponse.statusCode)")
-                throw StreamError.invalidResponse
-            }
-            
-            // Kiểm tra nếu response là JSON error
-            if let jsonError = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = jsonError["error"] as? String {
-                print("❌ [Videasy] API Error: \(error)")
-                throw StreamError.seedExpired
-            }
-            
-            // In raw response đầu tiên (để debug)
-            if let rawText = String(data: data, encoding: .utf8) {
-                print("📄 [Videasy] Raw response (first 100): \(rawText.prefix(100))")
-            }
-            
-            // Decrypt response
             let decryptedData = try decrypt(data: data, seed: seed)
-            print("🔍 [Videasy] Decrypted size: \(decryptedData.count) bytes")
-            
-            // In decrypted text
-            if let text = String(data: decryptedData, encoding: .utf8) {
-                print("📄 [Videasy] Decrypted text (first 500): \(text.prefix(500))")
-            }
-            
-            // Parse JSON
-            do {
-                let sourcesResponse = try JSONDecoder().decode(SourcesResponse.self, from: decryptedData)
-                print("✅ [Videasy] Parse JSON thành công")
-                return sourcesResponse
-            } catch {
-                print("❌ [Videasy] JSON decode error: \(error)")
-                throw StreamError.invalidResponse
-            }
-            
+            let sourcesResponse = try JSONDecoder().decode(SourcesResponse.self, from: decryptedData)
+            return sourcesResponse
         } catch {
-            print("❌ [Videasy] Sources fetch error: \(error)")
-            throw error
+            throw NSError(domain: "Decrypt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Decrypt/parse: \(error.localizedDescription)"])
         }
     }
     
@@ -264,28 +214,18 @@ class SpeedRaceLightExtractor {
     private func findBestM3U8(from response: SourcesResponse) -> URL? {
         let sources = response.sources ?? []
         
-        // Lọc source m3u8
         let m3u8Sources = sources.filter { source in
             guard let url = source.url?.lowercased() else { return false }
-            let isM3U8 = url.contains("m3u8") || source.type?.lowercased() == "m3u8" || source.file?.lowercased() == "m3u8"
-            return isM3U8
+            return url.contains("m3u8") || source.type?.lowercased() == "m3u8" || source.file?.lowercased() == "m3u8"
         }
         
-        print("🔍 [Videasy] Tìm thấy \(m3u8Sources.count) m3u8 sources")
-        
-        // Sắp xếp theo quality
         let sorted = m3u8Sources.sorted { source1, source2 in
             let q1 = parseQuality(source1.quality ?? source1.label)
             let q2 = parseQuality(source2.quality ?? source2.label)
             return q1 > q2
         }
         
-        if let best = sorted.first {
-            print("🏆 [Videasy] Best quality: \(best.quality ?? "unknown") - URL: \(best.url?.prefix(100) ?? "nil")")
-            return best.url.flatMap(URL.init)
-        }
-        
-        return nil
+        return sorted.first?.url.flatMap(URL.init)
     }
     
     private func parseQuality(_ quality: String?) -> Int {
@@ -304,8 +244,7 @@ class SpeedRaceLightExtractor {
     private func decrypt(data: Data, seed: String) throws -> Data {
         // Bước 1: Decode Base64 URL-safe
         guard let base64String = String(data: data, encoding: .utf8) else {
-            print("❌ [Videasy] Không thể convert data sang string")
-            throw StreamError.decryptFailed
+            throw NSError(domain: "Decrypt", code: 3, userInfo: [NSLocalizedDescriptionKey: "Không thể convert data sang string"])
         }
         
         let normalized = base64String
@@ -315,11 +254,8 @@ class SpeedRaceLightExtractor {
         let padded = normalized.padding(toLength: ((normalized.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
         
         guard let decodedData = Data(base64Encoded: padded) else {
-            print("❌ [Videasy] Base64 decode failed")
-            throw StreamError.decryptFailed
+            throw NSError(domain: "Decrypt", code: 4, userInfo: [NSLocalizedDescriptionKey: "Base64 decode failed"])
         }
-        
-        print("🔍 [Videasy] Base64 decoded size: \(decodedData.count) bytes")
         
         // Bước 2: RC4 decrypt
         let keyBytes = Array(seed.utf8)
@@ -347,26 +283,16 @@ class SpeedRaceLightExtractor {
         let magicBytes: [UInt8] = [109, 118, 109, 49]
         
         guard decrypted.count > magicBytes.count else {
-            print("❌ [Videasy] Decrypted quá ngắn: \(decrypted.count) bytes")
-            throw StreamError.decryptFailed
+            throw NSError(domain: "Decrypt", code: 5, userInfo: [NSLocalizedDescriptionKey: "Decrypted quá ngắn: \(decrypted.count) bytes"])
         }
-        
-        print("🔍 [Videasy] First 10 bytes: \(Array(decrypted.prefix(10)))")
         
         for i in 0..<magicBytes.count {
             guard decrypted[i] == magicBytes[i] else {
-                print("❌ [Videasy] Magic mismatch tại \(i): expected \(magicBytes[i]) got \(decrypted[i])")
-                print("📄 [Videasy] 20 bytes đầu: \(Array(decrypted.prefix(20)))")
-                throw StreamError.decryptFailed
+                throw NSError(domain: "Decrypt", code: 6, userInfo: [NSLocalizedDescriptionKey: "Magic bytes sai tại vị trí \(i): expected \(magicBytes[i]) got \(decrypted[i])"])
             }
         }
         
-        print("✅ [Videasy] Magic bytes OK!")
-        
         // Bước 4: Bỏ 4 byte magic
-        let jsonData = Data(decrypted.dropFirst(magicBytes.count))
-        print("🔍 [Videasy] JSON data size: \(jsonData.count) bytes")
-        
-        return jsonData
+        return Data(decrypted.dropFirst(magicBytes.count))
     }
 }
