@@ -188,10 +188,15 @@ class SpeedRaceLightExtractor {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "HTTP status không phải 200"])
-        }
+        guard let httpResponse = response as? HTTPURLResponse else {
+    throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "Không phải HTTP response"])
+}
+
+guard httpResponse.statusCode == 200 else {
+    // In response body để debug
+    let bodyText = String(data: data, encoding: .utf8) ?? "Không đọc được"
+    throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode): \(bodyText.prefix(200))"])
+}
         
         // Kiểm tra nếu response là JSON error
         if let jsonError = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
