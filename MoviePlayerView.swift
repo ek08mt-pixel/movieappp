@@ -21,7 +21,6 @@ enum MovieSource: String, CaseIterable {
     case phimapi = "Emew 1"
     case nguonc = "Emew 2"
     case vsmov = "Emew 3"
-    case phimfun = "Emew 4"
 }
 
 struct CastDevice: Identifiable {
@@ -550,19 +549,6 @@ didResume = false
             showNguonCWebView = true
         }
         }
-        case .phimfun:
-    if let streamURL = await APIService.shared.getPhimFunM3U8(videoId: String(movieId)) {
-        await MainActor.run {
-            currentStreamURL = URL(string: streamURL)
-            selectedQuality = "FHD"
-            player.replaceCurrentItem(with: AVPlayerItem(url: URL(string: streamURL)!))
-            player.play()
-            hasStartedPlaying = true
-            isLoading = false
-            sourceStatus[.phimfun] = true
-            saveHistory()
-        }
-    }
             case .vsmov: 
                 let url = try await withCheckedThrowingContinuation { c in 
                     VSMOVService.shared.fetchStream(imdbID: imdbID, title: movieTitle, season: s, episode: ep) { c.resume(with: $0) } 
