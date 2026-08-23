@@ -293,37 +293,59 @@ final class VSMOVService {
         }.resume()
     }
     
-    private func fetchVSMOVDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
+   private func fetchVSMOVDetail(slug: String, season: Int?, episode: Int?, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let url = URL(string: "https://vsmov.com/api/phim/\(slug)") else { completion(.failure(StreamServiceError.invalidURL)); return }
         URLSession.streamSession.dataTask(with: url) { data, _, error in
             if let error = error { completion(.failure(error)); return }
             guard let data = data else { completion(.failure(StreamServiceError.noData)); return }
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let s = season, let e = episode {
-                        if let episodes = json["episodes"] as? [[String: Any]] {
-                            for server in episodes {
-                                if let serverData = server["server_data"] as? [[String: Any]] {
-                                    for ep in serverData {
-                                        if let name = ep["name"] as? String, let link = ep["link_embed"] as? String, matchEpisode(name: name, target: e) {
-                                            let m3u8 = link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
+                    
+                    // Check episodes trước
+                    if let episodes = json["episodes"] as? [[String: Any]], !episodes.isEmpty {
+                        for server in episodes {
+                            if let serverData = server["server_data"] as? [[String: Any]] {
+                                for ep in serverData {
+                                    if let link = ep["link_embed"] as? String, !link.isEmpty {
+                                        // Nếu có season/episode, match tập
+                                        if let s = season, let e = episode {
+                                            if let name = ep["name"] as? String, matchEpisode(name: name, target: e) {
+                                                let m3u8 = link.hasSuffix(".m3u8") ? link : link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
+                                                if let streamURL = URL(string: m3u8) { completion(.success(streamURL)); return }
+                                            }
+                                        } else {
+                                            // Không có season/episode, lấy tập đầu tiên
+                                            let m3u8 = link.hasSuffix(".m3u8") ? link : link.hasSuffix("/") ? "\(link)master-b2.m3u8" : "\(link)/master-b2.m3u8"
                                             if let streamURL = URL(string: m3u8) { completion(.success(streamURL)); return }
                                         }
                                     }
                                 }
                             }
                         }
-                        completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(s)E\(e)")))
+                        completion(.failure(StreamServiceError.episodeNotFound(ep: "S\(season ?? 1)E\(episode ?? 1)")))
                     } else {
-                        if let urlStr = json["url"] as? String, let streamURL = URL(string: urlStr) { completion(.success(streamURL)) }
-                        else if let m3u8 = json["m3u8"] as? String, let streamURL = URL(string: m3u8) { completion(.success(streamURL)) }
-                        else { completion(.failure(StreamServiceError.noStreamURL)) }
+                        // Movie lẻ - check url/m3u8 trong movie object
+                        if let movie = json["movie"] as? [String: Any] {
+                            if let urlStr = movie["url"] as? String, !urlStr.isEmpty, let streamURL = URL(string: urlStr) {
+                                completion(.success(streamURL)); return
+                            }
+                            if let m3u8 = movie["m3u8"] as? String, !m3u8.isEmpty, let streamURL = URL(string: m3u8) {
+                                completion(.success(streamURL)); return
+                            }
+                        }
+                        // Fallback: check root keys
+                        if let urlStr = json["url"] as? String, !urlStr.isEmpty, let streamURL = URL(string: urlStr) {
+                            completion(.success(streamURL)); return
+                        }
+                        if let m3u8 = json["m3u8"] as? String, !m3u8.isEmpty, let streamURL = URL(string: m3u8) {
+                            completion(.success(streamURL)); return
+                        }
+                        completion(.failure(StreamServiceError.noStreamURL))
                     }
                 } else { completion(.failure(StreamServiceError.noStreamURL)) }
             } catch { completion(.failure(error)) }
         }.resume()
     }
-}
 
 // MARK: - PhimAPI Service (Emew 1)
 final class PhimAPIService {
