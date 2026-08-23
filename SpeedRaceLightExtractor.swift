@@ -361,3 +361,4 @@ guard httpResponse.statusCode == 200 else {
     
     return Data(decrypted.dropFirst(magicBytes.count))
 }
+}
