@@ -49,13 +49,15 @@ class SpeedRaceLightExtractor {
     }
     
     // MARK: - Server Endpoints
-    private let servers: [(name: String, endpoint: String)] = [
+    private var servers: [(name: String, endpoint: String)] {
+    [
         ("Yoru", "\(baseAPI)/cdn/sources-with-title"),
         ("Neon", "\(baseAPI)/vsrc/sources-with-title"),
         ("Breach", "\(baseAPI)/m4uhd/sources-with-title"),
         ("Cypher", "\(baseAPI)/downloader2/sources-with-title"),
         ("Vyse", "\(baseAPI)/hdmovie/sources-with-title")
     ]
+}
     
     // MARK: - Public Method
     
