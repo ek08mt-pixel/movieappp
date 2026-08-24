@@ -132,7 +132,7 @@ class SpeedRaceLightExtractor {
         request.setValue("https://player.videasy.to/", forHTTPHeaderField: "Referer")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.streamSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
@@ -164,7 +164,9 @@ class SpeedRaceLightExtractor {
         seed: String
     ) async throws -> SourcesResponse {
         
-        var components = URLComponents(string: endpoint)!
+        guard var components = URLComponents(string: endpoint) else {
+    throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "URL lỗi"])
+}
         components.queryItems = [
             URLQueryItem(name: "title", value: title),
             URLQueryItem(name: "mediaType", value: mediaType),
@@ -184,7 +186,7 @@ class SpeedRaceLightExtractor {
         request.setValue("https://player.videasy.to/", forHTTPHeaderField: "Referer")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.streamSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
     throw NSError(domain: "Sources", code: 0, userInfo: [NSLocalizedDescriptionKey: "Không phải HTTP response"])
