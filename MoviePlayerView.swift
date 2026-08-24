@@ -21,7 +21,6 @@ enum MovieSource: String, CaseIterable {
     case phimapi = "Emew 1"
     case nguonc = "Emew 2"
     case vsmov = "Emew 3"
-    case videasy = "Videasy"
     case phim1280 = "Phim1280"
 }
 
@@ -600,6 +599,26 @@ didResume = false
             isLoading = false
         }
     }
+    
+    case .phim1280:
+    let result = try await Phim1280Extractor.shared.fetchStream(
+        tmdbID: movieId,
+        title: movieTitle,
+        mediaType: mediaType,
+        season: s,
+        episode: ep
+    )
+    await MainActor.run {
+        currentStreamURL = result
+        selectedQuality = detectQuality(from: result)
+        player.replaceCurrentItem(with: AVPlayerItem(url: result))
+        player.play()
+        hasStartedPlaying = true
+        isLoading = false
+        sourceStatus[.phim1280] = true
+        didResume = false
+    }
+    saveHistory()
     
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
