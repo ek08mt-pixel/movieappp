@@ -570,7 +570,7 @@ didResume = false
                     await MainActor.run {
                         currentStreamURL = result
                         selectedQuality = detectQuality(from: result)
-                        errorMessage = "m3u8: \((m3u8Content?.prefix(100)) ?? "nil")"
+                        errorMessage = "m3u8: \((m3u8Content?.prefix(1000)) ?? "nil")"
                         
                         let asset = AVURLAsset(url: result)
                         let playerItem = AVPlayerItem(asset: asset)
