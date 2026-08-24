@@ -4,7 +4,7 @@ class Phim1280Extractor {
     static let shared = Phim1280Extractor()
     private let baseURL = "https://film4k.net"
     
-    // MARK: - Models
+    // MARK: - Models 
     struct MovieDetail: Codable {
         let movie: MovieInfo?
         let episodes: [Episode]?
