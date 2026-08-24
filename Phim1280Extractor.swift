@@ -38,8 +38,9 @@ class Phim1280Extractor {
         // Tìm theo TMDB ID
         for item in list {
             if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID {
-                if let streamURL = try? buildStreamURL(from: item, season: season, episode: episode) {
-                    return try await getRealM3U8URL(streamURL)
+                print("✅ Tìm thấy theo TMDB ID: \(tmdbID)")
+                if let apiURL = try? buildAPIURL(from: item, season: season, episode: episode) {
+                    return try await Film4KPlayer.shared.fetchPlaylistURL(from: apiURL)
                 }
             }
         }
@@ -59,17 +60,19 @@ class Phim1280Extractor {
                 let viMatched = viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle)
                 
                 if enMatched || viMatched {
-                    if let streamURL = try? buildStreamURL(from: item, season: season, episode: episode) {
-                        return try await getRealM3U8URL(streamURL)
+                    print("✅ Tìm thấy theo title: \(title)")
+                    if let apiURL = try? buildAPIURL(from: item, season: season, episode: episode) {
+                        return try await Film4KPlayer.shared.fetchPlaylistURL(from: apiURL)
                     }
                 }
             }
         }
         
+        print("❌ Không tìm thấy: \(title)")
         throw StreamError.movieNotFound
     }
     
-    private func buildStreamURL(
+    private func buildAPIURL(
         from item: [String: Any],
         season: Int?,
         episode: Int?
@@ -92,31 +95,10 @@ class Phim1280Extractor {
             }
         }
         
+        print("🔍 API URL: \(urlString)")
+        
         guard let url = URL(string: urlString) else {
             throw StreamError.noStreamAvailable
-        }
-        
-        return url
-    }
-    
-    private func getRealM3U8URL(_ url: URL) async throws -> URL {
-        var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-        request.timeoutInterval = 15
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        print("🔍 [Phim1280] HTTP status: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
-        print("🔍 [Phim1280] Response URL: \(response.url?.absoluteString ?? "nil")")
-        
-        if let text = String(data: data, encoding: .utf8) {
-            print("📄 [Phim1280] Response (first 300): \(text.prefix(300))")
-        }
-        
-        // Trả về URL sau redirect (nếu có)
-        if let finalURL = response.url {
-            return finalURL
         }
         
         return url
