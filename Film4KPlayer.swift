@@ -90,32 +90,55 @@ final class Film4KPlayer {
     }
     
     private func createLocalPlaylist(from m3u8Content: String, baseURL: URL) async throws -> URL {
-        var lines = m3u8Content.components(separatedBy: .newlines)
+    var lines = m3u8Content.components(separatedBy: .newlines)
+    
+    for i in 0..<lines.count {
+        var line = lines[i]
         
-        for i in 0..<lines.count {
-            let line = lines[i].trimmingCharacters(in: .whitespaces)
-            
-            // Bỏ qua comment và tags
-            if line.isEmpty || line.hasPrefix("#") {
-                continue
+        // Bỏ qua comment và tags trừ URI
+        if line.hasPrefix("#") {
+            // Tìm và sửa URI trong tags
+            if line.contains("URI=") {
+                // Sửa URI relative thành absolute
+                if let uriRange = line.range(of: "URI=\"") {
+                    let start = uriRange.upperBound
+                    if let endRange = line[start...].range(of: "\"") {
+                        let uri = String(line[start..<endRange.lowerBound])
+                        
+                        // Sửa URI lỗi (có dấu xuống dòng hoặc dấu .)
+                        let cleanedURI = uri
+                            .replacingOccurrences(of: "\n", with: "")
+                            .replacingOccurrences(of: "\r", with: "")
+                            .replacingOccurrences(of: " ", with: "")
+                            .replacingOccurrences(of: ".", with: "")
+                        
+                        if !cleanedURI.hasPrefix("http") {
+                            if let absoluteURL = URL(string: cleanedURI, relativeTo: URL(string: "https://film4k.net"))?.absoluteString {
+                                line = line.replacingOccurrences(of: uri, with: absoluteURL)
+                            }
+                        }
+                    }
+                }
             }
-            
-            // Chuyển URL tương đối thành absolute
-            if let absoluteURL = URL(string: line, relativeTo: baseURL)?.absoluteString {
-                lines[i] = absoluteURL
+        } else {
+            // URL trực tiếp
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("http") {
+                if let absoluteURL = URL(string: trimmed, relativeTo: URL(string: "https://film4k.net"))?.absoluteString {
+                    line = absoluteURL
+                }
             }
         }
         
-        let modified = lines.joined(separator: "\n")
-        
-        // Lưu vào temporary directory
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_playlist_\(Date().timeIntervalSince1970).m3u8")
-        
-        try modified.write(to: fileURL, atomically: true, encoding: .utf8)
-        
-        print("✅ Local playlist saved: \(fileURL.absoluteString)")
-        
-        return fileURL
+        lines[i] = line
     }
+    
+    let modified = lines.joined(separator: "\n")
+    
+    let tempDir = FileManager.default.temporaryDirectory
+    let fileURL = tempDir.appendingPathComponent("film4k_playlist_\(Date().timeIntervalSince1970).m3u8")
+    
+    try modified.write(to: fileURL, atomically: true, encoding: .utf8)
+    
+    return fileURL
 }
