@@ -562,11 +562,15 @@ didResume = false
                         season: s,
                         episode: ep
                     )
-                    print("🔍 Local playlist URL: \(result)")
+                    
+                    // Đọc nội dung file local
+                    let m3u8Content = try? String(contentsOf: result, encoding: .utf8)
+                    print("📄 m3u8 content (first 300): \(m3u8Content?.prefix(300) ?? "nil")")
                     
                     await MainActor.run {
                         currentStreamURL = result
                         selectedQuality = detectQuality(from: result)
+                        errorMessage = "m3u8: \((m3u8Content?.prefix(100)) ?? "nil")"
                         
                         let asset = AVURLAsset(url: result)
                         let playerItem = AVPlayerItem(asset: asset)
@@ -577,11 +581,9 @@ didResume = false
                         isLoading = false
                         sourceStatus[.phim1280] = true
                         didResume = false
-                        errorMessage = "URL: \(result.absoluteString)"
                     }
                     saveHistory()
                 } catch {
-                    print("❌ Phim1280 error: \(error)")
                     await MainActor.run {
                         errorMessage = "Phim1280: \(error.localizedDescription)"
                         isLoading = false
