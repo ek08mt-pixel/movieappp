@@ -35,15 +35,13 @@ class Phim1280Extractor {
             throw StreamError.movieNotFound
         }
         
-        // Tìm theo TMDB ID
         for item in list {
             if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID {
                 print("✅ Tìm thấy theo TMDB ID: \(tmdbID)")
-                return try extractStreamURL(from: item, season: season, episode: episode)
+                return try await extractStreamURL(from: item)
             }
         }
         
-        // Tìm theo title
         let normalizedTitle = title.lowercased()
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "&", with: "and")
@@ -57,52 +55,119 @@ class Phim1280Extractor {
                 if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
                    viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle) {
                     print("✅ Tìm thấy theo title: \(title)")
-                    return try extractStreamURL(from: item, season: season, episode: episode)
+                    return try await extractStreamURL(from: item)
                 }
             }
         }
         
-        print("❌ Không tìm thấy: \(title)")
         throw StreamError.movieNotFound
     }
     
-    private func extractStreamURL(
-        from item: [String: Any],
-        season: Int?,
-        episode: Int?
-    ) throws -> URL {
+    private func extractStreamURL(from item: [String: Any]) async throws -> URL {
         
-        // Ưu tiên 1: hlsUrl trực tiếp CDN
+        // Ưu tiên 1: hlsUrl CDN
         if let hlsUrl = item["hlsUrl"] as? String,
-           hlsUrl.hasPrefix("http"),
-           !hlsUrl.contains("/api/hls/tiktok") {
+           hlsUrl.hasPrefix("http") {
+            print("🔍 CDN hlsUrl: \(hlsUrl.prefix(100))")
             if let url = URL(string: hlsUrl) {
-                print("✅ CDN hlsUrl: \(hlsUrl.prefix(100))")
-                return url
+                return try await processMasterPlaylist(url)
             }
         }
         
-        // Ưu tiên 2: sources[].url trực tiếp CDN
+        // Ưu tiên 2: sources[].url CDN
         if let sources = item["sources"] as? [[String: Any]],
            let firstSource = sources.first,
            let sourceURL = firstSource["url"] as? String,
-           sourceURL.hasPrefix("http"),
-           !sourceURL.contains("/api/hls/tiktok") {
+           sourceURL.hasPrefix("http") {
+            print("🔍 CDN source: \(sourceURL.prefix(100))")
             if let url = URL(string: sourceURL) {
-                print("✅ CDN source: \(sourceURL.prefix(100))")
-                return url
+                return try await processMasterPlaylist(url)
             }
         }
         
-        // Ưu tiên 3: /api/hls/tiktok (cần xử lý thêm)
+        // Ưu tiên 3: /api/hls/tiktok
         let slug = item["slug"] as? String ?? ""
         let urlString = "\(baseURL)/api/hls/tiktok/\(slug)/master.m3u8"
-        
         guard let url = URL(string: urlString) else {
             throw StreamError.noStreamAvailable
         }
         
         print("⚠️ Dùng API hls: \(urlString)")
-        return url
+        return try await processMasterPlaylist(url)
+    }
+    
+    private func processMasterPlaylist(_ masterURL: URL) async throws -> URL {
+        var request = URLRequest(url: masterURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let content = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        print("📄 Master m3u8: \(content.prefix(300))")
+        
+        let lines = content.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                let variantURL: String
+                if trimmed.hasPrefix("http") {
+                    variantURL = trimmed
+                } else {
+                    let base = masterURL.deletingLastPathComponent().absoluteString
+                    variantURL = "\(base)/\(trimmed)"
+                }
+                
+                if let url = URL(string: variantURL) {
+                    print("🎯 Variant URL: \(variantURL)")
+                    return try await processVariantPlaylist(url)
+                }
+            }
+        }
+        
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func processVariantPlaylist(_ variantURL: URL) async throws -> URL {
+        var request = URLRequest(url: variantURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let content = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        print("📄 Variant m3u8 (first 300): \(content.prefix(300))")
+        
+        let lines = content.components(separatedBy: .newlines)
+        var newLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                let absoluteURL: String
+                if trimmed.hasPrefix("http") {
+                    absoluteURL = trimmed
+                } else {
+                    let base = variantURL.deletingLastPathComponent().absoluteString
+                    absoluteURL = "\(base)/\(trimmed)"
+                }
+                newLines.append(absoluteURL)
+            } else {
+                newLines.append(line)
+            }
+        }
+        
+        let localContent = newLines.joined(separator: "\n")
+        
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("film4k_variant_\(Date().timeIntervalSince1970).m3u8")
+        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        
+        print("✅ Local variant saved: \(fileURL)")
+        
+        return fileURL
     }
 }
