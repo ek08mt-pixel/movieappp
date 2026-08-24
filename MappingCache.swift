@@ -126,6 +126,7 @@ final class MappingCache {
         defaults.removeObject(forKey: phimapiKey)
         defaults.removeObject(forKey: phim1280Key)
     }
+} 
 
 // MARK: - Error
 enum StreamServiceError: LocalizedError {
