@@ -116,6 +116,8 @@ final class MappingCache {
     func getPhimAPIURL(tmdbID: Int, season: Int, episode: Int) -> String? { dict(for: phimapiKey)["\(tmdbID)_S\(season)E\(episode)"] }
     func setPhimAPIURL(tmdbID: Int, season: Int, episode: Int, url: String) { var d = dict(for: phimapiKey); d["\(tmdbID)_S\(season)E\(episode)"] = url; save(d, for: phimapiKey) }
     func getHardcodedSlug(tmdbID: Int, season: Int) -> String? { hardcodedSlugs["\(tmdbID)_\(season)"] }
+    func getPhim1280Slug(tmdbID: Int) -> String? { dict(for: phim1280Key)["\(tmdbID)"] }
+    func setPhim1280Slug(tmdbID: Int, slug: String) { var d = dict(for: phim1280Key); d["\(tmdbID)"] = slug; save(d, for: phim1280Key) }
     func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
     func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
     func clearAll() { 
