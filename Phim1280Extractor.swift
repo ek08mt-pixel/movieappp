@@ -24,8 +24,8 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
-        // Bước 1: Lấy danh sách phim
-        let homeURL = "\(baseURL)/api/home"
+        let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let homeURL = "\(baseURL)/api/home?q=\(query)"
         guard let url = URL(string: homeURL) else { throw StreamError.noStreamAvailable }
         
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -39,9 +39,7 @@ class Phim1280Extractor {
         for item in list {
             if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID {
                 print("✅ Tìm thấy theo TMDB ID: \(tmdbID)")
-                if let apiURL = try? buildAPIURL(from: item, season: season, episode: episode) {
-                    return try await Film4KPlayer.shared.fetchPlaylistURL(from: apiURL)
-                }
+                return try extractStreamURL(from: item, season: season, episode: episode)
             }
         }
         
@@ -56,14 +54,10 @@ class Phim1280Extractor {
                 let enTitle = (titleObj["en"] as? String ?? "").lowercased()
                 let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
                 
-                let enMatched = enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle)
-                let viMatched = viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle)
-                
-                if enMatched || viMatched {
+                if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                   viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle) {
                     print("✅ Tìm thấy theo title: \(title)")
-                    if let apiURL = try? buildAPIURL(from: item, season: season, episode: episode) {
-                        return try await Film4KPlayer.shared.fetchPlaylistURL(from: apiURL)
-                    }
+                    return try extractStreamURL(from: item, season: season, episode: episode)
                 }
             }
         }
@@ -72,35 +66,43 @@ class Phim1280Extractor {
         throw StreamError.movieNotFound
     }
     
-    private func buildAPIURL(
+    private func extractStreamURL(
         from item: [String: Any],
         season: Int?,
         episode: Int?
     ) throws -> URL {
         
-        let slug = item["slug"] as? String ?? ""
-        let itemMediaType = item["mediaType"] as? String ?? "movie"
-        
-        var urlString: String
-        
-        if itemMediaType == "tv" || season != nil {
-            let s = season ?? 1
-            let ep = episode ?? 1
-            urlString = "\(baseURL)/api/hls/tiktok/\(slug)-s\(String(format: "%02d", s))e\(String(format: "%02d", ep))/master.m3u8"
-        } else {
-            if let hlsUrl = item["hlsUrl"] as? String, !hlsUrl.isEmpty {
-                urlString = hlsUrl.hasPrefix("/") ? "\(baseURL)\(hlsUrl)" : hlsUrl
-            } else {
-                urlString = "\(baseURL)/api/hls/tiktok/\(slug)/master.m3u8"
+        // Ưu tiên 1: hlsUrl trực tiếp CDN
+        if let hlsUrl = item["hlsUrl"] as? String,
+           hlsUrl.hasPrefix("http"),
+           !hlsUrl.contains("/api/hls/tiktok") {
+            if let url = URL(string: hlsUrl) {
+                print("✅ CDN hlsUrl: \(hlsUrl.prefix(100))")
+                return url
             }
         }
         
-        print("🔍 API URL: \(urlString)")
+        // Ưu tiên 2: sources[].url trực tiếp CDN
+        if let sources = item["sources"] as? [[String: Any]],
+           let firstSource = sources.first,
+           let sourceURL = firstSource["url"] as? String,
+           sourceURL.hasPrefix("http"),
+           !sourceURL.contains("/api/hls/tiktok") {
+            if let url = URL(string: sourceURL) {
+                print("✅ CDN source: \(sourceURL.prefix(100))")
+                return url
+            }
+        }
+        
+        // Ưu tiên 3: /api/hls/tiktok (cần xử lý thêm)
+        let slug = item["slug"] as? String ?? ""
+        let urlString = "\(baseURL)/api/hls/tiktok/\(slug)/master.m3u8"
         
         guard let url = URL(string: urlString) else {
             throw StreamError.noStreamAvailable
         }
         
+        print("⚠️ Dùng API hls: \(urlString)")
         return url
     }
 }
