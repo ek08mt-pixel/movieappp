@@ -552,62 +552,53 @@ didResume = false
         }
         
     case .videasy:
-                await MainActor.run {
-                    errorMessage = "Đang lấy stream..."
-                    isLoading = true
-                }
-                
-                let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-                guard let url = URL(string: urlString) else {
-                    await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
-                    return
-                }
-                
-                URLSession.streamSession.dataTask(with: url) { [weak self] data, _, _ in
-                    guard let self = self else { return }
-                    guard let data = data else {
-                        DispatchQueue.main.async {
-                            self.errorMessage = "Không có data"
-                            self.isLoading = false
-                        }
-                        return
-                    }
-                    
-                    struct E: Codable { let imdb_id: String? }
-                    let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-                    
-                    Task {
-                        do {
-                            let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
-                                tmdbId: self.movieId,
-                                title: self.movieTitle,
-                                year: self.currentMovie?.yearText,
-                                imdbId: movieImdbID,
-                                mediaType: "movie",
-                                seasonId: nil,
-                                episodeId: nil,
-                                totalSeasons: nil
-                            )
-                            
-                            DispatchQueue.main.async {
-                                self.currentStreamURL = result.streamURL
-                                self.selectedQuality = self.detectQuality(from: result.streamURL)
-                                self.player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
-                                self.player.play()
-                                self.hasStartedPlaying = true
-                                self.isLoading = false
-                                self.sourceStatus[.videasy] = true
-                                self.didResume = false
-                                self.errorMessage = nil
-                            }
-                        } catch {
-                            DispatchQueue.main.async {
-                                self.errorMessage = "Lỗi: \(error.localizedDescription)"
-                                self.isLoading = false
-                            }
-                        }
-                    }
-                }.resume()
+    await MainActor.run {
+        errorMessage = "Đang lấy stream..."
+        isLoading = true
+    }
+    
+    do {
+        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
+        guard let url = URL(string: urlString) else {
+            await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
+            return
+        }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        
+        struct E: Codable { let imdb_id: String? }
+        let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
+        
+        let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
+            tmdbId: movieId,
+            title: movieTitle,
+            year: currentMovie?.yearText,
+            imdbId: movieImdbID,
+            mediaType: "movie",
+            seasonId: nil,
+            episodeId: nil,
+            totalSeasons: nil
+        )
+        
+        await MainActor.run {
+            currentStreamURL = result.streamURL
+            selectedQuality = detectQuality(from: result.streamURL)
+            player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
+            player.play()
+            hasStartedPlaying = true
+            isLoading = false
+            sourceStatus[.videasy] = true
+            didResume = false
+            errorMessage = nil
+        }
+        saveHistory()
+        
+    } catch {
+        await MainActor.run {
+            errorMessage = "Lỗi: \(error.localizedDescription)"
+            isLoading = false
+        }
+    }
     
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
