@@ -560,7 +560,7 @@ switch selectedSource {
 case "Emew 1": src = .phimapi
 case "Emew 2": src = .nguonc
 case "Emew 3": src = .vsmov
-case "Emew 4": src = .videasy
+case "Phim1280": src = .phim1280
 default: src = .phimapi
 }
         let moviePlayer = MoviePlayerView(movieId: movie.id, movieTitle: movie.originalTitle ?? movie.title, mediaType: playerMediaType, seasonNumber: playSeason, episodeNumber: playEpisode, posterURL: movie.posterURL, initialSource: src, directURL: directURL).environmentObject(appState)
