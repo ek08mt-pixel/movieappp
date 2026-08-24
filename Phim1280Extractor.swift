@@ -226,16 +226,16 @@ class Phim1280Extractor {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let absoluteURL: String
+                let variantURLString: String
                 if trimmed.hasPrefix("http") {
-                    absoluteURL = trimmed.replacingOccurrences(of: "//3000kb", with: "/3000kb")
+                    variantURLString = trimmed
                 } else {
                     let base = masterURL.deletingLastPathComponent().absoluteString
-                    variantURL = "\(base)/\(trimmed)"
+                    variantURLString = "\(base)/\(trimmed)"
                 }
                 
-                if let url = URL(string: variantURL) {
-                    print("🎯 Variant URL: \(variantURL)")
+                if let url = URL(string: variantURLString) {
+                    print("🎯 Variant URL: \(variantURLString)")
                     return try await processVariantPlaylist(url)
                 }
             }
