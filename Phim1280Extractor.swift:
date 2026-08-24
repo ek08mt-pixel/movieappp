@@ -9,7 +9,7 @@ class Phim1280Extractor {
         let movie: MovieInfo?
         let episodes: [Episode]?
     }
-    
+     
     struct MovieInfo: Codable {
         let slug: String?
         let tmdbId: Int?
