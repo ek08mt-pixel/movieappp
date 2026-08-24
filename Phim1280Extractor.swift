@@ -133,34 +133,42 @@ class Phim1280Extractor {
         
         let (data, _) = try await URLSession.shared.data(from: url)
         
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let list = json["list"] as? [[String: Any]] else {
-            throw StreamError.movieNotFound
-        }
-        
-        for item in list {
-            if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-               let slug = item["slug"] as? String {
-                return slug
-            }
-        }
-        
-        // Tìm theo title
-        let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-        for item in list {
-            if let titleObj = item["title"] as? [String: Any] {
-                let enTitle = (titleObj["en"] as? String ?? "").lowercased()
-                let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
-                
-                if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
-                   viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let list = json["list"] as? [[String: Any]] {
+            
+            for item in list {
+                if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
                    let slug = item["slug"] as? String {
                     return slug
                 }
             }
+            
+            let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+            for item in list {
+                if let titleObj = item["title"] as? [String: Any] {
+                    let enTitle = (titleObj["en"] as? String ?? "").lowercased()
+                    let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
+                    
+                    if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                       viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                       let slug = item["slug"] as? String {
+                        return slug
+                    }
+                }
+            }
         }
         
-        throw StreamError.movieNotFound
+        // Fallback: tạo slug từ title
+        let fallbackSlug = title.lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ":", with: "")
+            .replacingOccurrences(of: "&", with: "and")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: ".", with: "")
+        
+        print("🔍 Fallback slug: \(fallbackSlug)")
+        return fallbackSlug
     }
     
     // MARK: - Extract Stream URL
