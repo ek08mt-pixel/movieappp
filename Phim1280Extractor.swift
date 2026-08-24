@@ -24,6 +24,26 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
+        // Nếu có season/episode, dùng API /api/watch
+        if let s = season, let ep = episode {
+            return try await fetchEpisodeStream(
+                tmdbID: tmdbID,
+                title: title,
+                season: s,
+                episode: ep
+            )
+        }
+        
+        // Movie - tìm trong /api/home
+        return try await fetchMovieStream(
+            tmdbID: tmdbID,
+            title: title
+        )
+    }
+    
+    // MARK: - Fetch Movie Stream
+    
+    private func fetchMovieStream(tmdbID: Int, title: String) async throws -> URL {
         let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let homeURL = "\(baseURL)/api/home?q=\(query)"
         guard let url = URL(string: homeURL) else { throw StreamError.noStreamAvailable }
@@ -35,6 +55,7 @@ class Phim1280Extractor {
             throw StreamError.movieNotFound
         }
         
+        // Tìm theo TMDB ID
         for item in list {
             if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID {
                 print("✅ Tìm thấy theo TMDB ID: \(tmdbID)")
@@ -42,6 +63,7 @@ class Phim1280Extractor {
             }
         }
         
+        // Tìm theo title
         let normalizedTitle = title.lowercased()
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "&", with: "and")
@@ -63,11 +85,92 @@ class Phim1280Extractor {
         throw StreamError.movieNotFound
     }
     
+    // MARK: - Fetch Episode Stream
+    
+    private func fetchEpisodeStream(
+        tmdbID: Int,
+        title: String,
+        season: Int,
+        episode: Int
+    ) async throws -> URL {
+        
+        // Tìm slug từ /api/home
+        let slug = try await findSlug(tmdbID: tmdbID, title: title)
+        
+        // Fetch /api/watch/{slug}
+        let watchURL = "\(baseURL)/api/watch/\(slug)"
+        guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let episodes = json["episodes"] as? [[String: Any]] else {
+            throw StreamError.movieNotFound
+        }
+        
+        // Tìm episode phù hợp
+        for ep in episodes {
+            if let epSeason = ep["season"] as? Int, epSeason == season,
+               let epNumber = ep["episode"] as? Int, epNumber == episode,
+               let sources = ep["sources"] as? [[String: Any]],
+               let firstSource = sources.first,
+               let sourceURL = firstSource["url"] as? String,
+               let streamURL = URL(string: sourceURL) {
+                print("✅ Episode stream: \(sourceURL.prefix(100))")
+                return try await processMasterPlaylist(streamURL)
+            }
+        }
+        
+        throw StreamError.movieNotFound
+    }
+    
+    // MARK: - Find Slug
+    
+    private func findSlug(tmdbID: Int, title: String) async throws -> String {
+        let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let homeURL = "\(baseURL)/api/home?q=\(query)"
+        guard let url = URL(string: homeURL) else { throw StreamError.movieNotFound }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let list = json["list"] as? [[String: Any]] else {
+            throw StreamError.movieNotFound
+        }
+        
+        for item in list {
+            if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
+               let slug = item["slug"] as? String {
+                return slug
+            }
+        }
+        
+        // Tìm theo title
+        let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+        for item in list {
+            if let titleObj = item["title"] as? [String: Any] {
+                let enTitle = (titleObj["en"] as? String ?? "").lowercased()
+                let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
+                
+                if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                   viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                   let slug = item["slug"] as? String {
+                    return slug
+                }
+            }
+        }
+        
+        throw StreamError.movieNotFound
+    }
+    
+    // MARK: - Extract Stream URL
+    
     private func extractStreamURL(from item: [String: Any]) async throws -> URL {
         
         // Ưu tiên 1: hlsUrl CDN
         if let hlsUrl = item["hlsUrl"] as? String,
-           hlsUrl.hasPrefix("http") {
+           hlsUrl.hasPrefix("http"),
+           !hlsUrl.contains("/api/hls/tiktok") {
             print("🔍 CDN hlsUrl: \(hlsUrl.prefix(100))")
             if let url = URL(string: hlsUrl) {
                 return try await processMasterPlaylist(url)
@@ -78,7 +181,8 @@ class Phim1280Extractor {
         if let sources = item["sources"] as? [[String: Any]],
            let firstSource = sources.first,
            let sourceURL = firstSource["url"] as? String,
-           sourceURL.hasPrefix("http") {
+           sourceURL.hasPrefix("http"),
+           !sourceURL.contains("/api/hls/tiktok") {
             print("🔍 CDN source: \(sourceURL.prefix(100))")
             if let url = URL(string: sourceURL) {
                 return try await processMasterPlaylist(url)
@@ -95,6 +199,8 @@ class Phim1280Extractor {
         print("⚠️ Dùng API hls: \(urlString)")
         return try await processMasterPlaylist(url)
     }
+    
+    // MARK: - Process Master Playlist
     
     private func processMasterPlaylist(_ masterURL: URL) async throws -> URL {
         var request = URLRequest(url: masterURL)
@@ -130,6 +236,8 @@ class Phim1280Extractor {
         throw StreamError.noStreamAvailable
     }
     
+    // MARK: - Process Variant Playlist
+    
     private func processVariantPlaylist(_ variantURL: URL) async throws -> URL {
         var request = URLRequest(url: variantURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
@@ -152,7 +260,9 @@ class Phim1280Extractor {
                     absoluteURL = trimmed
                 } else {
                     let base = variantURL.deletingLastPathComponent().absoluteString
-                    absoluteURL = "\(base)/\(trimmed)"
+                    let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
+                    let cleanPath = trimmed.hasPrefix("/") ? String(trimmed.dropFirst()) : trimmed
+                    absoluteURL = "\(cleanBase)/\(cleanPath)"
                 }
                 newLines.append(absoluteURL)
             } else {
