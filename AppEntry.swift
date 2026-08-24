@@ -187,6 +187,7 @@ struct AppEntry: App {
     
     init() {
         UIApplication.shared.isNetworkActivityIndicatorVisible = false
+        URLProtocol.registerClass(CustomURLProtocol.self)
     }
     
     var colorScheme: ColorScheme? {
