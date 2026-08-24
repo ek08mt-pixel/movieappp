@@ -218,9 +218,9 @@ class Phim1280Extractor {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let variantURL: String
+                let absoluteURL: String
                 if trimmed.hasPrefix("http") {
-                    variantURL = trimmed
+                    absoluteURL = trimmed.replacingOccurrences(of: "//3000kb", with: "/3000kb")
                 } else {
                     let base = masterURL.deletingLastPathComponent().absoluteString
                     variantURL = "\(base)/\(trimmed)"
