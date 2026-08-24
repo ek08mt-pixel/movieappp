@@ -505,10 +505,10 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
 if let source = prog?.source {
     switch source {
     case "Emew 1": src = .phimapi
-    case "Emew 2": src = .nguonc
-    case "Emew 3": src = .vsmov
-    case "Videasy": src = .videasy
-    default: src = .phimapi
+case "Emew 2": src = .nguonc
+case "Emew 3": src = .vsmov
+case "Phim1280": src = .phim1280
+default: src = .phimapi
     }
 } else { src = .phimapi }
         let moviePlayer = MoviePlayerView(movieId: id, movieTitle: continueMovieTitle, mediaType: continueMediaType, seasonNumber: continueSeason, episodeNumber: continueEpisode, posterURL: continuePosterURL, resumeTime: continueCurrentTime, initialSource: src).environmentObject(appState)
