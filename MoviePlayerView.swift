@@ -551,54 +551,6 @@ didResume = false
         }
         }
         
-    case .videasy:
-    await MainActor.run {
-        errorMessage = "Đang lấy stream..."
-        isLoading = true
-    }
-    
-    do {
-        let urlString = "https://api.themoviedb.org/3/movie/\(movieId)/external_ids?api_key=b6be36c1c5788565fec6a24811e7cc9b"
-        guard let url = URL(string: urlString) else {
-            await MainActor.run { errorMessage = "URL lỗi"; isLoading = false }
-            return
-        }
-        
-        let (data, _) = try await URLSession.shared.data(from: url)
-        
-        struct E: Codable { let imdb_id: String? }
-        let movieImdbID = (try? JSONDecoder().decode(E.self, from: data).imdb_id) ?? ""
-        
-        let result = try await SpeedRaceLightExtractor.shared.extractM3U8(
-            tmdbId: movieId,
-            title: movieTitle,
-            year: currentMovie?.yearText,
-            imdbId: movieImdbID,
-            mediaType: "movie",
-            seasonId: nil,
-            episodeId: nil,
-            totalSeasons: nil
-        )
-        
-        await MainActor.run {
-            currentStreamURL = result.streamURL
-            selectedQuality = detectQuality(from: result.streamURL)
-            player.replaceCurrentItem(with: AVPlayerItem(url: result.streamURL))
-            player.play()
-            hasStartedPlaying = true
-            isLoading = false
-            sourceStatus[.videasy] = true
-            didResume = false
-            errorMessage = nil
-        }
-        saveHistory()
-        
-    } catch {
-        await MainActor.run {
-            errorMessage = "Lỗi: \(error.localizedDescription)"
-            isLoading = false
-        }
-    }
     
     case .phim1280:
     let result = try await Phim1280Extractor.shared.fetchStream(
