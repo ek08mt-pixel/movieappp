@@ -554,6 +554,7 @@ didResume = false
     
     case .phim1280:
                 do {
+                    print("🔍 Bắt đầu Phim1280")
                     let result = try await Phim1280Extractor.shared.fetchStream(
                         tmdbID: movieId,
                         title: movieTitle,
@@ -561,6 +562,7 @@ didResume = false
                         season: s,
                         episode: ep
                     )
+                    print("🔍 Local playlist URL: \(result)")
                     
                     await MainActor.run {
                         currentStreamURL = result
@@ -575,10 +577,11 @@ didResume = false
                         isLoading = false
                         sourceStatus[.phim1280] = true
                         didResume = false
-                        errorMessage = nil
+                        errorMessage = "URL: \(result.absoluteString)"
                     }
                     saveHistory()
                 } catch {
+                    print("❌ Phim1280 error: \(error)")
                     await MainActor.run {
                         errorMessage = "Phim1280: \(error.localizedDescription)"
                         isLoading = false
