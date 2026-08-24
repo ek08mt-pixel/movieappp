@@ -566,15 +566,7 @@ didResume = false
                         currentStreamURL = result
                         selectedQuality = detectQuality(from: result)
                         
-                        // Thêm headers để phát HLS
-                        let asset = AVURLAsset(url: result, options: [
-    "AVURLAssetOutOfBandMIMETypeKey": "application/vnd.apple.mpegurl",
-    "AVURLAssetHTTPHeaderFieldsKey": [
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
-        "Referer": "https://film4k.net/",
-        "Accept": "application/vnd.apple.mpegurl,*/*"
-    ]
-])
+                        let asset = AVURLAsset(url: result)
                         let playerItem = AVPlayerItem(asset: asset)
                         player.replaceCurrentItem(with: playerItem)
                         player.play()
@@ -583,6 +575,7 @@ didResume = false
                         isLoading = false
                         sourceStatus[.phim1280] = true
                         didResume = false
+                        errorMessage = nil
                     }
                     saveHistory()
                 } catch {
