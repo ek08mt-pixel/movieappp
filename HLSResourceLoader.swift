@@ -11,6 +11,8 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         config.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
             "Referer": "https://film4k.net/",
+            "Origin": "https://film4k.net",
+            "X-Requested-With": "XMLHttpRequest",
             "Accept": "application/vnd.apple.mpegurl,*/*"
         ]
         session = URLSession(configuration: config)
@@ -41,6 +43,8 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         var request = URLRequest(url: realURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        request.setValue("https://film4k.net", forHTTPHeaderField: "Origin")
+        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
         request.setValue("application/vnd.apple.mpegurl,*/*", forHTTPHeaderField: "Accept")
         
         let task = session.dataTask(with: request) { data, response, error in
