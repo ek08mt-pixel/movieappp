@@ -554,7 +554,6 @@ didResume = false
     
     case .phim1280:
                 do {
-                    print("🔍 Bắt đầu Phim1280")
                     let result = try await Phim1280Extractor.shared.fetchStream(
                         tmdbID: movieId,
                         title: movieTitle,
@@ -563,16 +562,17 @@ didResume = false
                         episode: ep
                     )
                     
-                    // Đọc nội dung file local
-                    let m3u8Content = try? String(contentsOf: result, encoding: .utf8)
-                    print("📄 m3u8 content (first 300): \(m3u8Content?.prefix(300) ?? "nil")")
-                    
                     await MainActor.run {
                         currentStreamURL = result
                         selectedQuality = detectQuality(from: result)
-                        errorMessage = "m3u8: \((m3u8Content?.prefix(1000)) ?? "nil")"
                         
-                        let asset = AVURLAsset(url: result)
+                        // Dùng custom scheme để HLSResourceLoader xử lý
+                        let urlString = result.absoluteString
+                        let customSchemeURL = URL(string: "custom-hls://\(urlString)")!
+                        
+                        let asset = AVURLAsset(url: customSchemeURL)
+                        asset.resourceLoader.setDelegate(HLSResourceLoader.shared, queue: .main)
+                        
                         let playerItem = AVPlayerItem(asset: asset)
                         player.replaceCurrentItem(with: playerItem)
                         player.play()
@@ -581,6 +581,7 @@ didResume = false
                         isLoading = false
                         sourceStatus[.phim1280] = true
                         didResume = false
+                        errorMessage = nil
                     }
                     saveHistory()
                 } catch {
