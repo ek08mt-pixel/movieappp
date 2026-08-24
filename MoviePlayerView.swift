@@ -553,24 +553,42 @@ didResume = false
         
     
     case .phim1280:
-    let result = try await Phim1280Extractor.shared.fetchStream(
-        tmdbID: movieId,
-        title: movieTitle,
-        mediaType: mediaType,
-        season: s,
-        episode: ep
-    )
-    await MainActor.run {
-        currentStreamURL = result
-        selectedQuality = detectQuality(from: result)
-        player.replaceCurrentItem(with: AVPlayerItem(url: result))
-        player.play()
-        hasStartedPlaying = true
-        isLoading = false
-        sourceStatus[.phim1280] = true
-        didResume = false
-    }
-    saveHistory()
+                do {
+                    let result = try await Phim1280Extractor.shared.fetchStream(
+                        tmdbID: movieId,
+                        title: movieTitle,
+                        mediaType: mediaType,
+                        season: s,
+                        episode: ep
+                    )
+                    
+                    await MainActor.run {
+                        currentStreamURL = result
+                        selectedQuality = detectQuality(from: result)
+                        
+                        // Thêm headers để phát HLS
+                        let asset = AVURLAsset(url: result, options: [
+                            "AVURLAssetHTTPHeaderFieldsKey": [
+                                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+                                "Referer": "https://film4k.net/"
+                            ]
+                        ])
+                        let playerItem = AVPlayerItem(asset: asset)
+                        player.replaceCurrentItem(with: playerItem)
+                        player.play()
+                        
+                        hasStartedPlaying = true
+                        isLoading = false
+                        sourceStatus[.phim1280] = true
+                        didResume = false
+                    }
+                    saveHistory()
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "Phim1280: \(error.localizedDescription)"
+                        isLoading = false
+                    }
+                }
     
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
