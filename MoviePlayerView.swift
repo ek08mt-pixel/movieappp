@@ -22,6 +22,7 @@ enum MovieSource: String, CaseIterable {
     case nguonc = "Emew 2"
     case vsmov = "Emew 3"
     case videasy = "Videasy"
+    case phim1280 = "Phim1280"
 }
 
 struct CastDevice: Identifiable {
