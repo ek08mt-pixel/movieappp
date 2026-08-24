@@ -107,10 +107,9 @@ final class Film4KPlayer {
                         
                         // Sửa URI lỗi (có dấu xuống dòng hoặc dấu .)
                         let cleanedURI = uri
-                            .replacingOccurrences(of: "\n", with: "")
-                            .replacingOccurrences(of: "\r", with: "")
-                            .replacingOccurrences(of: " ", with: "")
-                            .replacingOccurrences(of: ".", with: "")
+    .replacingOccurrences(of: "\n", with: "")
+    .replacingOccurrences(of: "\r", with: "")
+    .replacingOccurrences(of: " ", with: "")
                         
                         if !cleanedURI.hasPrefix("http") {
                             if let absoluteURL = URL(string: cleanedURI, relativeTo: URL(string: "https://film4k.net"))?.absoluteString {
