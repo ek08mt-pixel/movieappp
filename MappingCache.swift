@@ -21,6 +21,7 @@ final class MappingCache {
     private let nguonCKey = "cache_nguonc_mapping"
     private let vsmovKey = "cache_vsmov_mapping"
     private let phimapiKey = "cache_phimapi_mapping"
+    private let phim1280Key = "cache_phim1280_mapping"
     static var seasonEpisodeCounts: [String: Int] = [:]
     
     private let hardcodedSlugs: [String: String] = [
@@ -117,8 +118,12 @@ final class MappingCache {
     func getHardcodedSlug(tmdbID: Int, season: Int) -> String? { hardcodedSlugs["\(tmdbID)_\(season)"] }
     func dict(for key: String) -> [String: String] { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
     func save(_ dict: [String: String], for key: String) { defaults.set(dict, forKey: key) }
-    func clearAll() { defaults.removeObject(forKey: nguonCKey); defaults.removeObject(forKey: vsmovKey); defaults.removeObject(forKey: phimapiKey) }
-}
+    func clearAll() { 
+        defaults.removeObject(forKey: nguonCKey)
+        defaults.removeObject(forKey: vsmovKey)
+        defaults.removeObject(forKey: phimapiKey)
+        defaults.removeObject(forKey: phim1280Key)
+    }
 
 // MARK: - Error
 enum StreamServiceError: LocalizedError {
