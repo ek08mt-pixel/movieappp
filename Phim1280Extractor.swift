@@ -7,11 +7,13 @@ class Phim1280Extractor {
     enum StreamError: Error, LocalizedError {
         case noStreamAvailable
         case movieNotFound
+        case unsupportedURL
         
         var errorDescription: String? {
             switch self {
             case .noStreamAvailable: return "Không tìm thấy stream"
             case .movieNotFound: return "Không tìm thấy phim"
+            case .unsupportedURL: return "URL không hợp lệ"
             }
         }
     }
@@ -24,11 +26,10 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
-        // Tìm slug
-        let slug = try await findSlug(title: title)
+        // Thử tìm slug qua nhiều cách
+        let slug = try await findSlug(tmdbID: tmdbID, title: title)
         print("✅ Slug: \(slug)")
         
-        // Fetch /api/watch/{slug}
         let watchURL = "\(baseURL)/api/watch/\(slug)"
         guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
         
@@ -37,48 +38,70 @@ class Phim1280Extractor {
             throw StreamError.movieNotFound
         }
         
-        // Nếu có season/episode và episodes tồn tại
-        if let s = season, let ep = episode,
-           let episodes = json["episodes"] as? [[String: Any]] {
+        // TV show - episodes
+        if let episodes = json["episodes"] as? [[String: Any]], !episodes.isEmpty {
+            let s = season ?? 1
+            let ep = episode ?? 1
+            
             for episodeItem in episodes {
                 if let epSeason = episodeItem["season"] as? Int, epSeason == s,
                    let epNumber = episodeItem["episode"] as? Int, epNumber == ep,
                    let sources = episodeItem["sources"] as? [[String: Any]],
                    let firstSource = sources.first,
-                   let sourceURL = firstSource["url"] as? String,
-                   let streamURL = URL(string: sourceURL) {
-                    print("✅ Episode source: \(sourceURL.prefix(80))")
+                   let sourceURL = firstSource["url"] as? String {
+                    if let streamURL = URL(string: sourceURL) {
+                        print("✅ Episode source: \(sourceURL.prefix(80))")
+                        return try await processMasterPlaylist(streamURL)
+                    }
+                }
+            }
+        }
+        
+        // Movie - sources từ movie
+        if let movie = json["movie"] as? [String: Any] {
+            // Lấy hlsUrl từ movie
+            if let hlsUrl = movie["hlsUrl"] as? String {
+                if let streamURL = URL(string: hlsUrl) {
+                    print("✅ Movie hlsUrl: \(hlsUrl.prefix(80))")
+                    return try await processMasterPlaylist(streamURL)
+                }
+            }
+            
+            // Lấy sources từ movie
+            if let sources = movie["sources"] as? [[String: Any]],
+               let firstSource = sources.first,
+               let sourceURL = firstSource["url"] as? String {
+                if let streamURL = URL(string: sourceURL) {
+                    print("✅ Movie source: \(sourceURL.prefix(80))")
                     return try await processMasterPlaylist(streamURL)
                 }
             }
         }
         
-        // Movie - lấy sources
-        if let movie = json["movie"] as? [String: Any],
-           let sources = movie["sources"] as? [[String: Any]],
-           let firstSource = sources.first,
-           let sourceURL = firstSource["url"] as? String,
-           let streamURL = URL(string: sourceURL) {
-            print("✅ Movie source: \(sourceURL.prefix(80))")
-            return try await processMasterPlaylist(streamURL)
-        }
-        
+        // Root sources
         if let sources = json["sources"] as? [[String: Any]],
            let firstSource = sources.first,
-           let sourceURL = firstSource["url"] as? String,
-           let streamURL = URL(string: sourceURL) {
-            print("✅ Root source: \(sourceURL.prefix(80))")
-            return try await processMasterPlaylist(streamURL)
+           let sourceURL = firstSource["url"] as? String {
+            if let streamURL = URL(string: sourceURL) {
+                print("✅ Root source: \(sourceURL.prefix(80))")
+                return try await processMasterPlaylist(streamURL)
+            }
         }
         
         throw StreamError.noStreamAvailable
     }
     
-    private func findSlug(title: String) async throws -> String {
+    private func findSlug(tmdbID: Int, title: String) async throws -> String {
         let cleanTitle = removeVietnameseDiacritics(title.lowercased())
-        let words = cleanTitle.components(separatedBy: " ")
-        let searchTerms = [cleanTitle] + words.filter { $0.count > 3 }
         
+        // Tạo nhiều search terms
+        var searchTerms: [String] = [cleanTitle]
+        let words = cleanTitle.components(separatedBy: " ")
+        if let first = words.first { searchTerms.append(first) }
+        if let last = words.last { searchTerms.append(last) }
+        searchTerms.append(contentsOf: words.filter { $0.count > 3 })
+        
+        // Thử search qua /api/home
         for term in searchTerms {
             let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             let homeURL = "\(baseURL)/api/home?q=\(encoded)"
@@ -93,13 +116,23 @@ class Phim1280Extractor {
                     if let top = json["top"] as? [[String: Any]] { allItems += top }
                     
                     for item in allItems {
+                        // Check tmdbId trước
+                        if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
+                           let slug = item["slug"] as? String {
+                            print("✅ Tìm theo TMDB: \(slug)")
+                            return slug
+                        }
+                        
+                        // Check title
                         let enTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["en"] as? String ?? "").lowercased()
                         let viTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["vi"] as? String ?? "").lowercased()
                         let slug = item["slug"] as? String ?? ""
                         
                         if enTitle.contains(cleanTitle) || cleanTitle.contains(enTitle) ||
                            viTitle.contains(cleanTitle) || cleanTitle.contains(viTitle) ||
-                           enTitle.contains(term) || viTitle.contains(term) {
+                           enTitle.contains(term) || viTitle.contains(term) ||
+                           cleanTitle.contains(enTitle) || cleanTitle.contains(viTitle) {
+                            print("✅ Tìm theo title: \(slug)")
                             return slug
                         }
                     }
@@ -109,7 +142,19 @@ class Phim1280Extractor {
             }
         }
         
-        throw StreamError.movieNotFound
+        // Fallback: tạo slug từ title
+        let fallbackSlug = cleanTitle
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ":", with: "")
+            .replacingOccurrences(of: "&", with: "and")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
+        
+        print("🔍 Fallback slug: \(fallbackSlug)")
+        return fallbackSlug
     }
     
     private func processMasterPlaylist(_ masterURL: URL) async throws -> URL {
@@ -122,26 +167,50 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Nếu là master playlist, lấy variant đầu tiên
-        let lines = content.components(separatedBy: .newlines)
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let variantURLString: String
-                if trimmed.hasPrefix("http") {
-                    variantURLString = trimmed
-                } else {
-                    let base = masterURL.deletingLastPathComponent().absoluteString
-                    variantURLString = "\(base)/\(trimmed)"
+        // Kiểm tra JSON response (không phải m3u8)
+        if content.hasPrefix("{") || content.hasPrefix("[") {
+            // Đây là JSON - có thể chứa URL m3u8
+            if let jsonData = content.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                if let sources = json["sources"] as? [[String: Any]],
+                   let firstSource = sources.first,
+                   let sourceURL = firstSource["url"] as? String,
+                   let streamURL = URL(string: sourceURL) {
+                    return try await processMasterPlaylist(streamURL)
                 }
-                
-                if let url = URL(string: variantURLString) {
-                    return try await processVariantPlaylist(url)
+                if let movie = json["movie"] as? [String: Any],
+                   let sources = movie["sources"] as? [[String: Any]],
+                   let firstSource = sources.first,
+                   let sourceURL = firstSource["url"] as? String,
+                   let streamURL = URL(string: sourceURL) {
+                    return try await processMasterPlaylist(streamURL)
+                }
+            }
+            throw StreamError.unsupportedURL
+        }
+        
+        // Master playlist - có variant
+        if content.contains("#EXT-X-STREAM-INF") {
+            let lines = content.components(separatedBy: .newlines)
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                    let variantURLString: String
+                    if trimmed.hasPrefix("http") {
+                        variantURLString = trimmed
+                    } else {
+                        let base = masterURL.deletingLastPathComponent().absoluteString
+                        variantURLString = "\(base)/\(trimmed)"
+                    }
+                    
+                    if let url = URL(string: variantURLString) {
+                        return try await processVariantPlaylist(url)
+                    }
                 }
             }
         }
         
-        // Nếu không có variant, trả về masterURL
+        // Trả về chính nó nếu là variant trực tiếp
         return masterURL
     }
     
@@ -165,6 +234,7 @@ class Phim1280Extractor {
                     absoluteURL = trimmed
                         .replacingOccurrences(of: "//", with: "/")
                         .replacingOccurrences(of: "https:/", with: "https://")
+                        .replacingOccurrences(of: "http:/", with: "http://")
                 } else {
                     let base = variantURL.deletingLastPathComponent().absoluteString
                     let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
