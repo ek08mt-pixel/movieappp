@@ -149,10 +149,11 @@ class Phim1280Extractor {
         return videoURL
     }
     
-    private func downloadTikTokSegments(_ content: String, baseURL: URL, limit: Int = 30) async throws -> URL {
-        print("📥 Bắt đầu tải TikTok segments...")
+    private func downloadTikTokSegments(_ content: String, baseURL: URL, limit: Int = 50) async throws -> URL {
+       print("📥 Bắt đầu tải TikTok segments...")
         
         let lines = content.components(separatedBy: .newlines)
+        print("🔍 Số dòng content: \(lines.count)")
         var newLines: [String] = []
         var segmentCount = 0
         
