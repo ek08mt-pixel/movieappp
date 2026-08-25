@@ -565,8 +565,13 @@ didResume = false
                     await MainActor.run {
     currentStreamURL = result
     selectedQuality = detectQuality(from: result)
-    errorMessage = "Path: \(result.path)"
-                        
+    
+    // Đọc nội dung file m3u8
+    if let content = try? String(contentsOf: result, encoding: .utf8) {
+        errorMessage = "Content: \(content.prefix(300))"
+    } else {
+        errorMessage = "Path: \(result.path)"
+    }
                         let asset = AVURLAsset(url: result, options: [
                             "AVURLAssetHTTPHeaderFieldsKey": [
                                 "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
