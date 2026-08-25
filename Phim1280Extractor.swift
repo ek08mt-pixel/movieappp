@@ -169,6 +169,7 @@ class Phim1280Extractor {
         
         // Kiểm tra JSON response (không phải m3u8)
         if content.hasPrefix("{") || content.hasPrefix("[") {
+            print("🔍 JSON response: \(content.prefix(300))")
             // Đây là JSON - có thể chứa URL m3u8
             if let jsonData = content.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
