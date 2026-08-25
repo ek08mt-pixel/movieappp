@@ -22,7 +22,7 @@ class Phim1280Extractor {
         mediaType: String?,
         season: Int? = nil,
         episode: Int? = nil
-    ) async throws -> URL {
+    ) async throws -> (url: URL, slug: String) {
         
         let slug = try await findSlug(tmdbID: tmdbID, title: title)
         let watchURL = "\(baseURL)/api/watch/\(slug)"
@@ -44,7 +44,7 @@ class Phim1280Extractor {
                    let firstSource = sources.first,
                    let sourceURL = firstSource["url"] as? String,
                    let streamURL = URL(string: sourceURL) {
-                    return try await processPlaylist(streamURL)
+                    return (try await processPlaylist(streamURL), slug)
                 }
             }
         }
@@ -54,7 +54,7 @@ class Phim1280Extractor {
             if let hlsUrl = movie["hlsUrl"] as? String {
                 let fullHlsURL = hlsUrl.hasPrefix("/") ? "\(baseURL)\(hlsUrl)" : hlsUrl
                 if let streamURL = URL(string: fullHlsURL) {
-                    return try await processPlaylist(streamURL)
+                    return (try await processPlaylist(streamURL), slug)
                 }
             }
             if let sources = movie["sources"] as? [[String: Any]],
@@ -62,7 +62,7 @@ class Phim1280Extractor {
                let sourceURL = firstSource["url"] as? String {
                 let fullSourceURL = sourceURL.hasPrefix("/") ? "\(baseURL)\(sourceURL)" : sourceURL
                 if let streamURL = URL(string: fullSourceURL) {
-                    return try await processPlaylist(streamURL)
+                    return (try await processPlaylist(streamURL), slug)
                 }
             }
         }
@@ -72,7 +72,7 @@ class Phim1280Extractor {
            let sourceURL = firstSource["url"] as? String {
             let fullSourceURL = sourceURL.hasPrefix("/") ? "\(baseURL)\(sourceURL)" : sourceURL
             if let streamURL = URL(string: fullSourceURL) {
-                return try await processPlaylist(streamURL)
+                return (try await processPlaylist(streamURL), slug)
             }
         }
         
@@ -94,20 +94,10 @@ class Phim1280Extractor {
             m3u8Content = String(content[range.lowerBound...])
         }
         
-        // Nếu là master playlist
         if m3u8Content.contains("#EXT-X-STREAM-INF") {
             return try await processMasterPlaylist(m3u8Content, baseURL: playlistURL)
         }
         
-        // Nếu là variant trực tiếp (không có STREAM-INF)
-        if m3u8Content.contains("#EXTINF") {
-            // Kiểm tra nếu là TikTok CDN
-            if m3u8Content.contains("tiktokcdn") {
-                return try await downloadTikTokSegments(m3u8Content, baseURL: playlistURL)
-            }
-        }
-        
-        // CDN link trực tiếp - trả về URL
         return playlistURL
     }
     
@@ -129,7 +119,7 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Fetch variant content
+        // Fetch variant
         var request = URLRequest(url: videoURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
@@ -139,13 +129,10 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Nếu variant chứa TikTok CDN → tải segments
         if variantContent.contains("tiktokcdn") || videoURLString.contains("/api/hls/tiktok/") {
-            print("📥 Phát hiện TikTok, tải segments...")
             return try await downloadTikTokSegments(variantContent, baseURL: videoURL)
         }
         
-        // Không phải TikTok → trả về videoURL
         return videoURL
     }
     
@@ -155,7 +142,6 @@ class Phim1280Extractor {
         let lines = content.components(separatedBy: .newlines)
         print("🔍 Số dòng content: \(lines.count)")
         
-        // Lấy tất cả segment URLs trước
         var segmentURLs: [URL] = []
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -169,7 +155,6 @@ class Phim1280Extractor {
         
         print("🔍 Tổng segments cần tải: \(segmentURLs.count)")
         
-        // Tải song song
         var downloadedSegments: [URL] = []
         
         await withTaskGroup(of: (Int, URL?).self) { group in
@@ -199,7 +184,6 @@ class Phim1280Extractor {
             }
         }
         
-        // Tạo local m3u8
         var newLines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7", "#EXT-X-TARGETDURATION:20", "#EXT-X-MEDIA-SEQUENCE:0"]
         
         let sortedSegments = downloadedSegments.sorted { $0.lastPathComponent < $1.lastPathComponent }
