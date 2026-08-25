@@ -129,6 +129,8 @@ struct MoviePlayerView: View {
     @State private var showSeekPreview = false
     @State private var seekPreviewImage: UIImage?
     @State private var seekPreviewTime: Double = 0
+    @State private var showPhim1280WebView = false
+    @State private var phim1280WebURL: URL?
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
     
@@ -231,7 +233,10 @@ selectedSource = initialSource
         Spacer()
     }
 }
-            
+            if showPhim1280WebView, let url = phim1280WebURL {
+                Phim1280WebPlayerView(url: url)
+                    .ignoresSafeArea()
+            }
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             
@@ -562,16 +567,36 @@ didResume = false
                         episode: ep
                     )
                     
-                    await MainActor.run {
-    currentStreamURL = result
-    selectedQuality = detectQuality(from: result)
-    
-    // Đọc nội dung file m3u8
-    if let content = try? String(contentsOf: result, encoding: .utf8) {
-        errorMessage = "Content: \(content.prefix(300))"
-    } else {
-        errorMessage = "Path: \(result.path)"
-    }
+                    if result.absoluteString.contains("tiktok") || result.absoluteString.contains("film4k_tiktok") {
+                        await MainActor.run {
+                            let slug = movieTitle.lowercased().replacingOccurrences(of: " ", with: "-")
+                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
+                            showPhim1280WebView = true
+                            isLoading = false
+                            sourceStatus[.phim1280] = true
+                        }
+                    } else {
+                        await MainActor.run {
+                            currentStreamURL = result
+                            selectedQuality = detectQuality(from: result)
+                            errorMessage = nil
+                            
+                            let asset = AVURLAsset(url: result, options: [
+                                "AVURLAssetHTTPHeaderFieldsKey": [
+                                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+                                    "Referer": "https://film4k.net/"
+                                ]
+                            ])
+                            let playerItem = AVPlayerItem(asset: asset)
+                            player.replaceCurrentItem(with: playerItem)
+                            player.play()
+                            
+                            hasStartedPlaying = true
+                            isLoading = false
+                            sourceStatus[.phim1280] = true
+                            didResume = false
+                        }
+                    }
                         let asset = AVURLAsset(url: result, options: [
                             "AVURLAssetHTTPHeaderFieldsKey": [
                                 "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
@@ -1165,3 +1190,21 @@ struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Bi
 }
 
 extension VideoGravityMode { var avGravity: AVLayerVideoGravity { switch self { case .fit: return .resizeAspect; case .fill: return .resizeAspectFill; case .stretch: return .resize } } }
+struct Phim1280WebPlayerView: UIViewRepresentable {
+    let url: URL
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        
+        let wv = WKWebView(frame: .zero, configuration: config)
+        wv.backgroundColor = .black
+        wv.isOpaque = false
+        wv.scrollView.isScrollEnabled = false
+        wv.load(URLRequest(url: url))
+        return wv
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
