@@ -196,6 +196,8 @@ class Phim1280Extractor {
         try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
         
         print("✅ Local m3u8: \(segmentCount) segments")
+        print("✅ File exists: \(FileManager.default.fileExists(atPath: fileURL.path))")
+        print("✅ File path: \(fileURL.path)")
         return fileURL
     }
     
