@@ -569,8 +569,7 @@ didResume = false
                     
                     if result.absoluteString.contains("tiktok") || result.absoluteString.contains("film4k_tiktok") {
                         await MainActor.run {
-                            let slug = movieTitle.lowercased().replacingOccurrences(of: " ", with: "-")
-                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
+                            phim1280WebURL = result
                             showPhim1280WebView = true
                             isLoading = false
                             sourceStatus[.phim1280] = true
