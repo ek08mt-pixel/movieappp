@@ -563,9 +563,9 @@ didResume = false
                     )
                     
                     await MainActor.run {
-                        currentStreamURL = result
-                        selectedQuality = detectQuality(from: result)
-                        errorMessage = nil
+    currentStreamURL = result
+    selectedQuality = detectQuality(from: result)
+    errorMessage = "Path: \(result.path)"
                         
                         let asset = AVURLAsset(url: result, options: [
                             "AVURLAssetHTTPHeaderFieldsKey": [
