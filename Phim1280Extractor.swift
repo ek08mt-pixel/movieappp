@@ -127,49 +127,52 @@ class Phim1280Extractor {
     // MARK: - Find Slug
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
-        let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let homeURL = "\(baseURL)/api/home?q=\(query)"
-        guard let url = URL(string: homeURL) else { throw StreamError.movieNotFound }
+    // Thử nhiều query
+    let queries = [
+        title,
+        title.components(separatedBy: " ").first ?? title,
+        title.components(separatedBy: " ").last ?? title
+    ]
+    
+    for query in queries {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let homeURL = "\(baseURL)/api/home?q=\(encoded)"
+        guard let url = URL(string: homeURL) else { continue }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let list = json["list"] as? [[String: Any]] {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
             
-            for item in list {
-                if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-                   let slug = item["slug"] as? String {
-                    return slug
-                }
-            }
-            
-            let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-            for item in list {
-                if let titleObj = item["title"] as? [String: Any] {
-                    let enTitle = (titleObj["en"] as? String ?? "").lowercased()
-                    let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
-                    
-                    if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
-                       viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let list = json["list"] as? [[String: Any]] {
+                
+                for item in list {
+                    if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
                        let slug = item["slug"] as? String {
                         return slug
                     }
                 }
+                
+                let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+                for item in list {
+                    if let titleObj = item["title"] as? [String: Any] {
+                        let enTitle = (titleObj["en"] as? String ?? "").lowercased()
+                        let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
+                        
+                        if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                           viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                           let slug = item["slug"] as? String {
+                            return slug
+                        }
+                    }
+                }
             }
+        } catch {
+            continue
         }
-        
-        // Fallback: tạo slug từ title
-        let fallbackSlug = title.lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: "&", with: "and")
-            .replacingOccurrences(of: "'", with: "")
-            .replacingOccurrences(of: ",", with: "")
-            .replacingOccurrences(of: ".", with: "")
-        
-        print("🔍 Fallback slug: \(fallbackSlug)")
-        return fallbackSlug
     }
+    
+    throw StreamError.movieNotFound
+}
     
     // MARK: - Extract Stream URL
     
@@ -265,8 +268,8 @@ class Phim1280Extractor {
             if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
                 let absoluteURL: String
                 if trimmed.hasPrefix("http") {
-                    absoluteURL = trimmed
-                } else {
+    absoluteURL = trimmed.replacingOccurrences(of: "//", with: "/").replacingOccurrences(of: "https:/", with: "https://")
+} else {
                     let base = variantURL.deletingLastPathComponent().absoluteString
                     let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
                     let cleanPath = trimmed.hasPrefix("/") ? String(trimmed.dropFirst()) : trimmed
