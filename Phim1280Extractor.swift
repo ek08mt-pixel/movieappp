@@ -24,10 +24,7 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
-        print("🔍 fetchStream bắt đầu: \(title) (tmdb: \(tmdbID)) S\(season ?? -1)E\(episode ?? -1)")
-        
         let slug = try await findSlug(tmdbID: tmdbID, title: title)
-        print("🔍 Slug: \(slug)")
         let watchURL = "\(baseURL)/api/watch/\(slug)"
         guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
         
@@ -83,7 +80,6 @@ class Phim1280Extractor {
     }
     
     private func processPlaylist(_ playlistURL: URL) async throws -> URL {
-        print("🔍 processPlaylist: \(playlistURL.absoluteString.prefix(100))")
         var request = URLRequest(url: playlistURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
@@ -103,13 +99,19 @@ class Phim1280Extractor {
             return try await processMasterPlaylist(m3u8Content, baseURL: playlistURL)
         }
         
-        // Nếu là variant trực tiếp - trả về playlistURL
-        print("✅ Variant: \(playlistURL.absoluteString.prefix(80))")
+        // Nếu là variant trực tiếp (không có STREAM-INF)
+        if m3u8Content.contains("#EXTINF") {
+            // Kiểm tra nếu là TikTok CDN
+            if m3u8Content.contains("tiktokcdn") {
+                return try await downloadTikTokSegments(m3u8Content, baseURL: playlistURL)
+            }
+        }
+        
+        // CDN link trực tiếp - trả về URL
         return playlistURL
     }
     
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
-        print("🔍 Master playlist có \(content.components(separatedBy: .newlines).count) dòng")
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
         
@@ -118,6 +120,7 @@ class Phim1280Extractor {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
                     videoVariantURL = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
+                    break
                 }
             }
         }
@@ -126,25 +129,36 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Trả về video variant URL trực tiếp
-        print("✅ Video variant: \(videoURLString.prefix(80))")
+        // Fetch variant content
+        var request = URLRequest(url: videoURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let variantContent = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        // Nếu variant chứa TikTok CDN → tải segments
+        if variantContent.contains("tiktokcdn") {
+            return try await downloadTikTokSegments(variantContent, baseURL: videoURL)
+        }
+        
+        // Không phải TikTok → trả về videoURL
         return videoURL
     }
     
-    private func downloadAllSegments(_ content: String, baseURL: URL) async throws -> URL {
+    private func downloadTikTokSegments(_ content: String, baseURL: URL, limit: Int = 30) async throws -> URL {
+        print("📥 Bắt đầu tải TikTok segments...")
+        
         let lines = content.components(separatedBy: .newlines)
         var newLines: [String] = []
         var segmentCount = 0
         
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let segmentURLString: String
-                if trimmed.hasPrefix("http") {
-                    segmentURLString = trimmed
-                } else {
-                    segmentURLString = "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
-                }
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") && segmentCount < limit {
+                let segmentURLString = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
                 
                 if let segmentURL = URL(string: segmentURLString) {
                     var request = URLRequest(url: segmentURL)
@@ -154,16 +168,16 @@ class Phim1280Extractor {
                     do {
                         let (segmentData, _) = try await URLSession.shared.data(for: request)
                         let tempDir = FileManager.default.temporaryDirectory
-                        let fileURL = tempDir.appendingPathComponent("seg_\(segmentCount).ts")
+                        let fileURL = tempDir.appendingPathComponent("tiktok_seg_\(segmentCount).ts")
                         try segmentData.write(to: fileURL)
                         newLines.append(fileURL.path)
                         segmentCount += 1
                         
-                        if segmentCount % 10 == 0 {
+                        if segmentCount % 5 == 0 {
                             print("✅ Đã tải \(segmentCount) segments")
                         }
                     } catch {
-                        print("⚠️ Lỗi segment \(segmentURLString): \(error)")
+                        print("⚠️ Lỗi segment: \(error)")
                         newLines.append(segmentURLString)
                     }
                 }
@@ -172,87 +186,16 @@ class Phim1280Extractor {
             }
         }
         
+        // Thêm ENDLIST
+        newLines.append("#EXT-X-ENDLIST")
+        
         let localContent = newLines.joined(separator: "\n")
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_local_\(Date().timeIntervalSince1970).m3u8")
+        let fileURL = tempDir.appendingPathComponent("film4k_tiktok_local_\(Date().timeIntervalSince1970).m3u8")
         try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
         
         print("✅ Local m3u8: \(segmentCount) segments")
         return fileURL
-    }
-    
-    private func fetchVariantWithAudio(videoURL: URL, audioURLs: [String], subtitleURLs: [String]) async throws -> URL {
-        var request = URLRequest(url: videoURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let videoContent = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        // Tạo local m3u8
-        var lines = videoContent.components(separatedBy: .newlines)
-        var result: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
-        
-        // Thêm audio tracks
-        if !audioURLs.isEmpty {
-            for audioURL in audioURLs {
-                result.append("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"Audio\",URI=\"\(audioURL)\"")
-            }
-        }
-        
-        // Thêm subtitles
-        if !subtitleURLs.isEmpty {
-            for subtitleURL in subtitleURLs {
-                result.append("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"sub\",NAME=\"Sub\",URI=\"\(subtitleURL)\"")
-            }
-        }
-        
-        // Thêm video segments với absolute URLs
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                if trimmed.hasPrefix("http") {
-                    result.append(trimmed)
-                } else {
-                    let base = videoURL.deletingLastPathComponent().absoluteString
-                    result.append("\(base)/\(trimmed)")
-                }
-            } else if trimmed.hasPrefix("#EXTINF") || trimmed.hasPrefix("#EXT-X-MAP") || trimmed.hasPrefix("#EXT-X-TARGETDURATION") || trimmed.hasPrefix("#EXT-X-MEDIA-SEQUENCE") || trimmed.hasPrefix("#EXT-X-PLAYLIST-TYPE") {
-                result.append(trimmed)
-            }
-        }
-        
-        let localContent = result.joined(separator: "\n")
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_tiktok_\(Date().timeIntervalSince1970).m3u8")
-        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        
-        print("✅ Tạo local m3u8 với \(audioURLs.count) audio, \(subtitleURLs.count) subtitle")
-        return fileURL
-    }
-    
-    private func createLocalVariant(_ content: String, baseURL: URL) async throws -> URL {
-        let lines = content.components(separatedBy: .newlines)
-        var newLines: [String] = []
-        
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                if trimmed.hasPrefix("http") {
-                    newLines.append(trimmed)
-                } else {
-                    let base = baseURL.deletingLastPathComponent().absoluteString
-                    newLines.append("\(base)/\(trimmed)")
-                }
-            } else {
-                newLines.append(line)
-            }
-        }
-        
-        // Trả về baseURL trực tiếp
-        return baseURL
     }
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
