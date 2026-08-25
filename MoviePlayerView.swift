@@ -1178,9 +1178,6 @@ struct CastRemoteView: View {
 struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?; var gravity: VideoGravityMode = .fit
     func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = gravity.avGravity; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { ui.videoGravity = gravity.avGravity; DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
-}
-
-extension VideoGravityMode { var avGravity: AVLayerVideoGravity { switch self { case .fit: return .resizeAspect; case .fill: return .resizeAspectFill; case .stretch: return .resize } } }
 struct Phim1280WebPlayerView: UIViewRepresentable {
     let url: URL
     
@@ -1189,12 +1186,24 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
-        // JS đơn giản - chỉ ẩn header/footer, giữ video
         let js = """
         (function() {
-            var style = document.createElement('style');
-            style.innerHTML = 'header, nav, footer, .breadcrumb, .movie-info, .movie-action, .movie-server, .eps-head, .eps-split, .watch-header, .watch-tabs, .related, .comments { display: none !important; } body { background: #000 !important; } .watch-player { margin: 0 !important; padding: 0 !important; }';
-            document.head.appendChild(style);
+            // Xóa tất cả elements, chỉ giữ video
+            setTimeout(function() {
+                var video = document.querySelector('video');
+                if (video) {
+                    // Xóa toàn bộ body
+                    document.body.innerHTML = '';
+                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
+                    
+                    // Thêm video vào body full màn hình
+                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
+                    video.controls = false;
+                    video.playsInline = true;
+                    document.body.appendChild(video);
+                    video.play();
+                }
+            }, 2000);
         })();
         """
         let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
