@@ -1202,49 +1202,34 @@ struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Bi
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { ui.videoGravity = gravity.avGravity; DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
     }
 struct Phim1280WebPlayerView: UIViewRepresentable {
-    let url: URL
+    let url: URL  // URL m3u8 trực tiếp
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
-        let js = """
-        (function() {
-            function cleanPage() {
-                var video = document.querySelector('video');
-                if (video) {
-                    document.body.innerHTML = '';
-                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
-                    video.controls = true;
-                    video.setAttribute('controls', 'controls');
-                    video.playsInline = false;
-                    document.body.appendChild(video);
-                    video.play();
-                    return true;
-                }
-                return false;
-            }
-            
-            // Thử nhiều lần
-            var attempts = 0;
-            var interval = setInterval(function() {
-                attempts++;
-                if (cleanPage() || attempts > 20) {
-                    clearInterval(interval);
-                }
-            }, 500);
-        })();
+        // Tạo HTML với video element
+        let html = """
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        body { margin:0; padding:0; background:#000; overflow:hidden; }
+        video { width:100vw; height:100vh; object-fit:contain; }
+        </style>
+        </head>
+        <body>
+        <video src="\(url.absoluteString)" controls autoplay playsinline></video>
+        </body>
+        </html>
         """
-        let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        config.userContentController.addUserScript(userScript)
         
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.backgroundColor = .black
         wv.isOpaque = false
         wv.scrollView.isScrollEnabled = false
-        wv.load(URLRequest(url: url))
+        wv.loadHTMLString(html, baseURL: nil)
         return wv
     }
     
