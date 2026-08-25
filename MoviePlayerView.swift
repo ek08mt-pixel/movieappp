@@ -1212,12 +1212,21 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         let js = """
         (function() {
             // Xóa tất cả elements, chỉ giữ video
+            // Ẩn body ngay lập tức
+            document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
+            
             setTimeout(function() {
                 var video = document.querySelector('video');
                 if (video) {
-                    // Xóa toàn bộ body
                     document.body.innerHTML = '';
-                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
+                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
+                    video.controls = true;
+                    video.setAttribute('controls', 'controls');
+                    video.playsInline = false;
+                    document.body.appendChild(video);
+                    video.play();
+                }
+            }, 1000);
                     
                     // Thêm video vào body full màn hình
                     video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
