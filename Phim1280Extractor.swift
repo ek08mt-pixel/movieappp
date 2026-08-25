@@ -140,7 +140,8 @@ class Phim1280Extractor {
         }
         
         // Nếu variant chứa TikTok CDN → tải segments
-        if variantContent.contains("tiktokcdn") {
+        if variantContent.contains("tiktokcdn") || videoURLString.contains("/api/hls/tiktok/") {
+            print("📥 Phát hiện TikTok, tải segments...")
             return try await downloadTikTokSegments(variantContent, baseURL: videoURL)
         }
         
