@@ -41,9 +41,12 @@ class Phim1280Extractor {
     // MARK: - Fetch Movie Stream
     
     private func fetchMovieStream(tmdbID: Int, title: String) async throws -> URL {
-    // Bước 1: Tìm slug từ /api/home?q=title
-    let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-    let homeURL = "\(baseURL)/api/home?q=\(query)"
+    // Fallback: tìm trong /api/home
+        let shortTitle = title.components(separatedBy: " ").dropFirst().joined(separator: " ")
+        let searchQuery = shortTitle.isEmpty ? title : shortTitle
+        let query = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let homeURL = "\(baseURL)/api/home?q=\(query)"
+        print("🔍 Search query: \(searchQuery)")
     
     if let url = URL(string: homeURL) {
         do {
