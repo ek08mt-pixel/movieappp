@@ -41,96 +41,87 @@ class Phim1280Extractor {
     // MARK: - Fetch Movie Stream
     
     private func fetchMovieStream(tmdbID: Int, title: String) async throws -> URL {
-        // Thử fetch trực tiếp /api/watch/{slug}
-        let fallbackSlug = title.lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: "&", with: "and")
-            .replacingOccurrences(of: "'", with: "")
-            .replacingOccurrences(of: ",", with: "")
-            .replacingOccurrences(of: ".", with: "")
-        
-        print("🔍 Thử slug: \(fallbackSlug)")
-        
-        let watchURL = "\(baseURL)/api/watch/\(fallbackSlug)"
-        if let url = URL(string: watchURL) {
-            do {
-                let (data, response) = try await URLSession.shared.data(from: url)
-                if let httpResponse = response as? HTTPURLResponse,
-                   httpResponse.statusCode == 200,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    
-                    // Kiểm tra movie có tồn tại không
-                    if let movie = json["movie"] as? [String: Any] {
-                        print("✅ Tìm thấy movie qua /api/watch!")
+    // Bước 1: Tìm slug từ /api/home?q=title
+    let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+    let homeURL = "\(baseURL)/api/home?q=\(query)"
+    
+    if let url = URL(string: homeURL) {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                var allItems: [[String: Any]] = []
+                
+                if let list = json["list"] as? [[String: Any]] {
+                    allItems.append(contentsOf: list)
+                }
+                if let hero = json["hero"] as? [[String: Any]] {
+                    allItems.append(contentsOf: hero)
+                }
+                if let top = json["top"] as? [[String: Any]] {
+                    allItems.append(contentsOf: top)
+                }
+                
+                // Tìm slug theo tmdbID hoặc title
+                for item in allItems {
+                    if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
+                       let slug = item["slug"] as? String {
+                        print("✅ Slug theo TMDB: \(slug)")
+                        return try await fetchStreamBySlug(slug)
+                    }
+                }
+                
+                let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+                for item in allItems {
+                    if let titleObj = item["title"] as? [String: Any] {
+                        let enTitle = (titleObj["en"] as? String ?? "").lowercased()
+                        let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
                         
-                        // Lấy sources từ movie
-                        if let sources = movie["sources"] as? [[String: Any]],
-                           let firstSource = sources.first,
-                           let sourceURL = firstSource["url"] as? String,
-                           let streamURL = URL(string: sourceURL) {
-                            print("✅ Source: \(sourceURL.prefix(100))")
-                            return try await processMasterPlaylist(streamURL)
-                        }
-                        
-                        // Lấy sources từ root
-                        if let sources = json["sources"] as? [[String: Any]],
-                           let firstSource = sources.first,
-                           let sourceURL = firstSource["url"] as? String,
-                           let streamURL = URL(string: sourceURL) {
-                            print("✅ Source (root): \(sourceURL.prefix(100))")
-                            return try await processMasterPlaylist(streamURL)
+                        if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                           viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                           let slug = item["slug"] as? String {
+                            print("✅ Slug theo title: \(slug)")
+                            return try await fetchStreamBySlug(slug)
                         }
                     }
                 }
-            } catch {
-                print("⚠️ Không fetch được /api/watch/\(fallbackSlug)")
             }
+        } catch {
+            print("⚠️ Lỗi /api/home")
         }
-        
-        // Fallback: tìm trong /api/home
-        let query = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let homeURL = "\(baseURL)/api/home?q=\(query)"
-        guard let url = URL(string: homeURL) else { throw StreamError.noStreamAvailable }
-        
-        let (data, _) = try await URLSession.shared.data(from: url)
-        
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            var allItems: [[String: Any]] = []
-            
-            if let list = json["list"] as? [[String: Any]] {
-                allItems.append(contentsOf: list)
-            }
-            if let hero = json["hero"] as? [[String: Any]] {
-                allItems.append(contentsOf: hero)
-            }
-            if let top = json["top"] as? [[String: Any]] {
-                allItems.append(contentsOf: top)
-            }
-            
-            for item in allItems {
-                if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID {
-                    print("✅ Tìm thấy theo TMDB ID: \(tmdbID)")
-                    return try await extractStreamURL(from: item)
-                }
-            }
-            
-            let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-            for item in allItems {
-                if let titleObj = item["title"] as? [String: Any] {
-                    let enTitle = (titleObj["en"] as? String ?? "").lowercased()
-                    let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
-                    
-                    if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
-                       viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle) {
-                        return try await extractStreamURL(from: item)
-                    }
-                }
-            }
-        }
-        
+    }
+    
+    throw StreamError.movieNotFound
+}
+
+private func fetchStreamBySlug(_ slug: String) async throws -> URL {
+    let watchURL = "\(baseURL)/api/watch/\(slug)"
+    guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
+    
+    let (data, _) = try await URLSession.shared.data(from: url)
+    
+    guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
         throw StreamError.movieNotFound
     }
+    
+    // Lấy sources từ movie hoặc root
+    if let movie = json["movie"] as? [String: Any],
+       let sources = movie["sources"] as? [[String: Any]],
+       let firstSource = sources.first,
+       let sourceURL = firstSource["url"] as? String,
+       let streamURL = URL(string: sourceURL) {
+        return try await processMasterPlaylist(streamURL)
+    }
+    
+    if let sources = json["sources"] as? [[String: Any]],
+       let firstSource = sources.first,
+       let sourceURL = firstSource["url"] as? String,
+       let streamURL = URL(string: sourceURL) {
+        return try await processMasterPlaylist(streamURL)
+    }
+    
+    throw StreamError.noStreamAvailable
+}
     
     // MARK: - Fetch Episode Stream
     
