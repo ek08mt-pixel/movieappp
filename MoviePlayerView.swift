@@ -1283,7 +1283,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
             webView.configuration.userContentController.add(self, name: "tracksInfo")
             
             let js = """
-        (function() {
+            (function() {
             document.documentElement.style.backgroundColor = '#000';
             document.body.style.backgroundColor = '#000';
             document.body.style.opacity = '0';
