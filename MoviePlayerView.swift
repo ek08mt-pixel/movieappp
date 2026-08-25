@@ -1189,6 +1189,31 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
+        // JavaScript: ẩn tất cả, chỉ giữ video player
+        let js = """
+        (function() {
+            // Ẩn mọi thứ trừ video
+            var style = document.createElement('style');
+            style.innerHTML = `
+                body > *:not(.watch-player):not(#player-container):not(video) { display: none !important; }
+                body { background: #000 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+                .watch-player { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; margin: 0 !important; padding: 0 !important; }
+                .watch-player > *:not(video):not(.video-js):not([class*="player"]) { display: none !important; }
+                header, nav, footer, .breadcrumb, .movie-single-content, .related, .comments, .eps-head, .eps-split, .watch-header, .watch-tabs { display: none !important; }
+                video { width: 100vw !important; height: 100vh !important; object-fit: contain !important; }
+            `;
+            document.head.appendChild(style);
+            
+            // Tự động play
+            setTimeout(function() {
+                var video = document.querySelector('video');
+                if (video) { video.play(); video.controls = false; }
+            }, 1000);
+        })();
+        """
+        let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(userScript)
+        
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.backgroundColor = .black
         wv.isOpaque = false
