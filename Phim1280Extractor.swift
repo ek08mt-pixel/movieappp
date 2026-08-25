@@ -124,8 +124,6 @@ class Phim1280Extractor {
         throw StreamError.movieNotFound
     }
     
-    // MARK: - Find Slug
-    
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
         print("🔍 Tìm slug cho title: \(title)")
         print("🔍 TMDB ID: \(tmdbID)")
@@ -138,46 +136,50 @@ class Phim1280Extractor {
         
         for query in queries {
             print("🔍 Query: \(query)")
-    
-    for query in queries {
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let homeURL = "\(baseURL)/api/home?q=\(encoded)"
-        guard let url = URL(string: homeURL) else { continue }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
             
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let list = json["list"] as? [[String: Any]] {
+            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let homeURL = "\(baseURL)/api/home?q=\(encoded)"
+            guard let url = URL(string: homeURL) else { continue }
+            
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
                 
-                for item in list {
-                    if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-                       let slug = item["slug"] as? String {
-                        return slug
-                    }
-                }
-                
-                let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
-                for item in list {
-                    if let titleObj = item["title"] as? [String: Any] {
-                        let enTitle = (titleObj["en"] as? String ?? "").lowercased()
-                        let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
-                        
-                        if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
-                           viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let list = json["list"] as? [[String: Any]] {
+                    
+                    print("🔍 Số kết quả: \(list.count)")
+                    
+                    for item in list {
+                        if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
                            let slug = item["slug"] as? String {
+                            print("✅ Tìm thấy theo TMDB: \(slug)")
                             return slug
                         }
                     }
+                    
+                    let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+                    for item in list {
+                        if let titleObj = item["title"] as? [String: Any] {
+                            let enTitle = (titleObj["en"] as? String ?? "").lowercased()
+                            let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
+                            
+                            if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
+                               viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
+                               let slug = item["slug"] as? String {
+                                print("✅ Tìm thấy theo title: \(slug)")
+                                return slug
+                            }
+                        }
+                    }
                 }
+            } catch {
+                print("❌ Lỗi query \(query): \(error)")
+                continue
             }
-        } catch {
-            continue
         }
+        
+        throw StreamError.movieNotFound
     }
-    
-    throw StreamError.movieNotFound
-}
     
     // MARK: - Extract Stream URL
     
