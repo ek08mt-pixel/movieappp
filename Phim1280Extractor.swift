@@ -132,9 +132,10 @@ class Phim1280Extractor {
             }
         }
         
-        // Fetch video variant
+        // Trả về video variant trực tiếp
         if let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) {
-            return try await fetchVariantWithAudio(videoURL: videoURL, audioURLs: audioVariants, subtitleURLs: subtitleVariants)
+            print("✅ Video variant: \(videoURLString.prefix(80))")
+            return videoURL
         }
         
         throw StreamError.noStreamAvailable
@@ -210,12 +211,8 @@ class Phim1280Extractor {
             }
         }
         
-        let localContent = newLines.joined(separator: "\n")
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_\(Date().timeIntervalSince1970).m3u8")
-        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        
-        return fileURL
+        // Trả về baseURL trực tiếp
+        return baseURL
     }
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
