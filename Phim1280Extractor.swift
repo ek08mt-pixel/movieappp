@@ -61,7 +61,8 @@ class Phim1280Extractor {
         if let movie = json["movie"] as? [String: Any] {
             // Lấy hlsUrl từ movie
             if let hlsUrl = movie["hlsUrl"] as? String {
-                if let streamURL = URL(string: hlsUrl) {
+                let fullHlsURL = hlsUrl.hasPrefix("/") ? "\(baseURL)\(hlsUrl)" : hlsUrl
+                if let streamURL = URL(string: fullHlsURL) {
                     print("✅ Movie hlsUrl: \(hlsUrl.prefix(80))")
                     return try await processMasterPlaylist(streamURL)
                 }
