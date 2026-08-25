@@ -1196,11 +1196,6 @@ struct CastRemoteView: View {
     func stopCasting() { isCasting = false; EmmewCastManager.shared.stopCasting(); dismiss() }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
-}
-struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?; var gravity: VideoGravityMode = .fit
-    func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = gravity.avGravity; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
-    func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { ui.videoGravity = gravity.avGravity; DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
-    }
 struct Phim1280WebPlayerView: UIViewRepresentable {
     let url: URL
     
@@ -1211,32 +1206,30 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         
         let js = """
         (function() {
-            // Xóa tất cả elements, chỉ giữ video
-            // Ẩn body ngay lập tức
-            document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-            
-            setTimeout(function() {
+            function cleanPage() {
                 var video = document.querySelector('video');
                 if (video) {
                     document.body.innerHTML = '';
+                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
                     video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
                     video.controls = true;
                     video.setAttribute('controls', 'controls');
                     video.playsInline = false;
                     document.body.appendChild(video);
                     video.play();
+                    return true;
                 }
-            }, 1000);
-                    
-                    // Thêm video vào body full màn hình
-                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
-                    video.controls = true;
-                    video.setAttribute('controls', 'controls');
-                    video.playsInline = true;
-                    document.body.appendChild(video);
-                    video.play();
+                return false;
+            }
+            
+            // Thử nhiều lần
+            var attempts = 0;
+            var interval = setInterval(function() {
+                attempts++;
+                if (cleanPage() || attempts > 20) {
+                    clearInterval(interval);
                 }
-            }, 2000);
+            }, 500);
         })();
         """
         let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
