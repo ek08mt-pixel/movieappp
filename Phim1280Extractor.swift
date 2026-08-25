@@ -167,10 +167,44 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Kiểm tra JSON response (không phải m3u8)
-        if content.hasPrefix("{") || content.hasPrefix("[") {
+        // Tìm #EXTM3U trong content (bỏ qua HTML thừa)
+        if let m3u8Range = content.range(of: "#EXTM3U") {
+            let m3u8Content = String(content[m3u8Range.lowerBound...])
+            print("📄 M3U8 content: \(m3u8Content.prefix(300))")
+            
+            // Master playlist - có variant
+            if m3u8Content.contains("#EXT-X-STREAM-INF") {
+                let lines = m3u8Content.components(separatedBy: .newlines)
+                for line in lines {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                        let variantURLString: String
+                        if trimmed.hasPrefix("http") {
+                            variantURLString = trimmed
+                        } else {
+                            let base = masterURL.deletingLastPathComponent().absoluteString
+                            variantURLString = "\(base)/\(trimmed)"
+                        }
+                        
+                        if let url = URL(string: variantURLString) {
+                            print("🎯 Variant URL: \(variantURLString)")
+                            return try await processVariantPlaylist(url)
+                        }
+                    }
+                }
+            }
+            
+            // Nếu không có variant, lưu m3u8 content
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent("film4k_\(Date().timeIntervalSince1970).m3u8")
+            try m3u8Content.write(to: fileURL, atomically: true, encoding: .utf8)
+            print("✅ Lưu m3u8: \(fileURL)")
+            return fileURL
+        }
+        
+        // Kiểm tra JSON (nếu không có #EXTM3U)
+        if content.hasPrefix("{") {
             print("🔍 JSON response: \(content.prefix(300))")
-            // Đây là JSON - có thể chứa URL m3u8
             if let jsonData = content.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
                 if let sources = json["sources"] as? [[String: Any]],
@@ -188,27 +222,6 @@ class Phim1280Extractor {
                 }
             }
             throw StreamError.unsupportedURL
-        }
-        
-        // Master playlist - có variant
-        if content.contains("#EXT-X-STREAM-INF") {
-            let lines = content.components(separatedBy: .newlines)
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                    let variantURLString: String
-                    if trimmed.hasPrefix("http") {
-                        variantURLString = trimmed
-                    } else {
-                        let base = masterURL.deletingLastPathComponent().absoluteString
-                        variantURLString = "\(base)/\(trimmed)"
-                    }
-                    
-                    if let url = URL(string: variantURLString) {
-                        return try await processVariantPlaylist(url)
-                    }
-                }
-            }
         }
         
         // Trả về chính nó nếu là variant trực tiếp
