@@ -553,43 +553,43 @@ didResume = false
         
     
     case .phim1280:
-    do {
-        let result = try await Phim1280Extractor.shared.fetchStream(
-            tmdbID: movieId,
-            title: movieTitle,
-            mediaType: mediaType,
-            season: s,
-            episode: ep
-        )
-        
-        // Đọc nội dung m3u8
-        await MainActor.run {
-    currentStreamURL = result
-    selectedQuality = detectQuality(from: result)
-    errorMessage = nil
-            
-            let asset = AVURLAsset(url: result, options: [
-    "AVURLAssetHTTPHeaderFieldsKey": [
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
-        "Referer": "https://film4k.net/"
-    ]
-])
-let playerItem = AVPlayerItem(asset: asset)
-            player.replaceCurrentItem(with: playerItem)
-            player.play()
-            
-            hasStartedPlaying = true
-            isLoading = false
-            sourceStatus[.phim1280] = true
-            didResume = false
-        }
-        saveHistory()
-    } catch {
-        await MainActor.run {
-            errorMessage = "Phim1280: \(movieTitle) - \(error.localizedDescription)"
-            isLoading = false
-        }
-    }
+                do {
+                    let result = try await Phim1280Extractor.shared.fetchStream(
+                        tmdbID: movieId,
+                        title: movieTitle,
+                        mediaType: mediaType,
+                        season: s,
+                        episode: ep
+                    )
+                    
+                    await MainActor.run {
+                        currentStreamURL = result
+                        selectedQuality = detectQuality(from: result)
+                        errorMessage = nil
+                        
+                        // Dùng custom scheme để HLSResourceLoader xử lý
+                        let urlString = result.absoluteString
+                        let customURL = URL(string: "custom-hls://\(urlString)")!
+                        
+                        let asset = AVURLAsset(url: customURL)
+                        asset.resourceLoader.setDelegate(HLSResourceLoader.shared, queue: .main)
+                        
+                        let playerItem = AVPlayerItem(asset: asset)
+                        player.replaceCurrentItem(with: playerItem)
+                        player.play()
+                        
+                        hasStartedPlaying = true
+                        isLoading = false
+                        sourceStatus[.phim1280] = true
+                        didResume = false
+                    }
+                    saveHistory()
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "Phim1280: \(movieTitle) - \(error.localizedDescription)"
+                        isLoading = false
+                    }
+                }
     
             case .vsmov: 
     let url = try await withCheckedThrowingContinuation { c in 
