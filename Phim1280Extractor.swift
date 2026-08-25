@@ -99,8 +99,9 @@ class Phim1280Extractor {
             return try await processMasterPlaylist(m3u8Content, baseURL: playlistURL)
         }
         
-        // Nếu là variant trực tiếp - tạo local với absolute URLs
-        return try await createLocalVariant(m3u8Content, baseURL: playlistURL)
+        // Nếu là variant trực tiếp - trả về playlistURL
+        print("✅ Variant: \(playlistURL.absoluteString.prefix(80))")
+        return playlistURL
     }
     
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
