@@ -97,7 +97,7 @@ class Phim1280Extractor {
     // Bước 2: Thử slug trực tiếp
     // ... code slug cũ ...
     
-    throw StreamError.movieNotFound
+    throw NSError(domain: "Phim1280", code: 1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy. Words: \(words)"])
 }
 
 private func fetchStreamBySlug(_ slug: String) async throws -> URL {
