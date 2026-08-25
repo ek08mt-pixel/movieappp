@@ -178,34 +178,6 @@ private func fetchStreamBySlug(_ slug: String) async throws -> URL {
     
     throw StreamError.noStreamAvailable
 }
-
-private func fetchStreamBySlug(_ slug: String) async throws -> URL {
-    let watchURL = "\(baseURL)/api/watch/\(slug)"
-    guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
-    
-    let (data, _) = try await URLSession.shared.data(from: url)
-    
-    guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-        throw StreamError.movieNotFound
-    }
-    
-    if let movie = json["movie"] as? [String: Any],
-       let sources = movie["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
-    }
-    
-    if let sources = json["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
-    }
-    
-    throw StreamError.noStreamAvailable
-}
     
     // MARK: - Fetch Episode Stream
     
