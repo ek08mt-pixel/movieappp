@@ -107,24 +107,8 @@ class Phim1280Extractor {
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
-        var audioVariants: [String] = []
-        var subtitleVariants: [String] = []
         
         for line in lines {
-            // Lấy URI từ #EXT-X-MEDIA
-            if line.hasPrefix("#EXT-X-MEDIA"), let uriRange = line.range(of: "URI=\""),
-               let endRange = line[uriRange.upperBound...].range(of: "\"") {
-                let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
-                let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
-                
-                if line.contains("TYPE=AUDIO") {
-                    audioVariants.append(absoluteURI)
-                } else if line.contains("TYPE=SUBTITLES") {
-                    subtitleVariants.append(absoluteURI)
-                }
-            }
-            
-            // Video variant
             if !line.hasPrefix("#") && !line.isEmpty {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
@@ -133,13 +117,72 @@ class Phim1280Extractor {
             }
         }
         
-        // Trả về video variant trực tiếp
-        if let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) {
-            print("✅ Video variant: \(videoURLString.prefix(80))")
-            return videoURL
+        guard let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) else {
+            throw StreamError.noStreamAvailable
         }
         
-        throw StreamError.noStreamAvailable
+        // Fetch variant content
+        var request = URLRequest(url: videoURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let variantContent = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        // Tải tất cả segments về local
+        return try await downloadAllSegments(variantContent, baseURL: videoURL)
+    }
+    
+    private func downloadAllSegments(_ content: String, baseURL: URL) async throws -> URL {
+        let lines = content.components(separatedBy: .newlines)
+        var newLines: [String] = []
+        var segmentCount = 0
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                let segmentURLString: String
+                if trimmed.hasPrefix("http") {
+                    segmentURLString = trimmed
+                } else {
+                    segmentURLString = "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
+                }
+                
+                if let segmentURL = URL(string: segmentURLString) {
+                    var request = URLRequest(url: segmentURL)
+                    request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+                    request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+                    
+                    do {
+                        let (segmentData, _) = try await URLSession.shared.data(for: request)
+                        let tempDir = FileManager.default.temporaryDirectory
+                        let fileURL = tempDir.appendingPathComponent("seg_\(segmentCount).ts")
+                        try segmentData.write(to: fileURL)
+                        newLines.append(fileURL.path)
+                        segmentCount += 1
+                        
+                        if segmentCount % 10 == 0 {
+                            print("✅ Đã tải \(segmentCount) segments")
+                        }
+                    } catch {
+                        print("⚠️ Lỗi segment \(segmentURLString): \(error)")
+                        newLines.append(segmentURLString)
+                    }
+                }
+            } else {
+                newLines.append(line)
+            }
+        }
+        
+        let localContent = newLines.joined(separator: "\n")
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("film4k_local_\(Date().timeIntervalSince1970).m3u8")
+        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        
+        print("✅ Local m3u8: \(segmentCount) segments")
+        return fileURL
     }
     
     private func fetchVariantWithAudio(videoURL: URL, audioURLs: [String], subtitleURLs: [String]) async throws -> URL {
