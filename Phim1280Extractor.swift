@@ -126,18 +126,9 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Fetch variant content
-        var request = URLRequest(url: videoURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let variantContent = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        // Tải tất cả segments về local
-        return try await downloadAllSegments(variantContent, baseURL: videoURL)
+        // Trả về video variant URL trực tiếp
+        print("✅ Video variant: \(videoURLString.prefix(80))")
+        return videoURL
     }
     
     private func downloadAllSegments(_ content: String, baseURL: URL) async throws -> URL {
