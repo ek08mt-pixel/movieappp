@@ -232,10 +232,15 @@ class Phim1280Extractor {
             if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
                 let absoluteURL: String
                 if trimmed.hasPrefix("http") {
-                    absoluteURL = trimmed
-                        .replacingOccurrences(of: "//", with: "/")
-                        .replacingOccurrences(of: "https:/", with: "https://")
-                        .replacingOccurrences(of: "http:/", with: "http://")
+                    var fixed = trimmed
+                    // Sửa // thừa giữa URL (không phải https://)
+                    if let schemeRange = fixed.range(of: "://") {
+                        let prefix = String(fixed[..<schemeRange.upperBound])
+                        let rest = String(fixed[schemeRange.upperBound...])
+                        fixed = prefix + rest.replacingOccurrences(of: "//", with: "/")
+                    }
+                    absoluteURL = fixed
+    }
                 } else {
                     let base = variantURL.deletingLastPathComponent().absoluteString
                     let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
