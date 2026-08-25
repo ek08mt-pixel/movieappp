@@ -585,7 +585,7 @@ didResume = false
         saveHistory()
     } catch {
         await MainActor.run {
-            errorMessage = "Phim1280: \(movieTitle) (tmdb: \(movieId)) - \(error.localizedDescription)"
+            errorMessage = "Phim1280: \(movieTitle) - \(error.localizedDescription)"
             isLoading = false
         }
     }
