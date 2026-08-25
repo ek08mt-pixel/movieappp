@@ -1178,6 +1178,7 @@ struct CastRemoteView: View {
 struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Binding var pipController: AVPictureInPictureController?; var gravity: VideoGravityMode = .fit
     func makeUIViewController(context: Context) -> AVPlayerViewController { let vc = AVPlayerViewController(); vc.player = player; vc.showsPlaybackControls = false; vc.videoGravity = gravity.avGravity; vc.allowsPictureInPicturePlayback = true; vc.canStartPictureInPictureAutomaticallyFromInline = true; try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: .allowAirPlay); try? AVAudioSession.sharedInstance().setActive(true); return vc }
     func updateUIViewController(_ ui: AVPlayerViewController, context: Context) { ui.videoGravity = gravity.avGravity; DispatchQueue.main.async { if pipController == nil, let layer = ui.view.layer.sublayers?.first as? AVPlayerLayer { pipController = AVPictureInPictureController(playerLayer: layer) } } }
+    }
 struct Phim1280WebPlayerView: UIViewRepresentable {
     let url: URL
     
