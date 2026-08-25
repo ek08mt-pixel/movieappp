@@ -274,13 +274,21 @@ selectedSource = initialSource
             }
             
             HStack(spacing: 50) {
-                Button { seek(false) } label: {
+                Button {
+                    let newTime = max(currentTime - 10, 0)
+                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+                } label: {
                     Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
                 }
-                Button { } label: {
+                Button {
+                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
+                } label: {
                     Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
                 }
-                Button { seek(true) } label: {
+                Button {
+                    let newTime = min(currentTime + 10, duration)
+                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+                } label: {
                     Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
                 }
             }
@@ -1234,6 +1242,7 @@ struct CustomPlayerVC: UIViewControllerRepresentable { let player: AVPlayer; @Bi
     }
 struct Phim1280WebPlayerView: UIViewRepresentable {
     let url: URL
+    static weak var activeWebView: WKWebView?
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -1246,6 +1255,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         wv.scrollView.isScrollEnabled = false
         wv.navigationDelegate = context.coordinator
         wv.load(URLRequest(url: url))
+        Phim1280WebPlayerView.activeWebView = wv
         return wv
     }
     
@@ -1257,25 +1267,26 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             let js = """
             (function() {
-                document.body.style.display = 'none';
                 setTimeout(function() {
                     var video = document.querySelector('video');
                     if (video) {
                         document.body.innerHTML = '';
-                        document.body.style.display = 'block';
                         document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
                         video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
-                        
-                        // Tắt controls mặc định (ẩn PIP + zoom)
                         video.controls = false;
-                        video.setAttribute('controls', 'false');
-                        video.removeAttribute('controls');
                         video.disablePictureInPicture = true;
                         video.playsInline = true;
-                        video.webkitPlaysInline = true;
-                        
                         document.body.appendChild(video);
                         video.play();
+                        
+                        // Gửi thời gian về app
+                        setInterval(function() {
+                            window.webkit.messageHandlers.timeUpdate.postMessage({
+                                currentTime: v.currentTime,
+                                duration: v.duration || 1,
+                                paused: v.paused
+                            });
+                        }, 500);
                     }
                 }, 1000);
             })();
