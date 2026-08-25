@@ -66,12 +66,18 @@ class Phim1280Extractor {
                 }
                 
                 for item in allItems {
-                    if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-                       let slug = item["slug"] as? String {
-                        print("✅ Tìm thấy slug qua /api/home: \(slug)")
-                        return try await fetchStreamBySlug(slug)
-                    }
-                }
+    // Không cần check tmdbId, chỉ cần slug tồn tại
+    if let slug = item["slug"] as? String {
+        // Kiểm tra title khớp
+        if let titleObj = item["title"] as? [String: Any] {
+            let enTitle = removeVietnameseDiacritics((titleObj["en"] as? String ?? "").lowercased())
+            if enTitle.contains(cleanTitle) || cleanTitle.contains(enTitle) {
+                print("✅ Tìm thấy slug: \(slug)")
+                return try await fetchStreamBySlug(slug)
+            }
+        }
+    }
+}
                 
                 // Tìm theo title
                 let normalizedTitle = removeVietnameseDiacritics(cleanTitle).trimmingCharacters(in: .whitespaces)
