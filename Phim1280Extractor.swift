@@ -74,11 +74,11 @@ class Phim1280Extractor {
                 }
                 
                 // Tìm theo title
-                let normalizedTitle = cleanTitle.trimmingCharacters(in: .whitespaces)
+                let normalizedTitle = removeVietnameseDiacritics(cleanTitle).trimmingCharacters(in: .whitespaces)
                 for item in allItems {
                     if let titleObj = item["title"] as? [String: Any] {
-                        let enTitle = (titleObj["en"] as? String ?? "").lowercased()
-                        let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
+                        let enTitle = removeVietnameseDiacritics((titleObj["en"] as? String ?? "").lowercased())
+                        let viTitle = removeVietnameseDiacritics((titleObj["vi"] as? String ?? "").lowercased())
                         
                         if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
                            viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
