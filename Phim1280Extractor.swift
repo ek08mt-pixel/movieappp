@@ -253,7 +253,6 @@ class Phim1280Extractor {
                         fixed = prefix + rest.replacingOccurrences(of: "//", with: "/")
                     }
                     absoluteURL = fixed
-    }
                 } else {
                     let base = variantURL.deletingLastPathComponent().absoluteString
                     let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
