@@ -23,258 +23,80 @@ class Phim1280Extractor {
         season: Int? = nil,
         episode: Int? = nil
     ) async throws -> URL {
-        
-        if let s = season, let ep = episode {
-            return try await fetchEpisodeStream(
-                tmdbID: tmdbID,
-                title: title,
-                season: s,
-                episode: ep
-            )
-        }
-        
         return try await fetchMovieStream(tmdbID: tmdbID, title: title)
     }
     
-    // MARK: - Fetch Movie Stream
-    
     private func fetchMovieStream(tmdbID: Int, title: String) async throws -> URL {
-    let cleanTitle = removeVietnameseDiacritics(title.lowercased())
-    let words = cleanTitle.components(separatedBy: " ")
-    
-    // Bước 1: Tìm qua /api/home với từ khóa ngắn
-    for word in words where word.count > 3 {
-        let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let homeURL = "\(baseURL)/api/home?q=\(encoded)"
+        let cleanTitle = removeVietnameseDiacritics(title.lowercased())
         
-        guard let url = URL(string: homeURL) else { continue }
+        // Thử tìm qua /api/home với từng từ khóa
+        let words = cleanTitle.components(separatedBy: " ")
+        let searchTerms = [cleanTitle] + words.filter { $0.count > 3 }
         
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+        for term in searchTerms {
+            let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let homeURL = "\(baseURL)/api/home?q=\(encoded)"
+            guard let url = URL(string: homeURL) else { continue }
             
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                var allItems: [[String: Any]] = []
-                
-                if let list = json["list"] as? [[String: Any]] {
-                    allItems.append(contentsOf: list)
-                }
-                if let hero = json["hero"] as? [[String: Any]] {
-                    allItems.append(contentsOf: hero)
-                }
-                if let top = json["top"] as? [[String: Any]] {
-                    allItems.append(contentsOf: top)
-                }
-                
-                for item in allItems {
-    // Không cần check tmdbId, chỉ cần slug tồn tại
-    if let slug = item["slug"] as? String {
-        // Kiểm tra title khớp
-        if let titleObj = item["title"] as? [String: Any] {
-            let enTitle = removeVietnameseDiacritics((titleObj["en"] as? String ?? "").lowercased())
-            if enTitle.contains(cleanTitle) || cleanTitle.contains(enTitle) {
-                print("✅ Tìm thấy slug: \(slug)")
-                return try await fetchStreamBySlug(slug)
-            }
-        }
-    }
-}
-                
-                // Tìm theo title
-                let normalizedTitle = removeVietnameseDiacritics(cleanTitle).trimmingCharacters(in: .whitespaces)
-                for item in allItems {
-                    if let titleObj = item["title"] as? [String: Any] {
-                        let enTitle = removeVietnameseDiacritics((titleObj["en"] as? String ?? "").lowercased())
-                        let viTitle = removeVietnameseDiacritics((titleObj["vi"] as? String ?? "").lowercased())
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    
+                    var allItems: [[String: Any]] = []
+                    if let list = json["list"] as? [[String: Any]] { allItems += list }
+                    if let hero = json["hero"] as? [[String: Any]] { allItems += hero }
+                    if let top = json["top"] as? [[String: Any]] { allItems += top }
+                    
+                    for item in allItems {
+                        // Lấy title từ item
+                        let enTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["en"] as? String ?? "").lowercased()
+                        let viTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["vi"] as? String ?? "").lowercased()
+                        let slug = item["slug"] as? String ?? ""
                         
-                        if enTitle.contains(normalizedTitle) || normalizedTitle.contains(enTitle) ||
-                           viTitle.contains(normalizedTitle) || normalizedTitle.contains(viTitle),
-                           let slug = item["slug"] as? String {
-                            print("✅ Tìm thấy slug theo title: \(slug)")
+                        // So sánh title
+                        if enTitle.contains(cleanTitle) || cleanTitle.contains(enTitle) ||
+                           viTitle.contains(cleanTitle) || cleanTitle.contains(viTitle) ||
+                           enTitle.contains(term) || term.contains(enTitle) {
+                            print("✅ Tìm thấy: \(slug)")
                             return try await fetchStreamBySlug(slug)
                         }
                     }
                 }
+            } catch {
+                continue
             }
-        } catch {
-            continue
         }
-    }
-    
-    // Bước 2: Thử slug trực tiếp
-    // ... code slug cũ ...
-    
-    throw NSError(domain: "Phim1280", code: 1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy. Words: \(words)"])
-}
-
-private func fetchStreamBySlug(_ slug: String) async throws -> URL {
-    let watchURL = "\(baseURL)/api/watch/\(slug)"
-    guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
-    
-    let (data, _) = try await URLSession.shared.data(from: url)
-    
-    guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-        throw StreamError.movieNotFound
-    }
-    
-    // Lấy trực tiếp CDN link, bỏ qua processMasterPlaylist
-    if let movie = json["movie"] as? [String: Any],
-       let sources = movie["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        print("✅ Trả về trực tiếp: \(sourceURL)")
-        return streamURL  // ← Không process nữa
-    }
-    
-    if let sources = json["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        print("✅ Trả về trực tiếp: \(sourceURL)")
-        return streamURL  // ← Không process nữa
-    }
-    
-    throw StreamError.noStreamAvailable
-}
-    
-    // MARK: - Fetch Episode Stream
-    
-    private func fetchEpisodeStream(
-        tmdbID: Int,
-        title: String,
-        season: Int,
-        episode: Int
-    ) async throws -> URL {
         
-        let slug = try await findSlug(tmdbID: tmdbID, title: title)
-        
+        throw NSError(domain: "Phim1280", code: 1, userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy: \(title)"])
+    }
+    
+    private func fetchStreamBySlug(_ slug: String) async throws -> URL {
         let watchURL = "\(baseURL)/api/watch/\(slug)"
         guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
         
         let (data, _) = try await URLSession.shared.data(from: url)
-        
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let episodes = json["episodes"] as? [[String: Any]] else {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw StreamError.movieNotFound
         }
         
-        for ep in episodes {
-            if let epSeason = ep["season"] as? Int, epSeason == season,
-               let epNumber = ep["episode"] as? Int, epNumber == episode,
-               let sources = ep["sources"] as? [[String: Any]],
-               let firstSource = sources.first,
-               let sourceURL = firstSource["url"] as? String,
-               let streamURL = URL(string: sourceURL) {
-                print("✅ Episode stream: \(sourceURL.prefix(100))")
-                return try await processMasterPlaylist(streamURL)
-            }
+        // Lấy trực tiếp CDN link
+        if let movie = json["movie"] as? [String: Any],
+           let sources = movie["sources"] as? [[String: Any]],
+           let firstSource = sources.first,
+           let sourceURL = firstSource["url"] as? String,
+           let streamURL = URL(string: sourceURL) {
+            return streamURL
         }
         
-        throw StreamError.movieNotFound
-    }
-    
-    // MARK: - Find Slug
-    
-    private func findSlug(tmdbID: Int, title: String) async throws -> String {
-        let fallbackSlug = removeVietnameseDiacritics(title.lowercased())
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: "&", with: "and")
-            .replacingOccurrences(of: "'", with: "")
-            .replacingOccurrences(of: ",", with: "")
-            .replacingOccurrences(of: ".", with: "")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-        
-        print("🔍 Fallback slug: \(fallbackSlug)")
-        return fallbackSlug
-    }
-    
-    // MARK: - Process Master Playlist
-    
-    private func processMasterPlaylist(_ masterURL: URL) async throws -> URL {
-        var request = URLRequest(url: masterURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        print("📄 Master m3u8: \(content.prefix(300))")
-        
-        let lines = content.components(separatedBy: .newlines)
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let variantURLString: String
-                if trimmed.hasPrefix("http") {
-                    variantURLString = trimmed
-                } else {
-                    let base = masterURL.deletingLastPathComponent().absoluteString
-                    variantURLString = "\(base)/\(trimmed)"
-                }
-                
-                if let url = URL(string: variantURLString) {
-                    print("🎯 Variant URL: \(variantURLString)")
-                    return try await processVariantPlaylist(url)
-                }
-            }
+        if let sources = json["sources"] as? [[String: Any]],
+           let firstSource = sources.first,
+           let sourceURL = firstSource["url"] as? String,
+           let streamURL = URL(string: sourceURL) {
+            return streamURL
         }
         
         throw StreamError.noStreamAvailable
     }
-    
-    // MARK: - Process Variant Playlist
-    
-    private func processVariantPlaylist(_ variantURL: URL) async throws -> URL {
-        var request = URLRequest(url: variantURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        print("📄 Variant m3u8 (first 300): \(content.prefix(300))")
-        
-        let lines = content.components(separatedBy: .newlines)
-        var newLines: [String] = []
-        
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                let absoluteURL: String
-                if trimmed.hasPrefix("http") {
-                    absoluteURL = trimmed
-                        .replacingOccurrences(of: "//", with: "/")
-                        .replacingOccurrences(of: "https:/", with: "https://")
-                        .replacingOccurrences(of: "http:/", with: "http://")
-                } else {
-                    let base = variantURL.deletingLastPathComponent().absoluteString
-                    let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
-                    let cleanPath = trimmed.hasPrefix("/") ? String(trimmed.dropFirst()) : trimmed
-                    absoluteURL = "\(cleanBase)/\(cleanPath)"
-                }
-                newLines.append(absoluteURL)
-            } else {
-                newLines.append(line)
-            }
-        }
-        
-        let localContent = newLines.joined(separator: "\n")
-        
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_variant_\(Date().timeIntervalSince1970).m3u8")
-        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        
-        print("✅ Local variant saved: \(fileURL)")
-        
-        return fileURL
-    }
-    
-    // MARK: - Remove Vietnamese Diacritics
     
     private func removeVietnameseDiacritics(_ text: String) -> String {
         let diacritics: [Character: String] = [
@@ -292,14 +114,10 @@ private func fetchStreamBySlug(_ slug: String) async throws -> URL {
             "ỳ": "y", "ý": "y", "ỷ": "y", "ỹ": "y", "ỵ": "y",
             "đ": "d"
         ]
-        
         var result = ""
         for char in text {
-            if let replacement = diacritics[char] {
-                result.append(replacement)
-            } else {
-                result.append(char)
-            }
+            if let replacement = diacritics[char] { result += replacement }
+            else { result += String(char) }
         }
         return result
     }
