@@ -160,36 +160,73 @@ class Phim1280Extractor {
             throw StreamError.noStreamAvailable
         }
         
-        // Tìm #EXTM3U trong content
         var m3u8Content = content
         if let m3u8Range = content.range(of: "#EXTM3U") {
             m3u8Content = String(content[m3u8Range.lowerBound...])
         }
         
-        // Kiểm tra nếu là master playlist
+        // Nếu là master playlist
         if m3u8Content.contains("#EXT-X-STREAM-INF") {
             let lines = m3u8Content.components(separatedBy: .newlines)
+            var newLines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
+            var videoVariant: String? = nil
+            
             for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                    let variantURLString: String
-                    if trimmed.hasPrefix("http") {
-                        variantURLString = trimmed
-                    } else {
-                        let base = playlistURL.deletingLastPathComponent().absoluteString
-                        variantURLString = "\(base)/\(trimmed)"
+                // Sửa URI trong #EXT-X-MEDIA
+                if line.hasPrefix("#EXT-X-MEDIA") {
+                    if let uriRange = line.range(of: "URI=\""),
+                       let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                        let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                        let absoluteURI: String
+                        if uri.hasPrefix("http") {
+                            absoluteURI = uri
+                        } else {
+                            let base = playlistURL.deletingLastPathComponent().absoluteString
+                            absoluteURI = "\(base)/\(uri)"
+                        }
+                        newLines.append(line.replacingOccurrences(of: uri, with: absoluteURI))
                     }
-                    
-                    if let url = URL(string: variantURLString) {
-                        print("🎯 Variant: \(variantURLString.prefix(80))")
-                        return url  // Trả về variant URL trực tiếp
+                }
+                
+                // Tìm video variant
+                if !line.hasPrefix("#") && !line.isEmpty {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                        let absolute: String
+                        if trimmed.hasPrefix("http") {
+                            absolute = trimmed
+                        } else {
+                            let base = playlistURL.deletingLastPathComponent().absoluteString
+                            absolute = "\(base)/\(trimmed)"
+                        }
+                        videoVariant = absolute
+                    }
+                }
+                
+                // Giữ các line khác trừ #EXT-X-MEDIA cũ
+                if !line.hasPrefix("#EXT-X-MEDIA") && !line.isEmpty && line != "#EXTM3U" {
+                    if line.hasPrefix("#EXT-X-STREAM-INF") {
+                        newLines.append(line)
                     }
                 }
             }
+            
+            // Thêm video variant
+            if let video = videoVariant {
+                newLines.append(video)
+            }
+            
+            // Lưu local m3u8
+            let localContent = newLines.joined(separator: "\n")
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent("film4k_master_\(Date().timeIntervalSince1970).m3u8")
+            try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
+            
+            print("✅ Tạo m3u8 local với audio/subtitle")
+            return fileURL
         }
         
-        // Nếu là variant trực tiếp, trả về URL
-        print("✅ Trả về: \(playlistURL.absoluteString.prefix(80))")
+        // Nếu không phải master, trả về URL
         return playlistURL
     }
     
