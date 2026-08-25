@@ -127,12 +127,17 @@ class Phim1280Extractor {
     // MARK: - Find Slug
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
-    // Thử nhiều query
-    let queries = [
-        title,
-        title.components(separatedBy: " ").first ?? title,
-        title.components(separatedBy: " ").last ?? title
-    ]
+        print("🔍 Tìm slug cho title: \(title)")
+        print("🔍 TMDB ID: \(tmdbID)")
+        
+        let queries = [
+            title,
+            title.components(separatedBy: " ").first ?? title,
+            title.components(separatedBy: " ").last ?? title
+        ]
+        
+        for query in queries {
+            print("🔍 Query: \(query)")
     
     for query in queries {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
