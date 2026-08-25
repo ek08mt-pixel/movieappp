@@ -559,7 +559,7 @@ didResume = false
     
     case .phim1280:
                 do {
-                    let result = try await Phim1280Extractor.shared.fetchStream(
+                    let (result, slug) = try await Phim1280Extractor.shared.fetchStream(
                         tmdbID: movieId,
                         title: movieTitle,
                         mediaType: mediaType,
@@ -567,9 +567,17 @@ didResume = false
                         episode: ep
                     )
                     
-                    if result.absoluteString.contains("tiktok") || result.absoluteString.contains("film4k_tiktok") {
+                    // Kiểm tra nếu là TikTok (file local hoặc chứa tiktok)
+                    if result.pathExtension == "m3u8" && result.absoluteString.contains("tiktok") {
                         await MainActor.run {
-                            phim1280WebURL = result
+                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
+                            showPhim1280WebView = true
+                            isLoading = false
+                            sourceStatus[.phim1280] = true
+                        }
+                    } else if result.absoluteString.contains("/api/hls/tiktok/") {
+                        await MainActor.run {
+                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
                             showPhim1280WebView = true
                             isLoading = false
                             sourceStatus[.phim1280] = true
