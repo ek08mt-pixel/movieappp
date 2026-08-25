@@ -1220,3 +1220,12 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
+extension VideoGravityMode {
+    var avGravity: AVLayerVideoGravity {
+        switch self {
+        case .fit: return .resizeAspect
+        case .fill: return .resizeAspectFill
+        case .stretch: return .resize
+        }
+    }
+}
