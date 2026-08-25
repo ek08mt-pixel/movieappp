@@ -126,7 +126,6 @@ class Phim1280Extractor {
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
         print("🔍 Tìm slug cho title: \(title)")
-        print("🔍 TMDB ID: \(tmdbID)")
         
         let queries = [
             title,
@@ -149,16 +148,10 @@ class Phim1280Extractor {
                     
                     print("🔍 Số kết quả: \(list.count)")
                     
-                    for item in list {
-                        if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-                           let slug = item["slug"] as? String {
-                            print("✅ Tìm thấy theo TMDB: \(slug)")
-                            return slug
-                        }
-                    }
-                    
                     let normalizedTitle = title.lowercased().trimmingCharacters(in: .whitespaces)
+                    
                     for item in list {
+                        // Tìm theo title trước
                         if let titleObj = item["title"] as? [String: Any] {
                             let enTitle = (titleObj["en"] as? String ?? "").lowercased()
                             let viTitle = (titleObj["vi"] as? String ?? "").lowercased()
@@ -170,10 +163,16 @@ class Phim1280Extractor {
                                 return slug
                             }
                         }
+                        
+                        // Tìm theo TMDB ID nếu có
+                        if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
+                           let slug = item["slug"] as? String {
+                            print("✅ Tìm thấy theo TMDB: \(slug)")
+                            return slug
+                        }
                     }
                 }
             } catch {
-                print("❌ Lỗi query \(query): \(error)")
                 continue
             }
         }
