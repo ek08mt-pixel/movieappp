@@ -242,7 +242,6 @@ selectedSource = initialSource
     ZStack {
         Phim1280WebPlayerView(url: url)
             .ignoresSafeArea()
-            .onReceive(...) { ... }
         
         Phim1280ControlsView(
             movieTitle: movieTitle,
@@ -1416,12 +1415,12 @@ struct Phim1280ControlsView: View {
                     
                     if !audioTracks.isEmpty {
                         Menu {
-                            ForEach(audioTracks, id: \.self) { track in
-                                Button(track["label"] as? String ?? "") {
-                                    let id = track["id"] as? String ?? ""
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
-                                }
-                            }
+                            ForEach(audioTracks.indices, id: \.self) { index in
+    Button(audioTracks[index]["label"] as? String ?? "") {
+        let id = audioTracks[index]["id"] as? String ?? ""
+        Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
+    }
+}
                         } label: {
                             VStack(spacing: 2) {
                                 Image(systemName: "waveform").font(.system(size: 20))
