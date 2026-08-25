@@ -1224,7 +1224,6 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
     
     class Coordinator: NSObject, WKNavigationDelegate {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // Xóa web, chỉ giữ video
             let js = """
             (function() {
                 document.body.style.display = 'none';
@@ -1234,10 +1233,16 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                         document.body.innerHTML = '';
                         document.body.style.display = 'block';
                         document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                        video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
-                        video.controls = true;
-                        video.setAttribute('controls', 'controls');
+                        video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:calc(100vh - 120px);object-fit:contain;z-index:9999;';
+                        
+                        // Tắt controls mặc định (ẩn PIP + zoom)
+                        video.controls = false;
+                        video.setAttribute('controls', 'false');
+                        video.removeAttribute('controls');
+                        video.disablePictureInPicture = true;
                         video.playsInline = true;
+                        video.webkitPlaysInline = true;
+                        
                         document.body.appendChild(video);
                         video.play();
                     }
