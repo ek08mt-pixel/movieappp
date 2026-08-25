@@ -1196,6 +1196,8 @@ struct CastRemoteView: View {
     func stopCasting() { isCasting = false; EmmewCastManager.shared.stopCasting(); dismiss() }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
 }
+
+// MARK: - CustomPlayerVC
 struct CustomPlayerVC: UIViewControllerRepresentable {
     let player: AVPlayer
     @Binding var pipController: AVPictureInPictureController?
@@ -1222,6 +1224,8 @@ struct CustomPlayerVC: UIViewControllerRepresentable {
         }
     }
 }
+
+// MARK: - Phim1280WebPlayerView
 struct Phim1280WebPlayerView: UIViewRepresentable {
     let url: URL
     
@@ -1248,7 +1252,6 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                 return false;
             }
             
-            // Thử nhiều lần
             var attempts = 0;
             var interval = setInterval(function() {
                 attempts++;
@@ -1271,6 +1274,8 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
+
+// MARK: - VideoGravityMode Extension
 extension VideoGravityMode {
     var avGravity: AVLayerVideoGravity {
         switch self {
