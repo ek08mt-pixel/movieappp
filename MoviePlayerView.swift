@@ -1155,7 +1155,6 @@ func removeExternalSubtitle() {
 func applySubOffset() {
     subManager.saveOffset(movieId: movieId, season: seasonNumber, episode: episodeNumber, offset: subManager.currentOffset)
 }
-}  // ← Đóng struct MoviePlayerView
 
 struct CastSheetView: View {
     @Binding var showRemote: Bool; @Binding var castDeviceName: String; @Binding var isCasting: Bool
