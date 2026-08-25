@@ -239,203 +239,46 @@ selectedSource = initialSource
     }
 }
             if showPhim1280WebView, let url = phim1280WebURL {
-                ZStack {
-                    Phim1280WebPlayerView(url: url)
-                        .ignoresSafeArea()
-                        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TimeUpdate"))) { notification in
-                            if let info = notification.userInfo {
-                                currentTime = info["currentTime"] as? Double ?? 0
-                                duration = info["duration"] as? Double ?? 1
-                            }
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TracksInfo"))) { notification in
-                            if let info = notification.userInfo {
-                                if let audioTracks = info["audioTracks"] as? [[String: Any]] {
-                                    phim1280AudioTracks = audioTracks
-                                }
-                                if let subtitleTracks = info["subtitleTracks"] as? [[String: Any]] {
-                                    phim1280SubtitleTracks = subtitleTracks
-                                }
-                                if let quality = info["quality"] as? String {
-                                    phim1280Quality = quality
-                                }
-                            }
-                        }
-                    
-                    // Controls
-                    VStack {
-                        // Top bar
-                        HStack {
-                            Button {
-                                Phim1280WebPlayerView.activeWebView?.stopLoading()
-                                showPhim1280WebView = false
-                                dismiss()
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(12)
-                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                            }
-                            .padding(.leading, 16)
-                            
-                            Spacer()
-                            
-                            Text(movieTitle)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                            
-                            Spacer()
-                            
-                            Button {
-                                showSourceMenu = true
-                            } label: {
-                                Image(systemName: "server.rack")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                            .padding(.trailing, 16)
-                        }
-                        .padding(.top, 56)
-                        
-                        Spacer()
-                        
-                        // Bottom controls
-                        VStack(spacing: 8) {
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(.white.opacity(0.2)).frame(height: 4)
-                                    Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
-                                }
-                                .contentShape(Rectangle())
-                                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
-                                    let r = min(max(v.location.x / geo.size.width, 0), 1)
-                                    currentTime = r * duration
-                                }.onEnded { _ in
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(currentTime); }")
-                                })
-                            }.frame(height: 20)
-                            
-                            HStack {
-                                Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
-                                Spacer()
-                                if !phim1280Quality.isEmpty {
-                                    Text(phim1280Quality).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
-                                }
-                                Spacer()
-                                Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
-                            }
-                            
-                            HStack(spacing: 50) {
-                                Button {
-                                    let newTime = max(currentTime - 10, 0)
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                                    currentTime = newTime
-                                } label: {
-                                    Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
-                                }
-                                
-                                Button {
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
-                                } label: {
-                                    Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
-                                }
-                                
-                                Button {
-                                    let newTime = min(currentTime + 10, duration)
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                                    currentTime = newTime
-                                } label: {
-                                    Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
-                                }
-                                
-                                // Audio tracks
-                                if !phim1280AudioTracks.isEmpty {
-                                    Button {
-                                        showPhim1280AudioMenu = true
-                                    } label: {
-                                        VStack(spacing: 2) {
-                                            Image(systemName: "waveform").font(.system(size: 20))
-                                            Text("Âm thanh").font(.system(size: 9))
-                                        }.foregroundColor(.white.opacity(0.8))
-                                    }
-                                }
-                                
-                                // Subtitle tracks
-                                if !phim1280SubtitleTracks.isEmpty {
-                                    Button {
-                                        showPhim1280SubtitleMenu = true
-                                    } label: {
-                                        VStack(spacing: 2) {
-                                            Text("EN").font(.system(size: 10, weight: .bold))
-                                            Text("Phụ đề").font(.system(size: 9))
-                                        }.foregroundColor(.white.opacity(0.8))
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20).padding(.bottom, 40)
-                        .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
-                    }
-                }
-                // Audio menu
-                .overlay {
-                    if showPhim1280AudioMenu {
-                        Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showPhim1280AudioMenu = false }
-                        VStack(spacing: 10) {
-                            Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                            ForEach(phim1280AudioTracks, id: \.self) { track in
-                                Button {
-                                    let id = track["id"] as? String ?? ""
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
-                                    showPhim1280AudioMenu = false
-                                } label: {
-                                    Text(track["label"] as? String ?? "")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                        .background(RoundedRectangle(cornerRadius: 8).fill((track["enabled"] as? Bool ?? false) ? .white.opacity(0.15) : .white.opacity(0.05)))
-                                }
-                            }
-                        }
-                        .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
-                    }
-                }
-                // Subtitle menu
-                .overlay {
-                    if showPhim1280SubtitleMenu {
-                        Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showPhim1280SubtitleMenu = false }
-                        VStack(spacing: 10) {
-                            Text("Phụ đề").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
-                            Button {
-                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = 'disabled'; } }")
-                                showPhim1280SubtitleMenu = false
-                            } label: {
-                                Text("Tắt").font(.system(size: 13)).foregroundColor(.white)
-                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
-                            }
-                            ForEach(phim1280SubtitleTracks.indices, id: \.self) { index in
-                                Button {
-                                    let id = index
-                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = (i === \(id)) ? 'showing' : 'disabled'; } }")
-                                    showPhim1280SubtitleMenu = false
-                                } label: {
-                                    Text(phim1280SubtitleTracks[index]["label"] as? String ?? "")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                        .background(RoundedRectangle(cornerRadius: 8).fill((phim1280SubtitleTracks[index]["mode"] as? String) == "showing" ? .white.opacity(0.15) : .white.opacity(0.05)))
-                                }
-                            }
-                        }
-                        .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
-                    }
-                }
+    ZStack {
+        Phim1280WebPlayerView(url: url)
+            .ignoresSafeArea()
+            .onReceive(...) { ... }
+        
+        Phim1280ControlsView(
+            movieTitle: movieTitle,
+            currentTime: currentTime,
+            duration: duration,
+            quality: phim1280Quality,
+            audioTracks: phim1280AudioTracks,
+            subtitleTracks: phim1280SubtitleTracks,
+            onBack: {
+                Phim1280WebPlayerView.activeWebView?.stopLoading()
+                showPhim1280WebView = false
+                dismiss()
+            },
+            onSeek: { newTime in
+                currentTime = newTime
+                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+            },
+            onPlayPause: {
+                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
+            },
+            onSkipBack: {
+                let newTime = max(currentTime - 10, 0)
+                currentTime = newTime
+                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+            },
+            onSkipForward: {
+                let newTime = min(currentTime + 10, duration)
+                currentTime = newTime
+                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+            },
+            onShowSource: {
+                showSourceMenu = true
             }
+        )
+    }
+}
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             
@@ -1485,8 +1328,139 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         }
     }
 }
+struct Phim1280ControlsView: View {
+    let movieTitle: String
+    let currentTime: Double
+    let duration: Double
+    let quality: String
+    let audioTracks: [[String: Any]]
+    let subtitleTracks: [[String: Any]]
+    let onBack: () -> Void
+    let onSeek: (Double) -> Void
+    let onPlayPause: () -> Void
+    let onSkipBack: () -> Void
+    let onSkipForward: () -> Void
+    let onShowSource: () -> Void
+    
+    var body: some View {
+        VStack {
+            // Top bar
+            HStack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                }
+                .padding(.leading, 16)
+                
+                Spacer()
+                
+                Text(movieTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                Button(action: onShowSource) {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(.trailing, 16)
+            }
+            .padding(.top, 56)
+            
+            Spacer()
+            
+            // Bottom controls
+            VStack(spacing: 8) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.2)).frame(height: 4)
+                        Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
+                    }
+                    .contentShape(Rectangle())
+                    .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                        let r = min(max(v.location.x / geo.size.width, 0), 1)
+                        onSeek(r * duration)
+                    }.onEnded { _ in
+                        onSeek(currentTime)
+                    })
+                }.frame(height: 20)
+                
+                HStack {
+                    Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                    Spacer()
+                    if !quality.isEmpty {
+                        Text(quality).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                }
+                
+                HStack(spacing: 50) {
+                    Button(action: onSkipBack) {
+                        Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
+                    }
+                    
+                    Button(action: onPlayPause) {
+                        Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
+                    }
+                    
+                    Button(action: onSkipForward) {
+                        Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
+                    }
+                    
+                    if !audioTracks.isEmpty {
+                        Menu {
+                            ForEach(audioTracks, id: \.self) { track in
+                                Button(track["label"] as? String ?? "") {
+                                    let id = track["id"] as? String ?? ""
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
+                                }
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: "waveform").font(.system(size: 20))
+                                Text("Âm thanh").font(.system(size: 9))
+                            }.foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    
+                    if !subtitleTracks.isEmpty {
+                        Menu {
+                            Button("Tắt") {
+                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = 'disabled'; } }")
+                            }
+                            ForEach(subtitleTracks.indices, id: \.self) { index in
+                                Button(subtitleTracks[index]["label"] as? String ?? "") {
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = (i === \(index)) ? 'showing' : 'disabled'; } }")
+                                }
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Text("EN").font(.system(size: 10, weight: .bold))
+                                Text("Phụ đề").font(.system(size: 9))
+                            }.foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20).padding(.bottom, 40)
+            .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+        }
+    }
+    
+    func formatTime(_ s: Double) -> String {
+        let m = Int(s) / 60; let sec = Int(s) % 60
+        return String(format: "%d:%02d", m, sec)
+    }
+}
 extension VideoGravityMode {
-    var avGravity: AVLayerVideoGravity {
+var avGravity: AVLayerVideoGravity {
         switch self {
         case .fit: return .resizeAspect
         case .fill: return .resizeAspectFill
