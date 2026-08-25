@@ -563,14 +563,10 @@ didResume = false
         )
         
         // Đọc nội dung m3u8
-        let m3u8Content = try? String(contentsOf: result, encoding: .utf8)
-        print("📄 m3u8 content:")
-        print(m3u8Content ?? "nil")
-        
         await MainActor.run {
-            currentStreamURL = result
-            selectedQuality = detectQuality(from: result)
-            errorMessage = String(m3u8Content?.prefix(500) ?? "nil")
+    currentStreamURL = result
+    selectedQuality = detectQuality(from: result)
+    errorMessage = nil
             
             let asset = AVURLAsset(url: result)
             let playerItem = AVPlayerItem(asset: asset)
