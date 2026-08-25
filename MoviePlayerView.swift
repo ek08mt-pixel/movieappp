@@ -235,29 +235,60 @@ selectedSource = initialSource
 }
             if showPhim1280WebView, let url = phim1280WebURL {
                 ZStack {
-                    Phim1280WebPlayerView(url: url)
-                        .ignoresSafeArea()
-                    
-                    VStack {
-                        HStack {
-                            Button {
-                                showPhim1280WebView = false
-                                dismiss()
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(12)
-                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-                            }
-                            .padding(.top, 56)
-                            .padding(.leading, 16)
-                            
-                            Spacer()
-                        }
-                        Spacer()
-                    }
+    Phim1280WebPlayerView(url: url)
+        .ignoresSafeArea()
+    
+    // Nút back
+    VStack {
+        HStack {
+            Button {
+                showPhim1280WebView = false
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+            }
+            .padding(.top, 56)
+            .padding(.leading, 16)
+            
+            Spacer()
+        }
+        Spacer()
+        
+        // Thanh tiến trình + controls
+        VStack(spacing: 8) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.2)).frame(height: 4)
+                    Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
                 }
+            }.frame(height: 20)
+            
+            HStack {
+                Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                Spacer()
+                Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+            }
+            
+            HStack(spacing: 50) {
+                Button { seek(false) } label: {
+                    Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
+                }
+                Button { } label: {
+                    Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
+                }
+                Button { seek(true) } label: {
+                    Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
+                }
+            }
+        }
+        .padding(.horizontal, 20).padding(.bottom, 40)
+        .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+    }
+}
             }
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
@@ -1233,7 +1264,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                         document.body.innerHTML = '';
                         document.body.style.display = 'block';
                         document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                        video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:calc(100vh - 120px);object-fit:contain;z-index:9999;';
+                        video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
                         
                         // Tắt controls mặc định (ẩn PIP + zoom)
                         video.controls = false;
