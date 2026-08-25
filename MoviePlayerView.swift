@@ -131,6 +131,11 @@ struct MoviePlayerView: View {
     @State private var seekPreviewTime: Double = 0
     @State private var showPhim1280WebView = false
     @State private var phim1280WebURL: URL?
+    @State private var phim1280AudioTracks: [[String: Any]] = []
+    @State private var phim1280SubtitleTracks: [[String: Any]] = []
+    @State private var phim1280Quality: String = ""
+    @State private var showPhim1280AudioMenu = false
+    @State private var showPhim1280SubtitleMenu = false
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
     
@@ -243,6 +248,19 @@ selectedSource = initialSource
                                 duration = info["duration"] as? Double ?? 1
                             }
                         }
+                        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TracksInfo"))) { notification in
+                            if let info = notification.userInfo {
+                                if let audioTracks = info["audioTracks"] as? [[String: Any]] {
+                                    phim1280AudioTracks = audioTracks
+                                }
+                                if let subtitleTracks = info["subtitleTracks"] as? [[String: Any]] {
+                                    phim1280SubtitleTracks = subtitleTracks
+                                }
+                                if let quality = info["quality"] as? String {
+                                    phim1280Quality = quality
+                                }
+                            }
+                        }
                     
                     // Controls
                     VStack {
@@ -285,7 +303,6 @@ selectedSource = initialSource
                         
                         // Bottom controls
                         VStack(spacing: 8) {
-                            // Thanh tiến trình
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(.white.opacity(0.2)).frame(height: 4)
@@ -294,8 +311,7 @@ selectedSource = initialSource
                                 .contentShape(Rectangle())
                                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                                     let r = min(max(v.location.x / geo.size.width, 0), 1)
-                                    let newTime = r * duration
-                                    currentTime = newTime
+                                    currentTime = r * duration
                                 }.onEnded { _ in
                                     Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(currentTime); }")
                                 })
@@ -303,6 +319,10 @@ selectedSource = initialSource
                             
                             HStack {
                                 Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                                Spacer()
+                                if !phim1280Quality.isEmpty {
+                                    Text(phim1280Quality).font(.system(size: 10)).foregroundColor(.white.opacity(0.7))
+                                }
                                 Spacer()
                                 Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
                             }
@@ -330,27 +350,89 @@ selectedSource = initialSource
                                     Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
                                 }
                                 
-                                Button {
-                                    showAudioPopup = true
-                                } label: {
-                                    VStack(spacing: 2) {
-                                        Image(systemName: "waveform").font(.system(size: 20))
-                                        Text("Âm thanh").font(.system(size: 9))
-                                    }.foregroundColor(.white.opacity(0.8))
+                                // Audio tracks
+                                if !phim1280AudioTracks.isEmpty {
+                                    Button {
+                                        showPhim1280AudioMenu = true
+                                    } label: {
+                                        VStack(spacing: 2) {
+                                            Image(systemName: "waveform").font(.system(size: 20))
+                                            Text("Âm thanh").font(.system(size: 9))
+                                        }.foregroundColor(.white.opacity(0.8))
+                                    }
                                 }
                                 
-                                Button {
-                                    showSubPopup = true
-                                } label: {
-                                    VStack(spacing: 2) {
-                                        Text("EN").font(.system(size: 10, weight: .bold))
-                                        Text("Phụ đề").font(.system(size: 9))
-                                    }.foregroundColor(.white.opacity(0.8))
+                                // Subtitle tracks
+                                if !phim1280SubtitleTracks.isEmpty {
+                                    Button {
+                                        showPhim1280SubtitleMenu = true
+                                    } label: {
+                                        VStack(spacing: 2) {
+                                            Text("EN").font(.system(size: 10, weight: .bold))
+                                            Text("Phụ đề").font(.system(size: 9))
+                                        }.foregroundColor(.white.opacity(0.8))
+                                    }
                                 }
                             }
                         }
                         .padding(.horizontal, 20).padding(.bottom, 40)
                         .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                    }
+                }
+                // Audio menu
+                .overlay {
+                    if showPhim1280AudioMenu {
+                        Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showPhim1280AudioMenu = false }
+                        VStack(spacing: 10) {
+                            Text("Âm thanh").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                            ForEach(phim1280AudioTracks, id: \.self) { track in
+                                Button {
+                                    let id = track["id"] as? String ?? ""
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
+                                    showPhim1280AudioMenu = false
+                                } label: {
+                                    Text(track["label"] as? String ?? "")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                        .background(RoundedRectangle(cornerRadius: 8).fill((track["enabled"] as? Bool ?? false) ? .white.opacity(0.15) : .white.opacity(0.05)))
+                                }
+                            }
+                        }
+                        .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
+                    }
+                }
+                // Subtitle menu
+                .overlay {
+                    if showPhim1280SubtitleMenu {
+                        Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { showPhim1280SubtitleMenu = false }
+                        VStack(spacing: 10) {
+                            Text("Phụ đề").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                            Button {
+                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = 'disabled'; } }")
+                                showPhim1280SubtitleMenu = false
+                            } label: {
+                                Text("Tắt").font(.system(size: 13)).foregroundColor(.white)
+                                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
+                            }
+                            ForEach(phim1280SubtitleTracks.indices, id: \.self) { index in
+                                Button {
+                                    let id = index
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.textTracks) { for(var i=0;i<v.textTracks.length;i++){ v.textTracks[i].mode = (i === \(id)) ? 'showing' : 'disabled'; } }")
+                                    showPhim1280SubtitleMenu = false
+                                } label: {
+                                    Text(phim1280SubtitleTracks[index]["label"] as? String ?? "")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                        .background(RoundedRectangle(cornerRadius: 8).fill((phim1280SubtitleTracks[index]["mode"] as? String) == "showing" ? .white.opacity(0.15) : .white.opacity(0.05)))
+                                }
+                            }
+                        }
+                        .padding(18).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.95)))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.2), lineWidth: 0.5)).frame(width: 240)
                     }
                 }
             }
@@ -1322,6 +1404,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.configuration.userContentController.add(self, name: "timeUpdate")
+            webView.configuration.userContentController.add(self, name: "tracksInfo")
             
             let js = """
             (function() {
@@ -1337,15 +1420,50 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                         document.body.appendChild(video);
                         video.play();
                         
-                        setInterval(function() {
+                        function sendInfo() {
                             try {
-                                window.webkit.messageHandlers.timeUpdate.postMessage({
+                                var info = {
                                     currentTime: video.currentTime,
                                     duration: video.duration || 1,
-                                    paused: video.paused
-                                });
+                                    paused: video.paused,
+                                    audioTracks: [],
+                                    subtitleTracks: [],
+                                    quality: ''
+                                };
+                                
+                                if (video.audioTracks) {
+                                    for (var i = 0; i < video.audioTracks.length; i++) {
+                                        info.audioTracks.push({
+                                            id: video.audioTracks[i].id,
+                                            label: video.audioTracks[i].label || 'Audio ' + (i+1),
+                                            language: video.audioTracks[i].language || '',
+                                            enabled: video.audioTracks[i].enabled
+                                        });
+                                    }
+                                }
+                                
+                                if (video.textTracks) {
+                                    for (var i = 0; i < video.textTracks.length; i++) {
+                                        info.subtitleTracks.push({
+                                            id: i,
+                                            label: video.textTracks[i].label || 'Subtitle ' + (i+1),
+                                            language: video.textTracks[i].language || '',
+                                            mode: video.textTracks[i].mode
+                                        });
+                                    }
+                                }
+                                
+                                if (video.getVideoPlaybackQuality) {
+                                    var q = video.getVideoPlaybackQuality();
+                                    info.quality = (q.width && q.height) ? q.width + 'x' + q.height : '';
+                                }
+                                
+                                window.webkit.messageHandlers.timeUpdate.postMessage(info);
+                                window.webkit.messageHandlers.tracksInfo.postMessage(info);
                             } catch(e) {}
-                        }, 500);
+                        }
+                        
+                        setInterval(sendInfo, 500);
                     }
                 }, 1000);
             })();
@@ -1356,11 +1474,12 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "timeUpdate", let dict = message.body as? [String: Any] {
                 DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: Notification.Name("Phim1280TimeUpdate"), object: nil, userInfo: [
-                        "currentTime": dict["currentTime"] as? Double ?? 0,
-                        "duration": dict["duration"] as? Double ?? 1,
-                        "paused": dict["paused"] as? Bool ?? false
-                    ])
+                    NotificationCenter.default.post(name: Notification.Name("Phim1280TimeUpdate"), object: nil, userInfo: dict)
+                }
+            }
+            if message.name == "tracksInfo", let dict = message.body as? [String: Any] {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: Notification.Name("Phim1280TracksInfo"), object: nil, userInfo: dict)
                 }
             }
         }
