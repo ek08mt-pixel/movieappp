@@ -238,10 +238,23 @@ selectedSource = initialSource
         Spacer()
     }
 }
-            if showPhim1280WebView, let url = phim1280WebURL {
-    ZStack {
-        Phim1280WebPlayerView(url: url)
+            Phim1280WebPlayerView(url: url)
             .ignoresSafeArea()
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TimeUpdate"))) { notification in
+                if let info = notification.userInfo {
+                    currentTime = info["currentTime"] as? Double ?? 0
+                    duration = info["duration"] as? Double ?? 1
+                    if let quality = info["quality"] as? String {
+                        phim1280Quality = quality
+                    }
+                    if let audioTracks = info["audioTracks"] as? [[String: Any]] {
+                        phim1280AudioTracks = audioTracks
+                    }
+                    if let subtitleTracks = info["subtitleTracks"] as? [[String: Any]] {
+                        phim1280SubtitleTracks = subtitleTracks
+                    }
+                }
+            }
         
         Phim1280ControlsView(
             movieTitle: movieTitle,
