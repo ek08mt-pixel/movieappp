@@ -150,45 +150,64 @@ class Phim1280Extractor {
     }
     
     private func downloadTikTokSegments(_ content: String, baseURL: URL, limit: Int = 50) async throws -> URL {
-       print("📥 Bắt đầu tải TikTok segments...")
+        print("📥 Bắt đầu tải TikTok segments...")
         
         let lines = content.components(separatedBy: .newlines)
         print("🔍 Số dòng content: \(lines.count)")
-        var newLines: [String] = []
-        var segmentCount = 0
         
+        // Lấy tất cả segment URLs trước
+        var segmentURLs: [URL] = []
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") && segmentCount < limit {
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") && segmentURLs.count < limit {
                 let segmentURLString = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
-                
                 if let segmentURL = URL(string: segmentURLString) {
+                    segmentURLs.append(segmentURL)
+                }
+            }
+        }
+        
+        print("🔍 Tổng segments cần tải: \(segmentURLs.count)")
+        
+        // Tải song song
+        var downloadedSegments: [URL] = []
+        
+        await withTaskGroup(of: (Int, URL?).self) { group in
+            for (index, segmentURL) in segmentURLs.enumerated() {
+                group.addTask {
                     var request = URLRequest(url: segmentURL)
                     request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
                     request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
                     
                     do {
-                        let (segmentData, _) = try await URLSession.shared.data(for: request)
+                        let (data, _) = try await URLSession.shared.data(for: request)
                         let tempDir = FileManager.default.temporaryDirectory
-                        let fileURL = tempDir.appendingPathComponent("tiktok_seg_\(segmentCount).ts")
-                        try segmentData.write(to: fileURL)
-                        newLines.append(fileURL.path)
-                        segmentCount += 1
-                        
-                        if segmentCount % 5 == 0 {
-                            print("✅ Đã tải \(segmentCount) segments")
-                        }
+                        let fileURL = tempDir.appendingPathComponent("tiktok_seg_\(index).ts")
+                        try data.write(to: fileURL)
+                        return (index, fileURL)
                     } catch {
-                        print("⚠️ Lỗi segment: \(error)")
-                        newLines.append(segmentURLString)
+                        print("⚠️ Segment \(index) lỗi")
+                        return (index, nil)
                     }
                 }
-            } else {
-                newLines.append(line)
+            }
+            
+            for await (index, fileURL) in group {
+                if let fileURL = fileURL {
+                    downloadedSegments.append(fileURL)
+                }
             }
         }
         
-        // Thêm ENDLIST
+        // Tạo local m3u8
+        var newLines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7", "#EXT-X-TARGETDURATION:20", "#EXT-X-MEDIA-SEQUENCE:0"]
+        
+        let sortedSegments = downloadedSegments.sorted { $0.lastPathComponent < $1.lastPathComponent }
+        for segmentURL in sortedSegments {
+            newLines.append("#EXTINF:20.0,")
+            newLines.append(segmentURL.path)
+        }
+        
         newLines.append("#EXT-X-ENDLIST")
         
         let localContent = newLines.joined(separator: "\n")
@@ -196,9 +215,7 @@ class Phim1280Extractor {
         let fileURL = tempDir.appendingPathComponent("film4k_tiktok_local_\(Date().timeIntervalSince1970).m3u8")
         try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
         
-        print("✅ Local m3u8: \(segmentCount) segments")
-        print("✅ File exists: \(FileManager.default.fileExists(atPath: fileURL.path))")
-        print("✅ File path: \(fileURL.path)")
+        print("✅ Local m3u8: \(sortedSegments.count) segments")
         return fileURL
     }
     
