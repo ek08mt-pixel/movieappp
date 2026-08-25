@@ -597,21 +597,6 @@ didResume = false
                             didResume = false
                         }
                     }
-                        let asset = AVURLAsset(url: result, options: [
-                            "AVURLAssetHTTPHeaderFieldsKey": [
-                                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-                                "Referer": "https://film4k.net/"
-                            ]
-                        ])
-                        let playerItem = AVPlayerItem(asset: asset)
-                        player.replaceCurrentItem(with: playerItem)
-                        player.play()
-                        
-                        hasStartedPlaying = true
-                        isLoading = false
-                        sourceStatus[.phim1280] = true
-                        didResume = false
-                    }
                     saveHistory()
                 } catch {
                     await MainActor.run {
