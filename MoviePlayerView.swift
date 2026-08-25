@@ -1211,23 +1211,30 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         
         let js = """
         (function() {
-            // Xóa tất cả elements, chỉ giữ video
-            setTimeout(function() {
+            function cleanPage() {
                 var video = document.querySelector('video');
                 if (video) {
-                    // Xóa toàn bộ body
                     document.body.innerHTML = '';
                     document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                    
-                    // Thêm video vào body full màn hình
                     video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
                     video.controls = true;
                     video.setAttribute('controls', 'controls');
-                    video.playsInline = true;
+                    video.playsInline = false;
                     document.body.appendChild(video);
                     video.play();
+                    return true;
                 }
-            }, 2000);
+                return false;
+            }
+            
+            // Thử nhiều lần
+            var attempts = 0;
+            var interval = setInterval(function() {
+                attempts++;
+                if (cleanPage() || attempts > 20) {
+                    clearInterval(interval);
+                }
+            }, 500);
         })();
         """
         let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
