@@ -24,7 +24,6 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
-        // Nếu có season/episode, dùng API /api/watch
         if let s = season, let ep = episode {
             return try await fetchEpisodeStream(
                 tmdbID: tmdbID,
@@ -34,111 +33,59 @@ class Phim1280Extractor {
             )
         }
         
-        // Movie
         return try await fetchMovieStream(tmdbID: tmdbID, title: title)
     }
     
     // MARK: - Fetch Movie Stream
     
     private func fetchMovieStream(tmdbID: Int, title: String) async throws -> URL {
-    // Danh sách slug cần thử
-    var slugs: [String] = []
-    
-    // Slug từ title tiếng Anh
-    let enSlug = title.lowercased()
-        .replacingOccurrences(of: " ", with: "-")
-        .replacingOccurrences(of: ":", with: "")
-        .replacingOccurrences(of: "&", with: "and")
-        .replacingOccurrences(of: "'", with: "")
-        .replacingOccurrences(of: ",", with: "")
-        .replacingOccurrences(of: ".", with: "")
-    slugs.append(enSlug)
-    
-    // Slug ngắn (từ cuối)
-    if let lastWord = title.components(separatedBy: " ").last {
-        let lastSlug = lastWord.lowercased()
-            .replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: "&", with: "and")
-        slugs.append(lastSlug)
-    }
-    
-    // Slug bỏ từ "The"
-    if title.lowercased().hasPrefix("the ") {
-        let noThe = String(title.dropFirst(4)).lowercased()
+        let fallbackSlug = removeVietnameseDiacritics(title.lowercased())
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "&", with: "and")
-        slugs.append(noThe)
-    }
-    
-    for slug in slugs {
-        print("🔍 Thử slug: \(slug)")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
         
-        let watchURL = "\(baseURL)/api/watch/\(slug)"
-        guard let url = URL(string: watchURL) else { continue }
+        print("🔍 Thử slug: \(fallbackSlug)")
         
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            
-            if let httpResponse = response as? HTTPURLResponse,
-               httpResponse.statusCode == 200,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               json["movie"] != nil {
-                
-                print("✅ Tìm thấy movie với slug: \(slug)")
-                
-                // Lấy sources
-                if let movie = json["movie"] as? [String: Any],
-                   let sources = movie["sources"] as? [[String: Any]],
-                   let firstSource = sources.first,
-                   let sourceURL = firstSource["url"] as? String,
-                   let streamURL = URL(string: sourceURL) {
-                    return try await processMasterPlaylist(streamURL)
+        let watchURL = "\(baseURL)/api/watch/\(fallbackSlug)"
+        if let url = URL(string: watchURL) {
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                if let httpResponse = response as? HTTPURLResponse,
+                   httpResponse.statusCode == 200,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   json["movie"] != nil {
+                    
+                    print("✅ Tìm thấy movie qua /api/watch!")
+                    
+                    if let movie = json["movie"] as? [String: Any],
+                       let sources = movie["sources"] as? [[String: Any]],
+                       let firstSource = sources.first,
+                       let sourceURL = firstSource["url"] as? String,
+                       let streamURL = URL(string: sourceURL) {
+                        print("✅ Source: \(sourceURL.prefix(100))")
+                        return try await processMasterPlaylist(streamURL)
+                    }
+                    
+                    if let sources = json["sources"] as? [[String: Any]],
+                       let firstSource = sources.first,
+                       let sourceURL = firstSource["url"] as? String,
+                       let streamURL = URL(string: sourceURL) {
+                        print("✅ Source (root): \(sourceURL.prefix(100))")
+                        return try await processMasterPlaylist(streamURL)
+                    }
                 }
-                
-                if let sources = json["sources"] as? [[String: Any]],
-                   let firstSource = sources.first,
-                   let sourceURL = firstSource["url"] as? String,
-                   let streamURL = URL(string: sourceURL) {
-                    return try await processMasterPlaylist(streamURL)
-                }
+            } catch {
+                print("⚠️ Không fetch được /api/watch/\(fallbackSlug)")
             }
-        } catch {
-            continue
         }
-    }
-    
-    throw StreamError.movieNotFound
-}
-
-private func fetchStreamBySlug(_ slug: String) async throws -> URL {
-    let watchURL = "\(baseURL)/api/watch/\(slug)"
-    guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
-    
-    let (data, _) = try await URLSession.shared.data(from: url)
-    
-    guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        
         throw StreamError.movieNotFound
     }
-    
-    // Lấy sources từ movie hoặc root
-    if let movie = json["movie"] as? [String: Any],
-       let sources = movie["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
-    }
-    
-    if let sources = json["sources"] as? [[String: Any]],
-       let firstSource = sources.first,
-       let sourceURL = firstSource["url"] as? String,
-       let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
-    }
-    
-    throw StreamError.noStreamAvailable
-}
     
     // MARK: - Fetch Episode Stream
     
@@ -179,49 +126,18 @@ private func fetchStreamBySlug(_ slug: String) async throws -> URL {
     // MARK: - Find Slug
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
-        let fallbackSlug = title.lowercased()
+        let fallbackSlug = removeVietnameseDiacritics(title.lowercased())
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "&", with: "and")
             .replacingOccurrences(of: "'", with: "")
             .replacingOccurrences(of: ",", with: "")
             .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
         
         print("🔍 Fallback slug: \(fallbackSlug)")
         return fallbackSlug
-    }
-    
-    // MARK: - Extract Stream URL
-    
-    private func extractStreamURL(from item: [String: Any]) async throws -> URL {
-        
-        if let hlsUrl = item["hlsUrl"] as? String,
-           hlsUrl.hasPrefix("http"),
-           !hlsUrl.contains("/api/hls/tiktok") {
-            print("🔍 CDN hlsUrl: \(hlsUrl.prefix(100))")
-            if let url = URL(string: hlsUrl) {
-                return try await processMasterPlaylist(url)
-            }
-        }
-        
-        if let sources = item["sources"] as? [[String: Any]],
-           let firstSource = sources.first,
-           let sourceURL = firstSource["url"] as? String,
-           sourceURL.hasPrefix("http"),
-           !sourceURL.contains("/api/hls/tiktok") {
-            print("🔍 CDN source: \(sourceURL.prefix(100))")
-            if let url = URL(string: sourceURL) {
-                return try await processMasterPlaylist(url)
-            }
-        }
-        
-        let slug = item["slug"] as? String ?? ""
-        let urlString = "\(baseURL)/api/hls/tiktok/\(slug)/master.m3u8"
-        guard let url = URL(string: urlString) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        return try await processMasterPlaylist(url)
     }
     
     // MARK: - Process Master Playlist
@@ -306,5 +222,35 @@ private func fetchStreamBySlug(_ slug: String) async throws -> URL {
         print("✅ Local variant saved: \(fileURL)")
         
         return fileURL
+    }
+    
+    // MARK: - Remove Vietnamese Diacritics
+    
+    private func removeVietnameseDiacritics(_ text: String) -> String {
+        let diacritics: [Character: String] = [
+            "à": "a", "á": "a", "ả": "a", "ã": "a", "ạ": "a",
+            "ă": "a", "ằ": "a", "ắ": "a", "ẳ": "a", "ẵ": "a", "ặ": "a",
+            "â": "a", "ầ": "a", "ấ": "a", "ẩ": "a", "ẫ": "a", "ậ": "a",
+            "è": "e", "é": "e", "ẻ": "e", "ẽ": "e", "ẹ": "e",
+            "ê": "e", "ề": "e", "ế": "e", "ể": "e", "ễ": "e", "ệ": "e",
+            "ì": "i", "í": "i", "ỉ": "i", "ĩ": "i", "ị": "i",
+            "ò": "o", "ó": "o", "ỏ": "o", "õ": "o", "ọ": "o",
+            "ô": "o", "ồ": "o", "ố": "o", "ổ": "o", "ỗ": "o", "ộ": "o",
+            "ơ": "o", "ờ": "o", "ớ": "o", "ở": "o", "ỡ": "o", "ợ": "o",
+            "ù": "u", "ú": "u", "ủ": "u", "ũ": "u", "ụ": "u",
+            "ư": "u", "ừ": "u", "ứ": "u", "ử": "u", "ữ": "u", "ự": "u",
+            "ỳ": "y", "ý": "y", "ỷ": "y", "ỹ": "y", "ỵ": "y",
+            "đ": "d"
+        ]
+        
+        var result = ""
+        for char in text {
+            if let replacement = diacritics[char] {
+                result.append(replacement)
+            } else {
+                result.append(char)
+            }
+        }
+        return result
     }
 }
