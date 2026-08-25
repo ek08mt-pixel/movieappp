@@ -24,7 +24,10 @@ class Phim1280Extractor {
         episode: Int? = nil
     ) async throws -> URL {
         
+        print("🔍 fetchStream bắt đầu: \(title) (tmdb: \(tmdbID)) S\(season ?? -1)E\(episode ?? -1)")
+        
         let slug = try await findSlug(tmdbID: tmdbID, title: title)
+        print("🔍 Slug: \(slug)")
         let watchURL = "\(baseURL)/api/watch/\(slug)"
         guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
         
@@ -80,6 +83,7 @@ class Phim1280Extractor {
     }
     
     private func processPlaylist(_ playlistURL: URL) async throws -> URL {
+        print("🔍 processPlaylist: \(playlistURL.absoluteString.prefix(100))")
         var request = URLRequest(url: playlistURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
@@ -105,6 +109,7 @@ class Phim1280Extractor {
     }
     
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
+        print("🔍 Master playlist có \(content.components(separatedBy: .newlines).count) dòng")
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
         
