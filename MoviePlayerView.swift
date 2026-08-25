@@ -235,68 +235,124 @@ selectedSource = initialSource
 }
             if showPhim1280WebView, let url = phim1280WebURL {
                 ZStack {
-    Phim1280WebPlayerView(url: url)
-        .ignoresSafeArea()
-    
-    // Nút back
-    VStack {
-        HStack {
-            Button {
-                showPhim1280WebView = false
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(12)
-                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
-            }
-            .padding(.top, 56)
-            .padding(.leading, 16)
-            
-            Spacer()
-        }
-        Spacer()
-        
-        // Thanh tiến trình + controls
-        VStack(spacing: 8) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.2)).frame(height: 4)
-                    Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
+                    Phim1280WebPlayerView(url: url)
+                        .ignoresSafeArea()
+                        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TimeUpdate"))) { notification in
+                            if let info = notification.userInfo {
+                                currentTime = info["currentTime"] as? Double ?? 0
+                                duration = info["duration"] as? Double ?? 1
+                            }
+                        }
+                    
+                    // Controls
+                    VStack {
+                        // Top bar
+                        HStack {
+                            Button {
+                                Phim1280WebPlayerView.activeWebView?.stopLoading()
+                                showPhim1280WebView = false
+                                dismiss()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(12)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
+                            }
+                            .padding(.leading, 16)
+                            
+                            Spacer()
+                            
+                            Text(movieTitle)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            
+                            Spacer()
+                            
+                            Button {
+                                showSourceMenu = true
+                            } label: {
+                                Image(systemName: "server.rack")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            .padding(.trailing, 16)
+                        }
+                        .padding(.top, 56)
+                        
+                        Spacer()
+                        
+                        // Bottom controls
+                        VStack(spacing: 8) {
+                            // Thanh tiến trình
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(.white.opacity(0.2)).frame(height: 4)
+                                    Capsule().fill(.white).frame(width: max(4, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 4)
+                                }
+                                .contentShape(Rectangle())
+                                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                                    let r = min(max(v.location.x / geo.size.width, 0), 1)
+                                    let newTime = r * duration
+                                    currentTime = newTime
+                                }.onEnded { _ in
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(currentTime); }")
+                                })
+                            }.frame(height: 20)
+                            
+                            HStack {
+                                Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                                Spacer()
+                                Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+                            }
+                            
+                            HStack(spacing: 50) {
+                                Button {
+                                    let newTime = max(currentTime - 10, 0)
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+                                    currentTime = newTime
+                                } label: {
+                                    Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
+                                }
+                                
+                                Button {
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
+                                } label: {
+                                    Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
+                                }
+                                
+                                Button {
+                                    let newTime = min(currentTime + 10, duration)
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
+                                    currentTime = newTime
+                                } label: {
+                                    Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
+                                }
+                                
+                                Button {
+                                    showAudioPopup = true
+                                } label: {
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "waveform").font(.system(size: 20))
+                                        Text("Âm thanh").font(.system(size: 9))
+                                    }.foregroundColor(.white.opacity(0.8))
+                                }
+                                
+                                Button {
+                                    showSubPopup = true
+                                } label: {
+                                    VStack(spacing: 2) {
+                                        Text("EN").font(.system(size: 10, weight: .bold))
+                                        Text("Phụ đề").font(.system(size: 9))
+                                    }.foregroundColor(.white.opacity(0.8))
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20).padding(.bottom, 40)
+                        .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                    }
                 }
-            }.frame(height: 20)
-            
-            HStack {
-                Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
-                Spacer()
-                Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
-            }
-            
-            HStack(spacing: 50) {
-                Button {
-                    let newTime = max(currentTime - 10, 0)
-                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                } label: {
-                    Image(systemName: "gobackward.10").font(.system(size: 26)).foregroundColor(.white)
-                }
-                Button {
-                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
-                } label: {
-                    Image(systemName: "pause.fill").font(.system(size: 36)).foregroundColor(.white)
-                }
-                Button {
-                    let newTime = min(currentTime + 10, duration)
-                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                } label: {
-                    Image(systemName: "goforward.10").font(.system(size: 26)).foregroundColor(.white)
-                }
-            }
-        }
-        .padding(.horizontal, 20).padding(.bottom, 40)
-        .background(LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom))
-    }
-}
             }
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
@@ -1263,8 +1319,10 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
     
     func makeCoordinator() -> Coordinator { Coordinator() }
     
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.configuration.userContentController.add(self, name: "timeUpdate")
+            
             let js = """
             (function() {
                 setTimeout(function() {
@@ -1279,19 +1337,32 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                         document.body.appendChild(video);
                         video.play();
                         
-                        // Gửi thời gian về app
                         setInterval(function() {
-                            window.webkit.messageHandlers.timeUpdate.postMessage({
-                                currentTime: v.currentTime,
-                                duration: v.duration || 1,
-                                paused: v.paused
-                            });
+                            try {
+                                window.webkit.messageHandlers.timeUpdate.postMessage({
+                                    currentTime: video.currentTime,
+                                    duration: video.duration || 1,
+                                    paused: video.paused
+                                });
+                            } catch(e) {}
                         }, 500);
                     }
                 }, 1000);
             })();
             """
             webView.evaluateJavaScript(js)
+        }
+        
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "timeUpdate", let dict = message.body as? [String: Any] {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: Notification.Name("Phim1280TimeUpdate"), object: nil, userInfo: [
+                        "currentTime": dict["currentTime"] as? Double ?? 0,
+                        "duration": dict["duration"] as? Double ?? 1,
+                        "paused": dict["paused"] as? Bool ?? false
+                    ])
+                }
+            }
         }
     }
 }
