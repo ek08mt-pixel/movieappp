@@ -12,8 +12,7 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
             "Referer": "https://film4k.net/",
             "Origin": "https://film4k.net",
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/vnd.apple.mpegurl,*/*"
+            "Accept": "*/*"
         ]
         session = URLSession(configuration: config)
         super.init()
@@ -25,7 +24,7 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
     ) -> Bool {
         
         guard let url = loadingRequest.request.url else {
-            loadingRequest.finishLoading(with: NSError(domain: "HLS", code: 1))
+            loadingRequest.finishLoading()
             return false
         }
         
@@ -36,7 +35,7 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         }
         
         guard let realURL = URL(string: realURLString) else {
-            loadingRequest.finishLoading(with: NSError(domain: "HLS", code: 2))
+            loadingRequest.finishLoading()
             return false
         }
         
@@ -44,23 +43,19 @@ final class HLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
         request.setValue("https://film4k.net", forHTTPHeaderField: "Origin")
-        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
-        request.setValue("application/vnd.apple.mpegurl,*/*", forHTTPHeaderField: "Accept")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
         
         let task = session.dataTask(with: request) { data, response, error in
             if let error = error {
                 loadingRequest.finishLoading(with: error)
                 return
             }
-            
             if let response = response {
                 loadingRequest.response = response
             }
-            
             if let data = data {
                 loadingRequest.dataRequest?.respond(with: data)
             }
-            
             loadingRequest.finishLoading()
         }
         task.resume()
