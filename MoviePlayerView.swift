@@ -136,6 +136,8 @@ struct MoviePlayerView: View {
     @State private var phim1280Quality: String = ""
     @State private var showPhim1280AudioMenu = false
     @State private var showPhim1280SubtitleMenu = false
+    @State private var phim1280AspectMode = 0
+    @State private var phim1280SubOffset: Double = 0
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
     
@@ -288,8 +290,14 @@ selectedSource = initialSource
                         Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
                     },
                     onShowSource: {
-                        showSourceMenu = true
-                    }
+                showSourceMenu = true
+            },
+            onChangeAspect: {
+                changePhim1280Aspect()
+            },
+            onChangeSubPosition: {
+                changePhim1280SubPosition()
+            }
                 )
             }
             }
@@ -338,7 +346,7 @@ selectedSource = initialSource
                 .allowsHitTesting(false)
             }
             
-            if showControls && errorMessage == nil && !isLoading && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup && !showSubPopup {
+            if showControls && errorMessage == nil && !isLoading && !showPhim1280WebView && !showOverlay && !showSourceMenu && !showSettings && !showAudioPopup && !showSubPopup {
                 HStack(spacing: 50) {
                     Button { prevEpisode() } label: { Image(systemName: "backward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.25))) }
                     Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 44, weight: .bold)).foregroundColor(.white).padding(20).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
@@ -732,6 +740,17 @@ func tryResume() {
     func resetVolumeTimer() { volumeTimer?.invalidate(); volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in showVolumeSlider = false } }
     func resetBrightnessTimer() { brightnessTimer?.invalidate(); brightnessTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in showBrightnessSlider = false } }
     func toggleOrientation() { guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }; ws.requestGeometryUpdate(.iOS(interfaceOrientations: ws.interfaceOrientation.isLandscape ? .portrait : .landscapeRight)) }
+    func changePhim1280Aspect() {
+        phim1280AspectMode = (phim1280AspectMode + 1) % 3
+        let mode = phim1280AspectMode == 0 ? "contain" : phim1280AspectMode == 1 ? "cover" : "fill"
+        Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.style.objectFit = '\(mode)'; }")
+    }
+    
+    func changePhim1280SubPosition() {
+        phim1280SubOffset += 20
+        if phim1280SubOffset > 100 { phim1280SubOffset = 0 }
+        Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.style.paddingBottom = '\(phim1280SubOffset)px'; }")
+    }
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
     
     @ViewBuilder func episodeRow(detail: TVSeasonDetail) -> some View { VStack(alignment: .leading, spacing: 6) { Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) { ForEach(detail.episodes) { ep in Button { loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() } label: { Text("\(ep.episodeNumber)").font(.system(size: 11, weight: .medium)).foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white).frame(height: 36).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 10).fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)).overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.15), lineWidth: 0.5))) } } } } }
@@ -1264,13 +1283,18 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
             webView.configuration.userContentController.add(self, name: "tracksInfo")
             
             let js = """
-            (function() {
-                setTimeout(function() {
-                    var video = document.querySelector('video');
-                    if (video) {
-                        document.body.innerHTML = '';
-                        document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                        video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
+        (function() {
+            document.documentElement.style.backgroundColor = '#000';
+            document.body.style.backgroundColor = '#000';
+            document.body.style.opacity = '0';
+            
+            setTimeout(function() {
+                var video = document.querySelector('video');
+                if (video) {
+                    document.body.innerHTML = '';
+                    document.body.style.opacity = '1';
+                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
+                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
                         video.controls = false;
                         video.disablePictureInPicture = true;
                         video.playsInline = true;
@@ -1355,6 +1379,8 @@ struct Phim1280ControlsView: View {
     let onSkipBack: () -> Void
     let onSkipForward: () -> Void
     let onShowSource: () -> Void
+    let onChangeAspect: () -> Void
+    let onChangeSubPosition: () -> Void
     
     var body: some View {
         VStack {
@@ -1430,12 +1456,15 @@ struct Phim1280ControlsView: View {
                     
                     if !audioTracks.isEmpty {
                         Menu {
+                            Button("Tiếng gốc (English)") {
+                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].language === 'eng' || v.audioTracks[i].language === 'en'); } }")
+                            }
                             ForEach(audioTracks.indices, id: \.self) { index in
-    Button(audioTracks[index]["label"] as? String ?? "") {
-        let id = audioTracks[index]["id"] as? String ?? ""
-        Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
-    }
-}
+                                Button(audioTracks[index]["label"] as? String ?? "") {
+                                    let id = audioTracks[index]["id"] as? String ?? ""
+                                    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].id === '\(id)'); } }")
+                                }
+                            }
                         } label: {
                             VStack(spacing: 2) {
                                 Image(systemName: "waveform").font(.system(size: 20))
@@ -1444,6 +1473,19 @@ struct Phim1280ControlsView: View {
                         }
                     }
                     
+                    Button(action: onChangeAspect) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "rectangle.expand.vertical").font(.system(size: 20))
+                            Text("Khung").font(.system(size: 9))
+                        }.foregroundColor(.white.opacity(0.8))
+                    }
+                    
+                    Button(action: onChangeSubPosition) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "textformat.size").font(.system(size: 20))
+                            Text("Sub").font(.system(size: 9))
+                        }.foregroundColor(.white.opacity(0.8))
+                    }
                     if !subtitleTracks.isEmpty {
                         Menu {
                             Button("Tắt") {
