@@ -7,13 +7,11 @@ class Phim1280Extractor {
     enum StreamError: Error, LocalizedError {
         case noStreamAvailable
         case movieNotFound
-        case unsupportedURL
         
         var errorDescription: String? {
             switch self {
             case .noStreamAvailable: return "Không tìm thấy stream"
             case .movieNotFound: return "Không tìm thấy phim"
-            case .unsupportedURL: return "URL không hợp lệ"
             }
         }
     }
@@ -27,8 +25,6 @@ class Phim1280Extractor {
     ) async throws -> URL {
         
         let slug = try await findSlug(tmdbID: tmdbID, title: title)
-        print("✅ Slug: \(slug)")
-        
         let watchURL = "\(baseURL)/api/watch/\(slug)"
         guard let url = URL(string: watchURL) else { throw StreamError.noStreamAvailable }
         
@@ -37,51 +33,45 @@ class Phim1280Extractor {
             throw StreamError.movieNotFound
         }
         
-        // TV show - episodes
+        // TV show
         if let episodes = json["episodes"] as? [[String: Any]], !episodes.isEmpty {
             let s = season ?? 1
             let ep = episode ?? 1
-            
             for episodeItem in episodes {
                 if let epSeason = episodeItem["season"] as? Int, epSeason == s,
                    let epNumber = episodeItem["episode"] as? Int, epNumber == ep,
                    let sources = episodeItem["sources"] as? [[String: Any]],
                    let firstSource = sources.first,
-                   let sourceURL = firstSource["url"] as? String {
-                    if let streamURL = URL(string: sourceURL) {
-                        print("✅ Episode source: \(sourceURL.prefix(80))")
-                        return try await processPlaylist(streamURL)
-                    }
+                   let sourceURL = firstSource["url"] as? String,
+                   let streamURL = URL(string: sourceURL) {
+                    return try await processPlaylist(streamURL)
                 }
             }
         }
         
-        // Movie - hlsUrl hoặc sources
+        // Movie
         if let movie = json["movie"] as? [String: Any] {
             if let hlsUrl = movie["hlsUrl"] as? String {
                 let fullHlsURL = hlsUrl.hasPrefix("/") ? "\(baseURL)\(hlsUrl)" : hlsUrl
                 if let streamURL = URL(string: fullHlsURL) {
-                    print("✅ Movie hlsUrl: \(fullHlsURL.prefix(80))")
                     return try await processPlaylist(streamURL)
                 }
             }
-            
             if let sources = movie["sources"] as? [[String: Any]],
                let firstSource = sources.first,
                let sourceURL = firstSource["url"] as? String {
-                if let streamURL = URL(string: sourceURL) {
-                    print("✅ Movie source: \(sourceURL.prefix(80))")
+                let fullSourceURL = sourceURL.hasPrefix("/") ? "\(baseURL)\(sourceURL)" : sourceURL
+                if let streamURL = URL(string: fullSourceURL) {
                     return try await processPlaylist(streamURL)
                 }
             }
         }
         
-        // Root sources
         if let sources = json["sources"] as? [[String: Any]],
            let firstSource = sources.first,
            let sourceURL = firstSource["url"] as? String {
-            if let streamURL = URL(string: sourceURL) {
-                print("✅ Root source: \(sourceURL.prefix(80))")
+            let fullSourceURL = sourceURL.hasPrefix("/") ? "\(baseURL)\(sourceURL)" : sourceURL
+            if let streamURL = URL(string: fullSourceURL) {
                 return try await processPlaylist(streamURL)
             }
         }
@@ -89,9 +79,147 @@ class Phim1280Extractor {
         throw StreamError.noStreamAvailable
     }
     
+    private func processPlaylist(_ playlistURL: URL) async throws -> URL {
+        var request = URLRequest(url: playlistURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let content = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        var m3u8Content = content
+        if let range = content.range(of: "#EXTM3U") {
+            m3u8Content = String(content[range.lowerBound...])
+        }
+        
+        // Nếu là master playlist
+        if m3u8Content.contains("#EXT-X-STREAM-INF") {
+            return try await processMasterPlaylist(m3u8Content, baseURL: playlistURL)
+        }
+        
+        // Nếu là variant trực tiếp - tạo local với absolute URLs
+        return try await createLocalVariant(m3u8Content, baseURL: playlistURL)
+    }
+    
+    private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
+        let lines = content.components(separatedBy: .newlines)
+        var videoVariantURL: String? = nil
+        var audioVariants: [String] = []
+        var subtitleVariants: [String] = []
+        
+        for line in lines {
+            // Lấy URI từ #EXT-X-MEDIA
+            if line.hasPrefix("#EXT-X-MEDIA"), let uriRange = line.range(of: "URI=\""),
+               let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
+                
+                if line.contains("TYPE=AUDIO") {
+                    audioVariants.append(absoluteURI)
+                } else if line.contains("TYPE=SUBTITLES") {
+                    subtitleVariants.append(absoluteURI)
+                }
+            }
+            
+            // Video variant
+            if !line.hasPrefix("#") && !line.isEmpty {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
+                    videoVariantURL = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
+                }
+            }
+        }
+        
+        // Fetch video variant
+        if let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) {
+            return try await fetchVariantWithAudio(videoURL: videoURL, audioURLs: audioVariants, subtitleURLs: subtitleVariants)
+        }
+        
+        throw StreamError.noStreamAvailable
+    }
+    
+    private func fetchVariantWithAudio(videoURL: URL, audioURLs: [String], subtitleURLs: [String]) async throws -> URL {
+        var request = URLRequest(url: videoURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let videoContent = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
+        }
+        
+        // Tạo local m3u8
+        var lines = videoContent.components(separatedBy: .newlines)
+        var result: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
+        
+        // Thêm audio tracks
+        if !audioURLs.isEmpty {
+            for audioURL in audioURLs {
+                result.append("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"Audio\",URI=\"\(audioURL)\"")
+            }
+        }
+        
+        // Thêm subtitles
+        if !subtitleURLs.isEmpty {
+            for subtitleURL in subtitleURLs {
+                result.append("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"sub\",NAME=\"Sub\",URI=\"\(subtitleURL)\"")
+            }
+        }
+        
+        // Thêm video segments với absolute URLs
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                if trimmed.hasPrefix("http") {
+                    result.append(trimmed)
+                } else {
+                    let base = videoURL.deletingLastPathComponent().absoluteString
+                    result.append("\(base)/\(trimmed)")
+                }
+            } else if trimmed.hasPrefix("#EXTINF") || trimmed.hasPrefix("#EXT-X-MAP") || trimmed.hasPrefix("#EXT-X-TARGETDURATION") || trimmed.hasPrefix("#EXT-X-MEDIA-SEQUENCE") || trimmed.hasPrefix("#EXT-X-PLAYLIST-TYPE") {
+                result.append(trimmed)
+            }
+        }
+        
+        let localContent = result.joined(separator: "\n")
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("film4k_tiktok_\(Date().timeIntervalSince1970).m3u8")
+        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        
+        print("✅ Tạo local m3u8 với \(audioURLs.count) audio, \(subtitleURLs.count) subtitle")
+        return fileURL
+    }
+    
+    private func createLocalVariant(_ content: String, baseURL: URL) async throws -> URL {
+        let lines = content.components(separatedBy: .newlines)
+        var newLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
+                if trimmed.hasPrefix("http") {
+                    newLines.append(trimmed)
+                } else {
+                    let base = baseURL.deletingLastPathComponent().absoluteString
+                    newLines.append("\(base)/\(trimmed)")
+                }
+            } else {
+                newLines.append(line)
+            }
+        }
+        
+        let localContent = newLines.joined(separator: "\n")
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("film4k_\(Date().timeIntervalSince1970).m3u8")
+        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        
+        return fileURL
+    }
+    
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
         let cleanTitle = removeVietnameseDiacritics(title.lowercased())
-        
         var searchTerms: [String] = [cleanTitle]
         let words = cleanTitle.components(separatedBy: " ")
         if let first = words.first { searchTerms.append(first) }
@@ -113,121 +241,22 @@ class Phim1280Extractor {
                     
                     for item in allItems {
                         if let tmdb = item["tmdbId"] as? Int, tmdb == tmdbID,
-                           let slug = item["slug"] as? String {
-                            print("✅ Tìm theo TMDB: \(slug)")
-                            return slug
-                        }
+                           let slug = item["slug"] as? String { return slug }
                         
                         let enTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["en"] as? String ?? "").lowercased()
                         let viTitle = removeVietnameseDiacritics((item["title"] as? [String: Any])?["vi"] as? String ?? "").lowercased()
                         let slug = item["slug"] as? String ?? ""
                         
                         if enTitle.contains(cleanTitle) || cleanTitle.contains(enTitle) ||
-                           viTitle.contains(cleanTitle) || cleanTitle.contains(viTitle) ||
-                           enTitle.contains(term) || viTitle.contains(term) ||
-                           cleanTitle.contains(enTitle) || cleanTitle.contains(viTitle) {
-                            print("✅ Tìm theo title: \(slug)")
+                           viTitle.contains(cleanTitle) || cleanTitle.contains(viTitle) {
                             return slug
                         }
                     }
                 }
-            } catch {
-                continue
-            }
+            } catch { continue }
         }
         
-        let fallbackSlug = cleanTitle
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: "&", with: "and")
-            .replacingOccurrences(of: "'", with: "")
-            .replacingOccurrences(of: ",", with: "")
-            .replacingOccurrences(of: ".", with: "")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-        
-        print("🔍 Fallback slug: \(fallbackSlug)")
-        return fallbackSlug
-    }
-    
-    private func processPlaylist(_ playlistURL: URL) async throws -> URL {
-        var request = URLRequest(url: playlistURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-        
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        var m3u8Content = content
-        if let m3u8Range = content.range(of: "#EXTM3U") {
-            m3u8Content = String(content[m3u8Range.lowerBound...])
-        }
-        
-        // Nếu là master playlist
-        if m3u8Content.contains("#EXT-X-STREAM-INF") {
-            let lines = m3u8Content.components(separatedBy: .newlines)
-            var newLines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
-            var videoVariant: String? = nil
-            
-            for line in lines {
-                // Sửa URI trong #EXT-X-MEDIA
-                if line.hasPrefix("#EXT-X-MEDIA") {
-                    if let uriRange = line.range(of: "URI=\""),
-                       let endRange = line[uriRange.upperBound...].range(of: "\"") {
-                        let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
-                        let absoluteURI: String
-                        if uri.hasPrefix("http") {
-                            absoluteURI = uri
-                        } else {
-                            let base = playlistURL.deletingLastPathComponent().absoluteString
-                            absoluteURI = "\(base)/\(uri)"
-                        }
-                        newLines.append(line.replacingOccurrences(of: uri, with: absoluteURI))
-                    }
-                }
-                
-                // Tìm video variant
-                if !line.hasPrefix("#") && !line.isEmpty {
-                    let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    if !trimmed.isEmpty && !trimmed.hasPrefix("#") {
-                        let absolute: String
-                        if trimmed.hasPrefix("http") {
-                            absolute = trimmed
-                        } else {
-                            let base = playlistURL.deletingLastPathComponent().absoluteString
-                            absolute = "\(base)/\(trimmed)"
-                        }
-                        videoVariant = absolute
-                    }
-                }
-                
-                // Giữ các line khác trừ #EXT-X-MEDIA cũ
-                if !line.hasPrefix("#EXT-X-MEDIA") && !line.isEmpty && line != "#EXTM3U" {
-                    if line.hasPrefix("#EXT-X-STREAM-INF") {
-                        newLines.append(line)
-                    }
-                }
-            }
-            
-            // Thêm video variant
-            if let video = videoVariant {
-                newLines.append(video)
-            }
-            
-            // Lưu local m3u8
-            let localContent = newLines.joined(separator: "\n")
-            let tempDir = FileManager.default.temporaryDirectory
-            let fileURL = tempDir.appendingPathComponent("film4k_master_\(Date().timeIntervalSince1970).m3u8")
-            try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
-            
-            print("✅ Tạo m3u8 local với audio/subtitle")
-            return fileURL
-        }
-        
-        // Nếu không phải master, trả về URL
-        return playlistURL
+        return cleanTitle.replacingOccurrences(of: " ", with: "-")
     }
     
     private func removeVietnameseDiacritics(_ text: String) -> String {
