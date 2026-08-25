@@ -568,8 +568,13 @@ didResume = false
     selectedQuality = detectQuality(from: result)
     errorMessage = nil
             
-            let asset = AVURLAsset(url: result)
-            let playerItem = AVPlayerItem(asset: asset)
+            let asset = AVURLAsset(url: result, options: [
+    "AVURLAssetHTTPHeaderFieldsKey": [
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        "Referer": "https://film4k.net/"
+    ]
+])
+let playerItem = AVPlayerItem(asset: asset)
             player.replaceCurrentItem(with: playerItem)
             player.play()
             
