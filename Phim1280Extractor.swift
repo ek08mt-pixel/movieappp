@@ -110,19 +110,22 @@ private func fetchStreamBySlug(_ slug: String) async throws -> URL {
         throw StreamError.movieNotFound
     }
     
+    // Lấy trực tiếp CDN link, bỏ qua processMasterPlaylist
     if let movie = json["movie"] as? [String: Any],
        let sources = movie["sources"] as? [[String: Any]],
        let firstSource = sources.first,
        let sourceURL = firstSource["url"] as? String,
        let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
+        print("✅ Trả về trực tiếp: \(sourceURL)")
+        return streamURL  // ← Không process nữa
     }
     
     if let sources = json["sources"] as? [[String: Any]],
        let firstSource = sources.first,
        let sourceURL = firstSource["url"] as? String,
        let streamURL = URL(string: sourceURL) {
-        return try await processMasterPlaylist(streamURL)
+        print("✅ Trả về trực tiếp: \(sourceURL)")
+        return streamURL  // ← Không process nữa
     }
     
     throw StreamError.noStreamAvailable
