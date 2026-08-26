@@ -36,7 +36,7 @@ final class MappingCache {
     ]
     
     static var directSlugs: [String: String] = [
-        "111110_1": "dao-hai-tac-live-action-phan-1", "111110_2": "dao-hai-tac-live-action-phan-2",
+        "111110_1": "dao-hai-tac-live-action-phan-1", "111110_2": "dao-hai-tac-live-action-phan-2","49018_1": "quy-quyet",
         "222624_1": "gintama-thay-ginpachi-o-lop-3z", "46261_1": "hoi-phap-su-phan-1","215522_1": "chung-ta-la-nhung-ke-doi-tra",
         "46261_2": "hoi-phap-su-phan-1", "46261_3": "hoi-phap-su-phan-1", "46261_4": "hoi-phap-su-phan-1",
         "46261_5": "hoi-phap-su-phan-2", "46261_6": "hoi-phap-su-phan-3", "46261_7": "hoi-phap-su-phan-3",
