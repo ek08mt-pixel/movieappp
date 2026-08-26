@@ -1479,14 +1479,13 @@ struct Phim1280ControlsView: View {
                             Button("English Stereo") {
     Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("""
         var v = document.querySelector('video');
-        if (v && v.audioTracks) {
-            for (var i = 0; i < v.audioTracks.length; i++) {
-                v.audioTracks[i].enabled = false;
-            }
-            for (var j = 0; j < v.audioTracks.length; j++) {
-                var label = (v.audioTracks[j].label || '').toLowerCase();
+        if (v && v.webkitAudioTracks) {
+            for (var i = 0; i < v.webkitAudioTracks.length; i++) {
+                var label = (v.webkitAudioTracks[i].label || '').toLowerCase();
                 if (label.indexOf('english') !== -1 || label.indexOf('stereo') !== -1) {
-                    v.audioTracks[j].enabled = true;
+                    v.webkitAudioTracks[i].enabled = true;
+                } else {
+                    v.webkitAudioTracks[i].enabled = false;
                 }
             }
         }
