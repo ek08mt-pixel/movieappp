@@ -1301,7 +1301,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                     document.body.innerHTML = '';
                     document.body.style.opacity = '1';
                     document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                    video.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:contain;z-index:9999;';
+                    video.style.cssText = 'position:fixed;top:20px;left:0;width:100vw;height:calc(100vh - 40px);object-fit:contain;z-index:9999;margin:0;padding:0;';
                         video.controls = false;
                         video.disablePictureInPicture = true;
                         video.playsInline = true;
@@ -1320,15 +1320,15 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                                 };
                                 
                                 if (video.audioTracks) {
-                                    for (var i = 0; i < video.audioTracks.length; i++) {
-                                        info.audioTracks.push({
-                                            id: video.audioTracks[i].id,
-                                            label: video.audioTracks[i].label || 'Audio ' + (i+1),
-                                            language: video.audioTracks[i].language || '',
-                                            enabled: video.audioTracks[i].enabled
-                                        });
-                                    }
-                                }
+    for (var i = 0; i < video.audioTracks.length; i++) {
+        info.audioTracks.push({
+            id: video.audioTracks[i].id,
+            label: video.audioTracks[i].label || 'Audio ' + (i+1),
+            language: video.audioTracks[i].language || '',
+            enabled: video.audioTracks[i].enabled
+        });
+    }
+}
                                 
                                 if (video.textTracks) {
                                     for (var i = 0; i < video.textTracks.length; i++) {
@@ -1464,8 +1464,8 @@ struct Phim1280ControlsView: View {
                     if !audioTracks.isEmpty {
                         Menu {
                             Button("Tiếng gốc (English)") {
-                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if (v.audioTracks[i].language && v.audioTracks[i].language.indexOf('en') !== -1) { v.audioTracks[i].enabled = true; } } }")
-                            }
+    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if(v.audioTracks[i].language && (v.audioTracks[i].language.indexOf('en') !== -1 || v.audioTracks[i].language.indexOf('eng') !== -1)) { v.audioTracks[i].enabled = true; } else { v.audioTracks[i].enabled = false; } } }")
+}
                             ForEach(audioTracks.indices, id: \.self) { index in
                                 Button(audioTracks[index]["label"] as? String ?? "") {
                                     let id = audioTracks[index]["id"] as? String ?? ""
