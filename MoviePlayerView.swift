@@ -1234,117 +1234,12 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         wv.backgroundColor = .black
         wv.isOpaque = false
         wv.scrollView.isScrollEnabled = false
-        wv.navigationDelegate = context.coordinator
         wv.load(URLRequest(url: url))
         Phim1280WebPlayerView.activeWebView = wv
         return wv
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    
-    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.configuration.userContentController.add(self, name: "timeUpdate")
-            webView.configuration.userContentController.add(self, name: "tracksInfo")
-            
-            let js = """
-            (function() {
-            document.documentElement.style.backgroundColor = '#000';
-            document.body.style.backgroundColor = '#000';
-            document.body.style.opacity = '0';
-            
-            setTimeout(function() {
-                var video = document.querySelector('video');
-                if (video) {
-                    document.body.innerHTML = '';
-                    document.body.style.opacity = '1';
-                    document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
-                    video.style.cssText = 'position:fixed;top:20px;left:0;width:100vw;height:calc(100vh - 40px);object-fit:contain;z-index:9999;margin:0;padding:0;';
-                        video.controls = true;
-                        video.setAttribute('controls', 'controls');
-                        video.playsInline = true;
-                        document.body.appendChild(video);
-                        video.play();
-                        
-                        setTimeout(function() {
-                            if (video.audioTracks) {
-                                for (var i = 0; i < video.audioTracks.length; i++) {
-                                    var label = (video.audioTracks[i].label || '').toLowerCase();
-                                    if (label.indexOf('english') !== -1 || label.indexOf('stereo') !== -1) {
-                                        video.audioTracks[i].enabled = true;
-                                    } else {
-                                        video.audioTracks[i].enabled = false;
-                                    }
-                                }
-                            }
-                        }, 2000);
-                        
-                        function sendInfo() {
-                            try {
-                                var info = {
-                                    currentTime: video.currentTime,
-                                    duration: video.duration || 1,
-                                    paused: video.paused,
-                                    audioTracks: [],
-                                    subtitleTracks: [],
-                                    quality: ''
-                                };
-                                
-                                if (video.audioTracks) {
-                                for (var i = 0; i < video.audioTracks.length; i++) {
-                                info.audioTracks.push({
-                                id: video.audioTracks[i].id,
-                                label: video.audioTracks[i].label || 'Audio ' + (i+1),
-                                language: video.audioTracks[i].language || '',
-                                enabled: video.audioTracks[i].enabled
-                                });
-                              }
-                              }
-                                
-                                if (video.textTracks) {
-                                    for (var i = 0; i < video.textTracks.length; i++) {
-                                        info.subtitleTracks.push({
-                                            id: i,
-                                            label: video.textTracks[i].label || 'Subtitle ' + (i+1),
-                                            language: video.textTracks[i].language || '',
-                                            mode: video.textTracks[i].mode
-                                        });
-                                    }
-                                }
-                                
-                                if (video.getVideoPlaybackQuality) {
-                                    var q = video.getVideoPlaybackQuality();
-                                    info.quality = (q.width && q.height) ? q.width + 'x' + q.height : '';
-                                }
-                                
-                                window.webkit.messageHandlers.timeUpdate.postMessage(info);
-                                window.webkit.messageHandlers.tracksInfo.postMessage(info);
-                            } catch(e) {}
-                        }
-                        
-                        setInterval(sendInfo, 500);
-                    }
-                }, 1000);
-            })();
-            """
-            webView.evaluateJavaScript(js)
-        }
-        
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "timeUpdate", let dict = message.body as? [String: Any] {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: Notification.Name("Phim1280TimeUpdate"), object: nil, userInfo: dict)
-                }
-            }
-            if message.name == "tracksInfo", let dict = message.body as? [String: Any] {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: Notification.Name("Phim1280TracksInfo"), object: nil, userInfo: dict)
-                }
-            }
-        }
-    }
 }
 struct Phim1280ControlsView: View {
     let movieTitle: String
