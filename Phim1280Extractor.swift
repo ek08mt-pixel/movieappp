@@ -104,31 +104,8 @@ class Phim1280Extractor {
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
-        var audioTracks: [String] = []
-        var subtitleTracks: [String] = []
         
         for line in lines {
-            // Thu thập audio tracks
-            if line.hasPrefix("#EXT-X-MEDIA") && line.contains("TYPE=AUDIO") {
-                if let uriRange = line.range(of: "URI=\""),
-                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
-                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
-                    let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
-                    audioTracks.append(absoluteURI)
-                }
-            }
-            
-            // Thu thập subtitle tracks
-            if line.hasPrefix("#EXT-X-MEDIA") && line.contains("TYPE=SUBTITLES") {
-                if let uriRange = line.range(of: "URI=\""),
-                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
-                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
-                    let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
-                    subtitleTracks.append(absoluteURI)
-                }
-            }
-            
-            // Video variant
             if !line.hasPrefix("#") && !line.isEmpty {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
@@ -138,39 +115,29 @@ class Phim1280Extractor {
             }
         }
         
-        guard let videoURLString = videoVariantURL else {
+        guard let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) else {
             throw StreamError.noStreamAvailable
         }
         
-        // Tạo local m3u8 với video + audio + subtitle
-        var m3u8Lines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
-        
-        // Thêm audio tracks
-        for (index, audioURL) in audioTracks.enumerated() {
-            let name = audioURL.contains("a0") ? "ViE-Ai" : audioURL.contains("a1") ? "English EAC3" : audioURL.contains("a2") ? "English Stereo" : audioURL.contains("a3") ? "Vietnamese" : "Audio \(index)"
-            let language = audioURL.contains("a0") || audioURL.contains("a3") ? "vie" : "eng"
-            let isDefault = audioURL.contains("a2") ? "YES" : "NO"
-            m3u8Lines.append("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"\(name)\",LANGUAGE=\"\(language)\",DEFAULT=\(isDefault),AUTOSELECT=YES,URI=\"\(audioURL)\"")
+        // Nếu là TikTok, trả về URL để WebView phát
+        if videoURLString.contains("/api/hls/tiktok/") {
+            return videoURL
         }
         
-        // Thêm subtitle tracks
-        for (index, subtitleURL) in subtitleTracks.enumerated() {
-            let name = subtitleURL.contains("s0") ? "English" : "VIE"
-            let language = subtitleURL.contains("s0") ? "eng" : "vie"
-            m3u8Lines.append("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"sub\",NAME=\"\(name)\",LANGUAGE=\"\(language)\",AUTOSELECT=YES,URI=\"\(subtitleURL)\"")
+        var request = URLRequest(url: videoURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let variantContent = String(data: data, encoding: .utf8) else {
+            throw StreamError.noStreamAvailable
         }
         
-        // Thêm video variant
-        m3u8Lines.append("#EXT-X-STREAM-INF:BANDWIDTH=8000000,AUDIO=\"aud\",SUBTITLES=\"sub\"")
-        m3u8Lines.append(videoURLString)
+        if variantContent.contains("tiktokcdn") {
+            return videoURL
+        }
         
-        let localContent = m3u8Lines.joined(separator: "\n")
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_master_\(Date().timeIntervalSince1970).m3u8")
-        try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        
-        print("✅ Tạo local master m3u8 với \(audioTracks.count) audio, \(subtitleTracks.count) subtitle")
-        return fileURL
+        return videoURL
     }
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
