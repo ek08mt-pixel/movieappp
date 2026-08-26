@@ -1320,14 +1320,14 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                                 };
                                 
                                 if (video.audioTracks) {
-    for (var i = 0; i < video.audioTracks.length; i++) {
-        info.audioTracks.push({
-            id: video.audioTracks[i].id,
-            label: video.audioTracks[i].label || 'Audio ' + (i+1),
-            language: video.audioTracks[i].language || '',
-            enabled: video.audioTracks[i].enabled
-        });
-    }
+                                for (var i = 0; i < video.audioTracks.length; i++) {
+                                info.audioTracks.push({
+                                id: video.audioTracks[i].id,
+                                label: video.audioTracks[i].label || 'Audio ' + (i+1),
+                                language: video.audioTracks[i].language || '',
+                                enabled: video.audioTracks[i].enabled
+                                });
+                              }
 }
                                 
                                 if (video.textTracks) {
@@ -1464,7 +1464,18 @@ struct Phim1280ControlsView: View {
                     if !audioTracks.isEmpty {
                         Menu {
                             Button("Tiếng gốc (English)") {
-    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if(v.audioTracks[i].language && (v.audioTracks[i].language.indexOf('en') !== -1 || v.audioTracks[i].language.indexOf('eng') !== -1)) { v.audioTracks[i].enabled = true; } else { v.audioTracks[i].enabled = false; } } }")
+    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("""
+        var v = document.querySelector('video');
+        if (v && v.audioTracks) {
+            for (var i = 0; i < v.audioTracks.length; i++) {
+                v.audioTracks[i].enabled = (
+                    v.audioTracks[i].language === 'en' ||
+                    v.audioTracks[i].language === 'eng' ||
+                    v.audioTracks[i].language.indexOf('en') === 0
+                );
+            }
+        }
+    """)
 }
                             ForEach(audioTracks.indices, id: \.self) { index in
                                 Button(audioTracks[index]["label"] as? String ?? "") {
