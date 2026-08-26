@@ -125,7 +125,10 @@ class Phim1280Extractor {
         }
         
         guard let videoURLString = videoVariantURL, let audioURLString = audioEnglishURL else {
-            return try await fetchVideoOnly(videoVariantURL: videoVariantURL)
+            if let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) {
+                return videoURL
+            }
+            throw StreamError.noStreamAvailable
         }
         
         let localM3U8 = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"English Stereo\",LANGUAGE=\"eng\",DEFAULT=YES,AUTOSELECT=YES,URI=\"\(audioURLString)\"\n#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x960,AUDIO=\"aud\"\n\(videoURLString)"
