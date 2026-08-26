@@ -1308,6 +1308,19 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                         document.body.appendChild(video);
                         video.play();
                         
+                        setTimeout(function() {
+                            if (video.audioTracks) {
+                                for (var i = 0; i < video.audioTracks.length; i++) {
+                                    var label = (video.audioTracks[i].label || '').toLowerCase();
+                                    if (label.indexOf('english') !== -1 || label.indexOf('stereo') !== -1) {
+                                        video.audioTracks[i].enabled = true;
+                                    } else {
+                                        video.audioTracks[i].enabled = false;
+                                    }
+                                }
+                            }
+                        }, 2000);
+                        
                         function sendInfo() {
                             try {
                                 var info = {
