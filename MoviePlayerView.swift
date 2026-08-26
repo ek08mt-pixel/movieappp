@@ -753,10 +753,11 @@ func tryResume() {
     }
     
     func changePhim1280SubPosition() {
-        phim1280SubOffset += 20
-        if phim1280SubOffset > 100 { phim1280SubOffset = 0 }
-        Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.style.transform = 'translateY(-\(phim1280SubOffset)px)'; }")
-    }
+    phim1280SubOffset += 20
+    if phim1280SubOffset > 100 { phim1280SubOffset = 0 }
+    // Chỉ thay đổi vị trí subtitles, không đụng video
+    Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var tracks=document.querySelectorAll('track'); if(tracks) { for(var i=0;i<tracks.length;i++){ tracks[i].style.transform = 'translateY(\(phim1280SubOffset)px)'; } }")
+}
     func formatTime(_ s: Double) -> String { let m = Int(s) / 60; let sec = Int(s) % 60; return String(format: "%d:%02d", m, sec) }
     
     @ViewBuilder func episodeRow(detail: TVSeasonDetail) -> some View { VStack(alignment: .leading, spacing: 6) { Text("Tập \(episodeNumber ?? 1)/\(detail.episodes.count)").font(.caption).foregroundColor(.white.opacity(0.6)); LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) { ForEach(detail.episodes) { ep in Button { loadStream(season: ep.seasonNumber, episode: ep.episodeNumber); closeOverlay() } label: { Text("\(ep.episodeNumber)").font(.system(size: 11, weight: .medium)).foregroundColor(ep.episodeNumber == (episodeNumber ?? 1) ? .black : .white).frame(height: 36).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 10).fill(ep.episodeNumber == (episodeNumber ?? 1) ? .white : Color.white.opacity(0.15)).overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.15), lineWidth: 0.5))) } } } } }
@@ -1463,7 +1464,9 @@ struct Phim1280ControlsView: View {
                     if !audioTracks.isEmpty {
                         Menu {
                             Button("Tiếng gốc (English)") {
-                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ v.audioTracks[i].enabled = (v.audioTracks[i].language.indexOf('en') !== -1); } }")
+                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if (v.audioTracks[i].language && v.audioTracks[i].language.indexOf('en') !== -1) {
+    v.audioTracks[i].enabled = true;
+} } }")
                             }
                             ForEach(audioTracks.indices, id: \.self) { index in
                                 Button(audioTracks[index]["label"] as? String ?? "") {
