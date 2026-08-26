@@ -104,8 +104,31 @@ class Phim1280Extractor {
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
+        var audioTracks: [String] = []
+        var subtitleTracks: [String] = []
         
         for line in lines {
+            // Thu thập audio tracks
+            if line.hasPrefix("#EXT-X-MEDIA") && line.contains("TYPE=AUDIO") {
+                if let uriRange = line.range(of: "URI=\""),
+                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                    let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
+                    audioTracks.append(absoluteURI)
+                }
+            }
+            
+            // Thu thập subtitle tracks
+            if line.hasPrefix("#EXT-X-MEDIA") && line.contains("TYPE=SUBTITLES") {
+                if let uriRange = line.range(of: "URI=\""),
+                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                    let absoluteURI = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
+                    subtitleTracks.append(absoluteURI)
+                }
+            }
+            
+            // Video variant
             if !line.hasPrefix("#") && !line.isEmpty {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
@@ -115,91 +138,38 @@ class Phim1280Extractor {
             }
         }
         
-        guard let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) else {
+        guard let videoURLString = videoVariantURL else {
             throw StreamError.noStreamAvailable
         }
         
-        // Fetch variant
-        var request = URLRequest(url: videoURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        // Tạo local m3u8 với video + audio + subtitle
+        var m3u8Lines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7"]
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let variantContent = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
+        // Thêm audio tracks
+        for (index, audioURL) in audioTracks.enumerated() {
+            let name = audioURL.contains("a0") ? "ViE-Ai" : audioURL.contains("a1") ? "English EAC3" : audioURL.contains("a2") ? "English Stereo" : audioURL.contains("a3") ? "Vietnamese" : "Audio \(index)"
+            let language = audioURL.contains("a0") || audioURL.contains("a3") ? "vie" : "eng"
+            let isDefault = audioURL.contains("a2") ? "YES" : "NO"
+            m3u8Lines.append("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"\(name)\",LANGUAGE=\"\(language)\",DEFAULT=\(isDefault),AUTOSELECT=YES,URI=\"\(audioURL)\"")
         }
         
-        if variantContent.contains("tiktokcdn") || videoURLString.contains("/api/hls/tiktok/") {
-            return try await downloadTikTokSegments(variantContent, baseURL: videoURL)
+        // Thêm subtitle tracks
+        for (index, subtitleURL) in subtitleTracks.enumerated() {
+            let name = subtitleURL.contains("s0") ? "English" : "VIE"
+            let language = subtitleURL.contains("s0") ? "eng" : "vie"
+            m3u8Lines.append("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"sub\",NAME=\"\(name)\",LANGUAGE=\"\(language)\",AUTOSELECT=YES,URI=\"\(subtitleURL)\"")
         }
         
-        return videoURL
-    }
-    
-    private func downloadTikTokSegments(_ content: String, baseURL: URL, limit: Int = 50) async throws -> URL {
-        print("📥 Bắt đầu tải TikTok segments...")
+        // Thêm video variant
+        m3u8Lines.append("#EXT-X-STREAM-INF:BANDWIDTH=8000000,AUDIO=\"aud\",SUBTITLES=\"sub\"")
+        m3u8Lines.append(videoURLString)
         
-        let lines = content.components(separatedBy: .newlines)
-        print("🔍 Số dòng content: \(lines.count)")
-        
-        var segmentURLs: [URL] = []
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty && !trimmed.hasPrefix("#") && segmentURLs.count < limit {
-                let segmentURLString = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
-                if let segmentURL = URL(string: segmentURLString) {
-                    segmentURLs.append(segmentURL)
-                }
-            }
-        }
-        
-        print("🔍 Tổng segments cần tải: \(segmentURLs.count)")
-        
-        var downloadedSegments: [URL] = []
-        
-        await withTaskGroup(of: (Int, URL?).self) { group in
-            for (index, segmentURL) in segmentURLs.enumerated() {
-                group.addTask {
-                    var request = URLRequest(url: segmentURL)
-                    request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-                    request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
-                    
-                    do {
-                        let (data, _) = try await URLSession.shared.data(for: request)
-                        let tempDir = FileManager.default.temporaryDirectory
-                        let fileURL = tempDir.appendingPathComponent("tiktok_seg_\(index).ts")
-                        try data.write(to: fileURL)
-                        return (index, fileURL)
-                    } catch {
-                        print("⚠️ Segment \(index) lỗi")
-                        return (index, nil)
-                    }
-                }
-            }
-            
-            for await (index, fileURL) in group {
-                if let fileURL = fileURL {
-                    downloadedSegments.append(fileURL)
-                }
-            }
-        }
-        
-        var newLines: [String] = ["#EXTM3U", "#EXT-X-VERSION:7", "#EXT-X-TARGETDURATION:20", "#EXT-X-MEDIA-SEQUENCE:0"]
-        
-        let sortedSegments = downloadedSegments.sorted { $0.lastPathComponent < $1.lastPathComponent }
-        for segmentURL in sortedSegments {
-            newLines.append("#EXTINF:20.0,")
-            newLines.append(segmentURL.path)
-        }
-        
-        newLines.append("#EXT-X-ENDLIST")
-        
-        let localContent = newLines.joined(separator: "\n")
+        let localContent = m3u8Lines.joined(separator: "\n")
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("film4k_tiktok_local_\(Date().timeIntervalSince1970).m3u8")
+        let fileURL = tempDir.appendingPathComponent("film4k_master_\(Date().timeIntervalSince1970).m3u8")
         try localContent.write(to: fileURL, atomically: true, encoding: .utf8)
         
-        print("✅ Local m3u8: \(sortedSegments.count) segments")
+        print("✅ Tạo local master m3u8 với \(audioTracks.count) audio, \(subtitleTracks.count) subtitle")
         return fileURL
     }
     
