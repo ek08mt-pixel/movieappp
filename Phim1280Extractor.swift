@@ -104,8 +104,19 @@ class Phim1280Extractor {
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
+        var audioVariantURL: String? = nil
         
         for line in lines {
+            // Lấy audio track English Stereo
+            if line.contains("TYPE=AUDIO") && line.contains("English") && line.contains("Stereo") {
+                if let uriRange = line.range(of: "URI=\""),
+                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                    audioVariantURL = uri.hasPrefix("http") ? uri : "\(baseURL.deletingLastPathComponent().absoluteString)/\(uri)"
+                }
+            }
+            
+            // Video variant
             if !line.hasPrefix("#") && !line.isEmpty {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
@@ -115,11 +126,27 @@ class Phim1280Extractor {
             }
         }
         
-        guard let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) else {
+        guard let videoURLString = videoVariantURL else {
             throw StreamError.noStreamAvailable
         }
         
-        // Fetch variant
+        // Nếu có audio English, tạo local m3u8 gộp
+        if let audioURLString = audioVariantURL {
+            let localM3U8 = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"English\",LANGUAGE=\"eng\",DEFAULT=YES,AUTOSELECT=YES,URI=\"\(audioURLString)\"\n#EXT-X-STREAM-INF:BANDWIDTH=8000000,AUDIO=\"aud\"\n\(videoURLString)"
+            
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent("film4k_english_\(Date().timeIntervalSince1970).m3u8")
+            try localM3U8.write(to: fileURL, atomically: true, encoding: .utf8)
+            
+            print("✅ Tạo m3u8 với audio English")
+            return fileURL
+        }
+        
+        // Không có audio English - dùng video variant
+        guard let videoURL = URL(string: videoURLString) else {
+            throw StreamError.noStreamAvailable
+        }
+        
         var request = URLRequest(url: videoURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
