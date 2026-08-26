@@ -1466,12 +1466,16 @@ struct Phim1280ControlsView: View {
                             Button("Tiếng gốc (English)") {
     Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("""
         var v = document.querySelector('video');
-        if (v && v.audioTracks) {
+        if (v && v.audioTracks && v.webkitSetAudioTracks) {
+            var engTracks = [];
             for (var i = 0; i < v.audioTracks.length; i++) {
-                v.audioTracks[i].enabled = false;
+                if (v.audioTracks[i].language === 'eng' || 
+                    v.audioTracks[i].label.toLowerCase().indexOf('english') !== -1) {
+                    engTracks.push(v.audioTracks[i]);
+                }
             }
-            if (v.audioTracks.length > 1) {
-                v.audioTracks[1].enabled = true;
+            if (engTracks.length > 0) {
+                v.webkitSetAudioTracks(engTracks);
             }
         }
     """)
