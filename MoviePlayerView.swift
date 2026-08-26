@@ -244,68 +244,28 @@ selectedSource = initialSource
             if showPhim1280WebView, let url = phim1280WebURL {
                 ZStack {
                     Phim1280WebPlayerView(url: url)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        showPhim1280Controls.toggle()
-                    }
-                    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Phim1280TimeUpdate"))) { notification in
-                        if let info = notification.userInfo {
-                            currentTime = info["currentTime"] as? Double ?? 0
-                            duration = info["duration"] as? Double ?? 1
-                            if let quality = info["quality"] as? String {
-                                phim1280Quality = quality
+                        .ignoresSafeArea()
+                    
+                    VStack {
+                        HStack {
+                            Button {
+                                showPhim1280WebView = false
+                                dismiss()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(12)
+                                    .background(Circle().fill(.ultraThinMaterial.opacity(0.5)))
                             }
-                            if let audioTracks = info["audioTracks"] as? [[String: Any]] {
-                                phim1280AudioTracks = audioTracks
-                            }
-                            if let subtitleTracks = info["subtitleTracks"] as? [[String: Any]] {
-                                phim1280SubtitleTracks = subtitleTracks
-                            }
+                            .padding(.top, 56)
+                            .padding(.leading, 16)
+                            
+                            Spacer()
                         }
+                        Spacer()
                     }
-                
-                if showPhim1280Controls {
-                    Phim1280ControlsView(
-                        movieTitle: movieTitle,
-                        currentTime: currentTime,
-                        duration: duration,
-                        quality: phim1280Quality,
-                        audioTracks: phim1280AudioTracks,
-                        subtitleTracks: phim1280SubtitleTracks,
-                        onBack: {
-                            Phim1280WebPlayerView.activeWebView?.stopLoading()
-                            showPhim1280WebView = false
-                            dismiss()
-                        },
-                        onSeek: { newTime in
-                            currentTime = newTime
-                            Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                        },
-                        onPlayPause: {
-                            Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { if(v.paused) v.play(); else v.pause(); }")
-                        },
-                        onSkipBack: {
-                            let newTime = max(currentTime - 10, 0)
-                            currentTime = newTime
-                            Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                        },
-                        onSkipForward: {
-                            let newTime = min(currentTime + 10, duration)
-                            currentTime = newTime
-                            Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v) { v.currentTime=\(newTime); }")
-                        },
-                        onShowSource: {
-                            showSourceMenu = true
-                        },
-                        onChangeAspect: {
-                            changePhim1280Aspect()
-                        },
-                        onChangeSubPosition: {
-                            changePhim1280SubPosition()
-                        }
-                    )
                 }
-            }
             }
             if isLoading { VStack(spacing: 16) { ProgressView().tint(.white).scaleEffect(1.5); Text("Đang tải...").font(.caption).foregroundColor(.white.opacity(0.7)); Button { dismiss() } label: { Text("Quay lại").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
             if let err = errorMessage, !isLoading { VStack(spacing: 16) { Image(systemName: "wifi.slash").font(.system(size: 40)).foregroundColor(.gray); Text(err).font(.caption).foregroundColor(.gray).multilineTextAlignment(.center); HStack(spacing: 10) { ForEach(MovieSource.allCases, id: \.self) { s in Button { selectedSource = s; loadStream() } label: { Text(s.rawValue).font(.caption2).foregroundColor(selectedSource == s ? .white : .gray).padding(.horizontal, 10).padding(.vertical, 6).background(Capsule().fill(selectedSource == s ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.clear))) } } }; HStack(spacing: 16) { Button("Thử lại") { loadStream() }.font(.caption).foregroundColor(.white).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)); Button("Quay lại") { dismiss() }.font(.caption).foregroundColor(.white.opacity(0.6)).padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(.ultraThinMaterial)) } } }
@@ -1302,8 +1262,8 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                     document.body.style.opacity = '1';
                     document.body.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;';
                     video.style.cssText = 'position:fixed;top:20px;left:0;width:100vw;height:calc(100vh - 40px);object-fit:contain;z-index:9999;margin:0;padding:0;';
-                        video.controls = false;
-                        video.disablePictureInPicture = true;
+                        video.controls = true;
+                        video.setAttribute('controls', 'controls');
                         video.playsInline = true;
                         document.body.appendChild(video);
                         video.play();
