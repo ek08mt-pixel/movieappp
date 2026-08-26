@@ -1464,9 +1464,7 @@ struct Phim1280ControlsView: View {
                     if !audioTracks.isEmpty {
                         Menu {
                             Button("Tiếng gốc (English)") {
-                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if (v.audioTracks[i].language && v.audioTracks[i].language.indexOf('en') !== -1) {
-    v.audioTracks[i].enabled = true;
-} } }")
+                                Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("var v=document.querySelector('video'); if(v&&v.audioTracks) { for(var i=0;i<v.audioTracks.length;i++){ if (v.audioTracks[i].language && v.audioTracks[i].language.indexOf('en') !== -1) { v.audioTracks[i].enabled = true; } } }")
                             }
                             ForEach(audioTracks.indices, id: \.self) { index in
                                 Button(audioTracks[index]["label"] as? String ?? "") {
