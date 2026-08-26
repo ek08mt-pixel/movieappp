@@ -1468,8 +1468,10 @@ struct Phim1280ControlsView: View {
         var v = document.querySelector('video');
         if (v && v.audioTracks) {
             for (var i = 0; i < v.audioTracks.length; i++) {
-                var label = (v.audioTracks[i].label || '').toLowerCase();
-                v.audioTracks[i].enabled = (label.indexOf('english') !== -1);
+                v.audioTracks[i].enabled = false;
+            }
+            if (v.audioTracks.length > 1) {
+                v.audioTracks[1].enabled = true;
             }
         }
     """)
