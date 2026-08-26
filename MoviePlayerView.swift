@@ -1328,7 +1328,7 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
                                 enabled: video.audioTracks[i].enabled
                                 });
                               }
-}
+                              }
                                 
                                 if (video.textTracks) {
                                     for (var i = 0; i < video.textTracks.length; i++) {
