@@ -104,40 +104,37 @@ class Phim1280Extractor {
     private func processMasterPlaylist(_ content: String, baseURL: URL) async throws -> URL {
         let lines = content.components(separatedBy: .newlines)
         var videoVariantURL: String? = nil
+        var audioEnglishURL: String? = nil
         
         for line in lines {
+            if line.contains("TYPE=AUDIO") && line.contains("Stereo") {
+                if let uriRange = line.range(of: "URI=\""),
+                   let endRange = line[uriRange.upperBound...].range(of: "\"") {
+                    let uri = String(line[uriRange.upperBound..<endRange.lowerBound])
+                    audioEnglishURL = uri.hasPrefix("http") ? uri : "https://film4k.net\(uri)"
+                }
+            }
+            
             if !line.hasPrefix("#") && !line.isEmpty {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
-                    videoVariantURL = trimmed.hasPrefix("http") ? trimmed : "\(baseURL.deletingLastPathComponent().absoluteString)/\(trimmed)"
+                    videoVariantURL = trimmed.hasPrefix("http") ? trimmed : "https://film4k.net\(trimmed)"
                     break
                 }
             }
         }
         
-        guard let videoURLString = videoVariantURL, let videoURL = URL(string: videoURLString) else {
-            throw StreamError.noStreamAvailable
+        guard let videoURLString = videoVariantURL, let audioURLString = audioEnglishURL else {
+            return try await fetchVideoOnly(videoVariantURL: videoVariantURL)
         }
         
-        // Nếu là TikTok, trả về URL để WebView phát
-        if videoURLString.contains("/api/hls/tiktok/") {
-            return videoURL
-        }
+        let localM3U8 = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"aud\",NAME=\"English Stereo\",LANGUAGE=\"eng\",DEFAULT=YES,AUTOSELECT=YES,URI=\"\(audioURLString)\"\n#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x960,AUDIO=\"aud\"\n\(videoURLString)"
         
-        var request = URLRequest(url: videoURL)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.setValue("https://film4k.net/", forHTTPHeaderField: "Referer")
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("film4k_eng_\(Date().timeIntervalSince1970).m3u8")
+        try localM3U8.write(to: fileURL, atomically: true, encoding: .utf8)
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        guard let variantContent = String(data: data, encoding: .utf8) else {
-            throw StreamError.noStreamAvailable
-        }
-        
-        if variantContent.contains("tiktokcdn") {
-            return videoURL
-        }
-        
-        return videoURL
+        return fileURL
     }
     
     private func findSlug(tmdbID: Int, title: String) async throws -> String {
