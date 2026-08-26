@@ -1463,17 +1463,16 @@ struct Phim1280ControlsView: View {
                     
                     if !audioTracks.isEmpty {
                         Menu {
-                            Button("Debug Audio") {
+                            Button("Tiếng gốc (English)") {
     Phim1280WebPlayerView.activeWebView?.evaluateJavaScript("""
         var v = document.querySelector('video');
-        if (v && v.audioTracks) {
-            var info = '';
-            for (var i = 0; i < v.audioTracks.length; i++) {
-                info += i + ':' + v.audioTracks[i].label + '|' + 
-                        v.audioTracks[i].language + '|' + 
-                        v.audioTracks[i].enabled + ' ';
-            }
-            alert(info);
+        if (v) {
+            var currentTime = v.currentTime;
+            var src = v.src;
+            v.src = '';
+            v.src = src;
+            v.currentTime = currentTime;
+            v.play();
         }
     """)
 }
