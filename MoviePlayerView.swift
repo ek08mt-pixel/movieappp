@@ -1230,6 +1230,14 @@ struct Phim1280WebPlayerView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
+        let js = """
+        var style = document.createElement('style');
+        style.innerHTML = '[class*="popup"], [class*="modal"], [class*="welcome"], [class*="overlay"], [class*="noti"] { display: none !important; }';
+        document.head.appendChild(style);
+        """
+        let userScript = WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(userScript)
+        
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.backgroundColor = .black
         wv.isOpaque = false
