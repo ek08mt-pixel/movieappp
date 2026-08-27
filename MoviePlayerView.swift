@@ -597,22 +597,27 @@ didResume = false
                         episode: ep
                     )
                     
-                    // Kiểm tra nếu là TikTok (file local hoặc chứa tiktok)
-                    if result.pathExtension == "m3u8" && result.absoluteString.contains("tiktok") {
-                        await MainActor.run {
-                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
-                            showPhim1280WebView = true
-                            isLoading = false
-                            sourceStatus[.phim1280] = true
-                        }
-                    } else if result.absoluteString.contains("/api/hls/tiktok/") {
-                        await MainActor.run {
-                            phim1280WebURL = URL(string: "https://film4k.net/watch/\(slug)")
-                            showPhim1280WebView = true
-                            isLoading = false
-                            sourceStatus[.phim1280] = true
-                        }
-                    } else {
+                    // Luôn dùng AVPlayer với proxyhls scheme
+                    await MainActor.run {
+                        currentStreamURL = result
+                        selectedQuality = detectQuality(from: result)
+                        errorMessage = nil
+                        
+                        let originalURLString = result.absoluteString
+                        let customURLString = "proxyhls://" + originalURLString.replacingOccurrences(of: "https://", with: "")
+                        let customURL = URL(string: customURLString)!
+                        let asset = AVURLAsset(url: customURL)
+                        let resourceLoaderDelegate = HLSResourceLoaderDelegate()
+                        asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: .main)
+                        let playerItem = AVPlayerItem(asset: asset)
+                        player.replaceCurrentItem(with: playerItem)
+                        player.play()
+                        
+                        hasStartedPlaying = true
+                        isLoading = false
+                        sourceStatus[.phim1280] = true
+                        didResume = false
+                    }
                         await MainActor.run {
                             currentStreamURL = result
                             selectedQuality = detectQuality(from: result)
