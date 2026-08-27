@@ -61,9 +61,7 @@ final class HLSResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
     
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
                         didCancel loadingRequest: AVAssetResourceLoadingRequest) {
-        if let url = loadingRequest.request.url {
-            pendingRequests[url]?.cancel()
-            pendingRequests.removeValue(forKey: url)
-        }
+        let request = loadingRequest.request
+        pendingRequests[request]?.cancel()
+        pendingRequests.removeValue(forKey: request)
     }
-}
