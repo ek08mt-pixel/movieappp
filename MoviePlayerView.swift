@@ -617,7 +617,7 @@ didResume = false
                         isLoading = false
                         sourceStatus[.phim1280] = true
                         didResume = false
-                    }
+                
                         await MainActor.run {
                             currentStreamURL = result
                             selectedQuality = detectQuality(from: result)
