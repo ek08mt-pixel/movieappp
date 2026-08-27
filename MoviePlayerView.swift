@@ -618,12 +618,12 @@ didResume = false
                             selectedQuality = detectQuality(from: result)
                             errorMessage = nil
                             
-                            let asset = AVURLAsset(url: result, options: [
-                                "AVURLAssetHTTPHeaderFieldsKey": [
-                                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-                                    "Referer": "https://film4k.net/"
-                                ]
-                            ])
+                            let originalURLString = result.absoluteString
+                            let customURLString = "proxyhls://" + originalURLString.replacingOccurrences(of: "https://", with: "")
+                            let customURL = URL(string: customURLString)!
+                            let asset = AVURLAsset(url: customURL)
+                            let resourceLoaderDelegate = HLSResourceLoaderDelegate()
+                            asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: .main)
                             let playerItem = AVPlayerItem(asset: asset)
                             player.replaceCurrentItem(with: playerItem)
                             player.play()
