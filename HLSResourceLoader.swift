@@ -65,3 +65,4 @@ final class HLSResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
         pendingRequests[request]?.cancel()
         pendingRequests.removeValue(forKey: request)
     }
+    }
