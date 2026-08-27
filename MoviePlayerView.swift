@@ -597,7 +597,6 @@ didResume = false
                         episode: ep
                     )
                     
-                    // Luôn dùng AVPlayer với proxyhls scheme
                     await MainActor.run {
                         currentStreamURL = result
                         selectedQuality = detectQuality(from: result)
@@ -605,27 +604,8 @@ didResume = false
                         
                         let originalURLString = result.absoluteString
                         let customURLString = "proxyhls://" + originalURLString.replacingOccurrences(of: "https://", with: "")
-                        let customURL = URL(string: customURLString)!
-                        let asset = AVURLAsset(url: customURL)
-                        let resourceLoaderDelegate = HLSResourceLoaderDelegate()
-                        asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: .main)
-                        let playerItem = AVPlayerItem(asset: asset)
-                        player.replaceCurrentItem(with: playerItem)
-                        player.play()
                         
-                        hasStartedPlaying = true
-                        isLoading = false
-                        sourceStatus[.phim1280] = true
-                        didResume = false
-                
-                        await MainActor.run {
-                            currentStreamURL = result
-                            selectedQuality = detectQuality(from: result)
-                            errorMessage = nil
-                            
-                            let originalURLString = result.absoluteString
-                            let customURLString = "proxyhls://" + originalURLString.replacingOccurrences(of: "https://", with: "")
-                            let customURL = URL(string: customURLString)!
+                        if let customURL = URL(string: customURLString) {
                             let asset = AVURLAsset(url: customURL)
                             let resourceLoaderDelegate = HLSResourceLoaderDelegate()
                             asset.resourceLoader.setDelegate(resourceLoaderDelegate, queue: .main)
@@ -637,6 +617,9 @@ didResume = false
                             isLoading = false
                             sourceStatus[.phim1280] = true
                             didResume = false
+                        } else {
+                            isLoading = false
+                            errorMessage = "Không tạo được URL"
                         }
                     }
                     saveHistory()
