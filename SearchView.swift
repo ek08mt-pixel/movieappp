@@ -29,6 +29,7 @@ struct SearchView: View {
     private let columns = [GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15), GridItem(.flexible(), spacing: 15)]
     private let actorColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     
+    @ViewBuilder
     var body: some View {
         NavigationStack {
             ZStack(alignment: .topLeading) {
