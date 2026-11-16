@@ -119,7 +119,7 @@ class VoiceSearchManager: ObservableObject {
         let finalText = text
         let handler = onComplete
         stop()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             handler?(finalText)
         }
     }
