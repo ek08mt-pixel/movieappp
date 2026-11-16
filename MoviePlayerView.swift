@@ -364,18 +364,26 @@ struct MoviePlayerView: View {
     
     // MARK: - Thumbnail Function
     func fetchThumbnail(at time: Double) {
-        guard let output = videoOutput else { return }
-        let cmTime = CMTime(seconds: time, preferredTimescale: 600)
-        if output.hasNewPixelBuffer(forItemTime: cmTime) {
-            if let pixelBuffer = output.copyPixelBuffer(forItemTime: cmTime, itemTimeForDisplay: nil) {
-                let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-                let context = CIContext()
-                if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
-                    DispatchQueue.main.async { self.previewThumbnail = UIImage(cgImage: cgImage) }
-                }
+    // Lấy asset từ player hiện tại
+    guard let asset = player.currentItem?.asset else { return }
+    
+    let generator = AVAssetImageGenerator(asset: asset)
+    generator.appliesPreferredTrackTransform = true
+    generator.requestedTimeToleranceBefore = .zero
+    generator.requestedTimeToleranceAfter = .zero
+    
+    let cmTime = CMTime(seconds: time, preferredTimescale: 600)
+    
+    // Chạy ngầm để không lag UI
+    DispatchQueue.global(qos: .userInitiated).async {
+        if let cgImage = try? generator.copyCGImage(at: cmTime, actualTime: nil) {
+            let image = UIImage(cgImage: cgImage)
+            DispatchQueue.main.async {
+                self.previewThumbnail = image
             }
         }
     }
+}
 
     func forceLandscape() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) } }
     func forcePortraitWithDelay() { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } }; DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { if let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene { ws.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) } } }
