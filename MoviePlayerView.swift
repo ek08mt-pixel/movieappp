@@ -144,6 +144,7 @@ struct MoviePlayerView: View {
     
     var episodeInfo: String { if let s = seasonNumber, let e = episodeNumber { return "S\(s):E\(e)" }; return "" }
     
+    @ViewBuilder
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
