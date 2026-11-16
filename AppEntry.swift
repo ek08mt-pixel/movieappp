@@ -33,7 +33,47 @@ struct WatchProgress: Codable, Equatable {
     let movieId: Int; let movieTitle: String; let posterPath: String?; let mediaType: String?
     var season: Int?; var episode: Int?; var currentTime: Double; var duration: Double; var lastWatched: Date
     var source: String? = nil
+    var imdbID: String? = nil
+    var lastKnownEpisode: Int? = nil
+    var seenNewEpisodeBadge: Bool = false
     var progress: Double { guard duration > 0 else { return 0 }; return min(currentTime / duration, 1.0) }
+    
+    enum CodingKeys: String, CodingKey {
+        case movieId, movieTitle, posterPath, mediaType
+        case season, episode, currentTime, duration, lastWatched
+        case source, imdbID, lastKnownEpisode, seenNewEpisodeBadge
+    }
+    
+    init(movieId: Int, movieTitle: String, posterPath: String?, mediaType: String?,
+         season: Int?, episode: Int?, currentTime: Double, duration: Double, lastWatched: Date,
+         source: String? = nil, imdbID: String? = nil,
+         lastKnownEpisode: Int? = nil, seenNewEpisodeBadge: Bool = false) {
+        self.movieId = movieId; self.movieTitle = movieTitle
+        self.posterPath = posterPath; self.mediaType = mediaType
+        self.season = season; self.episode = episode
+        self.currentTime = currentTime; self.duration = duration
+        self.lastWatched = lastWatched
+        self.source = source; self.imdbID = imdbID
+        self.lastKnownEpisode = lastKnownEpisode
+        self.seenNewEpisodeBadge = seenNewEpisodeBadge
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        movieId = try c.decode(Int.self, forKey: .movieId)
+        movieTitle = try c.decode(String.self, forKey: .movieTitle)
+        posterPath = try c.decodeIfPresent(String.self, forKey: .posterPath)
+        mediaType = try c.decodeIfPresent(String.self, forKey: .mediaType)
+        season = try c.decodeIfPresent(Int.self, forKey: .season)
+        episode = try c.decodeIfPresent(Int.self, forKey: .episode)
+        currentTime = try c.decode(Double.self, forKey: .currentTime)
+        duration = try c.decode(Double.self, forKey: .duration)
+        lastWatched = try c.decode(Date.self, forKey: .lastWatched)
+        source = try c.decodeIfPresent(String.self, forKey: .source)
+        imdbID = try c.decodeIfPresent(String.self, forKey: .imdbID)
+        lastKnownEpisode = try c.decodeIfPresent(Int.self, forKey: .lastKnownEpisode)
+        seenNewEpisodeBadge = try c.decodeIfPresent(Bool.self, forKey: .seenNewEpisodeBadge) ?? false
+    }
 }
 
 struct MovieList: Codable, Identifiable, Equatable {
@@ -48,6 +88,7 @@ class AppState: ObservableObject {
     @Published var favorites: [Movie] = []
     @Published var watchHistory: [Movie] = []
     @Published var watchProgressList: [WatchProgress] = []
+    @Published var newEpisodeMap: [Int: Int] = [:]   // movieId -> số tập mới nhất
     @Published var isLoggedIn = false
     @Published var email = ""
     @Published var nickname = ""
@@ -127,7 +168,44 @@ class AppState: ObservableObject {
         watchProgressList.removeAll { $0.movieId == progress.movieId }
         watchProgressList.insert(progress, at: 0)
         if watchProgressList.count > 30 { watchProgressList.removeLast() }
+        // Nếu là tập mới nhất đã xem → cập nhật lastKnownEpisode nếu cao hơn
+        if let ep = progress.episode {
+            if let idx = watchProgressList.firstIndex(where: { $0.movieId == progress.movieId }) {
+                let current = watchProgressList[idx].lastKnownEpisode ?? 0
+                if ep > current { watchProgressList[idx].lastKnownEpisode = ep }
+            }
+        }
         save()
+    }
+    
+    // Gọi khi user bấm xem tập mới từ badge → ẩn badge
+    func markBadgeSeen(movieId: Int) {
+        guard let idx = watchProgressList.firstIndex(where: { $0.movieId == movieId }) else { return }
+        watchProgressList[idx].seenNewEpisodeBadge = true
+        newEpisodeMap.removeValue(forKey: movieId)
+        save()
+    }
+    
+    // Gọi sau khi check API xong: nếu có tập mới hơn lastKnownEpisode → set badge
+    func setNewEpisodeIfNeeded(movieId: Int, latestEpisode: Int) {
+        guard let idx = watchProgressList.firstIndex(where: { $0.movieId == movieId }) else { return }
+        let known = watchProgressList[idx].lastKnownEpisode ?? 0
+        if latestEpisode > known {
+            watchProgressList[idx].seenNewEpisodeBadge = false
+            newEpisodeMap[movieId] = latestEpisode
+        } else {
+            watchProgressList[idx].seenNewEpisodeBadge = true
+            newEpisodeMap.removeValue(forKey: movieId)
+        }
+        save()
+    }
+    
+    func hasNewEpisode(movieId: Int) -> Bool {
+        return newEpisodeMap[movieId] != nil && !(watchProgressList.first(where: { $0.movieId == movieId })?.seenNewEpisodeBadge ?? true)
+    }
+    
+    func latestNewEpisode(movieId: Int) -> Int? {
+        return newEpisodeMap[movieId]
     }
     
     func save() {
@@ -156,7 +234,16 @@ class AppState: ObservableObject {
         avatarImageData = UserDefaults.standard.data(forKey: "\(prefix)_avatarImage")
         if let fav = UserDefaults.standard.data(forKey: "\(prefix)_favorites"), let f = try? JSONDecoder().decode([Movie].self, from: fav) { favorites = f }
         if let hist = UserDefaults.standard.data(forKey: "\(prefix)_history"), let h = try? JSONDecoder().decode([Movie].self, from: hist) { watchHistory = h }
-        if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"), let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) { watchProgressList = p }
+        if let prog = UserDefaults.standard.data(forKey: "\(prefix)_progress"), let p = try? JSONDecoder().decode([WatchProgress].self, from: prog) {
+            watchProgressList = p
+            // Rebuild newEpisodeMap từ dữ liệu đã lưu
+            newEpisodeMap.removeAll()
+            for wp in p {
+                if wp.seenNewEpisodeBadge == false, let known = wp.lastKnownEpisode {
+                    newEpisodeMap[wp.movieId] = known
+                }
+            }
+        }
         if let lists = UserDefaults.standard.data(forKey: "\(prefix)_movieLists"), let l = try? JSONDecoder().decode([MovieList].self, from: lists) { movieLists = l }
     }
 }
@@ -190,6 +277,53 @@ struct AppEntry: App {
         URLProtocol.registerClass(CustomURLProtocol.self)
     }
     
+    private func checkNewEpisodesOnLaunch() async {
+        let list = appState.watchProgressList
+        guard !list.isEmpty else { return }
+        for wp in list {
+            let latest = await fetchLatestEpisodeCount(for: wp)
+            if let latest = latest, latest > 0 {
+                await MainActor.run {
+                    appState.setNewEpisodeIfNeeded(movieId: wp.movieId, latestEpisode: latest)
+                }
+            }
+        }
+    }
+    
+    private func fetchLatestEpisodeCount(for wp: WatchProgress) async -> Int? {
+        // Chỉ check phim bộ
+        guard wp.mediaType == "tv" || wp.season != nil else { return nil }
+        let season = wp.season ?? 1
+        
+        // Ưu tiên: dùng imdbID đã lưu + source để gọi đúng service
+        if let imdb = wp.imdbID, !imdb.isEmpty {
+            switch wp.source {
+            case "Emew 2":
+                if let slug = MappingCache.shared.getNguonCSlug(imdbID: imdb) {
+                    return await NguonCEpisodeCounter.shared.fetchEpisodeCount(slug: slug, season: season)
+                }
+            case "Emew 3":
+                if let slug = MappingCache.shared.getVSMOVSlug(imdbID: imdb) {
+                    return await VSMOVEEpisodeCounter.shared.fetchEpisodeCount(slug: slug, season: season)
+                }
+            default:
+                break
+            }
+        }
+        
+        // Fallback: dùng directSlug + PhimAPIService.fetchRawEpisodes
+        if let slug = MappingCache.getDirectSlug(tmdbID: wp.movieId, season: season) {
+            return await PhimEpisodeCounter.shared.fetchEpisodeCount(slug: slug, season: season)
+        }
+        if let animeSlug = MappingCache.getAnimeSlug(tmdbID: wp.movieId) {
+            return await PhimEpisodeCounter.shared.fetchEpisodeCount(slug: animeSlug, season: season)
+        }
+        if let hardcoded = MappingCache.shared.getHardcodedSlug(tmdbID: wp.movieId, season: season) {
+            return await PhimEpisodeCounter.shared.fetchEpisodeCount(slug: hardcoded, season: season)
+        }
+        return nil
+    }
+    
     var colorScheme: ColorScheme? {
         switch userTheme {
         case "light": return .light
@@ -209,6 +343,9 @@ struct AppEntry: App {
                     MainTabView()
                         .environmentObject(appState)
                         .preferredColorScheme(colorScheme)
+                        .task {
+                            await checkNewEpisodesOnLaunch()
+                        }
                         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                             Task {
                                 await NotificationManager.shared.autoCheckFromAppState(appState)
