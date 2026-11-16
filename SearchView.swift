@@ -400,12 +400,15 @@ struct SearchView: View {
                             showVoice = false
                         },
                         onComplete: { text in
-                            print("DEBUG Voice onComplete: \(text)")
                             showVoice = false
                             vm.query = text
-                            // Đợi 0.5 giây cho thanh search cập nhật xong chữ rồi mới tìm
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                Task { await performSearch() }
+                            // Ép hàm search nhận thẳng chữ vừa nói
+                            Task {
+                                if searchMode == .movies {
+                                    await vm.search(query: text)
+                                } else {
+                                    await performSearch()
+                                }
                             }
                         }
                     )
