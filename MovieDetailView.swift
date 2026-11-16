@@ -1229,6 +1229,6 @@ struct EpisodePopupView: View {
         let hosting = LandscapeHostingController(rootView: AnyView(moviePlayer))
         hosting.modalPresentationStyle = .fullScreen
         topVC.present(hosting, animated: true)
-    
+    }
     }
 }
