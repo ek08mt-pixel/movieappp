@@ -64,7 +64,7 @@ struct SearchView: View {
                             vm.query = text
                             Task {
                                 if searchMode == .movies {
-                                    await vm.search(query: text)
+                                    await performSearch()
                                 } else {
                                     await performSearch()
                                 }
