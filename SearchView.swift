@@ -59,17 +59,7 @@ struct SearchView: View {
                             voice.stop()
                             showVoice = false
                         },
-                        onComplete: { text in
-                            showVoice = false
-                            vm.query = text
-                            Task {
-                                if searchMode == .movies {
-                                    await performSearch()
-                                } else {
-                                    await performSearch()
-                                }
-                            }
-                        }
+                        onComplete: { _ in } // Để rỗng, xử lý ở dưới
                     )
                     .transition(.opacity)
                     .zIndex(100)
@@ -85,7 +75,10 @@ struct SearchView: View {
             voice.setOnComplete { text in
                 showVoice = false
                 vm.query = text
-                Task { await performSearch() }
+                // Đợi 0.5 giây cho thanh search cập nhật xong chữ
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    Task { await performSearch() }
+                }
             }
             Task {
                 await vm.loadTrending()
