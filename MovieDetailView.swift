@@ -303,6 +303,32 @@ struct MovieDetailView: View {
                                         .overlay(alignment: .topLeading) {
                                             if showEpisodeSearch {
                                                 VStack(spacing: 0) {
+                                                    if let latestEp = appState.watchProgressList.first(where: { $0.movieId == movie.id })?.lastKnownEpisode {
+    Button {
+        playSeason = 1
+        playEpisode = latestEp
+        presentPlayer()
+    } label: {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("TẬP MỚI NHẤT")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                Text("Đã có tập \(latestEp), xem ngay")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            Spacer()
+            Image(systemName: "play.fill")
+                .foregroundColor(.white)
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.5))
+    }
+    .padding(.bottom, 10)
+}
                                                     ForEach(vm.seasons) { season in
                                                         Button {
                                                             searchSeason = season.seasonNumber
