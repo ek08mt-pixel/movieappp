@@ -114,6 +114,39 @@ struct MovieDetailView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 16) {
+                        if let newEp = appState.latestNewEpisode(movieId: movie.id), appState.hasNewEpisode(movieId: movie.id) {
+                            Button {
+                                appState.markBadgeSeen(movieId: movie.id)
+                                playSeason = appState.watchProgressList.first(where: { $0.movieId == movie.id })?.season ?? 1
+                                playEpisode = newEp
+                                presentPlayer()
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "bell.badge.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.yellow)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Đã có tập mới")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.white)
+                                        Text("Tập \(newEp) vừa ra mắt — xem ngay")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+                                    Spacer()
+                                    Image(systemName: "play.circle.fill")
+                                        .font(.system(size: 26))
+                                        .foregroundColor(.yellow)
+                                }
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.yellow.opacity(0.15))
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.yellow.opacity(0.4), lineWidth: 0.5))
+                                )
+                            }
+                            .padding(.horizontal, 4)
+                        }
                         HStack(alignment: .top, spacing: 14) {
                             ZStack(alignment: .bottom) {
                                 CachedAsyncImage(url: movie.posterURL, size: .detail)
@@ -525,10 +558,24 @@ struct MovieDetailView: View {
                 if let rt = runtime { Text("\(rt) phút").font(.system(size: 9)).foregroundColor(.gray) }
             }
             Spacer()
+            if isLatestNewEpisode(season: season, episode: episode) {
+                Text("NEW")
+                    .font(.system(size: 8, weight: .black))
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(.yellow))
+            }
             Image(systemName: "play.circle")
                 .foregroundColor(isWatched(season, episode) ? .white.opacity(0.8) : .white.opacity(0.5))
         }
         .padding(.vertical, 4)
+    }
+    
+    func isLatestNewEpisode(season: Int, episode: Int) -> Bool {
+        guard let newEp = appState.latestNewEpisode(movieId: movie.id),
+              appState.hasNewEpisode(movieId: movie.id) else { return false }
+        return season == (appState.watchProgressList.first(where: { $0.movieId == movie.id })?.season ?? 1) && episode == newEp
     }
     
     func getBestQuality() -> String? {
