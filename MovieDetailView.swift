@@ -274,36 +274,7 @@ struct MovieDetailView: View {
                             }
                         }
                         
-                        if !vm.seasons.isEmpty {
-    VStack(alignment: .leading, spacing: 12) {
-                                HStack(alignment: .center, spacing: 10) {
-                                    Text("Seasons & Episodes")
-                                        .font(.title3).fontWeight(.bold).foregroundColor(.white)
-                                    
-                                    Spacer()
-                                    
-                                    // Search box nhỏ ngang
-                                    HStack(spacing: 4) {
-                                        // Season picker tap - custom dropdown
-                                        Button {
-                                            withAnimation(.easeInOut(duration: 0.15)) {
-                                                showEpisodeSearch.toggle()
-                                            }
-                                        } label: {
-                                            HStack(spacing: 2) {
-                                                Text("S\(searchSeason)")
-                                                    .font(.system(size: 12, weight: .bold))
-                                                    .foregroundColor(.white)
-                                                Image(systemName: showEpisodeSearch ? "chevron.up" : "chevron.down")
-                                                    .font(.system(size: 8))
-                                                    .foregroundColor(.white.opacity(0.5))
-                                            }
-                                            .frame(width: 40)
-                                        }
-                                        .overlay(alignment: .topLeading) {
-                                            if showEpisodeSearch {
-                                                VStack(spacing: 0) {
-                                                    if let latestEp = appState.watchProgressList.first(where: { $0.movieId == movie.id })?.lastKnownEpisode {
+                        if let latestEp = appState.watchProgressList.first(where: { $0.movieId == movie.id })?.lastKnownEpisode {
     Button {
         playSeason = 1
         playEpisode = latestEp
@@ -329,6 +300,38 @@ struct MovieDetailView: View {
     }
     .padding(.bottom, 10)
 }
+
+// Vị trí dán là ở đây nè: Ngay TRÊN dòng if !vm.seasons.isEmpty này
+if !vm.seasons.isEmpty {
+    VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
+            Text("Seasons & Episodes")
+                                        .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                                    
+                                    Spacer()
+                                    
+                                    // Search box nhỏ ngang
+                                    HStack(spacing: 4) {
+                                        // Season picker tap - custom dropdown
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                showEpisodeSearch.toggle()
+                                            }
+                                        } label: {
+                                            HStack(spacing: 2) {
+                                                Text("S\(searchSeason)")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.white)
+                                                Image(systemName: showEpisodeSearch ? "chevron.up" : "chevron.down")
+                                                    .font(.system(size: 8))
+                                                    .foregroundColor(.white.opacity(0.5))
+                                            }
+                                            .frame(width: 40)
+                                        }
+                                        .overlay(alignment: .topLeading) {
+                                            if showEpisodeSearch {
+                                                VStack(spacing: 0) {
+                                                
                                                     ForEach(vm.seasons) { season in
                                                         Button {
                                                             searchSeason = season.seasonNumber
