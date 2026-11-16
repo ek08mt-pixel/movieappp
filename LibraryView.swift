@@ -184,6 +184,11 @@ struct LibraryView: View {
                                     .aspectRatio(2/3, contentMode: .fill)
                                     .frame(width: (UIScreen.main.bounds.width - 56) / 3, height: ((UIScreen.main.bounds.width - 56) / 3) * 1.5)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .overlay(alignment: .topLeading) {
+                                        NewEpisodeBadge(movieId: movie.id)
+                                            .scaleEffect(0.85)
+                                            .padding(4)
+                                    }
                                 Text(movie.title).font(.system(size: 10, weight: .medium)).foregroundColor(.white).lineLimit(2).frame(height: 28)
                             }
                         }
@@ -212,6 +217,9 @@ struct LibraryView: View {
                 HStack(spacing: 12) {
                     ZStack(alignment: .center) {
                         CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 80, height: 120).clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(alignment: .topLeading) {
+                                NewEpisodeBadge(movieId: movie.id).scaleEffect(0.8).padding(3)
+                            }
                         Button { presentPlayer(movie) } label: { Circle().fill(.black.opacity(0.6)).frame(width: 36, height: 36).overlay(Image(systemName: "play.fill").font(.system(size: 14)).foregroundColor(.white).offset(x: 1)) }
                     }
                     VStack(alignment: .leading, spacing: 6) {
