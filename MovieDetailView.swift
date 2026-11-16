@@ -644,7 +644,6 @@ default: src = .phimapi
         }
         await MainActor.run { self.ratings = (tmdbScore, imdbRating, rtRating) }
     }
-}
 
 // MARK: - Save To List Popup
 struct SaveToListPopup: View {
