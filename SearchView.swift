@@ -402,10 +402,9 @@ struct SearchView: View {
                         onComplete: { text in
                             print("DEBUG Voice onComplete: \(text)")
                             showVoice = false
-                            vm.query = text
-                            Task {
-                                try? await Task.sleep(nanoseconds: 300_000_000)
-                                await performSearch()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                vm.query = text
+                                Task { await performSearch() }
                             }
                         }
                     )
