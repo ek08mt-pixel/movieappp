@@ -128,6 +128,8 @@ struct MoviePlayerView: View {
     @State private var showEpisodePopup = false
     @State private var showSeekPreview = false
     @State private var seekPreviewImage: UIImage?
+    @State private var videoOutput: AVPlayerItemVideoOutput?
+    @State private var previewThumbnail: UIImage?
     @State private var seekPreviewTime: Double = 0
     @State private var showPhim1280WebView = false
     @State private var phim1280WebURL: URL?
@@ -319,32 +321,68 @@ selectedSource = initialSource
                     Button { player.rate == 0 ? player.play() : player.pause() } label: { Image(systemName: player.rate == 0 ? "play.fill" : "pause.fill").font(.system(size: 44, weight: .bold)).foregroundColor(.white).padding(20).background(Circle().fill(.ultraThinMaterial.opacity(0.3))) }
                     Button { nextEpisode() } label: { Image(systemName: "forward.end.fill").font(.system(size: 26)).foregroundColor(.white.opacity(0.9)).padding(14).background(Circle().fill(.ultraThinMaterial.opacity(0.25))) }
                 }
-                if showSeekPreview { Text(formatTime(seekPreviewTime)).font(.system(size: 12, design: .monospaced)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 5).background(Capsule().fill(.ultraThinMaterial.opacity(0.7))).offset(y: -60) }
-                VStack { Spacer()
-                    VStack(spacing: 2) {
-    GeometryReader { geo in
-        ZStack(alignment: .leading) {
-            Capsule().fill(.white.opacity(0.15)).frame(height: 5)
-            Capsule().fill(.white.opacity(0.8)).frame(width: max(5, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5)
-            
-            // Thumb chữ nhật bo tròn
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.white)
-                .frame(width: 22, height: 22)
-                .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 0.5))
-                .offset(x: max(0, min(geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 10, geo.size.width - 20)))
+                if showSeekPreview {
+    VStack(spacing: 4) {
+        if let thumb = previewThumbnail {
+            Image(uiImage: thumb)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 160, height: 90)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 1))
+                .shadow(color: .black.opacity(0.5), radius: 5)
+        }
+        Text(formatTime(seekPreviewTime))
+            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .foregroundColor(.white)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(Capsule().fill(.ultraThinMaterial.opacity(0.8)))
+    }
+    .offset(y: -120)
+    .zIndex(10)
+}
+
+VStack {
+    Spacer()
+    VStack(spacing: 2) {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.15)).frame(height: 5)
+                Capsule().fill(.white.opacity(0.8)).frame(width: max(5, geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1))), height: 5)
+                
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white)
+                    .frame(width: 22, height: 22)
+                    .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 0.5))
+                    .offset(x: max(0, min(geo.size.width * CGFloat(min(max(currentTime / max(duration, 1), 0), 1)) - 10, geo.size.width - 20)))
+            }
+            .frame(height: 20)
+            .contentShape(Rectangle())
+            .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in
+                let r = min(max(v.location.x / geo.size.width, 0), 1)
+                let newTime = r * duration
+                currentTime = newTime
+                isSeeking = true
+                seekPreviewTime = newTime
+                showSeekPreview = true
+                
+                fetchThumbnail(at: newTime)
+                
+            }.onEnded { _ in
+                player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600))
+                isSeeking = false
+                showSeekPreview = false
+            })
         }
         .frame(height: 20)
-        .contentShape(Rectangle())
-        .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { v in
-            let r = min(max(v.location.x / geo.size.width, 0), 1)
-            currentTime = r * duration; isSeeking = true; seekPreviewTime = currentTime; showSeekPreview = true
-        }.onEnded { _ in player.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600)); isSeeking = false; showSeekPreview = false })
+        HStack {
+            Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+            Spacer()
+            Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5))
+        }
     }
-    .frame(height: 20)
-    HStack { Text(formatTime(currentTime)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)); Spacer(); Text(formatTime(duration)).font(.system(size: 10, design: .monospaced)).foregroundColor(.white.opacity(0.5)) }
-}.padding(.horizontal, UIScreen.main.bounds.width * 0.15)
+    .padding(.horizontal, UIScreen.main.bounds.width * 0.15)
                     HStack(spacing: 0) {
                         HStack(spacing: 12) {
                             Button { isScreenLocked.toggle(); showControls = !isScreenLocked } label: { Image(systemName: isScreenLocked ? "lock.fill" : "lock.open.fill").font(.system(size: 17)).foregroundColor(isScreenLocked ? .white : .white.opacity(0.4)) }
@@ -544,6 +582,13 @@ selectedSource = initialSource
                     selectedQuality = detectQuality(from: result.0)
                     let item = AVPlayerItem(url: result.0)
 player.replaceCurrentItem(with: item)
+// Khởi tạo bộ lấy ảnh thumbnail
+let pixelBufferAttributes: [String: Any] = [
+    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+]
+let output = AVPlayerItemVideoOutput(pixelBufferAttributes: pixelBufferAttributes)
+item.add(output)
+videoOutput = output
 if let rt = resumeAt {
     player.seek(to: CMTime(seconds: rt, preferredTimescale: 600)) { _ in player.play() }
 } else {
@@ -1415,12 +1460,29 @@ struct Phim1280ControlsView: View {
     }
     
     func formatTime(_ s: Double) -> String {
-        let m = Int(s) / 60; let sec = Int(s) % 60
-        return String(format: "%d:%02d", m, sec)
+    let m = Int(s) / 60; let sec = Int(s) % 60
+    return String(format: "%d:%02d", m, sec)
+}
+
+func fetchThumbnail(at time: Double) {
+    guard let output = videoOutput else { return }
+    
+    let time = CMTime(seconds: time, preferredTimescale: 600)
+    
+    if output.hasNewPixelBuffer(forItemTime: time) {
+        if let pixelBuffer = output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil) {
+            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+            let context = CIContext()
+            if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
+                previewThumbnail = UIImage(cgImage: cgImage)
+            }
+        }
     }
 }
+} // <--- Cái dấu ngoặc này là đóng struct MoviePlayerView
+
 extension VideoGravityMode {
-var avGravity: AVLayerVideoGravity {
+    var avGravity: AVLayerVideoGravity {
         switch self {
         case .fit: return .resizeAspect
         case .fill: return .resizeAspectFill
