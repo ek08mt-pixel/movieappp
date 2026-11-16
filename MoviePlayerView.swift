@@ -364,16 +364,21 @@ struct MoviePlayerView: View {
     
     // MARK: - Thumbnail Function
     func fetchThumbnail(at time: Double) {
-    guard let output = videoOutput else { return }
+    guard let asset = player.currentItem?.asset else { return }
+    
+    let generator = AVAssetImageGenerator(asset: asset)
+    generator.appliesPreferredTrackTransform = true
+    // Cho phép sai số 1 giây để máy lấy ảnh nhanh hơn
+    generator.requestedTimeToleranceBefore = CMTime(seconds: 1, preferredTimescale: 600)
+    generator.requestedTimeToleranceAfter = CMTime(seconds: 1, preferredTimescale: 600)
     
     let cmTime = CMTime(seconds: time, preferredTimescale: 600)
     
-    if output.hasNewPixelBuffer(forItemTime: cmTime) {
-        if let pixelBuffer = output.copyPixelBuffer(forItemTime: cmTime, itemTimeForDisplay: nil) {
-            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-            let context = CIContext()
-            if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
-                previewThumbnail = UIImage(cgImage: cgImage)
+    DispatchQueue.global(qos: .userInitiated).async {
+        if let cgImage = try? generator.copyCGImage(at: cmTime, actualTime: nil) {
+            let image = UIImage(cgImage: cgImage)
+            DispatchQueue.main.async {
+                self.previewThumbnail = image
             }
         }
     }
