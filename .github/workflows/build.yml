@@ -105,6 +105,10 @@ jobs:
               <string>mxplayer</string>
               <string>iina</string>
           </array>
+          <key>NSMicrophoneUsageDescription</key>
+          <string>Emmew cần micro để tìm phim bằng giọng nói</string>
+          <key>NSSpeechRecognitionUsageDescription</key>
+          <string>Emmew cần nhận diện giọng nói để tìm phim</string>
           </dict></plist>
           EOF
           
