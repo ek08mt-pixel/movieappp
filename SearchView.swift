@@ -1,4 +1,6 @@
 import SwiftUI
+import Speech
+import AVFoundation
 
 struct SearchView: View {
     @StateObject private var vm = SearchViewModel()
@@ -17,6 +19,8 @@ struct SearchView: View {
     @State private var hotMovies: [Movie] = []
     @State private var currentPage = 1
     @State private var totalPages = 5
+    @StateObject private var voice = VoiceSearchManager()
+    @State private var showVoice = false
     
     enum SearchMode: String, CaseIterable { case movies = "Phim", actors = "Diễn viên" }
     
@@ -47,6 +51,14 @@ struct SearchView: View {
                                 .foregroundColor(.white)
                                 .onSubmit { saveSearch(vm.query) }
                                 .onChange(of: vm.query) { _ in Task { await performSearch() } }
+                            Button {
+                                showVoice = true
+                                voice.start()
+                            } label: {
+                                Image(systemName: "mic.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
                             if !vm.query.isEmpty {
                                 Button { vm.query = "" } label: {
                                     Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
@@ -105,7 +117,6 @@ struct SearchView: View {
                             }
                         }
                     } else if !vm.query.isEmpty && searchMode == .actors {
-                        // Actor search
                         if actors.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "person.fill.questionmark").font(.system(size: 40)).foregroundColor(.gray)
@@ -130,10 +141,8 @@ struct SearchView: View {
                             }
                         }
                     } else {
-                        // Query rỗng - hiện main content
                         ScrollView {
                             if searchMode == .movies {
-                                // Emmew Recommended (ẩn khi focused)
                                 if let movie = recommendedMovie, !focused {
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text("Emmew Recommended")
@@ -241,7 +250,6 @@ struct SearchView: View {
                                     .padding(.top, 16)
                                 }
                                 
-                                // Tìm kiếm gần đây (chỉ hiện khi focused)
                                 if focused && !recentSearches.isEmpty {
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack {
@@ -283,7 +291,6 @@ struct SearchView: View {
                                     .padding(.top, 16)
                                 }
                                 
-                                // Hot hit dạo này
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Hot hit dạo này")
                                         .font(.system(size: 15, weight: .bold))
@@ -342,7 +349,6 @@ struct SearchView: View {
                                 }
                                 .padding(.top, 20)
                             } else {
-                                // Diễn viên hot
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Diễn viên hot")
                                         .font(.system(size: 15, weight: .bold))
@@ -384,6 +390,24 @@ struct SearchView: View {
                         }
                     }
                 }
+                
+                if showVoice {
+                    VoiceSearchOverlay(
+                        text: voice.transcript,
+                        audioLevel: voice.audioLevel,
+                        onCancel: {
+                            voice.stop()
+                            showVoice = false
+                        },
+                        onComplete: { text in
+                            showVoice = false
+                            vm.query = text
+                            Task { await performSearch() }
+                        }
+                    )
+                    .transition(.opacity)
+                    .zIndex(100)
+                }
             }
             .fullScreenCover(item: $selectedMovie) { movie in MovieDetailView(movie: movie) }
             .fullScreenCover(item: $selectedActor) { actor in ActorDetailView(actor: actor) }
@@ -392,6 +416,11 @@ struct SearchView: View {
             }
         }
         .onAppear {
+            voice.setOnComplete { text in
+                showVoice = false
+                vm.query = text
+                Task { await performSearch() }
+            }
             Task {
                 await vm.loadTrending()
                 if vm.results.isEmpty {
@@ -472,54 +501,52 @@ struct SearchView: View {
         }
     }
     
-   func loadTrendingActors() async {
-    // Lấy diễn viên từ phim hot thay vì trending person
-    let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&page=1"
-    guard let url = URL(string: urlString) else { return }
-    
-    do {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        struct MovieResponse: Codable { let results: [MovieResult] }
-        struct MovieResult: Codable {
-            let id: Int; let title: String?
-            let genre_ids: [Int]?
-        }
-        let response = try JSONDecoder().decode(MovieResponse.self, from: data)
+    func loadTrendingActors() async {
+        let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN&page=1"
+        guard let url = URL(string: urlString) else { return }
         
-        var actorIds: Set<Int> = []
-        var actors: [Actor] = []
-        
-        // Lấy credits từ từng phim hot
-        for movie in response.results.prefix(5) {
-            let creditsURL = "https://api.themoviedb.org/3/movie/\(movie.id)/credits?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
-            guard let creditsUrl = URL(string: creditsURL) else { continue }
-            let (creditsData, _) = try await URLSession.shared.data(from: creditsUrl)
-            struct CreditsResponse: Codable {
-                let cast: [CastResult]
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct MovieResponse: Codable { let results: [MovieResult] }
+            struct MovieResult: Codable {
+                let id: Int; let title: String?
+                let genre_ids: [Int]?
             }
-            struct CastResult: Codable {
-                let id: Int; let name: String; let profile_path: String?
-                let known_for_department: String?
-                let popularity: Double?
-            }
-            let credits = try JSONDecoder().decode(CreditsResponse.self, from: creditsData)
-            for cast in credits.cast.prefix(5) {
-                if cast.known_for_department == "Acting" && !actorIds.contains(cast.id) {
-                    actorIds.insert(cast.id)
-                    actors.append(Actor(id: cast.id, name: cast.name, character: nil, profilePath: cast.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: cast.known_for_department))
+            let response = try JSONDecoder().decode(MovieResponse.self, from: data)
+            
+            var actorIds: Set<Int> = []
+            var actors: [Actor] = []
+            
+            for movie in response.results.prefix(5) {
+                let creditsURL = "https://api.themoviedb.org/3/movie/\(movie.id)/credits?api_key=b6be36c1c5788565fec6a24811e7cc9b&language=vi-VN"
+                guard let creditsUrl = URL(string: creditsURL) else { continue }
+                let (creditsData, _) = try await URLSession.shared.data(from: creditsUrl)
+                struct CreditsResponse: Codable {
+                    let cast: [CastResult]
+                }
+                struct CastResult: Codable {
+                    let id: Int; let name: String; let profile_path: String?
+                    let known_for_department: String?
+                    let popularity: Double?
+                }
+                let credits = try JSONDecoder().decode(CreditsResponse.self, from: creditsData)
+                for cast in credits.cast.prefix(5) {
+                    if cast.known_for_department == "Acting" && !actorIds.contains(cast.id) {
+                        actorIds.insert(cast.id)
+                        actors.append(Actor(id: cast.id, name: cast.name, character: nil, profilePath: cast.profile_path, biography: nil, birthday: nil, placeOfBirth: nil, knownForDepartment: cast.known_for_department))
+                    }
+                    if actors.count >= 21 { break }
                 }
                 if actors.count >= 21 { break }
             }
-            if actors.count >= 21 { break }
+            
+            await MainActor.run {
+                trendingActors = actors
+            }
+        } catch {
+            print("Trending actors error: \(error)")
         }
-        
-        await MainActor.run {
-            trendingActors = actors
-        }
-    } catch {
-        print("Trending actors error: \(error)")
     }
-}
     
     func performSearch() async {
         if searchMode == .movies {
