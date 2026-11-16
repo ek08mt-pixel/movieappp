@@ -113,40 +113,7 @@ struct MovieDetailView: View {
                         }
                     }
                     
-                    VStack(alignment: .leading, spacing: 16) {
-                        if let newEp = appState.latestNewEpisode(movieId: movie.id), appState.hasNewEpisode(movieId: movie.id) {
-                            Button {
-                                appState.markBadgeSeen(movieId: movie.id)
-                                playSeason = appState.watchProgressList.first(where: { $0.movieId == movie.id })?.season ?? 1
-                                playEpisode = newEp
-                                presentPlayer()
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "bell.badge.fill")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.yellow)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Đã có tập mới")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(.white)
-                                        Text("Tập \(newEp) vừa ra mắt — xem ngay")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.7))
-                                    }
-                                    Spacer()
-                                    Image(systemName: "play.circle.fill")
-                                        .font(.system(size: 26))
-                                        .foregroundColor(.yellow)
-                                }
-                                .padding(12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.yellow.opacity(0.15))
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.yellow.opacity(0.4), lineWidth: 0.5))
-                                )
-                            }
-                            .padding(.horizontal, 4)
-                        }
+        
                         HStack(alignment: .top, spacing: 14) {
                             ZStack(alignment: .bottom) {
                                 CachedAsyncImage(url: movie.posterURL, size: .detail)
