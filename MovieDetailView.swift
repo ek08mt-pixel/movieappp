@@ -1230,5 +1230,4 @@ struct EpisodePopupView: View {
         hosting.modalPresentationStyle = .fullScreen
         topVC.present(hosting, animated: true)
     }
-    }
 }
