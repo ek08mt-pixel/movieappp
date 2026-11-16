@@ -408,6 +408,7 @@ struct SearchView: View {
                                 await performSearch()
                             }
                         }
+                    )
                     .transition(.opacity)
                     .zIndex(100)
                 }
