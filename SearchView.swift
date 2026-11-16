@@ -400,11 +400,14 @@ struct SearchView: View {
                             showVoice = false
                         },
                         onComplete: { text in
+                            print("DEBUG Voice onComplete: \(text)")
                             showVoice = false
                             vm.query = text
-                            Task { await performSearch() }
+                            Task {
+                                try? await Task.sleep(nanoseconds: 300_000_000)
+                                await performSearch()
+                            }
                         }
-                    )
                     .transition(.opacity)
                     .zIndex(100)
                 }
