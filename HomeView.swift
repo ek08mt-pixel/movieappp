@@ -199,8 +199,14 @@ if !vm.trendingAnime.isEmpty {
                                 .aspectRatio(16/9, contentMode: .fill)
                                 .frame(height: 200)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(alignment: .topTrailing) {
+                                    NewEpisodeBadge(movieId: movie.id).padding(10)
+                                }
                         } else {
                             RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2)).frame(height: 200)
+                                .overlay(alignment: .topTrailing) {
+                                    NewEpisodeBadge(movieId: movie.id).padding(10)
+                                }
                         }
                         LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -460,6 +466,10 @@ SectionGrid(title: "USUK Icons", movies: vm.usukIcons)
                 }
             }
             .frame(width: 200, height: 112)
+            .overlay(alignment: .topTrailing) {
+                NewEpisodeBadge(movieId: prog.movieId)
+                    .padding(6)
+            }
             
             Text(prog.movieTitle)
                 .font(.system(size: 12, weight: .semibold))
@@ -649,11 +659,17 @@ struct SectionGrid: View {
                                                 .frame(width: 200, height: 112)
                                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                                 .shadow(color: .black.opacity(0.3), radius: 3)
+                                                .overlay(alignment: .topTrailing) {
+                                                    NewEpisodeBadge(movieId: movie.id).padding(6)
+                                                }
                                     
                                         } else {
                                             RoundedRectangle(cornerRadius: 10)
                                                 .fill(.ultraThinMaterial.opacity(0.2))
                                                 .frame(width: 200, height: 112)
+                                                .overlay(alignment: .topTrailing) {
+                                                    NewEpisodeBadge(movieId: movie.id).padding(6)
+                                                }
                                         }
                                         
                                         // Số + Tên + Subtitle - canh giữa dọc với số
@@ -694,6 +710,9 @@ struct SectionGrid: View {
                                             .frame(width: 115, height: 172)
                                             .clipShape(RoundedRectangle(cornerRadius: 12))
                                             .shadow(color: .black.opacity(0.3), radius: 3)
+                                            .overlay(alignment: .topTrailing) {
+                                                NewEpisodeBadge(movieId: movie.id).padding(6)
+                                            }
                                         Text(movie.title)
                                             .font(.system(size: 10))
                                             .fontWeight(.semibold)
@@ -720,7 +739,7 @@ struct BigCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label(title, systemImage: icon).font(.headline).foregroundColor(.white)
                 ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 8) { ForEach(movies.prefix(4)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { HStack(spacing: 10) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 50, height: 75).clipShape(RoundedRectangle(cornerRadius: 8)); VStack(alignment: .leading, spacing: 2) { Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2); Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray) }; Spacer() } } } }
+                    LazyVStack(spacing: 8) { ForEach(movies.prefix(4)) { movie in NavigationLink(destination: MovieDetailView(movie: movie)) { HStack(spacing: 10) { CachedAsyncImage(url: movie.posterURL).aspectRatio(2/3, contentMode: .fill).frame(width: 50, height: 75).clipShape(RoundedRectangle(cornerRadius: 8)).overlay(alignment: .topTrailing) { NewEpisodeBadge(movieId: movie.id).scaleEffect(0.7).padding(2) }; VStack(alignment: .leading, spacing: 2) { Text(movie.title).font(.system(size: 11, weight: .medium)).foregroundColor(.white).lineLimit(2); Text(movie.yearText).font(.system(size: 9)).foregroundColor(.gray) }; Spacer() } } } }
                 }.frame(maxHeight: 200)
             }.padding(12).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial.opacity(0.2))).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
