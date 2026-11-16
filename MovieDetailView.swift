@@ -540,7 +540,14 @@ if !vm.seasons.isEmpty {
             }
             .ignoresSafeArea(edges: .top)
         }
-        .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
+.gesture(
+    DragGesture(minimumDistance: 20).onEnded { value in
+        if value.translation.width > 100 {
+            dismiss()
+        }
+    }
+)
         .onAppear {
             NotificationCenter.default.post(name: NSNotification.Name("HideTabBar"), object: nil)
         }
