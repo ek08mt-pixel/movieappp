@@ -182,6 +182,7 @@ if let _ = MappingCache.shared.dict(for: "phimapi_stream_cache")[testKey] {
     errorMessage = "Cached: \(testKey)"
 }
 selectedSource = initialSource
+                    appState.markBadgeSeen(movieId: movieId)
                     if let i = UserDefaults.standard.value(forKey: "lastAudioIndex_\(movieId)") as? Int { selectedServerIndex = i }
                     if let l = UserDefaults.standard.string(forKey: "lastAudioLabel_\(movieId)") { selectedAudioLabel = l }
                 }
@@ -684,7 +685,27 @@ func tryResume() {
         let actualDuration = player.currentItem?.duration.seconds ?? duration
         guard actualTime > 0, actualDuration > 0 else { return }
         
-        appState.updateProgress(WatchProgress(movieId: movieId, movieTitle: movieTitle, posterPath: posterURL?.absoluteString, mediaType: mediaType, season: seasonNumber, episode: episodeNumber, currentTime: actualTime, duration: max(actualDuration, 1), lastWatched: Date(), source: selectedSource.rawValue))
+        let currentEp = episodeNumber
+        let existing = appState.watchProgressList.first(where: { $0.movieId == movieId })
+        var knownEp = existing?.lastKnownEpisode ?? currentEp
+        if let cur = currentEp, let k = knownEp, cur > k { knownEp = cur }
+        if knownEp == nil { knownEp = currentEp }
+        
+        appState.updateProgress(WatchProgress(
+            movieId: movieId,
+            movieTitle: movieTitle,
+            posterPath: posterURL?.absoluteString,
+            mediaType: mediaType,
+            season: seasonNumber,
+            episode: episodeNumber,
+            currentTime: actualTime,
+            duration: max(actualDuration, 1),
+            lastWatched: Date(),
+            source: selectedSource.rawValue,
+            imdbID: imdbIDCache,
+            lastKnownEpisode: knownEp,
+            seenNewEpisodeBadge: existing?.seenNewEpisodeBadge ?? false
+        ))
     }
     func saveHistory() { let m = Movie(id: movieId, title: movieTitle, overview: "", posterPath: posterURL?.absoluteString ?? "", backdropPath: nil, voteAverage: 0, releaseDate: nil, genreIds: nil, originalTitle: nil, popularity: nil, voteCount: nil, adult: false, originalLanguage: nil, mediaType: mediaType); appState.watchHistory.removeAll { $0.id == movieId }; appState.watchHistory.insert(m, at: 0); if appState.watchHistory.count > 50 { appState.watchHistory.removeLast() }; appState.save() }
     func setupTimeObserver() { player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { t in if !isSeeking { currentTime = t.seconds }; if let d = player.currentItem?.duration, d.isNumeric { duration = d.seconds } } }
